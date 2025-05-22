@@ -1,0 +1,69 @@
+# Python bytecode files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django stuff:
+*.log
+*.pot
+*.pyc
+*.sqlite3
+db.sqlite3
+
+# Media folder (user-uploaded files)
+media/
+
+# Static files (if you want to exclude collected static)
+staticfiles/
+
+# Virtual environment folders
+venv/
+env/
+ENV/
+.venv/
+
+# PyCharm or VSCode project files
+.idea/
+.vscode/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+
+# Unit test / coverage reports
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# mypy type checker
+.mypy_cache/
+
+# pytype static type analyzer
+.pytype/
+
+# Django migrations (optional: you may want to include them if you track migrations)
+# migrations/
+
+# Environment variables file (if any)
+.env
+.env.*
+
+# Mac system files
+.DS_Store
+
+# Logs
+*.log
+
+# celery beat schedule file
+celerybeat-schedule
+
+# local settings
+local_settings.py
