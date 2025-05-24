@@ -1,6 +1,4 @@
 from rest_framework import viewsets, permissions
-from .models import Property, Caretaker, Renter, RentRecord, PropertyTaxRecord
-from .serializers import PropertySerializer, CaretakerSerializer, RenterSerializer, RentRecordSerializer, PropertyTaxRecordSerializer
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from weasyprint import HTML
@@ -11,6 +9,27 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import NotFound
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
+from .models import (
+    PropertyTaxRecord, SubscriptionPlan, UserSubscription,
+    AddOnPurchase, PlanFeatureLimit, UsageLimit,
+    RentAgreementDraft, PDFExportRecord,
+    PropertyImage, PropertyDocument,
+    Property, Caretaker, Renter, RentRecord
+)
+from .serializers import (
+    PropertyTaxRecordSerializer, SubscriptionPlanSerializer, UserSubscriptionSerializer,
+    AddOnPurchaseSerializer, PlanFeatureLimitSerializer, UsageLimitSerializer,
+    RentAgreementDraftSerializer, PDFExportRecordSerializer,
+    PropertyImageSerializer, PropertyDocumentSerializer, PropertySerializer, 
+    CaretakerSerializer, RenterSerializer, RentRecordSerializer
+)
+
+class IsOwnerOrReadOnly(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
+
 
 class PropertyViewSet(viewsets.ModelViewSet):
     serializer_class = PropertySerializer
@@ -55,6 +74,147 @@ class PropertyTaxRecordViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save()
+
+
+
+
+
+
+# Records owned by a user
+class PropertyTaxRecordViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PropertyTaxRecordSerializer
+    queryset = PropertyTaxRecord.objects.all()
+
+    def get_queryset(self):
+        return PropertyTaxRecord.objects.filter(property__owner=self.request.user)
+
+class UserSubscriptionViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserSubscriptionSerializer
+    queryset = UserSubscription.objects.all()
+
+    def get_queryset(self):
+        return UserSubscription.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class AddOnPurchaseViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = AddOnPurchaseSerializer
+    queryset = AddOnPurchase.objects.all()
+
+    def get_queryset(self):
+        return AddOnPurchase.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UsageLimitSerializer
+    queryset = UsageLimit.objects.all()
+
+    def get_queryset(self):
+        return UsageLimit.objects.filter(user=self.request.user)
+
+class RentAgreementDraftViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = RentAgreementDraftSerializer
+    queryset = RentAgreementDraft.objects.all()
+
+    def get_queryset(self):
+        return RentAgreementDraft.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class PDFExportRecordViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PDFExportRecordSerializer
+    queryset = PDFExportRecord.objects.all()
+
+    def get_queryset(self):
+        return PDFExportRecord.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class PropertyImageViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PropertyImageSerializer
+    queryset = PropertyImage.objects.all()
+
+    def get_queryset(self):
+        return PropertyImage.objects.filter(property__owner=self.request.user)
+
+class PropertyDocumentViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PropertyDocumentSerializer
+    queryset = PropertyDocument.objects.all()
+
+    def get_queryset(self):
+        return PropertyDocument.objects.filter(property__owner=self.request.user)
+
+# Global Plans & Limits (public for listing)
+class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = SubscriptionPlan.objects.filter(is_active=True)
+    serializer_class = SubscriptionPlanSerializer
+
+class PlanFeatureLimitViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = PlanFeatureLimit.objects.all()
+    serializer_class = PlanFeatureLimitSerializer
+
+# class PropertyTaxRecordViewSet(viewsets.ModelViewSet):
+#     queryset = PropertyTaxRecord.objects.all()
+#     serializer_class = PropertyTaxRecordSerializer
+#     permission_classes = [IsAuthenticated]
+
+# class SubscriptionPlanViewSet(viewsets.ModelViewSet):
+#     queryset = SubscriptionPlan.objects.all()
+#     serializer_class = SubscriptionPlanSerializer
+#     permission_classes = [IsAuthenticated]
+
+# class UserSubscriptionViewSet(viewsets.ModelViewSet):
+#     queryset = UserSubscription.objects.all()
+#     serializer_class = UserSubscriptionSerializer
+#     permission_classes = [IsAuthenticated]
+
+# class AddOnPurchaseViewSet(viewsets.ModelViewSet):
+#     queryset = AddOnPurchase.objects.all()
+#     serializer_class = AddOnPurchaseSerializer
+#     permission_classes = [IsAuthenticated]
+
+# class PlanFeatureLimitViewSet(viewsets.ModelViewSet):
+#     queryset = PlanFeatureLimit.objects.all()
+#     serializer_class = PlanFeatureLimitSerializer
+#     permission_classes = [IsAuthenticated]
+
+# class UsageLimitViewSet(viewsets.ModelViewSet):
+#     queryset = UsageLimit.objects.all()
+#     serializer_class = UsageLimitSerializer
+#     permission_classes = [IsAuthenticated]
+
+# class RentAgreementDraftViewSet(viewsets.ModelViewSet):
+#     queryset = RentAgreementDraft.objects.all()
+#     serializer_class = RentAgreementDraftSerializer
+#     permission_classes = [IsAuthenticated]
+
+# class PDFExportRecordViewSet(viewsets.ModelViewSet):
+#     queryset = PDFExportRecord.objects.all()
+#     serializer_class = PDFExportRecordSerializer
+#     permission_classes = [IsAuthenticated]
+
+# class PropertyImageViewSet(viewsets.ModelViewSet):
+#     queryset = PropertyImage.objects.all()
+#     serializer_class = PropertyImageSerializer
+#     permission_classes = [IsAuthenticated]
+
+# class PropertyDocumentViewSet(viewsets.ModelViewSet):
+#     queryset = PropertyDocument.objects.all()
+#     serializer_class = PropertyDocumentSerializer
+#     permission_classes = [IsAuthenticated]
 
 
 class GenerateRentAgreementPdfViewSet(viewsets.ViewSet):
@@ -137,3 +297,5 @@ class GenerateRentReceiptPdfViewSet(viewsets.ModelViewSet):
         response = HttpResponse(pdf_file, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename=rent_receipt_{rent_record.id}.pdf'
         return response
+    
+

@@ -152,7 +152,6 @@ class RentRecord(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='rent_records')
     rent_month = models.DateField(help_text="Use first day of the month, e.g. 2025-05-01")
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, help_text="Amount paid for rent")
-    
     date_paid = models.DateField(help_text="Date when payment was made")
     
     class PaymentMode(models.TextChoices):
@@ -203,6 +202,12 @@ class PropertyTaxRecord(models.Model):
 
     class Meta:
         unique_together = ('property', 'tax_year')
+
+    def is_due_soon(self, days_before=7):
+        from datetime import date, timedelta
+        if self.is_paid or not self.due_date:
+            return False
+        return self.due_date <= date.today() + timedelta(days=days_before)
 
     def __str__(self):
         return f"{self.property.title} - {self.tax_year}"
@@ -290,17 +295,3 @@ class UsageLimit(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.feature_key}: {self.usage_count}"
     
-
-
-#example property creation
-
-# class PropertyViewSet(viewsets.ModelViewSet):
-#     ...
-
-#     def perform_create(self, serializer):
-#         user = self.request.user
-#         if not can_add_property(user):
-#             raise PermissionDenied("Your plan limit reached. Please upgrade.")
-#         serializer.save(owner=user)
-#         Jab property add ho to call karo:
-#         increment_usage(user, 'max_properties')
