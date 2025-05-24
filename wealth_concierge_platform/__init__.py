@@ -1,0 +1,1 @@
+default_app_config = 'wealth_concierge_platform.apps.CoreConfig'

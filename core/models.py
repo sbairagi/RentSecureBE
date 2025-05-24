@@ -20,7 +20,7 @@ class App(models.Model):
         return self.name
 
 class UserApp(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_app')
     app = models.ForeignKey(App, on_delete=models.CASCADE)
     access_granted = models.BooleanField(default=True)
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)

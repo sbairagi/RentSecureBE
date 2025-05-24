@@ -4,6 +4,7 @@ from simple_history.models import HistoricalRecords
 from core.models import User
 from django.conf import settings
 
+
 # Phone number validator for consistent format
 phone_regex = RegexValidator(
     regex=r'^\+?1?\d{9,15}$',
@@ -54,7 +55,16 @@ class Property(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.city}, {self.state}"
+    
+class PropertyImage(models.Model):
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='property_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
 
+class PropertyDocument(models.Model):
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='documents')
+    document = models.FileField(upload_to='property_documents/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
 
 class Caretaker(models.Model):
     id = models.AutoField(primary_key=True)
@@ -64,8 +74,8 @@ class Caretaker(models.Model):
     alternate_phone = models.CharField(validators=[phone_regex], max_length=15, blank=True, null=True, help_text="Alternate phone number")
     emergency_contact_name = models.CharField(max_length=100, blank=True, null=True, help_text="Emergency contact name")
     emergency_contact_number = models.CharField(validators=[phone_regex], max_length=15, blank=True, null=True, help_text="Emergency contact number")
-    caretaker_image = models.ImageField(upload_to='caretaker_images/', blank=True, null=True, help_text="Photo of caretaker")
-    id_proof = models.FileField(upload_to='id_proofs/caretakers/', help_text="Caretaker's ID proof document")
+    caretaker_image = models.ImageField(upload_to='caretaker_image/', blank=True, null=True, help_text="Photo of caretaker")
+    id_proof = models.FileField(upload_to='id_proof/caretaker/', help_text="Caretaker's ID proof document")
     address_line = models.CharField(max_length=255, help_text="Caretaker address line")
     landmark = models.CharField(max_length=255, blank=True, null=True, help_text="Nearby landmark")
     city = models.CharField(max_length=100, help_text="City")
@@ -100,8 +110,8 @@ class Renter(models.Model):
     alternate_phone = models.CharField(validators=[phone_regex], max_length=15, blank=True, null=True, help_text="Alternate phone number")
     emergency_contact_name = models.CharField(max_length=100, blank=True, null=True, help_text="Emergency contact name")
     emergency_contact_number = models.CharField(validators=[phone_regex], max_length=15, blank=True, null=True, help_text="Emergency contact number")
-    renter_image = models.ImageField(upload_to='renter_images/', blank=True, null=True, help_text="Photo of renter")
-    id_proof = models.FileField(upload_to='id_proofs/renters/', help_text="Renter's ID proof document")
+    renter_image = models.ImageField(upload_to='renter_image/', blank=True, null=True, help_text="Photo of renter")
+    id_proof = models.FileField(upload_to='id_proofs/renter/', help_text="Renter's ID proof document")
     rent_agreement = models.FileField(upload_to='agreements/', help_text="Rent agreement document")
     rent_amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Rent amount")
     start_date = models.DateField(help_text="Rental start date")
@@ -122,6 +132,18 @@ class Renter(models.Model):
         from django.core.exceptions import ValidationError
         if self.end_date and self.end_date < self.start_date:
             raise ValidationError("End date cannot be earlier than start date.")
+
+class RentAgreementDraft(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    renter = models.OneToOneField(Renter, on_delete=models.CASCADE)
+    generated_at = models.DateTimeField(auto_now_add=True)
+    file = models.FileField(upload_to='auto_agreements/')
+
+
+class PDFExportRecord(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    property = models.ForeignKey(Property, on_delete=models.CASCADE)
+    exported_at = models.DateTimeField(auto_now_add=True)
 
 
 class RentRecord(models.Model):
@@ -159,3 +181,126 @@ class RentRecord(models.Model):
         if self.date_paid < self.rent_month:
             raise ValidationError("Date paid cannot be before the rent month.")
 
+
+class PropertyTaxRecord(models.Model):
+    id = models.AutoField(primary_key=True)
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='tax_records')
+    tax_year = models.PositiveIntegerField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    is_paid = models.BooleanField(default=False)
+    payment_date = models.DateField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    payment_mode = models.CharField(max_length=30, choices=[('online', 'Online'), ('cheque', 'Cheque'), ('cash', 'Cash'), ('upi', 'UPI'), ('other', 'Other')], null=True, blank=True)
+    late_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    proof = models.FileField(upload_to='tax_proofs/', null=True, blank=True)
+    proof_description = models.TextField(null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
+    internal_notes = models.TextField(null=True, blank=True)
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_tax_records')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('property', 'tax_year')
+
+    def __str__(self):
+        return f"{self.property.title} - {self.tax_year}"
+    
+class SubscriptionPlan(models.Model):
+    PLAN_CHOICES = [
+        ('free', 'Free'),
+        ('pro', 'Pro'),
+        ('elite', 'Elite'),
+    ]
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=50, choices=PLAN_CHOICES, unique=True)
+    monthly_price = models.DecimalField(max_digits=10, decimal_places=2)
+    yearly_price = models.DecimalField(max_digits=10, decimal_places=2)
+    features = models.TextField(help_text="Comma-separated list or rich description")
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name.capitalize()
+    
+class UserSubscription(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='usersubscription')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True)
+    start_date = models.DateField(auto_now_add=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    is_yearly = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.plan.name}"
+
+class AddOnPurchase(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)  # e.g. "Extra Storage", "Legal Drafting"
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    is_recurring = models.BooleanField(default=False)
+    purchase_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.user.username}"
+    
+class PlanFeatureLimit(models.Model):
+    FEATURE_CHOICES = [
+        ('max_properties', 'Max Properties'),
+        ('max_renters', 'Max Renters per Property'),
+        ('max_caretakers', 'Max Caretakers per Property'),
+        ('max_property_images', 'Max Property Images'),
+        ('max_document_uploads', 'Max Document Uploads'),
+        ('tax_notifications', 'Tax Notifications'),
+        ('whatsapp_alerts', 'WhatsApp Alerts'),
+        ('rent_agreement_drafting', 'Rent Agreement Drafting'),
+        ('export_pdf_dossier', 'Export PDF Dossier'),
+    ]
+
+    id = models.AutoField(primary_key=True)
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, related_name='limits')
+    feature_key = models.CharField(max_length=50, choices=FEATURE_CHOICES)
+    value = models.CharField(max_length=20)  # store int or 'unlimited' or 'yes/no'
+
+    class Meta:
+        unique_together = ('plan', 'feature_key')
+
+    def __str__(self):
+        return f"{self.plan.name} - {self.feature_key}: {self.value}"
+    
+class UsageLimit(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='usage_limits')
+    feature_key = models.CharField(max_length=50, choices=PlanFeatureLimit.FEATURE_CHOICES)
+    usage_count = models.IntegerField(default=0)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'feature_key')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.feature_key}: {self.usage_count}"
+    
+
+
+#example property creation
+
+# class PropertyViewSet(viewsets.ModelViewSet):
+#     ...
+
+#     def perform_create(self, serializer):
+#         user = self.request.user
+#         if not can_add_property(user):
+#             raise PermissionDenied("Your plan limit reached. Please upgrade.")
+#         serializer.save(owner=user)
+#         Jab property add ho to call karo:
+#         increment_usage(user, 'max_properties')
