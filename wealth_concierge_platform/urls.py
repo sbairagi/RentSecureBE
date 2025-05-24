@@ -30,6 +30,7 @@ router.register(r'property-documents', PropertyDocumentViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+    path("notifications/", include("wealth_concierge_platform.management.urls")),
 ]
 
 

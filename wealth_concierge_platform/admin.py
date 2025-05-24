@@ -36,7 +36,7 @@ class RenterInline(admin.TabularInline):
 class PropertyAdmin(SimpleHistoryAdmin):
     list_display = (
         'id', 'title', 'owner', 'address_line', 'landmark', 'city', 'state', 'country', 
-        'postal_code', 'property_type', 'property_image_thumbnail', 'is_vacant', 
+        'postal_code', 'whatsapp_number', 'property_type', 'property_image_thumbnail', 'is_vacant', 
         'is_verified', 'maintenance_notes', 'rent_due_reminder', 'agreement_expiry_reminder', 
         'latitude', 'longitude', 'notes', 'created_at', 'updated_at'
     )
@@ -50,7 +50,7 @@ class PropertyAdmin(SimpleHistoryAdmin):
             'fields': ('owner', 'title', 'property_type')
         }),
         ('Address', {
-            'fields': ('address_line', 'landmark', 'city', 'state', 'country', 'postal_code')
+            'fields': ('address_line', 'landmark', 'city', 'state', 'country', 'postal_code', 'whatsapp_number',)
         }),
         ('Documents & Images', {
             'fields': ('property_image', 'property_image_thumbnail', 'id_proof')
@@ -79,7 +79,7 @@ class PropertyAdmin(SimpleHistoryAdmin):
 @admin.register(Caretaker)
 class CaretakerAdmin(SimpleHistoryAdmin):
     list_display = (
-        'id', 'property', 'name', 'phone', 'alternate_phone', 'emergency_contact_name', 
+        'id', 'property', 'name', 'phone', 'alternate_phone', 'whatsapp_number', 'emergency_contact_name', 
         'emergency_contact_number', 'caretaker_image_thumbnail', 'address_line', 'landmark', 'city', 'state', 'country', 'postal_code', 
         'start_date', 'end_date', 'notes', 'created_at', 'updated_at'
     )
@@ -88,7 +88,7 @@ class CaretakerAdmin(SimpleHistoryAdmin):
     readonly_fields = ('created_at', 'updated_at', 'caretaker_image_thumbnail')
     fieldsets = (
         ('Basic Info', {
-            'fields': ('property', 'name', 'phone', 'alternate_phone')
+            'fields': ('property', 'name', 'phone', 'alternate_phone', 'whatsapp_number')
         }),
         ('Emergency Contact', {
             'fields': ('emergency_contact_name', 'emergency_contact_number')
@@ -117,7 +117,7 @@ class CaretakerAdmin(SimpleHistoryAdmin):
 @admin.register(Renter)
 class RenterAdmin(SimpleHistoryAdmin):
     list_display = (
-        'id', 'property', 'name', 'phone', 'alternate_phone', 'emergency_contact_name', 
+        'id', 'property', 'name', 'phone', 'alternate_phone', 'whatsapp_number', 'emergency_contact_name', 
         'emergency_contact_number', 'renter_image_thumbnail', 'rent_amount', 
         'start_date', 'end_date', 'is_active', 'notes', 'created_at', 'updated_at'
     )
@@ -126,7 +126,7 @@ class RenterAdmin(SimpleHistoryAdmin):
     readonly_fields = ('created_at', 'updated_at', 'renter_image_thumbnail')
     fieldsets = (
         ('Basic Info', {
-            'fields': ('property', 'name', 'phone', 'alternate_phone')
+            'fields': ('property', 'name', 'phone', 'alternate_phone', 'whatsapp_number')
         }),
         ('Emergency Contact', {
             'fields': ('emergency_contact_name', 'emergency_contact_number')
@@ -205,9 +205,10 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
 
 @admin.register(UserSubscription)
 class UserSubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'plan', 'start_date', 'end_date', 'is_active', 'is_yearly')
-    search_fields = ('user__username', 'plan__name')
-    readonly_fields = ('created_at', 'updated_at')
+    list_display = ('user', 'plan', 'start_date', 'end_date', 'is_active', 'is_yearly', 'tax_reminder_days_before', 'rent_reminder_days_before')
+    search_fields = ('user__username', 'plan__name', 'rent_reminder_days_before')
+    list_editable = ('tax_reminder_days_before',)
+    readonly_fields = ('created_at', 'updated_at',)
 
 @admin.register(AddOnPurchase)
 class AddOnPurchaseAdmin(admin.ModelAdmin):

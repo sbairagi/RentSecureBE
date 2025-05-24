@@ -29,6 +29,20 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Email details
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your@email.com'
+EMAIL_HOST_PASSWORD = 'your-app-password'
+DEFAULT_FROM_EMAIL = 'Your Concierge <your@email.com>'
+
+# Twilio details
+TWILIO_ACCOUNT_SID = "your_account_sid"
+TWILIO_AUTH_TOKEN = "your_auth_token"
+TWILIO_WHATSAPP_NUMBER = "whatsapp:+14155238886"  # Twilio sandbox number
+
 
 # Application definition
 
@@ -42,10 +56,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'simple_history',
+    'fcm_django',
 
     #custome app
     'core',
-    'wealth_concierge_platform'
+    'wealth_concierge_platform',
+
 ]
 
 MIDDLEWARE = [
@@ -120,6 +136,12 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
+
+FCM_DJANGO_SETTINGS = {
+    "FCM_SERVER_KEY": "<your_firebase_server_key>",
+    "ONE_DEVICE_PER_USER": False,
+    "DELETE_INACTIVE_DEVICES": True,
 }
 
 
