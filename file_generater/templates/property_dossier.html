@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Property Dossier</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      font-size: small;
+    }
+    .container {
+      width: 800px;
+      margin: 20px auto;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .watermark {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 100px;
+      opacity: 0.3;
+    }
+    h1, h2, h3, h4 {
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .summary {
+          background: #024fcf;;
+          border-radius: 8px;
+          padding: 20px;
+          font-size: 15px;
+          color: white;
+          font-weight: 600;
+          margin-bottom: 40px;
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+          display: flex;
+          justify-content: space-around;
+          flex-wrap: wrap;
+          gap: 20px;
+      }
+    .section {
+      margin-top: 40px;
+    }
+    .badge {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: white;
+    }
+    .badge.paid { background: green; }
+    .badge.unpaid { background: red; }
+    .badge.verified-true { background: green; }
+    .badge.verified-false { background: gray; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    table th, table td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    .name-with-pic {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .profile-pic {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #ccc;
+    }
+    .info-table, .payment-table, .summary, .terms {
+      margin-top: 20px;
+      margin-bottom: 20px;
+      border-collapse: collapse;
+    }
+    .info-table td, .payment-table td, .payment-table th, .summary td {
+      padding: 8px;
+      border: 1px solid #ccc;
+    }
+    .payment-table th {
+      background-color: #024fcf;
+      color: white;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      background-color: #024fcf;
+      color: white;
+      padding: 20px;
+      border-radius: 8px 8px 0 0;
+    }
+    .header img {
+      width: 60px;
+      height: 60px;
+      margin-right: 20px;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      background-color: #024fcf;
+      border-radius: 0 0 8px 8px;
+      padding: 10px;
+      color: white;
+    }
+    .footer img {
+      width: 120px;
+      margin: 0 10px;
+    }
+    a {
+      text-decoration: none;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="https://via.placeholder.com/100x40?text=Logo" alt="Watermark" class="watermark" />
+    <div class="header">
+      <img class="logo" src="https://dummyimage.com/60x60/000/fff&text=W" alt="Logo" />
+      <div>
+          <h2>Weath Concierge</h2>
+          <p>Pune Maharashtra - 411014</p>
+      </div>
+    </div>
+
+    <!-- Summary Section -->
+    <h2>Property Summary</h2>
+    <div class="summary">
+      <div>Total Caretakers: 2</div>
+      <div>Total Renters: 1</div>
+      <div>
+          Taxes Paid: 
+          <span class="badge paid">
+              1
+          </span>
+      </div>
+      <div>
+          Taxes Unpaid: 
+          <span class="badge unpaid">
+              1
+          </span>
+      </div>
+  </div>
+
+    <div class="section">
+      <h2>Property Info</h2>
+
+      <p class="name-with-pic">
+        <strong>Owner:</strong>
+        John Doe
+        <img src="https://randomuser.me/api/portraits/men/1.jpg" class="profile-pic" />
+      </p>
+      <table class="info-table">
+        <tr>
+            <td><strong>Title</strong><br />Sunshine Villa</td>
+            <td><strong>Address</strong><br />123 Green Street, Springfield, Illinois</td>
+            <td><strong>Type</strong><br />Residential</td>
+        </tr>
+        <tr>
+            <td><strong>Email</strong><br /><a href="mailto:example@example.com">📧 example@example.com</a></td>
+            <td><strong>Mobile</strong><br /><a href="tel:9012345678">📞 9012345678</a></td>
+            <td><strong>Verified</strong><br /><span class="badge verified-true">Yes</span></td>
+        </tr>
+        </table>
+    </div>
+
+    <div class="section">
+      <h2>Caretakers</h2>
+      <table class="payment-table">
+        <thead><tr><th>Name</th><th>Phone</th><th>Alt Phone</th><th>Email</th><th>City</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="name-with-pic">
+              <img src="https://randomuser.me/api/portraits/men/5.jpg" class="profile-pic" />
+              Raj Sharma
+            </td>
+            <td><a href="tel:9012345678">📞 9012345678</a></td>
+            <td><a href="tel:9012345678">📞 9012345678</a></td>
+            <td><a href="mailto:example@example.com">📧 example@example.com</a></td>
+            <td>Mumbai</td>
+          </tr>
+          <tr>
+            <td class="name-with-pic">
+              <img src="https://randomuser.me/api/portraits/women/6.jpg" class="profile-pic" />
+              Priya Mehra
+            </td>
+            <td><a href="tel:9012345678">📞 9012345678</a></td>
+            <td><a href="tel:9012345678">📞 9012345678</a></td>
+            <td><a href="mailto:example@example.com">📧 example@example.com</a></td>
+            <td>Delhi</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Renters</h2>
+      <div style="margin-bottom: 30px;">
+        <h3 class="name-with-pic">
+          <img src="https://randomuser.me/api/portraits/men/8.jpg" class="profile-pic" />
+          Aman Verma - (1 Jan 2023 - Ongoing)
+        </h3>
+
+
+        <table class="info-table">
+          <tr>
+              <td><strong>Phone</strong><br /><a href="tel:9012345678">📞 9012345678</a></td>
+              <td><strong>Email</strong><br /><a href="mailto:example@example.com">📧 example@example.com</a></td>
+              <td><strong>Rent Amount</strong><br />₹15,000</td>
+          </tr>
+          <tr>
+              <td><strong>Rent Agreement</strong><br /> <a href="https://example.com/rent-agreement.pdf">View PDF</a></td>
+              <td><strong>Police Verification</strong><br /><a href="https://example.com/police-verification.pdf">View PDF</a></td>
+              <td><strong>Possession Images</strong><br /><span>
+                <a href="https://via.placeholder.com/100x100.png?text=Image1">View Images</a>
+              </span></td>
+          </tr>
+        </table>
+
+        <h4>Rent Records</h4>
+        <table class="payment-table">
+          <tr>
+              <th>Payment Details</th>
+              <th>Remarks</th>
+              <th>Dues Amount</th>
+              <th>Paid Amount</th>
+              <th>Net Balance</th>
+          </tr>
+          <tr>
+              <td>Security Deposit Dues for Nov 2024</td>
+              <td>Received while adding tenant</td>
+              <td style="color: red;">₹ 5000.00</td>
+              <td style="color: green;">₹ 5000.00</td>
+              <td>00</td>
+          </tr>
+          <tr>
+            <td>Rent Dues for Nov 2024</td>
+            <td>Received on 5th of Dec</td>
+            <td style="color: red;">₹ 14000.00</td>
+            <td style="color: green;">₹ 14000.00</td>
+            <td>00</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Tax Records</h2>
+      <table class="payment-table">
+        <thead><tr><th>Year</th><th>Amount</th><th>Status</th><th>Paid On</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>2022</td>
+            <td>₹10,000</td>
+            <td><span class="badge paid">Paid</span></td>
+            <td>15 Apr 2023</td>
+          </tr>
+          <tr>
+            <td>2023</td>
+            <td>₹12,000</td>
+            <td><span class="badge unpaid">Unpaid</span></td>
+            <td>-</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="text-align: center; font-size: 11px; color: #999; margin-top: 50px;">
+      This dossier is system-generated and valid only if issued by the authorized property manager.<br>
+      Please retain for records and verification.
+    </div>
+
+    <div class="footer">
+      <p>Download our app</p>
+      <a href="https://play.google.com/store/apps/details?id=dummy.app.id" target="_blank">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Google_Play_Store_badge_EN.svg/512px-Google_Play_Store_badge_EN.svg.png" 
+             alt="Google Play" 
+             style="height: 30px; width: auto; margin-right: 10px;" />
+      </a>
+      <a href="https://apps.apple.com/us/app/dummy-app-id" target="_blank">
+        <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" 
+             alt="App Store" 
+             style="height: 30px; width: auto;" />
+      </a>
+  </div>
+  </div>
+</body>
+</html>

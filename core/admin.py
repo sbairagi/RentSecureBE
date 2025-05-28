@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import User, App, UserApp, AILog
-from simple_history.admin import SimpleHistoryAdmin
+from .models import User
+from .models import (SubscriptionPlan, UserSubscription, AddOnPurchase, PlanFeatureLimit, UsageLimit)
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -8,20 +8,31 @@ class UserAdmin(admin.ModelAdmin):
     search_fields = ('username', 'full_name', 'email', 'phone')
     list_filter = ('is_investor', 'is_staff', 'is_active')
 
-@admin.register(App)
-class AppAdmin(SimpleHistoryAdmin):
-    list_display = ('name', 'slug')
-    search_fields = ('name', 'slug')
+@admin.register(SubscriptionPlan)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ('name', 'monthly_price', 'yearly_price', 'is_active')
+    search_fields = ('name',)
+    readonly_fields = ('created_at', 'updated_at')
 
-@admin.register(UserApp)
-class UserAppAdmin(SimpleHistoryAdmin):
-    list_display = ('user', 'app', 'access_granted')
-    list_filter = ('access_granted',)
-    search_fields = ('user__username', 'app__name')
+@admin.register(UserSubscription)
+class UserSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'plan', 'start_date', 'end_date', 'is_active', 'is_yearly', 'tax_reminder_days_before', 'rent_reminder_days_before')
+    search_fields = ('user__username', 'plan__name', 'rent_reminder_days_before')
+    list_editable = ('tax_reminder_days_before',)
+    readonly_fields = ('created_at', 'updated_at',)
 
-# @admin.register(AILog)
-# class AILogAdmin(admin.ModelAdmin):
-#     list_display = ('user', 'app', 'prompt', 'response', 'timestamp')
-#     search_fields = ('user__username', 'app__name', 'prompt')
-#     list_filter = ('timestamp',)
-#     readonly_fields = ('timestamp',)
+@admin.register(AddOnPurchase)
+class AddOnPurchaseAdmin(admin.ModelAdmin):
+    list_display = ('user', 'name', 'amount', 'is_recurring', 'purchase_date')
+    search_fields = ('user__username', 'name')
+
+@admin.register(PlanFeatureLimit)
+class PlanFeatureLimitAdmin(admin.ModelAdmin):
+    list_display = ('plan', 'feature_key', 'value')
+    list_filter = ('feature_key',)
+    search_fields = ('plan__name', 'feature_key')
+
+@admin.register(UsageLimit)
+class UsageLimitAdmin(admin.ModelAdmin):
+    list_display = ('user', 'feature_key', 'usage_count', 'updated_at')
+    search_fields = ('user__username', 'feature_key')

@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-25n+2a!0)5v+2ju$6v=u0vi7q1s!pojfqvc3l-plkqt3u-jgy$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['192.168.1.2', 'localhost', '127.0.0.1']
 
 # Email details
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -39,9 +39,10 @@ EMAIL_HOST_PASSWORD = 'your-app-password'
 DEFAULT_FROM_EMAIL = 'Your Concierge <your@email.com>'
 
 # Twilio details
-TWILIO_ACCOUNT_SID = "your_account_sid"
-TWILIO_AUTH_TOKEN = "your_auth_token"
+TWILIO_ACCOUNT_SID = "<REDACTED_TWILIO_SID>"
+TWILIO_AUTH_TOKEN = "c287d560ab4791dab85aa41b582cb50c"
 TWILIO_WHATSAPP_NUMBER = "whatsapp:+14155238886"  # Twilio sandbox number
+TWILIO_PHONE_NUMBER = "+1234567890"
 
 
 # Application definition
@@ -61,6 +62,10 @@ INSTALLED_APPS = [
     #custome app
     'core',
     'wealth_concierge_platform',
+    'itr_filing_assistant',
+    'referral_and_earn',
+    'communication',
+    'file_generater'
 
 ]
 
@@ -132,10 +137,17 @@ REST_FRAMEWORK = {
     )
 }
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-rentsecure-cache",
+        "TIMEOUT": 300   # 5 min
+    }
+}
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=35),
 }
 
 FCM_DJANGO_SETTINGS = {

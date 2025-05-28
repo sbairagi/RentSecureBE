@@ -1,52 +1,44 @@
 from rest_framework import serializers
-# from django.contrib.auth import get_user_model
-from .models import App, UserApp, AILog
-
-from core.models import User
-# User = get_user_model()
+from .models import (SubscriptionPlan, UserSubscription, AddOnPurchase, PlanFeatureLimit, UsageLimit, User)
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'full_name', 'phone']
 
-class RegisterSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ("username", "email", "password", "full_name", "phone")
-        extra_kwargs = {
-            "password": {"write_only": True}
-        }
 
-    # def create(self, validated_data):
-    #     return User.objects.create_user(
-    #         username=validated_data["username"],
-    #         email=validated_data["email"],
-    #         full_name=validated_data.get("full_name", ""),
-    #         phone=validated_data.get("phone", ""),
-    #         password=validated_data["password"]
-    #     )
+
+class SubscriptionPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPlan
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+class UserSubscriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserSubscription
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
     def create(self, validated_data):
-        return User.objects.create_user(
-            username=validated_data["username"],
-            email=validated_data["email"],
-            full_name=validated_data.get("full_name", ""),
-            phone=validated_data.get("phone", ""),
-            password=validated_data["password"]  # this hashes automatically
-        )
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
 
-class AppSerializer(serializers.ModelSerializer):
+class AddOnPurchaseSerializer(serializers.ModelSerializer):
     class Meta:
-        model = App
-        fields = ['id', 'name', 'slug']
+        model = AddOnPurchase
+        fields = '__all__'
 
-class UserAppSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserApp
-        fields = ['user', 'app', 'access_granted']
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
 
-class AILogSerializer(serializers.ModelSerializer):
+class PlanFeatureLimitSerializer(serializers.ModelSerializer):
     class Meta:
-        model = AILog
-        fields = ['id', 'user', 'app', 'prompt', 'response', 'timestamp']
-        read_only_fields = ['user', 'timestamp']
+        model = PlanFeatureLimit
+        fields = '__all__'
+
+class UsageLimitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UsageLimit
+        fields = '__all__'

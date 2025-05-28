@@ -3,38 +3,108 @@ from django.db import models
 from simple_history.models import HistoricalRecords
 from django.conf import settings
 
+# User Models
 class User(AbstractUser):
     full_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=15, blank=True)
     is_investor = models.BooleanField(default=False)
+    is_phone_verified = models.BooleanField(default=False)
+    history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
 
     def __str__(self):
         return self.full_name
-
-class App(models.Model):
-    name = models.CharField(max_length=100)
-    slug = models.SlugField(unique=True)
-    history = HistoricalRecords(user_model=User)
-
-    def __str__(self):
-        return self.name
-
-class UserApp(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_app')
-    app = models.ForeignKey(App, on_delete=models.CASCADE)
-    access_granted = models.BooleanField(default=True)
+    
+class OTP(models.Model):
+    phone_number = models.CharField(max_length=15)
+    code = models.CharField(max_length=6)
+    referral_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
 
-    def __str__(self):
-        return f"{self.user__name} - {self.app__name}"
 
-class AILog(models.Model):
+   
+#  Subscription Models
+class SubscriptionPlan(models.Model):
+    PLAN_CHOICES = [
+        ('free', 'Free'),
+        ('pro', 'Pro'),
+        ('elite', 'Elite'),
+    ]
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=50, choices=PLAN_CHOICES, unique=True)
+    monthly_price = models.DecimalField(max_digits=10, decimal_places=2)
+    yearly_price = models.DecimalField(max_digits=10, decimal_places=2)
+    features = models.TextField(help_text="Comma-separated list or rich description")
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name.capitalize()
+    
+class UserSubscription(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='usersubscription')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True)
+    start_date = models.DateField(auto_now_add=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    is_yearly = models.BooleanField(default=False)
+    tax_reminder_days_before = models.PositiveIntegerField(default=7, help_text="Days before tax due date to send reminder")
+    rent_reminder_days_before = models.PositiveIntegerField(default=7, help_text="Days before rent due date to send reminder")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.plan.name}"
+
+class AddOnPurchase(models.Model):
+    FEATURE_CHOICES = [
+        ('max_buildings', 'Max Buildings'),
+        ('max_units', 'Max Units'),
+        ('max_renters', 'Max Renters per Unit'),
+        ('max_caretakers', 'Max Caretakers per Unit'),
+        ('max_unit_images', 'Max Unit Images'),
+        ('max_document_uploads', 'Max Document Uploads per Unit'),
+        ('tax_notifications', 'Tax Notifications'),
+        ('whatsapp_alerts', 'WhatsApp Alerts'),
+        ('rent_agreement_drafting', 'Rent Agreement Drafting'),
+        ('export_pdf_dossier', 'Export PDF Dossier'),
+    ]
+    id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    app = models.ForeignKey(App, on_delete=models.CASCADE)
-    prompt = models.TextField()
-    response = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
-    history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
+    name = models.CharField(max_length=50, choices=FEATURE_CHOICES)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    is_recurring = models.BooleanField(default=False)
+    purchase_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.app__name} from {self.user__name} prompt : {self.prompt}"
+        return f"{self.name} - {self.user.username}"
+    
+class PlanFeatureLimit(models.Model):
+    id = models.AutoField(primary_key=True)
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, related_name='limits')
+    feature_key = models.CharField(max_length=50, choices=AddOnPurchase.FEATURE_CHOICES)
+    value = models.CharField(max_length=20)  # store int or 'unlimited' or 'yes/no'
+
+    class Meta:
+        unique_together = ('plan', 'feature_key')
+
+    def __str__(self):
+        return f"{self.plan.name} - {self.feature_key}: {self.value}"
+    
+class UsageLimit(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='usage_limits')
+    feature_key = models.CharField(max_length=50, choices=AddOnPurchase.FEATURE_CHOICES)
+    usage_count = models.IntegerField(default=0)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'feature_key')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.feature_key}: {self.usage_count}"
+    

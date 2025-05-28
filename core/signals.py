@@ -2,7 +2,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from core.models import User
-from wealth_concierge_platform.models import SubscriptionPlan, UserSubscription
+from .models import SubscriptionPlan, UserSubscription
 
 @receiver(post_save, sender=User)
 def assign_default_plan(sender, instance, created, **kwargs):

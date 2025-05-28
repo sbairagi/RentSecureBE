@@ -21,6 +21,7 @@ Django==5.2.1
 django-simple-history==3.8.0
 djangorestframework==3.16.0
 djangorestframework_simplejwt==5.5.0
+et_xmlfile==2.0.0
 executing==2.2.0
 fcm-django==2.2.1
 firebase-admin==6.8.0
@@ -51,6 +52,7 @@ matplotlib-inline==0.1.7
 msgpack==1.1.0
 multidict==6.4.4
 nest-asyncio==1.6.0
+openpyxl==3.1.5
 packaging==25.0
 parso==0.8.4
 pexpect==4.9.0

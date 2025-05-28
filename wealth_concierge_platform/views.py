@@ -1,301 +1,387 @@
-from rest_framework import viewsets, permissions
-from django.template.loader import render_to_string
-from django.http import HttpResponse
-from weasyprint import HTML
-from django.utils.timezone import now
-from django.shortcuts import get_object_or_404
-from io import BytesIO
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.exceptions import NotFound
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import (
-    PropertyTaxRecord, SubscriptionPlan, UserSubscription,
-    AddOnPurchase, PlanFeatureLimit, UsageLimit,
-    RentAgreementDraft, PDFExportRecord,
-    PropertyImage, PropertyDocument,
-    Property, Caretaker, Renter, RentRecord
-)
-from .serializers import (
-    PropertyTaxRecordSerializer, SubscriptionPlanSerializer, UserSubscriptionSerializer,
-    AddOnPurchaseSerializer, PlanFeatureLimitSerializer, UsageLimitSerializer,
-    RentAgreementDraftSerializer, PDFExportRecordSerializer,
-    PropertyImageSerializer, PropertyDocumentSerializer, PropertySerializer, 
-    CaretakerSerializer, RenterSerializer, RentRecordSerializer
-)
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from .models import ( RentAgreementDraft, UnitImage, UnitDocument, Unit, 
+                     Caretaker, Renter, RentRecord, Building )
+from .serializers import ( RentAgreementDraftSerializer, UnitImageSerializer, 
+                          UnitDocumentSerializer, UnitSerializer, CaretakerSerializer, RenterSerializer, 
+                          RentRecordSerializer, BuildingSerializer )
+from django.core.cache import cache
+from .feature_enforcer import FeatureEnforcer
 
-class IsOwnerOrReadOnly(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        return obj.user == request.user
-
-
-class PropertyViewSet(viewsets.ModelViewSet):
-    serializer_class = PropertySerializer
-    queryset = Property.objects.all()
-
-    def get_queryset(self):
-        return Property.objects.filter(owner=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
-
-class CaretakerViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = Caretaker.objects.all()
-    serializer_class = CaretakerSerializer
-
-
-class RenterViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = Renter.objects.all()
-    serializer_class = RenterSerializer
-
-
-class RentRecordViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = RentRecord.objects.all()
-    serializer_class = RentRecordSerializer
-
-
-class PropertyTaxRecordViewSet(viewsets.ModelViewSet):
-    queryset = PropertyTaxRecord.objects.all()
-    serializer_class = PropertyTaxRecordSerializer
-    permission_classes = [permissions.IsAuthenticated]
+class BuildingViewSet(viewsets.ModelViewSet):
+    serializer_class = BuildingSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        # Return only tax records of properties owned by the user
-        return PropertyTaxRecord.objects.filter(property__owner=user)
+        cache_key = f"buildings_user_{user.id}"
+        enforcer = FeatureEnforcer(user)
 
+        buildings = cache.get(cache_key)
+        if buildings is None:
+            buildings = Building.objects.filter(owner=user)
+            cache.set(cache_key, buildings, timeout=300)
+
+        if enforcer.is_expired() and enforcer.is_past_grace_period():
+            # Free plan active, show only allowed active buildings
+            free_limit = enforcer.get_free_plan_limit('max_buildings')
+            return buildings.filter(is_archived=False)[:free_limit]
+
+        return buildings
+
+    
     def perform_create(self, serializer):
-        serializer.save()
+        user = self.request.user
+        enforcer = FeatureEnforcer(user)
+
+        current_buildings = Building.objects.filter(owner=user).count()
+        try:
+            enforcer.check_limit('max_buildings', current_buildings)
+        except ValidationError as e:
+            raise ValidationError({"detail": str(e)})
+
+        serializer.save(owner=user)
+        enforcer.increment('max_buildings')
+        cache.delete(f"buildings_user_{user.id}")
 
     def perform_update(self, serializer):
+        if serializer.instance.owner != self.request.user:
+            raise PermissionDenied("You do not have permission to update this building.")
         serializer.save()
+        cache.delete(f"buildings_user_{self.request.user.id}")
 
+    def perform_destroy(self, instance):
+        if instance.owner != self.request.user:
+            raise PermissionDenied("You do not have permission to delete this building.")
+        enforcer = FeatureEnforcer(self.request.user)
+        instance.delete()
+        enforcer.decrement('max_buildings')
+        cache.delete(f"buildings_user_{self.request.user.id}")
 
-
-
-
-
-# Records owned by a user
-class PropertyTaxRecordViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = PropertyTaxRecordSerializer
-    queryset = PropertyTaxRecord.objects.all()
-
-    def get_queryset(self):
-        return PropertyTaxRecord.objects.filter(property__owner=self.request.user)
-
-class UserSubscriptionViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UserSubscriptionSerializer
-    queryset = UserSubscription.objects.all()
+class UnitViewSet(viewsets.ModelViewSet):
+    serializer_class = UnitSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return UserSubscription.objects.filter(user=self.request.user)
+        user = self.request.user
+        cache_key = f'units_user_{user.id}'
+        enforcer = FeatureEnforcer(user)
+
+        units = cache.get(cache_key)
+        if units is None:
+            units = Unit.objects.filter(owner=user)
+            cache.set(cache_key, units, timeout=300)
+
+        if enforcer.is_expired() and enforcer.is_past_grace_period():
+            free_limit = enforcer.get_free_plan_limit('max_units')  # Assuming this is correct key
+            return units.filter(is_archived=False)[:free_limit]
+
+        return units
+
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-class AddOnPurchaseViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = AddOnPurchaseSerializer
-    queryset = AddOnPurchase.objects.all()
-
-    def get_queryset(self):
-        return AddOnPurchase.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UsageLimitSerializer
-    queryset = UsageLimit.objects.all()
-
-    def get_queryset(self):
-        return UsageLimit.objects.filter(user=self.request.user)
-
-class RentAgreementDraftViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = RentAgreementDraftSerializer
-    queryset = RentAgreementDraft.objects.all()
-
-    def get_queryset(self):
-        return RentAgreementDraft.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-class PDFExportRecordViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = PDFExportRecordSerializer
-    queryset = PDFExportRecord.objects.all()
-
-    def get_queryset(self):
-        return PDFExportRecord.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-class PropertyImageViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = PropertyImageSerializer
-    queryset = PropertyImage.objects.all()
-
-    def get_queryset(self):
-        return PropertyImage.objects.filter(property__owner=self.request.user)
-
-class PropertyDocumentViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = PropertyDocumentSerializer
-    queryset = PropertyDocument.objects.all()
-
-    def get_queryset(self):
-        return PropertyDocument.objects.filter(property__owner=self.request.user)
-
-# Global Plans & Limits (public for listing)
-class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = SubscriptionPlan.objects.filter(is_active=True)
-    serializer_class = SubscriptionPlanSerializer
-
-class PlanFeatureLimitViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = PlanFeatureLimit.objects.all()
-    serializer_class = PlanFeatureLimitSerializer
-
-# class PropertyTaxRecordViewSet(viewsets.ModelViewSet):
-#     queryset = PropertyTaxRecord.objects.all()
-#     serializer_class = PropertyTaxRecordSerializer
-#     permission_classes = [IsAuthenticated]
-
-# class SubscriptionPlanViewSet(viewsets.ModelViewSet):
-#     queryset = SubscriptionPlan.objects.all()
-#     serializer_class = SubscriptionPlanSerializer
-#     permission_classes = [IsAuthenticated]
-
-# class UserSubscriptionViewSet(viewsets.ModelViewSet):
-#     queryset = UserSubscription.objects.all()
-#     serializer_class = UserSubscriptionSerializer
-#     permission_classes = [IsAuthenticated]
-
-# class AddOnPurchaseViewSet(viewsets.ModelViewSet):
-#     queryset = AddOnPurchase.objects.all()
-#     serializer_class = AddOnPurchaseSerializer
-#     permission_classes = [IsAuthenticated]
-
-# class PlanFeatureLimitViewSet(viewsets.ModelViewSet):
-#     queryset = PlanFeatureLimit.objects.all()
-#     serializer_class = PlanFeatureLimitSerializer
-#     permission_classes = [IsAuthenticated]
-
-# class UsageLimitViewSet(viewsets.ModelViewSet):
-#     queryset = UsageLimit.objects.all()
-#     serializer_class = UsageLimitSerializer
-#     permission_classes = [IsAuthenticated]
-
-# class RentAgreementDraftViewSet(viewsets.ModelViewSet):
-#     queryset = RentAgreementDraft.objects.all()
-#     serializer_class = RentAgreementDraftSerializer
-#     permission_classes = [IsAuthenticated]
-
-# class PDFExportRecordViewSet(viewsets.ModelViewSet):
-#     queryset = PDFExportRecord.objects.all()
-#     serializer_class = PDFExportRecordSerializer
-#     permission_classes = [IsAuthenticated]
-
-# class PropertyImageViewSet(viewsets.ModelViewSet):
-#     queryset = PropertyImage.objects.all()
-#     serializer_class = PropertyImageSerializer
-#     permission_classes = [IsAuthenticated]
-
-# class PropertyDocumentViewSet(viewsets.ModelViewSet):
-#     queryset = PropertyDocument.objects.all()
-#     serializer_class = PropertyDocumentSerializer
-#     permission_classes = [IsAuthenticated]
-
-
-class GenerateRentAgreementPdfViewSet(viewsets.ViewSet):
-    queryset = Renter.objects.all()
-
-    @action(detail=True, methods=['get'], url_path='generate-rent-agreement-pdf')
-    def generate_rent_agreement_pdf(self, request, pk=None):
-        try:
-            renter = Renter.objects.select_related('property', 'property__owner').get(pk=pk)
-        except Renter.DoesNotExist:
-            return Response({'detail': 'Renter not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        html_string = render_to_string('rent_agreement_template.html', {
-            'renter': renter,
-            'property': renter.property,
-            'owner': renter.property.owner,
-            'today_date': now().date()
-        })
-
-        pdf_file = HTML(string=html_string).write_pdf()
-
-        response = HttpResponse(pdf_file, content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename=rent_agreement_{renter.id}.pdf'
-        return response
-
-class GeneratePropertyDossierPdfViewSet(viewsets.ViewSet):
-    @action(detail=True, methods=['get'], url_path='generate-dossier-pdf')
-    def generate_dossier_pdf(self, request, pk=None):
-        # Get property or return 404
-        property_obj = get_object_or_404(Property, pk=pk)
+        enforcer = FeatureEnforcer(self.request.user)
+        if not enforcer.can_create('max_units'):
+            raise PermissionDenied("Unit creation limit reached for your plan.")
         
-        # Get related data
-        caretakers = property_obj.caretakers.all()
-        renters = property_obj.renters.all()
-        taxes = getattr(property_obj, 'tax_records', None)
-        if taxes is None:
-            taxes = []
+        serializer.save(owner=self.request.user)
+        enforcer.increment('max_units')
+        cache.delete(f'units_user_{self.request.user.id}')
 
-        context = {
-            'property': property_obj,
-            'caretakers': caretakers,
-            'renters': renters,
-            'taxes': taxes,
-        }
+    def perform_update(self, serializer):
+        if serializer.instance.owner != self.request.user:
+            raise PermissionDenied("You do not have permission to update this unit.")
+        serializer.save()
+        cache.delete(f'units_user_{self.request.user.id}')
 
-        # Render HTML from template
-        html_string = render_to_string('property_dossier_template.html', context)
+    def perform_destroy(self, instance):
+        if instance.owner != self.request.user:
+            raise PermissionDenied("You do not have permission to delete this unit.")
+        enforcer = FeatureEnforcer(self.request.user)
+        instance.delete()
+        enforcer.decrement('max_units')
+        cache.delete(f'units_user_{self.request.user.id}')
 
-        try:
-            pdf_file = BytesIO()
-            HTML(string=html_string).write_pdf(pdf_file)
-        except Exception as e:
-            return Response(
-                {"error": "Failed to generate PDF", "details": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+class CaretakerViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CaretakerSerializer
 
-        response = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename=property_dossier_{pk}.pdf'
-        return response
+    def get_queryset(self):
+        cache_key = f'caretakers_user_{self.request.user.id}'
+        caretakers = cache.get(cache_key)
+        if caretakers is None:
+            caretakers = Caretaker.objects.filter(unit__owner=self.request.user)
+            cache.set(cache_key, caretakers, timeout=300)
+        return caretakers
 
-class GenerateRentReceiptPdfViewSet(viewsets.ModelViewSet):
-    queryset = RentRecord.objects.all()
+    def perform_create(self, serializer):
+        unit = serializer.validated_data.get('unit')
+        if not unit or unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+
+        enforcer = FeatureEnforcer(self.request.user)
+        if not enforcer.can_create('max_caretakers'):
+            raise PermissionDenied("Caretaker limit reached for your plan.")
+
+        serializer.save()
+        enforcer.increment('max_caretakers')
+        cache.delete(f'caretakers_user_{self.request.user.id}')
+
+
+    def perform_update(self, serializer):
+        unit = serializer.validated_data.get('unit') or serializer.instance.unit
+        if unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+        serializer.save()
+        cache.delete(f'caretakers_user_{self.request.user.id}')
+
+    def perform_destroy(self, instance):
+        if instance.unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+        enforcer = FeatureEnforcer(self.request.user)
+        instance.delete()
+        enforcer.decrement('max_caretakers')
+        cache.delete(f'caretakers_user_{self.request.user.id}')
+
+class RenterViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = RenterSerializer
+
+    def get_queryset(self):
+        cache_key = f'renters_user_{self.request.user.id}'
+        renters = cache.get(cache_key)
+        if renters is None:
+            renters = Renter.objects.filter(unit__owner=self.request.user)
+            cache.set(cache_key, renters, timeout=300)
+        return renters
+
+    def perform_create(self, serializer):
+        unit = serializer.validated_data.get('unit')
+        if not unit or unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+
+        enforcer = FeatureEnforcer(self.request.user)
+        if not enforcer.can_create('max_renters'):
+            raise PermissionDenied("Renter limit reached for your plan.")
+
+        serializer.save()
+        enforcer.increment('max_renters')
+        cache.delete(f'renters_user_{self.request.user.id}')
+
+
+    def perform_update(self, serializer):
+        unit = serializer.validated_data.get('unit') or serializer.instance.unit
+        if unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+        serializer.save()
+        cache.delete(f'renters_user_{self.request.user.id}')
+
+    def perform_destroy(self, instance):
+        if instance.unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+        enforcer = FeatureEnforcer(self.request.user)
+        instance.delete()
+        enforcer.decrement('max_renters')
+        cache.delete(f'renters_user_{self.request.user.id}')
+
+class RentRecordViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
     serializer_class = RentRecordSerializer
 
-    @action(detail=True, methods=['get'], url_path='pdf_receipt')
-    def pdf_receipt(self, request, pk=None):
-        try:
-            rent_record = self.get_object()
-        except NotFound:
-            return Response(
-                {"error": "Rent record not found."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+    def get_queryset(self):
+        user = self.request.user
+        cache_key = f'rent_records_user_{user.id}'
+        rent_records = cache.get(cache_key)
+        if rent_records is None:
+            rent_records = RentRecord.objects.filter(unit__owner=user).select_related('unit', 'renter')
+            cache.set(cache_key, rent_records, timeout=300)
+        return rent_records
 
-        html_string = render_to_string('rent_receipt.html', {'rent_record': rent_record})
-        html = HTML(string=html_string)
-        pdf_file = html.write_pdf()
+    def perform_create(self, serializer):
+        unit = serializer.validated_data.get('unit')
+        renter = serializer.validated_data.get('renter')
+        user = self.request.user
 
-        response = HttpResponse(pdf_file, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename=rent_receipt_{rent_record.id}.pdf'
-        return response
-    
+        if unit.owner != user:
+            raise PermissionDenied("You do not own this unit.")
+        if renter.unit != unit:
+            raise ValidationError("Renter does not belong to the selected unit.")
+        if RentRecord.objects.filter(renter=renter, rent_month=serializer.validated_data.get('rent_month')).exists():
+            raise ValidationError("Rent record for this month already exists.")
 
+        # OPTIONAL: enforce if limit exists
+        enforcer = FeatureEnforcer(user)
+        if not enforcer.can_create("rent_records"):
+            raise PermissionDenied("You have reached your rent record creation limit.")
+        serializer.save()
+        enforcer.increment("rent_records")
+        cache.delete(f'rent_records_user_{user.id}')
+
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        user = self.request.user
+
+        if instance.unit.owner != user:
+            raise PermissionDenied("You do not own this unit.")
+
+        new_unit = serializer.validated_data.get('unit', instance.unit)
+        new_renter = serializer.validated_data.get('renter', instance.renter)
+
+        if new_unit.owner != user:
+            raise PermissionDenied("You do not own the selected unit.")
+
+        if new_renter.unit != new_unit:
+            raise ValidationError("Renter does not belong to the selected unit.")
+
+        serializer.save()
+        cache.delete(f'rent_records_user_{user.id}')
+
+    def perform_destroy(self, instance):
+        if instance.unit.owner != self.request.user:
+            raise PermissionDenied("You do not own this rent record.")
+        enforcer = FeatureEnforcer(self.request.user)
+        instance.delete()
+        enforcer.decrement('rent_records')
+        cache.delete(f'rent_records_user_{self.request.user.id}')
+
+
+class UnitImageViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UnitImageSerializer
+
+    def get_queryset(self):
+        cache_key = f'unit_images_user_{self.request.user.id}'
+        images = cache.get(cache_key)
+        if images is None:
+            images = UnitImage.objects.filter(unit__owner=self.request.user)
+            cache.set(cache_key, images, timeout=300)
+        return images
+
+    def perform_create(self, serializer):
+        unit = serializer.validated_data.get('unit')
+        if not unit or unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+
+        enforcer = FeatureEnforcer(self.request.user)
+        if not enforcer.can_create("unit_images"):
+            raise PermissionDenied("You have reached your image upload limit.")
+
+        serializer.save()
+        enforcer.increment("unit_images")
+        cache.delete(f'unit_images_user_{self.request.user.id}')
+
+
+    def perform_update(self, serializer):
+        unit = serializer.validated_data.get('unit') or serializer.instance.unit
+        if unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+        serializer.save()
+        cache.delete(f'unit_images_user_{self.request.user.id}')
+
+    def perform_destroy(self, instance):
+        if instance.unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+        enforcer = FeatureEnforcer(self.request.user)
+        instance.delete()
+        enforcer.decrement('unit_images')
+        cache.delete(f'unit_images_user_{self.request.user.id}')
+
+
+class UnitDocumentViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UnitDocumentSerializer
+
+    def get_queryset(self):
+        cache_key = f'unit_docs_user_{self.request.user.id}'
+        docs = cache.get(cache_key)
+        if docs is None:
+            docs = UnitDocument.objects.filter(unit__owner=self.request.user)
+            cache.set(cache_key, docs, timeout=300)
+        return docs
+
+    def perform_create(self, serializer):
+        unit = serializer.validated_data.get('unit')
+        if not unit or unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+
+        enforcer = FeatureEnforcer(self.request.user)
+        if not enforcer.can_create("unit_documents"):
+            raise PermissionDenied("You have reached your document upload limit.")
+
+        serializer.save()
+        enforcer.increment("unit_documents")
+        cache.delete(f'unit_docs_user_{self.request.user.id}')
+
+
+    def perform_update(self, serializer):
+        unit = serializer.validated_data.get('unit') or serializer.instance.unit
+        if unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+        serializer.save()
+        cache.delete(f'unit_docs_user_{self.request.user.id}')
+
+    def perform_destroy(self, instance):
+        if instance.unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+        enforcer = FeatureEnforcer(self.request.user)
+        instance.delete()
+        enforcer.decrement('unit_documents')
+        cache.delete(f'unit_docs_user_{self.request.user.id}')
+
+
+class RentAgreementDraftViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = RentAgreementDraftSerializer
+
+    def get_queryset(self):
+        cache_key = f'rent_drafts_user_{self.request.user.id}'
+        drafts = cache.get(cache_key)
+        if drafts is None:
+            drafts = RentAgreementDraft.objects.filter(user=self.request.user)
+            cache.set(cache_key, drafts, timeout=300)
+        return drafts
+
+    def perform_create(self, serializer):
+        enforcer = FeatureEnforcer(self.request.user)
+
+        renter = serializer.validated_data.get('renter')
+        unit = serializer.validated_data.get('unit')
+
+        if not enforcer.can_create("rent_agreement_drafts"):
+            raise PermissionDenied("You have reached your draft creation limit.")
+
+        if unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+        if renter.unit != unit:
+            raise PermissionDenied("Renter does not belong to this unit.")
+
+        serializer.save(user=self.request.user)
+        enforcer.increment("rent_agreement_drafts")
+        cache.delete(f'rent_drafts_user_{self.request.user.id}')
+        
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        if instance.user != self.request.user:
+            raise PermissionDenied("You do not own this draft.")
+
+        unit = serializer.validated_data.get('unit', instance.unit)
+        renter = serializer.validated_data.get('renter', instance.renter)
+
+        if unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+        if renter.unit != unit:
+            raise PermissionDenied("Renter does not belong to this unit.")
+
+        serializer.save()
+        cache.delete(f'rent_drafts_user_{self.request.user.id}')
+
+    def perform_destroy(self, instance):
+        if instance.user != self.request.user:
+            raise PermissionDenied("You do not own this draft.")
+        enforcer = FeatureEnforcer(self.request.user)
+        instance.delete()
+        enforcer.decrement('rent_agreement_drafts')
+        cache.delete(f'rent_drafts_user_{self.request.user.id}')

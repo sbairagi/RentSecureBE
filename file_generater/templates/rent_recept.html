@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rent Receipt</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      font-size: small;
+    }
+    .container {
+      width: 800px;
+      margin: 20px auto;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      background-color: #024fcf;
+      color: white;
+      padding: 20px;
+      border-radius: 8px 8px 0 0;
+    }
+    .header img {
+      width: 60px;
+      height: 60px;
+      margin-right: 20px;
+    }
+    .info-table, .payment-table, .summary, .terms {
+      width: 100%;
+      margin-top: 20px;
+      margin-bottom: 20px;
+      border-collapse: collapse;
+    }
+    .info-table td, .payment-table td, .payment-table th, .summary td {
+      padding: 8px;
+      border: 1px solid #ccc;
+    }
+    .payment-table th {
+      background-color: #024fcf;
+      color: white;
+    }
+    .terms {
+      font-size: 14px;
+    }
+    .terms ul {
+      padding-left: 20px;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      background-color: #024fcf;
+      border-radius: 0 0 8px 8px;
+      padding: 10px;
+      color: white;
+    }
+    .footer img {
+      width: 120px;
+      margin: 0 10px;
+    }
+    h1, h2, h3, h4 {
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    a {
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+    <img class="logo" src="https://dummyimage.com/60x60/000/fff&text=W" alt="Logo" />
+    <div>
+        <h2>Weath Concierge</h2>
+        <p>Pune Maharashtra - 411014</p>
+    </div>
+    </div>
+    <table class="info-table">
+    <tr>
+        <td><strong>Payee Name</strong><br />Shubham Bairagi</td>
+        <td><strong>GST No</strong><br />-</td>
+        <td><strong>Unit Name</strong><br />flate_no_204</td>
+        <td><strong>Admin Name</strong><br />-</td>
+    </tr>
+    <tr>
+        <td><strong>Contact No</strong><br /><a href="tel:9012345678">📞 9012345678</a></td>
+        <td><strong>Admin No</strong><br /><a href="tel:9012345678">📞 9012345678</a></td>
+        <td colspan="2"><strong>Fixed Rent</strong><br />₹ 14000</td>
+    </tr>
+    </table>
+    <div style="display: flex; justify-content: space-between;">
+        <span><strong>Receipt No:</strong> 1732295990510</span>
+        <span><strong>Payment timestamp:</strong> 05 Oct 2024 | 00:00:00</span>
+    </div>
+    <table class="payment-table">
+    <tr>
+        <th>Payment Details</th>
+        <th>Remarks</th>
+        <th>Dues Amount</th>
+        <th>Paid Amount</th>
+        <th>Net Balance</th>
+    </tr>
+    <tr>
+        <td>Security Deposit Dues for Nov 2024</td>
+        <td>Received while adding tenant</td>
+        <td style="color: red;">₹ 5000.00</td>
+        <td style="color: green;">₹ 5000.00</td>
+        <td>-</td>
+    </tr>
+    </table>
+    <table class="summary">
+    <tr>
+        <td><strong>Amount paid by tenant</strong></td>
+        <td>₹ 5000.00</td>
+    </tr>
+    <tr>
+        <td><strong>GRAND TOTAL</strong></td>
+        <td><strong>₹ 5000.00</strong></td>
+    </tr>
+    <tr>
+        <td colspan="2">Recorded by Abid Ali (Manager)</td>
+    </tr>
+    <tr>
+        <td colspan="2"><strong>Payment mode :</strong> Phone pe</td>
+    </tr>
+    </table>
+    <p><strong>This is a computer generated invoice issued by Owner Name through Weath Concierge. It does not require any 
+        signatures.</strong></p>
+    <div class="terms">
+    <h3>Terms & Conditions</h3>
+    <ul>
+        <li>This is an acknowledge receipt of the payment made by the tenant through whatsoever mode of payment for the 
+            corresponding services.</li>
+        <li>In case of failed online payments for whatsoever reason this receipt will be Null & Void.</li>
+        <li>No refund and/or discounts will ever be entertained against this receipt.</li>
+    </ul>
+    </div>
+    <div class="footer">
+        <p>Download our app</p>
+        <a href="https://play.google.com/store/apps/details?id=dummy.app.id" target="_blank">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Google_Play_Store_badge_EN.svg/512px-Google_Play_Store_badge_EN.svg.png" 
+               alt="Google Play" 
+               style="height: 30px; width: auto; margin-right: 10px;" />
+        </a>
+        <a href="https://apps.apple.com/us/app/dummy-app-id" target="_blank">
+          <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" 
+               alt="App Store" 
+               style="height: 30px; width: auto;" />
+        </a>
+    </div>
+  </div>
+</body>
+</html>

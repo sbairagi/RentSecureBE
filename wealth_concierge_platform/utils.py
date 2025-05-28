@@ -1,5 +1,11 @@
-from wealth_concierge_platform.models import UsageLimit, UserSubscription, Property
+from core.models import UsageLimit, UserSubscription, PlanFeatureLimit, AddOnPurchase
+from wealth_concierge_platform.models import Unit
 from rest_framework.exceptions import PermissionDenied
+from django.db import transaction
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+from django.db.models import Sum
+import hashlib
 
 def get_plan_limit(user, feature_key):
     try:
@@ -27,10 +33,10 @@ def update_usage_count(user, feature_key, model_class):
     if not user.is_authenticated:
         return
 
-    if model_class == Property:
+    if model_class == Unit:
         count = model_class.objects.filter(owner=user).count()
     else:
-        count = model_class.objects.filter(property__owner=user).count()
+        count = model_class.objects.filter(unit__owner=user).count()
 
     usage_limit, _ = UsageLimit.objects.get_or_create(user=user, feature_key=feature_key)
     usage_limit.usage_count = count
@@ -67,3 +73,106 @@ def enforce_limit(user, feature_key):
 
     if current_usage >= int(allowed_value):
         raise PermissionDenied(f"Feature limit exceeded for {feature_key}: allowed {allowed_value}, used {current_usage}.")
+    
+
+def generate_file_hash(file):
+    """Generate SHA256 hash for uploaded file content"""
+    hash_sha256 = hashlib.sha256()
+    for chunk in file.chunks():
+        hash_sha256.update(chunk)
+    return hash_sha256.hexdigest()
+
+
+def get_feature_limit(user, feature_key):
+    # Check Add-on Usage Limit first
+    from .models import PlanFeatureLimit
+    addon = UsageLimit.objects.filter(user=user, feature_key=feature_key).first()
+    if addon:
+        return int(addon.usage_count)
+
+    # Fallback to plan limits
+    plan = user.usersubscription.plan
+    plan_limit = PlanFeatureLimit.objects.filter(plan=plan, feature_key=feature_key).first()
+    if not plan_limit:
+        return 0
+    return float('inf') if plan_limit.value == 'unlimited' else int(plan_limit.value)
+
+
+def get_limit_for_source(source, feature_key):
+    if isinstance(source, UserSubscription):
+        return PlanFeatureLimit.objects.get(plan=source.plan, feature_key=feature_key).value
+    elif isinstance(source, AddOnPurchase):
+        return source.features.get(feature_key, 0)  # assume dict field
+    return 0
+
+
+def get_used_units(user, feature_key, source):
+    filters = {
+        'user': user,
+        'feature_key': feature_key,
+    }
+
+    if isinstance(source, UserSubscription):
+        filters['user_subscription'] = source
+    else:
+        filters['addon_purchase'] = source
+
+    return UsageLimit.objects.filter(**filters).aggregate(total=Sum('used_units'))['total'] or 0
+
+
+
+def deduct_feature_usage_with_priority(user, feature_key, units_to_deduct=1):
+    """
+    Deducts feature usage by scanning active subscriptions and addons
+    in priority order. Raises error if usage can't be fulfilled.
+    """
+
+    now = timezone.now()
+
+    # 1. Get active user subscriptions ordered by expiry date
+    active_subs = UserSubscription.objects.filter(
+        user=user,
+        is_active=True,
+        end_date__gt=now
+    ).order_by('end_date')
+
+    # 2. Get active addon purchases ordered by creation
+    active_addons = AddOnPurchase.objects.filter(
+        user=user,
+        is_active=True,
+        expires_at__gt=now
+    ).order_by('created_at')
+
+    # 3. Merge both into a single priority queue
+    usage_sources = list(active_subs) + list(active_addons)
+
+    units_remaining = units_to_deduct
+
+    with transaction.atomic():
+        for source in usage_sources:
+            limit = get_limit_for_source(source, feature_key)
+            used = get_used_units(user, feature_key, source)
+
+            available = limit - used
+            if available <= 0:
+                continue  # skip this source
+
+            deduct = min(available, units_remaining)
+
+            # Record usage
+            UsageLimit.objects.create(
+                user=user,
+                feature_key=feature_key,
+                used_units=deduct,
+                user_subscription=source if isinstance(source, UserSubscription) else None,
+                addon_purchase=source if isinstance(source, AddOnPurchase) else None,
+            )
+
+            units_remaining -= deduct
+
+            if units_remaining <= 0:
+                break  # all done
+
+    if units_remaining > 0:
+        raise ValidationError(f"Not enough available units for feature: {feature_key}")
+
