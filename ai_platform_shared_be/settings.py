@@ -44,6 +44,33 @@ TWILIO_AUTH_TOKEN = "c287d560ab4791dab85aa41b582cb50c"
 TWILIO_WHATSAPP_NUMBER = "whatsapp:+14155238886"  # Twilio sandbox number
 TWILIO_PHONE_NUMBER = "+1234567890"
 
+# Cashfree Payment Intigration
+CASHFREE_CLIENT_ID="your_sandbox_client_id"
+CASHFREE_CLIENT_SECRET="your_sandbox_client_secret"
+CASHFREE_PAYOUT_BASE_TEST_URL="https://payout-gamma.cashfree.com"
+CASHFREE_PAYOUT_BASE_URL= "https://payout-api.cashfree.com"
+
+RAZORPAY_KEY_ID="your_key"
+RAZORPAY_KEY_SECRET="your_secret"
+
+OPENAI_API_KEY = "sk-..."
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+}
+
+
 
 # Application definition
 

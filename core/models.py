@@ -9,18 +9,39 @@ class User(AbstractUser):
     phone = models.CharField(max_length=15, blank=True)
     is_investor = models.BooleanField(default=False)
     is_phone_verified = models.BooleanField(default=False)
+    whatsapp_number = models.CharField(max_length=15, help_text="Include country code, e.g. +91xxxxxxxxxx")
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
 
     def __str__(self):
         return self.full_name
     
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    whatsapp_number = models.CharField(max_length=15, help_text="Include country code, e.g. +91xxxxxxxxxx")
+    whatsapp_opt_in = models.BooleanField(default=True)
+    language_preference = models.CharField(default="en", choices=[("en", "English"), ("hi", "Hindi")])
+
+
 class OTP(models.Model):
     phone_number = models.CharField(max_length=15)
     code = models.CharField(max_length=6)
     referral_code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
 
+
+# models.py
+
+class OwnerBankDetails(models.Model):
+    owner = models.OneToOneField(User, on_delete=models.CASCADE)  # or PropertyOwner if you have that
+    bank_account_number = models.CharField(max_length=30)
+    ifsc_code = models.CharField(max_length=20)
+    beneficiary_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    bank_account_verified = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.owner.username} - {self.bank_account_number}"
 
    
 #  Subscription Models

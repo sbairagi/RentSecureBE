@@ -26,6 +26,8 @@ urlpatterns = [
     path("itr_filing_assistant/", include("itr_filing_assistant.urls")),
     path("communication/", include("communication.urls")),
     path("file-generater/", include("file_generater.urls")),
+    path("dashboard/", include("dashboard.urls")),
+    
 ]
 
 

@@ -1,3 +1,6 @@
+from ai_assistant.services.rent_notify_service import send_payout_notification
+from ai_assistant.services.voice_note_service import generate_voice_note
+from ai_assistant.services.whatsapp_service import send_whatsapp_audio
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -152,7 +155,7 @@ class RenterViewSet(viewsets.ModelViewSet):
         cache_key = f'renters_user_{self.request.user.id}'
         renters = cache.get(cache_key)
         if renters is None:
-            renters = Renter.objects.filter(unit__owner=self.request.user)
+            renters = Renter.objects.filter(unit__owner=self.request.user, status__in=["active", "notice_period"])
             cache.set(cache_key, renters, timeout=300)
         return renters
 
@@ -185,6 +188,9 @@ class RenterViewSet(viewsets.ModelViewSet):
         enforcer.decrement('max_renters')
         cache.delete(f'renters_user_{self.request.user.id}')
 
+from ai_platform_shared_be.services.razorpay_service import create_payment_link
+from communication.utils import send_whatsapp_message
+
 class RentRecordViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = RentRecordSerializer
@@ -214,7 +220,17 @@ class RentRecordViewSet(viewsets.ModelViewSet):
         enforcer = FeatureEnforcer(user)
         if not enforcer.can_create("rent_records"):
             raise PermissionDenied("You have reached your rent record creation limit.")
-        serializer.save()
+        
+        rent = serializer.save()
+
+        # ✅ Generate Razorpay payment link
+        link = create_payment_link(rent)
+        rent.payment_link = link
+        rent.save()
+
+        # ✅ WhatsApp link to tenant
+        send_whatsapp_message(rent.renter.phone, f"📩 Pay your rent: {link}")
+
         enforcer.increment("rent_records")
         cache.delete(f'rent_records_user_{user.id}')
 
@@ -385,3 +401,242 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet):
         instance.delete()
         enforcer.decrement('rent_agreement_drafts')
         cache.delete(f'rent_drafts_user_{self.request.user.id}')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# rent/api.py or views.py
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from ai_platform_shared_be.services.cashfree_service import process_rent_payout
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def retry_payout_api(request, rent_id):
+    rent = RentRecord.objects.get(id=rent_id, renter__property__owner=request.user)
+
+    if rent.payment_status != "PAID" or rent.payout_status != "FAILED":
+        return Response({"error": "Payout not retryable"}, status=400)
+
+    try:
+        response = process_rent_payout(rent)
+        rent = RentRecord.objects.get(id=rent_id, renter__property__owner=request.user)
+        
+        if rent.payout_status == "SUCCESS":
+            # 🔔 WhatsApp Alert After Saving
+            owner = rent.renter.property.owner
+            phone = owner.profile.whatsapp_number  # Make sure this is stored in +91 format
+
+            if phone:
+                send_payout_notification(rent)
+        return Response({
+            "message": "Payout retry attempted",
+            "status": rent.payout_status
+        })
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+# Optional Owner Notification
+
+# After successful retry:
+
+#if rent.payout_status == "SUCCESS":
+    # send_whatsapp_message(
+    #     owner.profile.whatsapp_number,
+    #     f"✅ Your payout for ₹{rent.amount} has been successfully retried and credited."
+    # )
+
+# {% if rent.payment_status == 'PAID' and rent.payout_status == 'FAILED' %}
+# <form method="POST" action="{% url 'retry_payout_api' rent.id %}">
+#   {% csrf_token %}
+#   <button type="submit">🔁 Retry Payout</button>
+# </form>
+# {% endif %}
+
+
+
+# views.py
+from wealth_concierge_platform.models import RentRecord
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from wealth_concierge_platform.serializers import RentRecordSerializer
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def owner_rent_records(request):
+    owner = request.user
+    rents = RentRecord.objects.filter(renter__property__owner=owner).select_related('renter', 'renter__property')
+    serializer = RentRecordSerializer(rents, many=True)
+    return Response(serializer.data)
+
+
+# views.py
+from django.http import FileResponse
+from wealth_concierge_platform.models import RentRecord
+from wealth_concierge_platform.utils import generate_rent_invoice_pdf
+from django.shortcuts import get_object_or_404
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def download_rent_invoice(request, rent_id):
+    rent = get_object_or_404(RentRecord, id=rent_id, renter__property__owner=request.user)
+    pdf_path = generate_rent_invoice_pdf(rent)
+    return FileResponse(open(pdf_path, "rb"), content_type="application/pdf")
+
+
+
+# views.py
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_latest_due_rent(request):
+    renter = Renter.objects.filter(user=request.user, status__in=["active", "notice_period"]).first()
+
+    if not renter:
+        return Response({"error": "Not a renter"}, status=403)
+
+    rent = RentRecord.objects.filter(renter=renter, payment_status="PENDING").order_by("-due_date").first()
+
+    if not rent:
+        return Response({"message": "No pending rent"})
+
+    return Response({
+        "amount": rent.amount,
+        "month": rent.month,
+        "year": rent.year,
+        "property": renter.property.name,
+        "payment_link": rent.payment_link,
+        "due_date": rent.due_date,
+    })
+
+
+
+# views.py
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def rent_history(request):
+    renter = Renter.objects.filter(user=request.user, status__in=["active", "notice_period"]).first()
+    if not renter:
+        return Response({"error": "Not a renter"}, status=403)
+
+    rents = RentRecord.objects.filter(renter=renter).order_by("-due_date")
+    data = [{
+        "month": r.month,
+        "year": r.year,
+        "amount": r.amount,
+        "status": r.payment_status,
+        "invoice_url": r.invoice_pdf.url if r.invoice_pdf else None,
+        "payment_link": r.payment_link,
+    } for r in rents]
+
+    return Response(data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def owner_rent_overview(request):
+    owner = request.user
+    rents = RentRecord.objects.filter(renter__property__owner=owner).select_related("renter", "renter__property")
+    
+    data = []
+    for r in rents:
+        data.append({
+            "tenant": r.renter.name,
+            "unit": r.renter.property.name,
+            "amount": r.amount,
+            "month": r.month,
+            "year": r.year,
+            "status": r.payment_status,
+            "payout": r.payout_status,
+            "invoice_url": r.invoice_pdf.url if r.invoice_pdf else None
+        })
+
+    return Response(data)
+
+
+# views/renter.py
+# from rest_framework.decorators import api_view, permission_classes
+# from rest_framework.permissions import IsAuthenticated
+# from rest_framework.response import Response
+from .serializers import RenterRentRecordSerializer
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_rent_records(request):
+    renter = request.user.renter_profile
+    rents = RentRecord.objects.filter(renter=renter).order_by('-due_date')
+    return Response(RenterRentRecordSerializer(rents, many=True).data)
+
+
+
+# views/property.py
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_late_fee_policy(request, property_id):
+    prop = RentRecord.objects.get(id=property_id, owner=request.user)
+    prop.grace_days = request.data.get('grace_days', prop.grace_days)
+    prop.late_fee_amount = request.data.get('late_fee_amount', prop.late_fee_amount)
+    prop.save()
+    return Response({"msg": "Updated"})
+
+
+# views/revoke_agreement.py
+
+from django.utils import timezone
+
+@api_view(['POST'])
+def revoke_rent_agreement(request, renter_id):
+    renter = Renter.objects.get(id=renter_id, property__owner=request.user)
+    
+    renter.is_agreement_revoked = True
+    renter.revoked_by_owner = True
+    renter.revoked_on = timezone.now()
+    renter.revocation_reason = request.data.get("reason", "Manually revoked by owner")
+    renter.active_agreement = None
+    renter.save()
+
+    # Optionally notify renter
+    send_whatsapp_message(
+        renter.phone,
+        f"⚠️ Your rent agreement has been revoked by the owner. Reason: {renter.revocation_reason}"
+    )
+
+    return Response({"success": True, "message": "Agreement revoked successfully"})
+
+
+# views.py
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def unit_analytics(request):
+    user = request.user
+    buildings = Building.objects.filter(owner=user)
+
+    response = []
+    for building in buildings:
+        total_units = Unit.objects.filter(building=building).count()
+        vacant_units = Unit.objects.filter(building=building, status="vacant").count()
+        occupied_units = total_units - vacant_units
+
+        response.append({
+            "building": building.name,
+            "total": total_units,
+            "vacant": vacant_units,
+            "occupied": occupied_units,
+        })
+
+    return Response(response)

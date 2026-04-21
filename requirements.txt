@@ -78,6 +78,7 @@ pytest==8.3.5
 pytest-django==4.11.1
 python-dateutil==2.9.0.post0
 pyzmq==26.4.0
+razorpay==1.4.2
 requests==2.32.3
 rsa==4.9.1
 setuptools==80.8.0

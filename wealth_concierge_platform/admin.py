@@ -157,7 +157,8 @@ class RenterAdmin(SimpleHistoryAdmin):
 class RentRecordAdmin(SimpleHistoryAdmin):
     list_display = (
         'id', 'renter', 'unit', 'rent_month', 'amount_paid', 'date_paid', 
-        'payment_mode', 'remarks', 'created_at', 'updated_at'
+        'payment_mode', 'remarks', 'created_at', 'updated_at',
+        'title', 'grace_days', 'late_fee_amount'
     )
     search_fields = ('renter__name',)
     list_filter = ('rent_month',)
@@ -181,6 +182,16 @@ class RentRecordAdmin(SimpleHistoryAdmin):
         updated_count = queryset.update(remarks="Paid")
         self.message_user(request, f"{updated_count} rent record(s) marked as Paid.")
     mark_as_paid.short_description = "Mark selected rent records as Paid"
+
+
+
+
+
+
+
+
+
+#De-priritize don't touch the below code
 
 @admin.register(RentAgreementDraft)
 class RentAgreementDraftAdmin(admin.ModelAdmin):
