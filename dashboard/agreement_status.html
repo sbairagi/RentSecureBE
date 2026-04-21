@@ -1,0 +1,28 @@
+<h2>📄 Rent Agreement Signature Status</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Renter</th>
+      <th>Agreement</th>
+      <th>Signature Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in records %}
+      <tr>
+        <td>{{ r.renter.name }}</td>
+        <td><a href="{{ r.agreement_pdf.url }}">Download</a></td>
+        <td>{{ r.signature_status }}</td>
+        <td>
+          {% if r.signature_status != "SIGNED" %}
+            <form method="post" action="{% url 'retry_signature' r.id %}">
+              {% csrf_token %}
+              <button type="submit">🔁 Retry Signature</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

@@ -1,5 +1,6 @@
+from ai_assistant.services.late_fees_notify_service import notify_owner_about_late_fee, notify_renter_about_late_fee
 from core.models import UsageLimit, UserSubscription, PlanFeatureLimit, AddOnPurchase
-from wealth_concierge_platform.models import Unit
+from wealth_concierge_platform.models import RentRecord, Unit
 from rest_framework.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
@@ -176,3 +177,55 @@ def deduct_feature_usage_with_priority(user, feature_key, units_to_deduct=1):
     if units_remaining > 0:
         raise ValidationError(f"Not enough available units for feature: {feature_key}")
 
+
+
+# utils/pdf_utils.py
+from django.template.loader import render_to_string
+from weasyprint import HTML
+import tempfile
+
+def generate_rent_invoice_pdf(rent):
+    html_string = render_to_string("invoices/rent_invoice.html", {"rent": rent})
+    html = HTML(string=html_string)
+    result = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    html.write_pdf(target=result.name)
+    return result.name
+
+
+# utils/pdf_utils.py
+# from django.template.loader import render_to_string
+# from weasyprint import HTML
+# import os
+
+# def generate_rent_invoice_pdf(rent, output_path):
+#     html_content = render_to_string("invoice/rent_invoice.html", {"rent": rent})
+#     HTML(string=html_content).write_pdf(output_path)
+
+
+
+from datetime import date
+
+def apply_late_fee_if_needed(rent: RentRecord):
+    if rent.payment_status != "PAID":
+        return
+
+    if rent.payment_date and rent.payment_date > rent.due_date:
+        days_late = (rent.payment_date - rent.due_date).days
+        late_fee = days_late * 100  # ₹100/day
+        rent.late_fee = late_fee
+        rent.adjustment_reason = f"{days_late} days late x ₹100 = ₹{late_fee}"
+        rent.save()
+
+        # Attach late fee to next month
+        next_month = rent.due_date.replace(day=1) + relativedelta(months=1)
+        next_rent, _ = RentRecord.objects.get_or_create(
+            renter=rent.renter,
+            due_date=next_month,
+            defaults={"amount": rent.renter.monthly_rent}
+        )
+        next_rent.amount += late_fee
+        next_rent.adjustment_reason = f"Late fee from {rent.due_date}"
+        next_rent.save()
+
+        notify_renter_about_late_fee(rent, late_fee)
+        notify_owner_about_late_fee(rent, late_fee)

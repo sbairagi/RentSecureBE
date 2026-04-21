@@ -3,6 +3,7 @@ from django.core.validators import RegexValidator
 from simple_history.models import HistoricalRecords
 from core.models import User
 from django.conf import settings
+from datetime import date
 
 
 # Phone number validator for consistent format
@@ -52,6 +53,7 @@ class Unit(models.Model):
     unit_type = models.CharField(max_length=50, choices=UnitType.choices, help_text="Type of unit")
     # unit_image = models.ImageField(upload_to='unit_images/', blank=True, null=True, help_text="Image of unit")
     # id_proof = models.FileField(upload_to='id_proofs/owners/', help_text="Owner ID proof document")
+    status = models.CharField(max_length=20, choices=[("vacant", "Vacant"),("occupied", "Occupied"),], default="vacant")
     is_vacant = models.BooleanField(default=True, help_text="Is unit currently vacant?")
     is_verified = models.BooleanField(default=False, help_text="Has unit been verified?")
     maintenance_notes = models.TextField(blank=True, null=True, help_text="Maintenance related notes")
@@ -121,6 +123,13 @@ class Caretaker(models.Model):
 
 
 class Renter(models.Model):
+
+    class RenterStatus(models.TextChoices):
+        ACTIVE = "active", "Active"
+        NOTICE_PERIOD = "notice_period", "Notice Period"
+        REVOKED = "revoked", "Revoked"
+        DEACTIVATED = "deactivated", "Deactivated"
+
     id = models.AutoField(primary_key=True)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='renters', db_index=True)
     name = models.CharField(max_length=100, help_text="Renter's full name")
@@ -137,10 +146,27 @@ class Renter(models.Model):
     is_active = models.BooleanField(default=True, help_text="Is renter currently active?")
     notes = models.TextField(blank=True, null=True, help_text="Additional notes")
     whatsapp_number = models.CharField(max_length=15, blank=True, null=True, help_text="For WhatsApp messages")
-    rent_due_date = models.DateField(blank=True, null=True, help_text="Required for rent reminder")
+    rent_due_date = models.DateField(blank=True, null=True, default=date.today, help_text="Required for rent reminder")
     created_at = models.DateTimeField(auto_now_add=True, help_text="Move in Date")
+    late_payment_count = models.IntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
+
+    missed_rents = models.PositiveIntegerField(default=0)
+    is_flagged = models.BooleanField(default=False)
+    flagged_reason = models.TextField(blank=True, null=True)
+
+    is_agreement_revoked = models.BooleanField(default=False)
+    revocation_reason = models.TextField(blank=True, null=True)
+    revoked_by_owner = models.BooleanField(default=False)
+    revoked_on = models.DateTimeField(blank=True, null=True)
+
+    vacated_on = models.DateField(blank=True, null=True)  # Date tenant left
+
+    status = models.CharField(max_length=20, choices=RenterStatus.choices, default=RenterStatus.ACTIVE)
+    notice_start_date = models.DateField(null=True, blank=True)  # Optional, to track 1-month window
+
+    final_invoice_path = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         unique_together = ('unit', 'phone')
@@ -168,7 +194,8 @@ class RentRecord(models.Model):
 
     id = models.AutoField(primary_key=True)
     renter = models.ForeignKey(Renter, on_delete=models.CASCADE, related_name='rent_records', db_index=True)
-    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='rent_records')
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='rent_records_unit')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='rent_records_owner', db_index=True)
     rent_month = models.DateField(help_text="Use first day of the month, e.g. 2025-05-01", db_index=True)
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, help_text="Amount paid for rent")
     date_paid = models.DateField(help_text="Date when payment was made")
@@ -177,6 +204,40 @@ class RentRecord(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
+
+    # Payout specific fields:
+    payout_status = models.CharField(max_length=20, default="PENDING")  # or SUCCESS/FAILED
+    payout_reference = models.CharField(max_length=100, null=True, blank=True)
+    payout_retry_count = models.IntegerField(default=0)
+    last_retry_on = models.DateTimeField(null=True, blank=True)
+    # razorpay specific fields:
+    razorpay_order_id = models.CharField(max_length=100, blank=True, null=True)
+    razorpay_payment_status = models.CharField(max_length=20, default="PENDING")
+
+    # Auto-Resend Failed Payouts specific fields:
+    payout_retries = models.IntegerField(default=0)
+    last_payout_retry = models.DateTimeField(null=True, blank=True)
+
+    # Auto-apply ₹/day late fee
+    grace_days = models.PositiveIntegerField(default=3)
+    late_fee = models.DecimalField(max_digits=8, decimal_places=2, default=100.00)
+    adjustment_reason = models.TextField(blank=True, null=True)
+
+
+    # rent due reminder
+    # msg = f"""📢 *Rent Due Reminder*
+    # Hi {renter.name}, your rent of ₹{renter.rent_amount} for *{renter.property.name}* is due on *{renter.rent_due_date.strftime('%d %B')}*.
+    # Please pay on time to avoid late fees. Thank you! 🙏
+    # """
+    rent_due_date = models.DateField(default=date.today)  # e.g., 1st of every month
+    payment_link = models.URLField(null=True, blank=True)
+    rent_due_day = models.IntegerField(default=5)  # Rent due every 5th of month
+
+
+    is_active = models.BooleanField(default=True)
+
+    invoice_number = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    invoice_pdf = models.FileField(upload_to="rent_invoices/", null=True, blank=True)
 
     class Meta:
         unique_together = ('renter', 'rent_month')
@@ -198,12 +259,41 @@ class RentRecord(models.Model):
         return f"{self.renter.name} - {self.rent_month.strftime('%B %Y')}"
 
 
-    
+class RentReminderLog(models.Model):
+    renter = models.ForeignKey(Renter, on_delete=models.CASCADE)
+    message_type = models.CharField(max_length=20, help_text="EXAMPLE: PRE, DUE, LATE")  
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+
+class AgreementRevocationLog(models.Model):
+    renter = models.ForeignKey(Renter, on_delete=models.CASCADE)
+    revoked_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    reason = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+
+class UnitVacancy(models.Model):
+    class Reason(models.TextChoices):
+        RENOVATION = 'renovation', 'Renovation'
+        CLEANING = 'cleaning', 'Cleaning'
+        BETWEEN_RENTERS = 'between renters', 'Between Renters'
+        LONG_TERM_VACANCY = 'long-term vacancy', 'Long-Term Vacancy'
+        OTHER = 'other', 'Other'
+
+    unit = models.OneToOneField(Unit, on_delete=models.CASCADE)
+    reason = models.CharField(max_length=100, choices=Reason.choices)
+    noted_on = models.DateField(auto_now_add=True)
 
 
 
-
-
+class ArchivedRenter(models.Model):
+    renter = models.OneToOneField(Renter, on_delete=models.CASCADE)
+    data = models.JSONField()
+    agreement_pdf = models.FileField(upload_to="archived/agreements/")
+    police_pdf = models.FileField(upload_to="archived/police/")
+    property_images = models.JSONField(default=list)  # List of image paths
+    final_invoice = models.FileField(upload_to="archived/final_invoice/")
+    archived_at = models.DateTimeField(auto_now_add=True)
 
 
 

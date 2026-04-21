@@ -222,3 +222,39 @@ class RentAgreementDraftSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Renter does not belong to the selected unit.")
 
         return data
+
+
+
+
+
+
+
+
+
+# serializers.py
+
+class RentRecordSerializer(serializers.ModelSerializer):
+    renter_name = serializers.CharField(source='renter.name')
+    property_name = serializers.CharField(source='renter.property.name')
+
+    class Meta:
+        model = RentRecord
+        fields = [
+            'id', 'property_name', 'renter_name',
+            'amount', 'month', 'year',
+            'payment_status', 'payout_status',
+            'payout_reference', 'retry_count', 'created_at'
+        ]
+
+# serializers.py
+class RenterRentRecordSerializer(serializers.ModelSerializer):
+    invoice_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RentRecord
+        fields = ['due_date', 'amount', 'late_fee', 'payment_status', 'invoice_url']
+
+    def get_invoice_url(self, obj):
+        if obj.payment_status == "PAID":
+            return obj.invoice_url or ""
+        return ""
