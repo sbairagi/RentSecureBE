@@ -1,9 +1,10 @@
 from django.db import models
-from core.models import User
+# from core.models import User
+from django.conf import settings
 
 
 class CAProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     firm_name = models.CharField(max_length=255)
     contact_email = models.EmailField()
     phone = models.CharField(max_length=15)
@@ -14,7 +15,7 @@ class CAProfile(models.Model):
 
 
 class TaxSubmissionToCA(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tax_submissions_to_ca')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tax_submissions_to_ca')
     ca = models.ForeignKey(CAProfile, on_delete=models.SET_NULL, null=True, blank=True)
     financial_year = models.CharField(max_length=9, help_text="e.g., 2024-25")
     sent_to_email = models.EmailField()

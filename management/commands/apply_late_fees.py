@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from rent.models import RentRecord
 from django.utils.timezone import now
 from decimal import Decimal
-from services.whatsapp_service import send_whatsapp_message
+from notification.services.whatsapp_service import send_whatsapp_message
 
 class Command(BaseCommand):
     help = 'Apply late fee to unpaid rents after due date and send reminders'

@@ -1,6 +1,6 @@
-from ai_assistant.services.rent_notify_service import send_payout_notification
-from ai_assistant.services.voice_note_service import generate_voice_note
-from ai_assistant.services.whatsapp_service import send_whatsapp_audio
+from notification.services.rent_notify_service import send_payout_notification
+from notification.services.voice_note_service import generate_voice_note
+from notification.services.whatsapp_service import send_whatsapp_audio
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -189,7 +189,7 @@ class RenterViewSet(viewsets.ModelViewSet):
         cache.delete(f'renters_user_{self.request.user.id}')
 
 from ai_platform_shared_be.services.razorpay_service import create_payment_link
-from communication.utils import send_whatsapp_message
+from notification.utils import send_whatsapp_message
 
 class RentRecordViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]

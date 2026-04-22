@@ -1,6 +1,7 @@
-from rent.models import Renter, RentRecord
 from datetime import date, timedelta
-from .models import AIAlert
+
+from wealth_concierge_platform.models import RentRecord, Renter
+from ..models import AIAlert
 
 def generate_ai_alerts(owner):
     today = date.today()

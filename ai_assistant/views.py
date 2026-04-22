@@ -189,7 +189,7 @@ def chat_with_assistant(request):
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from ai_assistant.services.whatsapp_service import send_whatsapp_message
+from notification.services.whatsapp_service import send_whatsapp_message
 from core.models import UserProfile
 
 # views.py

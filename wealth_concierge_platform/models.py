@@ -338,7 +338,7 @@ class UnitImage(models.Model):
 
 
 class RentAgreementDraft(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_index=True)
     renter = models.OneToOneField(Renter, on_delete=models.CASCADE, db_index=True)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='rent_agreement_draft')
     generated_at = models.DateTimeField(auto_now_add=True)
@@ -354,7 +354,7 @@ class RentAgreementDraft(models.Model):
 
 
 class PoliceVerification(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_index=True)
     renter = models.OneToOneField(Renter, on_delete=models.CASCADE, db_index=True)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='police_verification')
     generated_at = models.DateTimeField(auto_now_add=True)

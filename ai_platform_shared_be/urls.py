@@ -23,11 +23,9 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("core.urls")),
     path("wealth_concierge_platform/", include("wealth_concierge_platform.urls")),
-    path("itr_filing_assistant/", include("itr_filing_assistant.urls")),
-    path("communication/", include("communication.urls")),
-    path("file-generater/", include("file_generater.urls")),
+    path("finance/", include("finance.urls")),
+    path("documents/", include("documents.urls")),
     path("dashboard/", include("dashboard.urls")),
-    
 ]
 
 

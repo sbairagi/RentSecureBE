@@ -2,7 +2,7 @@
 
 
 # Notify Renter
-from ai_assistant.services.whatsapp_service import send_whatsapp_message
+from notification.services.whatsapp_service import send_whatsapp_message
 from wealth_concierge_platform.models import RentRecord
 
 

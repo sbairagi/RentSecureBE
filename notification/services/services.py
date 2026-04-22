@@ -1,5 +1,5 @@
-from communication.utils import send_whatsapp_message
-from .models import Notification
+from ..utils import send_whatsapp_message
+from ..models import Notification
 
 # Use Cases Integration
 

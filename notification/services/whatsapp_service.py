@@ -1,5 +1,6 @@
 # services/whatsapp_service.py
 
+from notification.utils import send_whatsapp_message
 from twilio.rest import Client
 from django.conf import settings
 
@@ -30,3 +31,8 @@ def upload_to_s3(file_path):
     s3.upload_file(file_path, 'your-bucket-name', key, ExtraArgs={'ContentType': 'audio/mpeg'})
     url = f"https://your-bucket-name.s3.amazonaws.com/{key}"
     return url
+
+
+def send_agreement_via_whatsapp(renter, pdf_url):
+    msg = f"📄 Your rent agreement is ready.\nDownload: {pdf_url}"
+    send_whatsapp_message(renter.phone, msg)
