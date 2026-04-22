@@ -1,4 +1,4 @@
-from services.whatsapp_service import send_whatsapp_message
+from notification.services.whatsapp_service import send_whatsapp_message
 from services.notifications import send_push_notification
 from services.sms_service import send_sms
 

@@ -1,10 +1,10 @@
 from datetime import timezone
 from django.dispatch import receiver
-from ai_assistant.services.voice_note_service import send_thank_you_voice_note
+from notification.services.voice_note_service import send_thank_you_voice_note
 from notification.models import Notification
-from notification.services import notify_owner_renter_flagged
-from services.archive_service import archive_renter_data
-from services.invoice_service import generate_final_invoice_pdf
+from notification.services.services import notify_owner_renter_flagged
+from ai_assistant.services.archive_service import archive_renter_data
+from ai_assistant.services.invoice_service import generate_final_invoice_pdf
 from wealth_concierge_platform.models import Unit, Caretaker, Renter, UnitImage, UnitDocument, Building, RentRecord
 from django.db.models.signals import post_save, post_delete
 from wealth_concierge_platform.scheduler import cancel_reminder_job
@@ -84,7 +84,7 @@ def notify_owner_if_unit_vacant(sender, instance, **kwargs):
 
         if not Renter.objects.filter(unit=unit, status="active").exists():
             # Send alert to owner
-            from services.whatsapp_service import send_whatsapp_message
+            from notification.services.whatsapp_service import send_whatsapp_message
             send_whatsapp_message(
                 owner.profile.whatsapp_number,
                 f"🏠 Unit {unit.unit_number} is now vacant. Please assign a new renter or mark it as intentionally vacant from your dashboard."

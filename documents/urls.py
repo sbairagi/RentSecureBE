@@ -10,5 +10,5 @@ router.register(r'rent_agreement', GenerateRentAgreementPdfViewSet, basename='re
 
 
 urlpatterns = [
-    path('file_generater/', include(router.urls)),
+    path('document/', include(router.urls)),
 ]

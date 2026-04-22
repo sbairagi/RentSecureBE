@@ -1,6 +1,6 @@
 # services/scheduler.py
 
-from ai_assistant.services.voice_note_service import alert_owner_about_delay, send_late_rent_reminder
+from notification.services.voice_note_service import alert_owner_about_delay, send_late_rent_reminder
 from django_celery_beat.models import PeriodicTask
 
 def cancel_reminder_job(task_id: str):

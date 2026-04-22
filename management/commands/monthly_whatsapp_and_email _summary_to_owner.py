@@ -2,7 +2,7 @@ from datetime import date
 from wealth_concierge_platform.models import RentRecord
 from core.models import Owner
 from django.utils.timezone import now
-from services.whatsapp_service import send_whatsapp_message
+from notification.services.whatsapp_service import send_whatsapp_message
 from django.core.mail import EmailMessage
 
 

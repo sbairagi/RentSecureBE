@@ -94,7 +94,7 @@ class AddOnPurchase(models.Model):
         ('export_pdf_dossier', 'Export PDF Dossier'),
     ]
     id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     name = models.CharField(max_length=50, choices=FEATURE_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     is_recurring = models.BooleanField(default=False)
@@ -117,7 +117,7 @@ class PlanFeatureLimit(models.Model):
     
 class UsageLimit(models.Model):
     id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='usage_limits')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='usage_limits')
     feature_key = models.CharField(max_length=50, choices=AddOnPurchase.FEATURE_CHOICES)
     usage_count = models.IntegerField(default=0)
 

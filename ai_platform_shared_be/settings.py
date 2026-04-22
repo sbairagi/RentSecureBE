@@ -85,14 +85,16 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'simple_history',
     'fcm_django',
+    "django_celery_beat",
 
     #custome app
     'core',
+    'notification',
     'wealth_concierge_platform',
-    'itr_filing_assistant',
+    'finance',
     'referral_and_earn',
-    'communication',
-    'file_generater'
+    'documents',
+    'smartbot',
 
 ]
 

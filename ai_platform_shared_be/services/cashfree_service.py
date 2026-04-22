@@ -1,10 +1,11 @@
 # services/cashfree_service.py
-from ai_assistant.services.rent_notify_service import notify_owner, notify_owner_post_payout, notify_renter, send_payout_notification
-from ai_assistant.services.voice_note_service import generate_voice_note
-from ai_assistant.services.whatsapp_service import send_whatsapp_audio
+from notification.services.rent_notify_service import notify_owner, notify_owner_post_payout, notify_renter, send_payout_notification
+from notification.services.voice_note_service import generate_voice_note
+from notification.services.whatsapp_service import send_whatsapp_audio
 from wealth_concierge_platform.models import RentRecord
 from core.models import OwnerBankDetails
 from ai_platform_shared_be.utils.cashfree_payout import add_beneficiary, make_payout
+from notification.utils import send_whatsapp_message
 # from core.models import 
 
 def register_owner_with_cashfree(owner: OwnerBankDetails):
@@ -95,7 +96,7 @@ def register_cashfree_beneficiary(bank_details: OwnerBankDetails):
 
     return response
 
-from communication.utils import send_whatsapp_message
+
 
 def process_rent_payout(rent: RentRecord):
     bank_details = OwnerBankDetails.objects.get(owner=rent.renter.property.owner)

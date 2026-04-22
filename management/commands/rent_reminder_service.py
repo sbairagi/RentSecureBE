@@ -1,4 +1,4 @@
-from services.whatsapp_service import send_whatsapp_message
+from notification.services.whatsapp_service import send_whatsapp_message
 from datetime import date
 
 def send_rent_reminder(renter, days_left):

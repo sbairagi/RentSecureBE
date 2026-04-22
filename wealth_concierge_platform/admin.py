@@ -158,7 +158,7 @@ class RentRecordAdmin(SimpleHistoryAdmin):
     list_display = (
         'id', 'renter', 'unit', 'rent_month', 'amount_paid', 'date_paid', 
         'payment_mode', 'remarks', 'created_at', 'updated_at',
-        'title', 'grace_days', 'late_fee_amount'
+        'grace_days'
     )
     search_fields = ('renter__name',)
     list_filter = ('rent_month',)

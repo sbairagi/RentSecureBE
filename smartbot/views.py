@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rent.models import RentRecord
+# from rent.models import RentRecord
 from datetime import date
 
 # @api_view(["POST"])
@@ -68,11 +68,14 @@ from datetime import date
 
 # smartbot/views.py
 
-from .gpt_service import gpt_smart_reply
-from rent.models import RentRecord
+# from .gpt_service import gpt_smart_reply
+# from rent.models import RentRecord
 from datetime import date
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated
+
+from smartbot.gpt_services import gpt_smart_reply
+from wealth_concierge_platform.models import RentRecord
 from .models import SmartBotChat
 from .intents import extract_intent
 from .actions import send_rent_reminder, retry_payout, send_rent_agreement, send_agreement_for_signature
@@ -135,5 +138,4 @@ def smart_bot_reply(request):
     # Save to DB
     SmartBotChat.objects.create(user=user, message=query, reply=context_data)
     return Response({"answer": answer})
-
 

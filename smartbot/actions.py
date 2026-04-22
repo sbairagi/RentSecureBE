@@ -1,9 +1,14 @@
-from services.whatsapp_service import send_whatsapp_message
-from rent.services import process_rent_payout
-from rent.models import RentRecord, Renter
-from .agreement_service import generate_agreement_pdf
+# from services.whatsapp_service import send_whatsapp_message
+# from rent.services import process_rent_payout
+# from rent.models import RentRecord, Renter
+from ai_platform_shared_be.services.cashfree_service import process_rent_payout
+# from services.whatsapp_service import send_whatsapp_message
+from notification.utils import send_whatsapp_message
+from smartbot.services.agreement_service import generate_agreement_pdf
+from wealth_concierge_platform.models import RentRecord, Renter
+# from .services.agreement_service import generate_agreement_pdf
 from .whatsapp_service import send_agreement_via_whatsapp
-from .leegality_service import initiate_signature
+from .services.leegality_service import initiate_signature
 
 def send_rent_reminder(renter_name):
     try:

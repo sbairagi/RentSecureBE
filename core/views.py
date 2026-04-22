@@ -1,8 +1,8 @@
 # views.py
 import random
-from ai_assistant.services.rent_notify_service import send_payout_notification
-from ai_assistant.services.voice_note_service import generate_voice_note
-from ai_assistant.services.whatsapp_service import send_whatsapp_audio
+from notification.services.rent_notify_service import send_payout_notification
+from notification.services.voice_note_service import generate_voice_note
+from notification.services.whatsapp_service import send_whatsapp_audio
 from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta
@@ -13,6 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password
 from rest_framework import generics, permissions
 
+from core.utils.export_utils import generate_owner_rent_report
 from wealth_concierge_platform.utils import generate_rent_invoice_pdf
 from .models import (User, OTP, SubscriptionPlan, UserSubscription, AddOnPurchase, PlanFeatureLimit, UsageLimit)
 from .serializers import ( SubscriptionPlanSerializer, UserSubscriptionSerializer,AddOnPurchaseSerializer, 
@@ -594,7 +595,7 @@ def owner_rent_records(request):
 
 # views/owner.py
 from django.http import HttpResponse
-from utils.export_utils import generate_owner_rent_report
+# from utils.export_utils import generate_owner_rent_report
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
