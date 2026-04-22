@@ -1,6 +1,6 @@
 # services/unit_service.py
 
-from wealth_concierge_platform.models import Renter
+from properties.models import Renter
 
 
 def update_unit_status(unit):

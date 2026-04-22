@@ -4,7 +4,7 @@
 # from django.utils import timezone
 # from datetime import timedelta
 # from core.models import UserSubscription, PlanFeatureLimit, UsageLimit, SubscriptionPlan
-# from wealth_concierge_platform.models import Building, Unit, Caretaker, Renter, UnitImage, UnitDocument
+# from properties.models import Building, Unit, Caretaker, Renter, UnitImage, UnitDocument
 
 # # python manage.py downgrade_expired_users
 

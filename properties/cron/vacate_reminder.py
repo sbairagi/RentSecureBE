@@ -4,7 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from communication.utils import send_whatsapp_message
-from wealth_concierge_platform.models import Renter
+from properties.models import Renter
 # from renters.models import Renter
 # from services.whatsapp_service import send_whatsapp_message
 

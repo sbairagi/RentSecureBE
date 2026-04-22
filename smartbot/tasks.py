@@ -1,4 +1,4 @@
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 
 # tasks.py (Celery or cron)
 

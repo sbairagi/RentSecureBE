@@ -1,7 +1,7 @@
 # services/archive_service.py
 
 from django.forms import model_to_dict
-from wealth_concierge_platform.models import ArchivedRenter, RentRecord, UnitImage
+from properties.models import ArchivedRenter, RentRecord, UnitImage
 
 
 def archive_renter_data(renter):

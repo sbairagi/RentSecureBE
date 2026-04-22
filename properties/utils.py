@@ -1,6 +1,6 @@
 from notification.services.late_fees_notify_service import notify_owner_about_late_fee, notify_renter_about_late_fee
 from core.models import UsageLimit, UserSubscription, PlanFeatureLimit, AddOnPurchase
-from wealth_concierge_platform.models import RentRecord, Unit
+from properties.models import RentRecord, Unit
 from rest_framework.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone

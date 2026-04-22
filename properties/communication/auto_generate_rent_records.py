@@ -1,4 +1,4 @@
-from wealth_concierge_platform.models import RentRecord, Renter
+from properties.models import RentRecord, Renter
 from ai_platform_shared_be.services.razorpay_service import create_payment_link
 from communication.utils import send_whatsapp_message
 from datetime import date

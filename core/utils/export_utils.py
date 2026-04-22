@@ -1,5 +1,5 @@
 # utils/export_utils.py
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 import xlsxwriter
 from io import BytesIO
 

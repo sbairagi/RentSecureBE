@@ -1,4 +1,4 @@
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 from communication.utils import send_whatsapp_message
 
 def send_signature_reminders():

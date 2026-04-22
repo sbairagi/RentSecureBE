@@ -3,7 +3,7 @@
 
 # Notify Renter
 from notification.services.whatsapp_service import send_whatsapp_message
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 
 
 def notify_renter_about_late_fee(rent: RentRecord, late_fee):
