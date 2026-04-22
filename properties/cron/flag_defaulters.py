@@ -1,8 +1,8 @@
 # cron/flag_defaulters.py
 
 from datetime import timezone
-from wealth_concierge_platform.models import RentRecord
-from wealth_concierge_platform.signals import update_renter_defaulter_status
+from properties.models import RentRecord
+from properties.signals import update_renter_defaulter_status
 
 
 def flag_repeat_defaulters():

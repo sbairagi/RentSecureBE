@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.http import FileResponse
 from .utils import generate_tax_excel, generate_tax_pdf, create_tax_zip
-from wealth_concierge_platform.models import Unit
+from properties.models import Unit
 
 class CAProfileViewSet(viewsets.ModelViewSet):
     queryset = CAProfile.objects.all()

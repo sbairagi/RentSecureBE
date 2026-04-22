@@ -470,11 +470,11 @@ def retry_payout_api(request, rent_id):
 
 
 # views.py
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from wealth_concierge_platform.serializers import RentRecordSerializer
+from properties.serializers import RentRecordSerializer
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -487,8 +487,8 @@ def owner_rent_records(request):
 
 # views.py
 from django.http import FileResponse
-from wealth_concierge_platform.models import RentRecord
-from wealth_concierge_platform.utils import generate_rent_invoice_pdf
+from properties.models import RentRecord
+from properties.utils import generate_rent_invoice_pdf
 from django.shortcuts import get_object_or_404
 
 @api_view(["GET"])

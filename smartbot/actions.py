@@ -5,7 +5,7 @@ from ai_platform_shared_be.services.cashfree_service import process_rent_payout
 # from services.whatsapp_service import send_whatsapp_message
 from notification.utils import send_whatsapp_message
 from smartbot.services.agreement_service import generate_agreement_pdf
-from wealth_concierge_platform.models import RentRecord, Renter
+from properties.models import RentRecord, Renter
 # from .services.agreement_service import generate_agreement_pdf
 from .whatsapp_service import send_agreement_via_whatsapp
 from .services.leegality_service import initiate_signature

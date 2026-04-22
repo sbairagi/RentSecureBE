@@ -90,7 +90,7 @@ INSTALLED_APPS = [
     #custome app
     'core',
     'notification',
-    'wealth_concierge_platform',
+    'properties',
     'finance',
     'referral_and_earn',
     'documents',

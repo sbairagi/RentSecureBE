@@ -1,9 +1,9 @@
 # import pytest
 # from django.contrib.auth import get_user_model
-# from wealth_concierge_platform.models import (
+# from properties.models import (
 #     UsageLimit, PlanFeatureLimit, SubscriptionPlan, UserSubscription
 # )
-# from wealth_concierge_platform.utils import enforce_limit
+# from properties.utils import enforce_limit
 # from rest_framework.exceptions import PermissionDenied
 
 # User = get_user_model()

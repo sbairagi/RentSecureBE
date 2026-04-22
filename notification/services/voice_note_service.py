@@ -2,7 +2,7 @@
 
 from notification.services.voice_service import generate_voice_note
 from notification.services.whatsapp_service import send_whatsapp_audio, send_whatsapp_message
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 
 
 def send_thank_you_voice_note(rent: RentRecord):

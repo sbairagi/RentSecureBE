@@ -1,6 +1,6 @@
 
-from wealth_concierge_platform.models import Renter, Unit, RentRecord
-from wealth_concierge_platform.serializers import RentRecordSerializer
+from properties.models import Renter, Unit, RentRecord
+from properties.serializers import RentRecordSerializer
 from rest_framework import viewsets
 from django.http import HttpResponse
 from weasyprint import HTML

@@ -14,7 +14,7 @@ from django.contrib.auth.hashers import check_password
 from rest_framework import generics, permissions
 
 from core.utils.export_utils import generate_owner_rent_report
-from wealth_concierge_platform.utils import generate_rent_invoice_pdf
+from properties.utils import generate_rent_invoice_pdf
 from .models import (User, OTP, SubscriptionPlan, UserSubscription, AddOnPurchase, PlanFeatureLimit, UsageLimit)
 from .serializers import ( SubscriptionPlanSerializer, UserSubscriptionSerializer,AddOnPurchaseSerializer, 
                           PlanFeatureLimitSerializer, UsageLimitSerializer)
@@ -302,7 +302,7 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 
 @csrf_exempt
 def cashfree_payout_webhook(request):
@@ -339,7 +339,7 @@ import razorpay
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 
 @csrf_exempt
 def create_rent_payment(request):
@@ -411,7 +411,7 @@ import json, hmac, hashlib
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.conf import settings
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 from ai_platform_shared_be.services.cashfree_service import process_rent_payout
 
 @csrf_exempt
@@ -544,7 +544,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Sum
 # from rent.models import RentRecord
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

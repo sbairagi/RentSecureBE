@@ -2,7 +2,7 @@
 
 # from django.core.management.base import BaseCommand
 # from core.models import SubscriptionPlan
-# from wealth_concierge_platform.models import UsageLimit
+# from properties.models import UsageLimit
 
 # class Command(BaseCommand):
 #     help = 'Seed default subscription plans with usage limits'

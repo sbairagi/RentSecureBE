@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.shortcuts import redirect
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 
 def agreement_status_view(request):
     records = RentRecord.objects.select_related("renter").all().order_by("-created_at")

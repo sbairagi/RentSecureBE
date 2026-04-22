@@ -5,10 +5,10 @@ from notification.models import Notification
 from notification.services.services import notify_owner_renter_flagged
 from ai_assistant.services.archive_service import archive_renter_data
 from ai_assistant.services.invoice_service import generate_final_invoice_pdf
-from wealth_concierge_platform.models import Unit, Caretaker, Renter, UnitImage, UnitDocument, Building, RentRecord
+from properties.models import Unit, Caretaker, Renter, UnitImage, UnitDocument, Building, RentRecord
 from django.db.models.signals import post_save, post_delete
-from wealth_concierge_platform.scheduler import cancel_reminder_job
-from wealth_concierge_platform.utils import update_usage_count
+from properties.scheduler import cancel_reminder_job
+from properties.utils import update_usage_count
 
 # Building usage update
 @receiver(post_save, sender=Building)

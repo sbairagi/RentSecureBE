@@ -2,7 +2,7 @@
 # from django.core.mail import send_mail
 # from django.utils import timezone
 # from datetime import timedelta
-# from wealth_concierge_platform.models import Renter
+# from properties.models import Renter
 # from django.conf import settings
 # from communication.utils import send_whatsapp_message
 

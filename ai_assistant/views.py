@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 # from ai_assistant.services.whatsapp_service import send_whatsapp_message
 from ai_assistant.services.finance_ai import analyze_financial_health
-from wealth_concierge_platform.models import Renter, RentRecord
+from properties.models import Renter, RentRecord
 # from tax.models import PropertyTaxRecord
 # from ai_assistent.services.finance_ai import analyze_financial_health
 from datetime import date
@@ -162,7 +162,7 @@ def financial_health_report(request):
 
 
 # views.py
-from services.chatbot_service import handle_chat_message
+from smartbot.services.chatbot_service import handle_chat_message
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

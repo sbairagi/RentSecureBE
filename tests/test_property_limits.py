@@ -1,6 +1,6 @@
 # from django.test import TestCase
 # from django.contrib.auth.models import User
-# from wealth_concierge_platform.models import Building, Unit, Renter, Caretaker, UnitDocument, UnitImage
+# from properties.models import Building, Unit, Renter, Caretaker, UnitDocument, UnitImage
 # from core.models import SubscriptionPlan, UserSubscription, PlanFeatureLimit, AddOnPurchase, UsageLimit
 # from datetime import date
 

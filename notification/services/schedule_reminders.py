@@ -2,7 +2,7 @@
 from django.utils.timezone import now, timedelta
 from notification.services.voice_service import generate_voice_note
 from notification.services.whatsapp_service import send_whatsapp_audio
-from wealth_concierge_platform.models import RentRecord, PropertyTaxRecord
+from properties.models import RentRecord, PropertyTaxRecord
 
 def get_upcoming_rent_dues():
     target_date = now().date() + timedelta(days=3)

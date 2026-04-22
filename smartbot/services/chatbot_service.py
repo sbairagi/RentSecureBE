@@ -1,6 +1,6 @@
 import openai
 from django.utils import timezone
-from wealth_concierge_platform.models import RentRecord
+from properties.models import RentRecord
 
 def handle_chat_message(user, message):
     # Sample rule-based handler

@@ -190,7 +190,7 @@
 # from datetime import timedelta
 
 # from core.models import User, SubscriptionPlan, UserSubscription, PlanFeatureLimit, UsageLimit
-# from wealth_concierge_platform.feature_enforcer import FeatureEnforcer
+# from properties.feature_enforcer import FeatureEnforcer
 
 # class FeatureEnforcerTest(TestCase):
 #     def setUp(self):
@@ -241,7 +241,7 @@
 
 # from django.test import TestCase
 # from core.models import SubscriptionPlan, UserSubscription, PlanFeatureLimit, UsageLimit, User
-# from wealth_concierge_platform.feature_enforcer import FeatureEnforcer
+# from properties.feature_enforcer import FeatureEnforcer
 # from django.utils import timezone
 # from datetime import timedelta
 
@@ -310,7 +310,7 @@
 # from django.test import TestCase
 # from django.utils import timezone
 # from core.models import SubscriptionPlan, UserSubscription, PlanFeatureLimit, UsageLimit, User, AddOnPurchase
-# from wealth_concierge_platform.feature_enforcer import FeatureEnforcer
+# from properties.feature_enforcer import FeatureEnforcer
 
 # class FeatureEnforcerTest(TestCase):
 

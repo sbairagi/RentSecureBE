@@ -3,7 +3,7 @@
 from datetime import date, timedelta
 
 from communication.utils import send_whatsapp_message
-from wealth_concierge_platform.models import Renter
+from properties.models import Renter
 # from yourapp.models import Renter
 
 def auto_deactivate_notice_period_renters():

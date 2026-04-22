@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from wealth_concierge_platform.models import RentRecord, Renter
+from properties.models import RentRecord, Renter
 from ..models import AIAlert
 
 def generate_ai_alerts(owner):
