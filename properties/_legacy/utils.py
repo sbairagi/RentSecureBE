@@ -6,6 +6,8 @@ from django.db import transaction
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
+from datetime import date
+from dateutil.relativedelta import relativedelta
 import hashlib
 
 def get_plan_limit(user, feature_key):
@@ -35,6 +37,8 @@ def update_usage_count(user, feature_key, model_class):
         return
 
     if model_class == Unit:
+        count = model_class.objects.filter(owner=user).count()
+    elif model_class.__name__ == 'Building':
         count = model_class.objects.filter(owner=user).count()
     else:
         count = model_class.objects.filter(unit__owner=user).count()
@@ -204,28 +208,38 @@ def generate_rent_invoice_pdf(rent):
 
 
 from datetime import date
+from dateutil.relativedelta import relativedelta
 
 def apply_late_fee_if_needed(rent: RentRecord):
+    """
+    Apply late fee if rent is paid after rent_due_date.
+    Adds late fee to next month's rent record.
+    """
     if rent.payment_status != "PAID":
         return
 
-    if rent.payment_date and rent.payment_date > rent.due_date:
-        days_late = (rent.payment_date - rent.due_date).days
+    if rent.date_paid and rent.date_paid > rent.rent_due_date:
+        days_late = (rent.date_paid - rent.rent_due_date).days
         late_fee = days_late * 100  # ₹100/day
         rent.late_fee = late_fee
         rent.adjustment_reason = f"{days_late} days late x ₹100 = ₹{late_fee}"
-        rent.save()
+        rent.save(update_fields=['late_fee', 'adjustment_reason'])
 
-        # Attach late fee to next month
-        next_month = rent.due_date.replace(day=1) + relativedelta(months=1)
+        next_month = rent.rent_due_date.replace(day=1) + relativedelta(months=1)
         next_rent, _ = RentRecord.objects.get_or_create(
             renter=rent.renter,
-            due_date=next_month,
-            defaults={"amount": rent.renter.monthly_rent}
+            rent_month=next_month,
+            defaults={
+                "amount_paid": rent.renter.rent_amount,
+                "rent_due_date": next_month,
+                "payment_status": RentRecord.PaymentStatus.PENDING,
+                "unit": rent.unit,
+                "owner": rent.owner,
+                "date_paid": next_month,
+            }
         )
-        next_rent.amount += late_fee
-        next_rent.adjustment_reason = f"Late fee from {rent.due_date}"
-        next_rent.save()
+        next_rent.adjustment_reason = f"Late fee from {rent.rent_due_date}"
+        next_rent.save(update_fields=['adjustment_reason'])
 
         notify_renter_about_late_fee(rent, late_fee)
         notify_owner_about_late_fee(rent, late_fee)

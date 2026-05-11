@@ -26,7 +26,7 @@ urlpatterns = [
     path("api/renter/rent-due/", get_latest_due_rent),
     path("api/renter/rent-history/", rent_history),
     path("api/owner/rents/", owner_rent_overview),
-    path("api/owner/retry_payout_api", retry_payout_api)
+    path("api/owner/retry_payout_api/<int:rent_id>/", retry_payout_api)
 ]
 
 

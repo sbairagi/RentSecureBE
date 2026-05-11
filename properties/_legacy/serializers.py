@@ -1,7 +1,4 @@
 from rest_framework import serializers
-from .utils import enforce_limit, update_usage_count
-from rest_framework.exceptions import ValidationError
-from rest_framework import serializers
 from .models import (
     RentAgreementDraft,
     UnitImage, UnitDocument,
@@ -36,7 +33,7 @@ class UnitSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
     
 class BuildingSerializer(serializers.ModelSerializer):
-    unit = UnitSerializer(many=True, read_only=True)
+    units = UnitSerializer(many=True, read_only=True, source='units')
 
     class Meta:
         model = Building
@@ -62,7 +59,6 @@ class CaretakerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Caretaker
         fields = '__all__'
-        read_only_fields = ['owner']
 
     def validate(self, data):
         user = self.context['request'].user
@@ -70,10 +66,6 @@ class CaretakerSerializer(serializers.ModelSerializer):
         if unit and unit.owner != user:
             raise serializers.ValidationError("You do not own the selected unit.")
         return data
-
-    def create(self, validated_data):
-        validated_data['owner'] = self.context['request'].user
-        return super().create(validated_data)
 
     def update(self, instance, validated_data):
         unit = validated_data.get('unit')
@@ -85,7 +77,6 @@ class RenterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Renter
         fields = '__all__'
-        read_only_fields = ['owner']
 
     def validate(self, data):
         user = self.context['request'].user
@@ -93,10 +84,6 @@ class RenterSerializer(serializers.ModelSerializer):
         if unit and unit.owner != user:
             raise serializers.ValidationError("You do not own the selected unit.")
         return data
-
-    def create(self, validated_data):
-        validated_data['owner'] = self.context['request'].user
-        return super().create(validated_data)
 
     def update(self, instance, validated_data):
         unit = validated_data.get('unit')
@@ -108,7 +95,6 @@ class UnitImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = UnitImage
         fields = '__all__'
-        read_only_fields = ['owner']
 
     def validate(self, data):
         user = self.context['request'].user
@@ -116,10 +102,6 @@ class UnitImageSerializer(serializers.ModelSerializer):
         if unit and unit.owner != user:
             raise serializers.ValidationError("You do not own the selected unit.")
         return data
-
-    def create(self, validated_data):
-        validated_data['owner'] = self.context['request'].user
-        return super().create(validated_data)
 
     def update(self, instance, validated_data):
         unit = validated_data.get('unit')
@@ -131,7 +113,6 @@ class UnitDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = UnitDocument
         fields = '__all__'
-        read_only_fields = ['owner']
 
     def validate(self, data):
         user = self.context['request'].user
@@ -139,10 +120,6 @@ class UnitDocumentSerializer(serializers.ModelSerializer):
         if unit and unit.owner != user:
             raise serializers.ValidationError("You do not own the selected unit.")
         return data
-
-    def create(self, validated_data):
-        validated_data['owner'] = self.context['request'].user
-        return super().create(validated_data)
 
     def update(self, instance, validated_data):
         unit = validated_data.get('unit')
@@ -199,6 +176,11 @@ class RentRecordSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Renter must be part of the selected unit.")
 
         return super().update(instance, validated_data)
+    
+    def get_invoice_url(self, obj):
+        if obj.payment_status == "PAID" and obj.invoice_pdf:
+            return obj.invoice_pdf.url
+        return ""
 
 class RentAgreementDraftSerializer(serializers.ModelSerializer):
     class Meta:
@@ -233,21 +215,9 @@ class RentAgreementDraftSerializer(serializers.ModelSerializer):
 
 # serializers.py
 
-class RentRecordSerializer(serializers.ModelSerializer):
-    renter_name = serializers.CharField(source='renter.name')
-    property_name = serializers.CharField(source='renter.property.name')
-
-    class Meta:
-        model = RentRecord
-        fields = [
-            'id', 'property_name', 'renter_name',
-            'amount', 'month', 'year',
-            'payment_status', 'payout_status',
-            'payout_reference', 'retry_count', 'created_at'
-        ]
-
-# serializers.py
 class RenterRentRecordSerializer(serializers.ModelSerializer):
+    due_date = serializers.DateField(source='rent_due_date')
+    amount = serializers.DecimalField(source='amount_paid', max_digits=10, decimal_places=2)
     invoice_url = serializers.SerializerMethodField()
 
     class Meta:

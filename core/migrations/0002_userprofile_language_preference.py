@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='userprofile',
             name='language_preference',
-            field=models.CharField(choices=[('en', 'English'), ('hi', 'Hindi')], default='en'),
+            field=models.CharField(choices=[('en', 'English'), ('hi', 'Hindi')], default='en', max_length=2),
         ),
     ]

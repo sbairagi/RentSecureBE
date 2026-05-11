@@ -1,5 +1,5 @@
 """
-WSGI config for ai_platform_shared_be project.
+WSGI config for rentsecure_be project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ai_platform_shared_be.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rentsecure_be.settings')
 
 application = get_wsgi_application()

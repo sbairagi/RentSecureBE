@@ -4,7 +4,7 @@ from notification.services.voice_note_service import generate_voice_note
 from notification.services.whatsapp_service import send_whatsapp_audio
 from properties.models import RentRecord
 from core.models import OwnerBankDetails
-from ai_platform_shared_be.utils.cashfree_payout import add_beneficiary, make_payout
+from rentsecure_be.utils.cashfree_payout import add_beneficiary, make_payout
 from notification.utils import send_whatsapp_message
 # from core.models import 
 

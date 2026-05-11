@@ -1,5 +1,5 @@
 """
-URL configuration for ai_platform_shared_be project.
+URL configuration for rentsecure_be project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
@@ -22,6 +22,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("core.urls")),
+    path("api/", include("properties.urls")),
     path("properties/", include("properties.urls")),
     path("finance/", include("finance.urls")),
     path("documents/", include("documents.urls")),

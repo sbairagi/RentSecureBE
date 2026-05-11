@@ -39,7 +39,7 @@ class Unit(models.Model):
         PAYING_GUEST = 'paying_guest', 'Paying Guest'
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='unit', db_index=True)
-    building = models.ForeignKey(Building, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    building = models.ForeignKey(Building, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='units')
     is_archived = models.BooleanField(default=False)
     building_name = models.CharField(max_length=100, blank=True, null=True, help_text="name of the building")
     unit = models.CharField(max_length=100, help_text="unit of the unit")
@@ -82,7 +82,11 @@ class Unit(models.Model):
             raise ValidationError("Longitude must be between -180 and 180.")
 
     def __str__(self):
-        return f"{self.title} - {self.city}, {self.state}"
+        return f"{self.unit} - {self.city}, {self.state}"
+
+    @property
+    def name(self):
+        return self.building_name or self.unit
 
 class Caretaker(models.Model):
     id = models.AutoField(primary_key=True)
@@ -132,6 +136,7 @@ class Renter(models.Model):
 
     id = models.AutoField(primary_key=True)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='renters', db_index=True)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True, related_name='renter_profile')
     name = models.CharField(max_length=100, help_text="Renter's full name")
     phone = models.CharField(validators=[phone_regex], max_length=15, help_text="Primary phone number")
     alternate_phone = models.CharField(validators=[phone_regex], max_length=15, blank=True, null=True, help_text="Alternate phone number")
@@ -176,10 +181,10 @@ class Renter(models.Model):
         from django.core.exceptions import ValidationError
         if self.end_date and self.end_date < self.start_date:
             raise ValidationError("End date cannot be earlier than start date.")
-        
 
-        # if Renter.objects.filter(unit=self.unit, is_active=True).exclude(pk=self.pk).exists():
-        #     raise ValidationError("Another active renter already exists for this unit.")
+    @property
+    def property(self):
+        return self.unit
 
     def __str__(self):
         return self.name
@@ -192,6 +197,11 @@ class RentRecord(models.Model):
         ONLINE = 'online', 'Online Transfer'
         OTHER = 'other', 'Other'
 
+    class PaymentStatus(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        PAID = 'PAID', 'Paid'
+        FAILED = 'FAILED', 'Failed'
+
     id = models.AutoField(primary_key=True)
     renter = models.ForeignKey(Renter, on_delete=models.CASCADE, related_name='rent_records', db_index=True)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='rent_records_unit')
@@ -199,6 +209,7 @@ class RentRecord(models.Model):
     rent_month = models.DateField(help_text="Use first day of the month, e.g. 2025-05-01", db_index=True)
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2, help_text="Amount paid for rent")
     date_paid = models.DateField(help_text="Date when payment was made")
+    payment_status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING, help_text="Payment status")
     payment_mode = models.CharField(max_length=20, choices=PaymentMode.choices, blank=True, null=True, help_text="Mode of payment")
     remarks = models.TextField(blank=True, null=True, help_text="Additional remarks or notes")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -254,6 +265,26 @@ class RentRecord(models.Model):
 
         if self.renter.unit != self.unit:
             raise ValidationError("Renter does not belong to the selected unit.")
+
+    @property
+    def amount(self):
+        return self.amount_paid
+
+    @property
+    def payment_date(self):
+        return self.date_paid
+
+    @property
+    def due_date(self):
+        return self.rent_due_date
+
+    @property
+    def month(self):
+        return self.rent_month.month
+
+    @property
+    def year(self):
+        return self.rent_month.year
 
     def __str__(self):
         return f"{self.renter.name} - {self.rent_month.strftime('%B %Y')}"
