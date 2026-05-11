@@ -19,7 +19,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     whatsapp_number = models.CharField(max_length=15, help_text="Include country code, e.g. +91xxxxxxxxxx")
     whatsapp_opt_in = models.BooleanField(default=True)
-    language_preference = models.CharField(default="en", choices=[("en", "English"), ("hi", "Hindi")])
+    language_preference = models.CharField(max_length=2, default="en", choices=[("en", "English"), ("hi", "Hindi")])
 
 
 class OTP(models.Model):

@@ -367,7 +367,7 @@ def create_rent_payment(request):
             "key_id": settings.RAZORPAY_KEY_ID
         })
 
-from ai_platform_shared_be.services.cashfree_service  import process_rent_payout
+from rentsecure_be.services.cashfree_service  import process_rent_payout
 
 # @csrf_exempt
 # def razorpay_webhook(request):
@@ -412,7 +412,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.conf import settings
 from properties.models import RentRecord
-from ai_platform_shared_be.services.cashfree_service import process_rent_payout
+from rentsecure_be.services.cashfree_service import process_rent_payout
 
 @csrf_exempt
 def razorpay_webhook(request):
@@ -473,7 +473,7 @@ def razorpay_webhook(request):
 
 
 from .models import OwnerBankDetails
-from ai_platform_shared_be.services.cashfree_service import delete_beneficiary
+from rentsecure_be.services.cashfree_service import delete_beneficiary
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 

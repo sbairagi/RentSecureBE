@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from communication.utils import send_whatsapp_message
+from notification.utils import send_whatsapp_message
 from properties.models import Renter
 # from yourapp.models import Renter
 

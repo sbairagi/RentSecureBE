@@ -36,7 +36,7 @@ class RenterInline(admin.TabularInline):
 @admin.register(Unit)
 class UnitAdmin(SimpleHistoryAdmin):
     list_display = (
-        'id', 'building__name', 'building_name', 'unit', 'owner', 'address_line', 'landmark', 'city', 'state', 'country', 
+        'id', 'building_name', 'unit', 'owner', 'address_line', 'landmark', 'city', 'state', 'country', 
         'postal_code', 'unit_type', 'unit_image_thumbnail', 'is_vacant', 
         'is_verified', 'maintenance_notes', 'rent_due_reminder', 'agreement_expiry_reminder', 
         'latitude', 'longitude', 'notes', 'created_at', 'updated_at'
@@ -158,7 +158,7 @@ class RentRecordAdmin(SimpleHistoryAdmin):
     list_display = (
         'id', 'renter', 'unit', 'rent_month', 'amount_paid', 'date_paid', 
         'payment_mode', 'remarks', 'created_at', 'updated_at',
-        'grace_days'
+        'grace_days', 'late_fee'
     )
     search_fields = ('renter__name',)
     list_filter = ('rent_month',)

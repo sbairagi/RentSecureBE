@@ -1,6 +1,4 @@
 from notification.services.rent_notify_service import send_payout_notification
-from notification.services.voice_note_service import generate_voice_note
-from notification.services.whatsapp_service import send_whatsapp_audio
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -27,9 +25,11 @@ class BuildingViewSet(viewsets.ModelViewSet):
             cache.set(cache_key, buildings, timeout=300)
 
         if enforcer.is_expired() and enforcer.is_past_grace_period():
-            # Free plan active, show only allowed active buildings
             free_limit = enforcer.get_free_plan_limit('max_buildings')
-            return buildings.filter(is_archived=False)[:free_limit]
+            active_buildings = buildings.filter(is_archived=False)
+            if free_limit == 'unlimited':
+                return active_buildings
+            return active_buildings[:free_limit]
 
         return buildings
 
@@ -38,11 +38,8 @@ class BuildingViewSet(viewsets.ModelViewSet):
         user = self.request.user
         enforcer = FeatureEnforcer(user)
 
-        current_buildings = Building.objects.filter(owner=user).count()
-        try:
-            enforcer.check_limit('max_buildings', current_buildings)
-        except ValidationError as e:
-            raise ValidationError({"detail": str(e)})
+        if not enforcer.can_create('max_buildings'):
+            raise PermissionDenied("Building creation limit reached for your plan.")
 
         serializer.save(owner=user)
         enforcer.increment('max_buildings')
@@ -77,8 +74,11 @@ class UnitViewSet(viewsets.ModelViewSet):
             cache.set(cache_key, units, timeout=300)
 
         if enforcer.is_expired() and enforcer.is_past_grace_period():
-            free_limit = enforcer.get_free_plan_limit('max_units')  # Assuming this is correct key
-            return units.filter(is_archived=False)[:free_limit]
+            free_limit = enforcer.get_free_plan_limit('max_units')
+            active_units = units.filter(is_archived=False)
+            if free_limit == 'unlimited':
+                return active_units
+            return active_units[:free_limit]
 
         return units
 
@@ -188,7 +188,7 @@ class RenterViewSet(viewsets.ModelViewSet):
         enforcer.decrement('max_renters')
         cache.delete(f'renters_user_{self.request.user.id}')
 
-from ai_platform_shared_be.services.razorpay_service import create_payment_link
+from rentsecure_be.services.razorpay_service import create_payment_link
 from notification.utils import send_whatsapp_message
 
 class RentRecordViewSet(viewsets.ModelViewSet):
@@ -216,20 +216,20 @@ class RentRecordViewSet(viewsets.ModelViewSet):
         if RentRecord.objects.filter(renter=renter, rent_month=serializer.validated_data.get('rent_month')).exists():
             raise ValidationError("Rent record for this month already exists.")
 
-        # OPTIONAL: enforce if limit exists
         enforcer = FeatureEnforcer(user)
         if not enforcer.can_create("rent_records"):
             raise PermissionDenied("You have reached your rent record creation limit.")
         
-        rent = serializer.save()
+        rent = serializer.save(owner=user)
 
-        # ✅ Generate Razorpay payment link
-        link = create_payment_link(rent)
-        rent.payment_link = link
-        rent.save()
-
-        # ✅ WhatsApp link to tenant
-        send_whatsapp_message(rent.renter.phone, f"📩 Pay your rent: {link}")
+        try:
+            link = create_payment_link(rent)
+            rent.payment_link = link
+            rent.save(update_fields=['payment_link'])
+            send_whatsapp_message(rent.renter.phone, f"📩 Pay your rent: {link}")
+        except Exception:
+            # Keep the rent record if payment link generation fails, but do not block the resource creation.
+            pass
 
         enforcer.increment("rent_records")
         cache.delete(f'rent_records_user_{user.id}')
@@ -420,27 +420,22 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet):
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ai_platform_shared_be.services.cashfree_service import process_rent_payout
+from rentsecure_be.services.cashfree_service import process_rent_payout
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def retry_payout_api(request, rent_id):
-    rent = RentRecord.objects.get(id=rent_id, renter__property__owner=request.user)
+    rent = RentRecord.objects.get(id=rent_id, owner=request.user)
 
     if rent.payment_status != "PAID" or rent.payout_status != "FAILED":
         return Response({"error": "Payout not retryable"}, status=400)
 
     try:
         response = process_rent_payout(rent)
-        rent = RentRecord.objects.get(id=rent_id, renter__property__owner=request.user)
+        rent.refresh_from_db()
         
         if rent.payout_status == "SUCCESS":
-            # 🔔 WhatsApp Alert After Saving
-            owner = rent.renter.property.owner
-            phone = owner.profile.whatsapp_number  # Make sure this is stored in +91 format
-
-            if phone:
-                send_payout_notification(rent)
+            send_payout_notification(rent)
         return Response({
             "message": "Payout retry attempted",
             "status": rent.payout_status
@@ -480,7 +475,7 @@ from properties.serializers import RentRecordSerializer
 @permission_classes([IsAuthenticated])
 def owner_rent_records(request):
     owner = request.user
-    rents = RentRecord.objects.filter(renter__property__owner=owner).select_related('renter', 'renter__property')
+    rents = RentRecord.objects.filter(owner=owner).select_related('renter', 'unit')
     serializer = RentRecordSerializer(rents, many=True)
     return Response(serializer.data)
 
@@ -494,7 +489,7 @@ from django.shortcuts import get_object_or_404
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def download_rent_invoice(request, rent_id):
-    rent = get_object_or_404(RentRecord, id=rent_id, renter__property__owner=request.user)
+    rent = get_object_or_404(RentRecord, id=rent_id, owner=request.user)
     pdf_path = generate_rent_invoice_pdf(rent)
     return FileResponse(open(pdf_path, "rb"), content_type="application/pdf")
 
@@ -509,7 +504,7 @@ def get_latest_due_rent(request):
     if not renter:
         return Response({"error": "Not a renter"}, status=403)
 
-    rent = RentRecord.objects.filter(renter=renter, payment_status="PENDING").order_by("-due_date").first()
+    rent = RentRecord.objects.filter(renter=renter, payment_status="PENDING").order_by("-rent_due_date").first()
 
     if not rent:
         return Response({"message": "No pending rent"})
@@ -533,7 +528,7 @@ def rent_history(request):
     if not renter:
         return Response({"error": "Not a renter"}, status=403)
 
-    rents = RentRecord.objects.filter(renter=renter).order_by("-due_date")
+    rents = RentRecord.objects.filter(renter=renter).order_by("-rent_due_date")
     data = [{
         "month": r.month,
         "year": r.year,
@@ -550,7 +545,7 @@ def rent_history(request):
 @permission_classes([IsAuthenticated])
 def owner_rent_overview(request):
     owner = request.user
-    rents = RentRecord.objects.filter(renter__property__owner=owner).select_related("renter", "renter__property")
+    rents = RentRecord.objects.filter(owner=owner).select_related("renter", "unit")
     
     data = []
     for r in rents:
@@ -589,8 +584,8 @@ def my_rent_records(request):
 def update_late_fee_policy(request, property_id):
     prop = RentRecord.objects.get(id=property_id, owner=request.user)
     prop.grace_days = request.data.get('grace_days', prop.grace_days)
-    prop.late_fee_amount = request.data.get('late_fee_amount', prop.late_fee_amount)
-    prop.save()
+    prop.late_fee = request.data.get('late_fee_amount', prop.late_fee)
+    prop.save(update_fields=['grace_days', 'late_fee'])
     return Response({"msg": "Updated"})
 
 
@@ -600,16 +595,16 @@ from django.utils import timezone
 
 @api_view(['POST'])
 def revoke_rent_agreement(request, renter_id):
-    renter = Renter.objects.get(id=renter_id, property__owner=request.user)
+    renter = Renter.objects.get(id=renter_id, unit__owner=request.user)
     
     renter.is_agreement_revoked = True
     renter.revoked_by_owner = True
     renter.revoked_on = timezone.now()
     renter.revocation_reason = request.data.get("reason", "Manually revoked by owner")
-    renter.active_agreement = None
+    if hasattr(renter, 'active_agreement'):
+        renter.active_agreement = None
     renter.save()
 
-    # Optionally notify renter
     send_whatsapp_message(
         renter.phone,
         f"⚠️ Your rent agreement has been revoked by the owner. Reason: {renter.revocation_reason}"
@@ -640,3 +635,5 @@ def unit_analytics(request):
         })
 
     return Response(response)
+
+
