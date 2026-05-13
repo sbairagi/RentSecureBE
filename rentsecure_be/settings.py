@@ -14,47 +14,55 @@ from pathlib import Path
 from datetime import timedelta
 import os
 
+from django.core.exceptions import ImproperlyConfigured
+from decouple import config, Csv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# Environment configuration
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-placeholder-key')
+DEBUG = config('DEBUG', default=True, cast=bool)
+ENVIRONMENT = config('DJANGO_ENV', default='development')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-25n+2a!0)5v+2ju$6v=u0vi7q1s!pojfqvc3l-plkqt3u-jgy$'
+if not DEBUG and SECRET_KEY == 'django-insecure-placeholder-key':
+    raise ImproperlyConfigured('A secure SECRET_KEY must be set in production.')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['192.168.1.2', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
 # Email details
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your@email.com'
-EMAIL_HOST_PASSWORD = 'your-app-password'
-DEFAULT_FROM_EMAIL = 'Your Concierge <your@email.com>'
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@example.com')
 
-# Twilio details
-TWILIO_ACCOUNT_SID = "<REDACTED_TWILIO_SID>"
-TWILIO_AUTH_TOKEN = "c287d560ab4791dab85aa41b582cb50c"
-TWILIO_WHATSAPP_NUMBER = "whatsapp:+14155238886"  # Twilio sandbox number
-TWILIO_PHONE_NUMBER = "+1234567890"
+# Third-party service credentials
+TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
+TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
+TWILIO_WHATSAPP_NUMBER = config('TWILIO_WHATSAPP_NUMBER', default='whatsapp:+14155238886')
+TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='+1234567890')
 
-# Cashfree Payment Intigration
-CASHFREE_CLIENT_ID="your_sandbox_client_id"
-CASHFREE_CLIENT_SECRET="your_sandbox_client_secret"
-CASHFREE_PAYOUT_BASE_TEST_URL="https://payout-gamma.cashfree.com"
-CASHFREE_PAYOUT_BASE_URL= "https://payout-api.cashfree.com"
+CASHFREE_CLIENT_ID = config('CASHFREE_CLIENT_ID', default='')
+CASHFREE_CLIENT_SECRET = config('CASHFREE_CLIENT_SECRET', default='')
+CASHFREE_PAYOUT_BASE_TEST_URL = config('CASHFREE_PAYOUT_BASE_TEST_URL', default='https://payout-gamma.cashfree.com')
+CASHFREE_PAYOUT_BASE_URL = config('CASHFREE_PAYOUT_BASE_URL', default='https://payout-api.cashfree.com')
 
-RAZORPAY_KEY_ID="your_key"
-RAZORPAY_KEY_SECRET="your_secret"
+RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID', default='')
+RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET', default='')
+RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
 
-OPENAI_API_KEY = "sk-..."
+OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
+LEEGALITY_API_KEY = config('LEEGALITY_API_KEY', default='')
+LEEGALITY_ORG_ID = config('LEEGALITY_ORG_ID', default='')
+LEEGALITY_WORKFLOW_ID = config('LEEGALITY_WORKFLOW_ID', default='')
 
+AWS_S3_BUCKET_NAME = config('AWS_S3_BUCKET_NAME', default='')
+AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='')
 
 LOGGING = {
     "version": 1,
@@ -134,8 +142,12 @@ WSGI_APPLICATION = 'rentsecure_be.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
+        'NAME': config('DB_NAME', default=str(BASE_DIR / 'db.sqlite3')),
+        'USER': config('DB_USER', default=''),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default=''),
+        'PORT': config('DB_PORT', default=''),
     }
 }
 
@@ -180,9 +192,9 @@ SIMPLE_JWT = {
 }
 
 FCM_DJANGO_SETTINGS = {
-    "FCM_SERVER_KEY": "<your_firebase_server_key>",
-    "ONE_DEVICE_PER_USER": False,
-    "DELETE_INACTIVE_DEVICES": True,
+    "FCM_SERVER_KEY": config('FCM_SERVER_KEY', default=''),
+    "ONE_DEVICE_PER_USER": config('FCM_ONE_DEVICE_PER_USER', default=False, cast=bool),
+    "DELETE_INACTIVE_DEVICES": config('FCM_DELETE_INACTIVE_DEVICES', default=True, cast=bool),
 }
 
 
@@ -212,11 +224,11 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-SECURE_BROWSER_XSS_FILTER = True
-
-SECURE_CONTENT_TYPE_NOSNIFF = True
-
-SESSION_COOKIE_SECURE = True
-
-CSRF_COOKIE_SECURE = True
+SECURE_BROWSER_XSS_FILTER = config('SECURE_BROWSER_XSS_FILTER', default=True, cast=bool)
+SECURE_CONTENT_TYPE_NOSNIFF = config('SECURE_CONTENT_TYPE_NOSNIFF', default=True, cast=bool)
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=not DEBUG, cast=bool)
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=not DEBUG, cast=bool)
+SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=not DEBUG, cast=bool)
+SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=31536000, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True, cast=bool)
+SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=True, cast=bool)

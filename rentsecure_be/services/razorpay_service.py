@@ -1,8 +1,8 @@
 # services/razorpay_service.py
 import razorpay
-import os
+from django.conf import settings
 
-client = razorpay.Client(auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_KEY_SECRET")))
+client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 def create_payment_link(rent_record):
     renter = rent_record.renter

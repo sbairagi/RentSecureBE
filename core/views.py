@@ -26,10 +26,9 @@ from django.contrib.auth.models import Group
 
 # python3 manage.py runserver 0.0.0.0:8000
 
-ENV = "development"  # Set this to "production" in live
-
 def send_otp(phone_number, code):
-    if ENV == "production":
+    """Send OTP via Twilio in production; log locally during development."""
+    if not settings.DEBUG:
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
         message = f"Your verification code is {code}"
         client.messages.create(
