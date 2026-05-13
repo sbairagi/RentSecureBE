@@ -55,6 +55,10 @@ coverage.xml
 # Environment variables file (if any)
 .env
 .env.*
+!.env.example
+
+# Node dependencies
+node_modules/
 
 # Mac system files
 .DS_Store
