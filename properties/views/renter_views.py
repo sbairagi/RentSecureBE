@@ -1,11 +1,13 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 from django.core.cache import cache
 from ..models import Renter
 from ..serializers import RenterSerializer
 from ..feature_enforcer import FeatureEnforcer
 from ..services.unit_service import update_unit_status
+from ..utils import check_feature_limit
 
 
 class RenterViewSet(viewsets.ModelViewSet):
@@ -19,6 +21,18 @@ class RenterViewSet(viewsets.ModelViewSet):
             renters = Renter.objects.filter(unit__owner=self.request.user, status__in=["active", "notice_period"])
             cache.set(cache_key, renters, timeout=300)
         return renters
+
+    def create(self, request, *args, **kwargs):
+        allowed, current_usage, subscription_limit, add_on_limit = check_feature_limit(request.user, 'max_renters')
+        if not allowed:
+            return Response({
+                'error': "You’ve reached your renter limit.",
+                'required_add_on': 'max_renters',
+                'subscription_limit': subscription_limit,
+                'add_on_limit': add_on_limit,
+                'current_usage': current_usage,
+            }, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         unit = serializer.validated_data.get('unit')

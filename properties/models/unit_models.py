@@ -148,6 +148,12 @@ class Unit(models.Model):
         help_text="Soft-delete: archived units are hidden from listings"
     )
 
+    last_vacated_at = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date when the unit became vacant because no active renter remained"
+    )
+
     # Notification Settings
     rent_due_reminder = models.BooleanField(
         default=True,
