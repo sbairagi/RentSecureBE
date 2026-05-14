@@ -85,6 +85,59 @@ def generate_file_hash(file):
     return hash_sha256.hexdigest()
 
 
+def _normalize_feature_limit_value(value):
+    if value is None:
+        return 0
+    if isinstance(value, str):
+        lower = value.strip().lower()
+        if lower in ['unlimited', 'yes']:
+            return 'unlimited'
+        if lower in ['no']:
+            return 0
+        try:
+            return int(lower)
+        except ValueError:
+            return 0
+    return value
+
+
+def check_feature_limit(user, feature_key):
+    """
+    Check whether the user can create a resource under a feature limit.
+
+    Returns a tuple: (allowed, current_usage, subscription_limit, add_on_limit)
+    """
+    subscription_limit = 0
+    add_on_limit = 0
+    current_usage = 0
+
+    try:
+        subscription = user.usersubscription
+        plan_limit = PlanFeatureLimit.objects.filter(
+            plan=subscription.plan,
+            feature_key=feature_key
+        ).first()
+        if plan_limit is not None:
+            subscription_limit = _normalize_feature_limit_value(plan_limit.value)
+    except UserSubscription.DoesNotExist:
+        subscription_limit = 0
+
+    addon_sum = AddOnPurchase.objects.filter(user=user, name=feature_key).aggregate(
+        total=Sum('amount')
+    )['total']
+    add_on_limit = int(addon_sum) if addon_sum else 0
+
+    usage = UsageLimit.objects.filter(user=user, feature_key=feature_key).first()
+    current_usage = usage.usage_count if usage else 0
+
+    if subscription_limit == 'unlimited':
+        return True, current_usage, subscription_limit, add_on_limit
+
+    total_allowed = subscription_limit + add_on_limit
+    allowed = current_usage < total_allowed
+    return allowed, current_usage, subscription_limit, add_on_limit
+
+
 def get_feature_limit(user, feature_key):
     from core.models import PlanFeatureLimit
     addon = UsageLimit.objects.filter(user=user, feature_key=feature_key).first()

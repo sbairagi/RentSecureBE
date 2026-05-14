@@ -9,6 +9,7 @@ Handles automated business logic triggers:
 
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.utils import timezone
 from .models import Renter, Unit
 from .services.unit_service import update_unit_status
 
@@ -26,6 +27,22 @@ def update_unit_status_on_renter_save(sender, instance, created, **kwargs):
     This ensures unit occupancy status stays in sync with renter records.
     """
     update_unit_status(instance.unit)
+
+
+@receiver(post_save, sender=Renter)
+def update_last_vacated_date_on_renter_exit(sender, instance, **kwargs):
+    """Track the date the unit became vacant when the renter is exiting."""
+    if instance.status in [
+        Renter.RenterStatus.NOTICE_PERIOD,
+        Renter.RenterStatus.REVOKED,
+        Renter.RenterStatus.DEACTIVATED,
+    ]:
+        unit = instance.unit
+        if not unit.current_renter:
+            today = timezone.now().date()
+            if unit.last_vacated_at != today:
+                unit.last_vacated_at = today
+                unit.save(update_fields=['last_vacated_at'])
 
 
 @receiver(post_delete, sender=Renter)
