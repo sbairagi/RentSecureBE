@@ -5,6 +5,7 @@ from django.core.cache import cache
 from ..models import Renter
 from ..serializers import RenterSerializer
 from ..feature_enforcer import FeatureEnforcer
+from ..services.unit_service import update_unit_status
 
 
 class RenterViewSet(viewsets.ModelViewSet):
@@ -30,6 +31,7 @@ class RenterViewSet(viewsets.ModelViewSet):
 
         serializer.save()
         enforcer.increment('max_renters')
+        update_unit_status(unit)  # Auto-update unit occupancy status
         cache.delete(f'renters_user_{self.request.user.id}')
 
     def perform_update(self, serializer):
@@ -37,12 +39,15 @@ class RenterViewSet(viewsets.ModelViewSet):
         if unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
         serializer.save()
+        update_unit_status(unit)  # Auto-update unit occupancy status
         cache.delete(f'renters_user_{self.request.user.id}')
 
     def perform_destroy(self, instance):
         if instance.unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
+        unit = instance.unit
         enforcer = FeatureEnforcer(self.request.user)
         instance.delete()
         enforcer.decrement('max_renters')
+        update_unit_status(unit)  # Auto-update unit occupancy status
         cache.delete(f'renters_user_{self.request.user.id}')
