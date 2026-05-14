@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from ..models import Renter, RentRecord, Building, Unit
 from ..serializers import RenterRentRecordSerializer
 from notification.utils import send_whatsapp_message
+from ..services.unit_service import get_owner_analytics, update_unit_status
 
 
 @api_view(['GET'])
@@ -38,6 +39,9 @@ def revoke_rent_agreement(request, renter_id):
         renter.active_agreement = None
     renter.save()
 
+    # Auto-update unit status (unit should revert to vacant if renter is revoked)
+    update_unit_status(renter.unit)
+
     send_whatsapp_message(
         renter.phone,
         f"⚠️ Your rent agreement has been revoked by the owner. Reason: {renter.revocation_reason}"
@@ -49,17 +53,30 @@ def revoke_rent_agreement(request, renter_id):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def unit_analytics(request):
+    """
+    Get comprehensive unit occupancy analytics for all buildings.
+    
+    Returns aggregated and per-building metrics including:
+    - Total units, occupied, and vacant counts
+    - Occupancy rates (percentage)
+    - Per-building breakdown
+    
+    Query Parameters:
+        - building_id (optional): Filter to specific building
+        
+    Returns:
+        dict: Analytics with total, vacant, occupied counts and rates
+    """
     user = request.user
-    buildings = Building.objects.filter(owner=user)
-    response = []
-    for building in buildings:
-        total_units = Unit.objects.filter(building=building).count()
-        vacant_units = Unit.objects.filter(building=building, status="vacant").count()
-        occupied_units = total_units - vacant_units
-        response.append({
-            "building": building.name,
-            "total": total_units,
-            "vacant": vacant_units,
-            "occupied": occupied_units,
-        })
-    return Response(response)
+    building_id = request.query_params.get('building_id')
+    
+    if building_id:
+        # Get analytics for specific building
+        building = Building.objects.get(id=building_id, owner=user)
+        from ..services.unit_service import get_building_analytics
+        analytics = get_building_analytics(building)
+        return Response({"data": analytics})
+    
+    # Get analytics for all buildings
+    analytics = get_owner_analytics(user)
+    return Response(analytics)
