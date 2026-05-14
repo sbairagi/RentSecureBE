@@ -5,6 +5,7 @@ from django.core.cache import cache
 from ..models import Unit, UnitImage, UnitDocument, RentAgreementDraft
 from ..serializers import UnitSerializer, UnitImageSerializer, UnitDocumentSerializer, RentAgreementDraftSerializer
 from ..feature_enforcer import FeatureEnforcer
+from ..constants import UNITS_CACHE_TIMEOUT
 
 
 class UnitViewSet(viewsets.ModelViewSet):
@@ -19,7 +20,7 @@ class UnitViewSet(viewsets.ModelViewSet):
         units = cache.get(cache_key)
         if units is None:
             units = Unit.objects.filter(owner=user)
-            cache.set(cache_key, units, timeout=300)
+            cache.set(cache_key, units, timeout=UNITS_CACHE_TIMEOUT)
 
         if enforcer.is_expired() and enforcer.is_past_grace_period():
             free_limit = enforcer.get_free_plan_limit('max_units')

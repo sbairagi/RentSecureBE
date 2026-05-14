@@ -1,8 +1,12 @@
 # Django Imports
 from django.db import models
+from typing import TYPE_CHECKING, Optional
 
 # Local Imports
 from core.models import User
+
+if TYPE_CHECKING:
+    from .unit_models import Unit
 
 
 class Building(models.Model):
@@ -82,16 +86,16 @@ class Building(models.Model):
         verbose_name_plural = "Buildings"
         ordering = ['-created_at']
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return building identifier with city."""
         return f"{self.name} ({self.city}, {self.state})"
 
     @property
-    def units_count(self):
+    def units_count(self) -> int:
         """Return total count of units in this building."""
         return self.units.count()
 
     @property
-    def occupied_units_count(self):
+    def occupied_units_count(self) -> int:
         """Return count of currently occupied units."""
         return self.units.filter(is_vacant=False).count()
