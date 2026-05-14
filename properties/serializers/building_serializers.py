@@ -4,7 +4,7 @@ from ..models import Building
 
 
 class BuildingSerializer(serializers.ModelSerializer):
-    units = UnitSerializer(many=True, read_only=True, source='units')
+    units = UnitSerializer(many=True, read_only=True)
 
     class Meta:
         model = Building

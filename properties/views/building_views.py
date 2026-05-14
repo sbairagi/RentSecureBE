@@ -5,6 +5,7 @@ from django.core.cache import cache
 from ..models import Building
 from ..serializers import BuildingSerializer
 from ..feature_enforcer import FeatureEnforcer
+from ..constants import BUILDINGS_CACHE_TIMEOUT
 
 
 class BuildingViewSet(viewsets.ModelViewSet):
@@ -19,7 +20,7 @@ class BuildingViewSet(viewsets.ModelViewSet):
         buildings = cache.get(cache_key)
         if buildings is None:
             buildings = Building.objects.filter(owner=user)
-            cache.set(cache_key, buildings, timeout=300)
+            cache.set(cache_key, buildings, timeout=BUILDINGS_CACHE_TIMEOUT)
 
         if enforcer.is_expired() and enforcer.is_past_grace_period():
             free_limit = enforcer.get_free_plan_limit('max_buildings')

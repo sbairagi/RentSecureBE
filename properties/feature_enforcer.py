@@ -1,6 +1,7 @@
 from django.utils import timezone
 from core.models import UsageLimit, PlanFeatureLimit, AddOnPurchase, UserSubscription
 from django.db.models import Sum
+from .constants import GRACE_PERIOD_DAYS
 
 class FeatureEnforcer:
     def __init__(self, user):
@@ -19,7 +20,9 @@ class FeatureEnforcer:
         except UserSubscription.DoesNotExist:
             return False  # free user, not expired
 
-    def is_past_grace_period(self, grace_days=7):
+    def is_past_grace_period(self, grace_days=None):
+        if grace_days is None:
+            grace_days = GRACE_PERIOD_DAYS
         try:
             sub = self.user.usersubscription
             if not sub.end_date:
