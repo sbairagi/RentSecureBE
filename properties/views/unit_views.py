@@ -1,11 +1,16 @@
+import json
+
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django.core.cache import cache
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from ..models import Unit, UnitImage, UnitDocument, RentAgreementDraft
 from ..serializers import UnitSerializer, UnitImageSerializer, UnitDocumentSerializer, RentAgreementDraftSerializer
 from ..feature_enforcer import FeatureEnforcer
 from ..constants import UNITS_CACHE_TIMEOUT
+from rentsecure_be.services.leegality_service import send_agreement_for_signature
 
 
 class UnitViewSet(viewsets.ModelViewSet):
@@ -162,9 +167,18 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet):
         if renter.unit != unit:
             raise PermissionDenied("Renter does not belong to this unit.")
 
-        serializer.save(user=self.request.user)
+        agreement = serializer.save(user=self.request.user)
         enforcer.increment("rent_agreement_drafts")
         cache.delete(f'rent_drafts_user_{self.request.user.id}')
+
+        try:
+            owner_email = self.request.user.email
+            renter_email = agreement.renter.email
+            if not owner_email:
+                raise PermissionDenied("Owner email is required for digital signature.")
+            send_agreement_for_signature(agreement, owner_email=owner_email, renter_email=renter_email)
+        except Exception:
+            pass
 
     def perform_update(self, serializer):
         instance = serializer.instance
@@ -188,4 +202,32 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet):
         enforcer = FeatureEnforcer(self.request.user)
         instance.delete()
         enforcer.decrement('rent_agreement_drafts')
-        cache.delete(f'rent_drafts_user_{self.request.user.id}')
+
+
+@csrf_exempt
+def leegality_webhook(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({'error': 'Invalid payload'}, status=400)
+
+    doc_id = payload.get('document_id') or payload.get('documentId') or payload.get('documentKey')
+    status_value = payload.get('status') or payload.get('state')
+    participant = payload.get('participant') or payload.get('identifier')
+
+    agreement = RentAgreementDraft.objects.filter(leegality_document_id=doc_id).first()
+    if agreement and status_value:
+        if status_value.upper() == 'SIGNED':
+            if participant and participant.upper() == 'OWNER':
+                agreement.owner_signed = True
+            elif participant and participant.upper() == 'RENTER':
+                agreement.renter_signed = True
+            else:
+                agreement.owner_signed = True
+                agreement.renter_signed = True
+            agreement.save(update_fields=['owner_signed', 'renter_signed'])
+
+    return JsonResponse({'status': 'ok'})

@@ -36,6 +36,7 @@ from .models import (
     Caretaker,
     Renter,
     RentRecord,
+    ExtraCharge,
     UnitImage,
     UnitDocument,
     RentAgreementDraft
@@ -526,6 +527,45 @@ class RentRecordViewSetAPITests(APITestCase):
                 response = self.client.post('/api/rent-records/', data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_owner_dashboard_summary_returns_expected_data(self):
+        """Test owner dashboard summary contains rent totals and defaulters"""
+        today = date.today()
+        current_month = today.replace(day=1)
+        last_month = (current_month - timedelta(days=30)).replace(day=1)
+
+        RentRecord.objects.create(
+            renter=self.renter,
+            unit=self.unit,
+            owner=self.user,
+            rent_month=current_month,
+            amount_paid=10000,
+            date_paid=today,
+            payment_status=RentRecord.PaymentStatus.PAID,
+            payout_status="SUCCESS",
+            rent_due_date=today
+        )
+
+        RentRecord.objects.create(
+            renter=self.renter,
+            unit=self.unit,
+            owner=self.user,
+            rent_month=last_month,
+            amount_paid=0,
+            date_paid=last_month,
+            payment_status=RentRecord.PaymentStatus.PENDING,
+            payout_status="PENDING",
+            rent_due_date=today - timedelta(days=10)
+        )
+
+        response = self.client.get('/api/api/owner/dashboard-summary/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(float(response.data['total_rent_collected']), 10000.0)
+        self.assertEqual(float(response.data['rent_collected_this_month']), 10000.0)
+        self.assertEqual(response.data['payouts']['success'], 1)
+        self.assertEqual(response.data['payouts']['pending'], 1)
+        self.assertEqual(len(response.data['rent_defaulters']), 1)
+        self.assertEqual(response.data['rent_defaulters'][0]['renter_name'], 'Alice')
+
     def test_cannot_create_duplicate_rent_record(self):
         """Test cannot create duplicate rent record for same month"""
         RentRecord.objects.create(
@@ -558,6 +598,58 @@ class RentRecordViewSetAPITests(APITestCase):
         response = self.client.post('/api/rent-records/', data, format='json')
         # Should fail
         self.assertNotEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_owner_can_list_extra_charges(self):
+        """Test owner can view extra charges"""
+        charge = ExtraCharge.objects.create(
+            name="Electricity",
+            renter=self.renter,
+            unit=self.unit,
+            amount=1500,
+            due_date=date(2025, 2, 10),
+            status=ExtraCharge.Status.DUE
+        )
+
+        response = self.client.get('/api/extra-charges/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['name'], charge.name)
+
+    def test_renter_can_list_their_extra_charges(self):
+        """Test renter user can view their own extra charges"""
+        renter_user = User.objects.create_user(username="renter1", password="pass123")
+        self.renter.user = renter_user
+        self.renter.save()
+
+        ExtraCharge.objects.create(
+            name="Maintenance",
+            renter=self.renter,
+            unit=self.unit,
+            amount=1200,
+            due_date=date(2025, 2, 10),
+            status=ExtraCharge.Status.DUE
+        )
+
+        self.client.force_authenticate(user=renter_user)
+        response = self.client.get('/api/extra-charges/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['renter'], self.renter.id)
+
+    def test_owner_can_create_extra_charge(self):
+        """Test owner can create extra charges via API"""
+        data = {
+            "name": "Water",
+            "description": "Monthly water charge",
+            "renter": self.renter.id,
+            "unit": self.unit.id,
+            "amount": 800,
+            "due_date": "2025-02-10",
+            "status": ExtraCharge.Status.DUE
+        }
+        response = self.client.post('/api/extra-charges/', data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['name'], "Water")
 
 
 class RentAgreementDraftViewSetAPITests(APITestCase):

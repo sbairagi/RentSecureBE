@@ -6,7 +6,7 @@ class RentRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = RentRecord
         fields = '__all__'
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'owner']
 
     def validate(self, data):
         user = self.context['request'].user

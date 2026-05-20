@@ -12,6 +12,14 @@ from django.dispatch import receiver
 from django.utils import timezone
 from .models import Renter, Unit
 from .services.unit_service import update_unit_status
+from .utils.onboarding_utils import generate_onboarding_token
+
+
+@receiver(post_save, sender=Renter)
+def generate_renter_onboarding_token(sender, instance, created, **kwargs):
+    """Generate onboarding token for new renters."""
+    if created and not instance.onboarding_token:
+        generate_onboarding_token(instance)
 
 
 @receiver(post_save, sender=Renter)

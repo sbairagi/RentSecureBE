@@ -1,0 +1,74 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rentsecure_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DJANGO_SETTINGS_MODULE: rentsecure_be.settings
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: rentsecure_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black ruff pylint pylint-django mypy bandit coverage psycopg2-binary
+
+      - name: Black formatting check
+        run: python -m black --check .
+
+      - name: Ruff lint
+        run: python -m ruff check .
+
+      - name: Pylint deep analysis
+        run: python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot
+
+      - name: Mypy type check
+        run: python -m mypy .
+
+      - name: Bandit security scan
+        run: python -m bandit -r . -x .venv,venv,migrations,tests
+
+      - name: Run tests with coverage
+        run: |
+          python -m pytest
+          python -m coverage report --fail-under=90
+          python -m coverage xml

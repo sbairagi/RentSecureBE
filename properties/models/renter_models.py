@@ -26,6 +26,7 @@ class Renter(models.Model):
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='renters', db_index=True)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True, related_name='renter_profile')
     name = models.CharField(max_length=100, help_text="Renter's full name")
+    email = models.EmailField(null=True, blank=True, help_text="Renter's email for receipts and notifications")
     phone = models.CharField(validators=[phone_regex], max_length=15, help_text="Primary phone number")
     alternate_phone = models.CharField(validators=[phone_regex], max_length=15, blank=True, null=True, help_text="Alternate phone number")
     emergency_contact_name = models.CharField(max_length=100, blank=True, null=True, help_text="Emergency contact name")
@@ -60,6 +61,43 @@ class Renter(models.Model):
     notice_start_date = models.DateField(null=True, blank=True)
 
     final_invoice_path = models.CharField(max_length=255, null=True, blank=True)
+
+    # Self-onboarding status
+    class OnboardingStatus(models.TextChoices):
+        PENDING = "pending", "Pending Invite"
+        LINK_SENT = "link_sent", "Link Sent"
+        COMPLETED = "completed", "Completed"
+
+    class KYCStatus(models.TextChoices):
+        NOT_STARTED = "not_started", "Not Started"
+        IN_PROGRESS = "in_progress", "In Progress"
+        VERIFIED = "verified", "Verified"
+        REJECTED = "rejected", "Rejected"
+
+    onboarding_status = models.CharField(
+        max_length=20,
+        choices=OnboardingStatus.choices,
+        default=OnboardingStatus.PENDING,
+        help_text="Renter self-onboarding progress"
+    )
+    kyc_status = models.CharField(
+        max_length=20,
+        choices=KYCStatus.choices,
+        default=KYCStatus.NOT_STARTED,
+        help_text="KYC verification status"
+    )
+    onboarding_token = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        unique=True,
+        help_text="Secure token for onboarding link"
+    )
+    onboarding_link_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the onboarding link was sent to renter"
+    )
 
     class Meta:
         unique_together = ('unit', 'phone')
@@ -121,6 +159,9 @@ class RentAgreementDraft(models.Model):
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='rent_agreement_draft')
     generated_at = models.DateTimeField(auto_now_add=True)
     file = models.FileField(upload_to='auto_agreements/')
+    leegality_document_id = models.CharField(max_length=255, null=True, blank=True)
+    owner_signed = models.BooleanField(default=False)
+    renter_signed = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('renter', 'unit')

@@ -39,7 +39,11 @@ class FeatureEnforcer:
             if limit_value == 'unlimited':
                 return 'unlimited'
             return int(limit_value)
-        except (UserSubscription.DoesNotExist, PlanFeatureLimit.DoesNotExist, ValueError):
+        except UserSubscription.DoesNotExist:
+            return 0
+        except PlanFeatureLimit.DoesNotExist:
+            return 'unlimited'
+        except ValueError:
             return 0
 
     def _get_addon_limit(self, key):
@@ -61,7 +65,13 @@ class FeatureEnforcer:
             return 0
 
     def get_active_limit(self, key):
-        # If subscription expired and past grace period, fallback to free plan limits
+        # If user has no subscription, use free plan limits.
+        try:
+            self.user.usersubscription
+        except UserSubscription.DoesNotExist:
+            return self._get_free_plan_limit(key)
+
+        # If subscription is expired and past grace period, fallback to free plan limits
         if self.is_expired() and self.is_past_grace_period():
             return self._get_free_plan_limit(key)
 

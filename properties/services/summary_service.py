@@ -7,8 +7,9 @@ Includes collected, pending, and defaulter information across all units.
 
 from django.utils import timezone
 from django.core.mail import send_mail
-from django.db.models import Sum, Q
-from properties.models import RentRecord, Unit
+from django.db.models import Sum
+from core.models import NotificationPreference
+from properties.models import RentRecord
 from datetime import date
 
 
@@ -83,30 +84,37 @@ def send_monthly_rent_summary_email(owner, target_date=None, send_whatsapp=True)
     # Build email message
     message_text = _build_summary_message(owner, summary)
 
-    # Send email
-    try:
-        send_mail(
-            subject=f"Monthly Rent Summary - {summary['month_name']}",
-            message=message_text,
-            from_email="no-reply@rentsecure.in",
-            recipient_list=[owner.email],
-            fail_silently=False,
-        )
-    except Exception as exc:
-        print(f"Failed to send email to {owner.email}: {exc}")
-        return False
+    prefs, _ = NotificationPreference.objects.get_or_create(owner=owner)
 
-    # Send WhatsApp if enabled
-    if send_whatsapp and hasattr(owner, 'profile'):
+    sent_any = False
+
+    if prefs.monthly_summary_email and owner.email:
+        try:
+            send_mail(
+                subject=f"Monthly Rent Summary - {summary['month_name']}",
+                message=message_text,
+                from_email="no-reply@rentsecure.in",
+                recipient_list=[owner.email],
+                fail_silently=False,
+            )
+            sent_any = True
+        except Exception as exc:
+            print(f"Failed to send email to {owner.email}: {exc}")
+
+    if send_whatsapp and prefs.monthly_summary_whatsapp and hasattr(owner, 'profile'):
         whatsapp_number = getattr(owner.profile, 'whatsapp_number', None)
         if whatsapp_number:
             try:
                 from notification.services.whatsapp_service import send_whatsapp_message
-                send_whatsapp_message(whatsapp_number, message_text)
+                result = send_whatsapp_message(whatsapp_number, message_text)
+                sent_any = sent_any or bool(result)
             except Exception as exc:
                 print(f"Failed to send WhatsApp to {whatsapp_number}: {exc}")
 
-    return True
+    if not sent_any:
+        print(f"No monthly summary notification was sent for {owner.email or owner.username}. Preferences: email={prefs.monthly_summary_email}, whatsapp={prefs.monthly_summary_whatsapp}")
+
+    return sent_any
 
 
 def _build_summary_message(owner, summary):

@@ -1,0 +1,31 @@
+[run]
+branch = True
+source =
+    rentsecure_be
+    ai_assistant
+    core
+    dashboard
+    documents
+    finance
+    notification
+    properties
+    referral_and_earn
+    smartbot
+omit =
+    */tests/*
+    */test_*.py
+    */tests.py
+    */migrations/*
+    */conftest.py
+    */venv/*
+    */.venv/*
+    */__pycache__/*
+    */.pytest_cache/*
+    */mock*.py
+    */mocks/*
+
+[report]
+show_missing = True
+skip_covered = True
+precision = 2
+fail_under = 90

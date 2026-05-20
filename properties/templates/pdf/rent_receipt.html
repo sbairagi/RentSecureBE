@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1f2937;
+            margin: 0;
+            font-size: 28px;
+        }
+        .logo {
+            color: #3b82f6;
+            font-weight: bold;
+        }
+        .receipt-number {
+            color: #6b7280;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            color: #1f2937;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 5px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .info-label {
+            color: #6b7280;
+            font-weight: 500;
+        }
+        .info-value {
+            color: #1f2937;
+            font-weight: 600;
+        }
+        .amount-section {
+            background-color: #eff6ff;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .amount-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+        .amount-label {
+            color: #6b7280;
+        }
+        .amount-value {
+            color: #1f2937;
+            font-weight: 600;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-top: 2px solid #3b82f6;
+            border-bottom: 2px solid #3b82f6;
+            margin-top: 10px;
+        }
+        .total-label {
+            color: #1f2937;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .total-amount {
+            color: #10b981;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .payment-status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .payment-status.paid {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+        .payment-status.pending {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 12px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        table td {
+            padding: 8px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        table td:first-child {
+            color: #6b7280;
+            width: 50%;
+        }
+        table td:last-child {
+            color: #1f2937;
+            font-weight: 600;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><span class="logo">🏠 RentSecure</span></h1>
+            <h2>RENT RECEIPT</h2>
+            <div class="receipt-number">Receipt #{{ rent.id }}</div>
+        </div>
+
+        <!-- Renter Information -->
+        <div class="section">
+            <div class="section-title">Renter Information</div>
+            <table>
+                <tr>
+                    <td>Name</td>
+                    <td>{{ renter.name }}</td>
+                </tr>
+                <tr>
+                    <td>Email</td>
+                    <td>{{ renter.email }}</td>
+                </tr>
+                <tr>
+                    <td>Phone</td>
+                    <td>{{ renter.phone }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Property Information -->
+        <div class="section">
+            <div class="section-title">Property Information</div>
+            <table>
+                <tr>
+                    <td>Unit</td>
+                    <td>{{ unit.unit }}</td>
+                </tr>
+                <tr>
+                    <td>Building</td>
+                    <td>{{ unit.building_name|default:unit.building.name }}</td>
+                </tr>
+                <tr>
+                    <td>Address</td>
+                    <td>{{ unit.city }}, {{ unit.state }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Payment Information -->
+        <div class="section">
+            <div class="section-title">Payment Information</div>
+            <table>
+                <tr>
+                    <td>Month</td>
+                    <td>{{ rent.rent_month|date:"F Y" }}</td>
+                </tr>
+                <tr>
+                    <td>Rent Amount</td>
+                    <td>₹{{ rent.amount_paid }}</td>
+                </tr>
+                <tr>
+                    <td>Payment Date</td>
+                    <td>{{ rent.date_paid|date:"d M Y" }}</td>
+                </tr>
+                <tr>
+                    <td>Payment Mode</td>
+                    <td>{{ rent.get_payment_mode_display|default:"Not specified" }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Amount Summary -->
+        <div class="amount-section">
+            <div class="amount-row">
+                <span class="amount-label">Rent for {{ rent.rent_month|date:"F" }}</span>
+                <span class="amount-value">₹{{ rent.amount_paid }}</span>
+            </div>
+            {% if rent.late_fee and rent.late_fee > 0 %}
+            <div class="amount-row">
+                <span class="amount-label">Late Fee</span>
+                <span class="amount-value">₹{{ rent.late_fee }}</span>
+            </div>
+            {% endif %}
+            <div class="total-row">
+                <span class="total-label">TOTAL PAID</span>
+                <span class="total-amount">₹{{ rent.amount_paid }}</span>
+            </div>
+        </div>
+
+        <!-- Payment Status -->
+        {% if rent.payment_status == "PAID" %}
+        <div class="payment-status paid">
+            ✓ PAYMENT RECEIVED AND CONFIRMED
+        </div>
+        {% elif rent.payment_status == "PENDING" %}
+        <div class="payment-status pending">
+            ⏳ PAYMENT PENDING
+        </div>
+        {% endif %}
+
+        <!-- Notes -->
+        {% if rent.remarks %}
+        <div class="section">
+            <div class="section-title">Notes</div>
+            <p style="color: #6b7280; line-height: 1.6;">{{ rent.remarks }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>This is an automated receipt. Please retain for your records.</strong></p>
+            <p>Generated on {{ "now"|date:"d M Y, H:i" }} IST</p>
+            <p>For questions or discrepancies, please contact your landlord or the RentSecure support team.</p>
+            <p style="margin-top: 15px;">© {% now "Y" %} RentSecure. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

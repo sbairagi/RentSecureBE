@@ -10,6 +10,7 @@ from .renter_models import (
     PoliceVerification,
 )
 from .rent_record_models import RentRecord
+from .extra_charge_models import ExtraCharge
 
 # Optional placeholders for future modules
 from .property_tax_models import *
@@ -30,4 +31,5 @@ __all__ = [
     'RentAgreementDraft',
     'PoliceVerification',
     'RentRecord',
+    'ExtraCharge',
 ]

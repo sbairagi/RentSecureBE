@@ -30,7 +30,7 @@ class GenerateRentAgreementPdfViewSet(viewsets.ViewSet):
         except Renter.DoesNotExist:
             return Response({'detail': 'Renter not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        html_string = render_to_string('rent_agreement_template.html', {
+        html_string = render_to_string('rent_agreement.html', {
             'renter': renter,
             'unit': renter.unit,
             'owner': renter.unit.owner,
@@ -66,7 +66,7 @@ class GenerateUnitDossierPdfViewSet(viewsets.ViewSet):
         }
 
         # Render HTML from template
-        html_string = render_to_string('unit_dossier_template.html', context)
+        html_string = render_to_string('property_dossier.html', context)
 
         try:
             pdf_file = BytesIO()
@@ -96,7 +96,7 @@ class GenerateRentReceiptPdfViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        html_string = render_to_string('rent_receipt.html', {'rent_record': rent_record})
+        html_string = render_to_string('rent_recept.html', {'rent_record': rent_record})
         html = HTML(string=html_string)
         pdf_file = html.write_pdf()
 

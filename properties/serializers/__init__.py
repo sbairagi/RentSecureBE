@@ -3,6 +3,7 @@ from .unit_serializers import UnitSerializer, UnitImageSerializer, UnitDocumentS
 from .caretaker_serializers import CaretakerSerializer
 from .renter_serializers import RenterSerializer, RenterRentRecordSerializer
 from .rent_record_serializers import RentRecordSerializer
+from .extra_charge_serializers import ExtraChargeSerializer
 
 from .property_tax_serializers import *
 from .subscription_serializers import *
@@ -18,4 +19,5 @@ __all__ = [
     'RenterSerializer',
     'RenterRentRecordSerializer',
     'RentRecordSerializer',
+    'ExtraChargeSerializer',
 ]

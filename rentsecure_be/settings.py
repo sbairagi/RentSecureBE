@@ -32,6 +32,10 @@ if not DEBUG and SECRET_KEY == 'django-insecure-placeholder-key':
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
 
+# Application URLs
+FRONTEND_URL = config('FRONTEND_URL', default='https://app.rentsecure.com')
+BACKEND_URL = config('BACKEND_URL', default='http://localhost:8000')
+
 # Email details
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
@@ -60,6 +64,7 @@ OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 LEEGALITY_API_KEY = config('LEEGALITY_API_KEY', default='')
 LEEGALITY_ORG_ID = config('LEEGALITY_ORG_ID', default='')
 LEEGALITY_WORKFLOW_ID = config('LEEGALITY_WORKFLOW_ID', default='')
+LEEGALITY_TEMPLATE_ID = config('LEEGALITY_TEMPLATE_ID', default='')
 
 AWS_S3_BUCKET_NAME = config('AWS_S3_BUCKET_NAME', default='')
 AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='')

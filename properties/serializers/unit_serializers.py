@@ -68,7 +68,7 @@ class RentAgreementDraftSerializer(serializers.ModelSerializer):
     class Meta:
         model = RentAgreementDraft
         fields = '__all__'
-        read_only_fields = ['user', 'generated_at', 'file']
+        read_only_fields = ['user', 'generated_at']
 
     def validate(self, data):
         request_user = self.context['request'].user

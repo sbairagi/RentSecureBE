@@ -59,6 +59,15 @@ def handle_rent_payment(sender, instance, **kwargs):
                 title="Thanks for Early Rent Payment",
                 message="We appreciate your on-time rent payment. Keep it up! 🏆"
             )
+        
+        # Send rent receipt email to renter
+        try:
+            from properties.services.receipt_service import send_rent_receipt_on_payment
+            send_rent_receipt_on_payment(instance)
+        except Exception as exc:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception(f"Failed to send receipt email for rent {instance.id}: {exc}")
 
 
 def update_renter_defaulter_status(rent: RentRecord):

@@ -22,6 +22,19 @@ class UserProfile(models.Model):
     language_preference = models.CharField(max_length=2, default="en", choices=[("en", "English"), ("hi", "Hindi")])
 
 
+class NotificationPreference(models.Model):
+    owner = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_preference')
+    rent_alerts_whatsapp = models.BooleanField(default=True)
+    rent_alerts_email = models.BooleanField(default=True)
+    monthly_summary_email = models.BooleanField(default=True)
+    monthly_summary_whatsapp = models.BooleanField(default=False)
+    payout_alerts_whatsapp = models.BooleanField(default=True)
+    payout_alerts_email = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Notification Preferences for {self.owner.email or self.owner.username}"
+
+
 class OTP(models.Model):
     phone_number = models.CharField(max_length=15)
     code = models.CharField(max_length=6)
