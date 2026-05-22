@@ -7,9 +7,11 @@ on:
 
 jobs:
   deploy:
+    name: Deploy to EC2
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.7
@@ -28,3 +30,19 @@ jobs:
             python manage.py collectstatic --noinput
             sudo systemctl restart gunicorn
             sudo systemctl restart nginx
+
+      - name: Install Sentry CLI
+        run: |
+          curl -sL https://sentry.io/get-cli/ | bash
+
+      - name: Create Sentry release
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          export RELEASE=${GITHUB_SHA}
+          ./sentry-cli releases new --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE"
+          ./sentry-cli releases set-commits --auto --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE"
+          ./sentry-cli releases finalize --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE"
+          ./sentry-cli releases deploys --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE" new -e production
