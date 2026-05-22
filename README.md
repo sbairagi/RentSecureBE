@@ -1,5 +1,7 @@
 # RentSecureBE - Project Overview
 
+<!-- demo: this comment is used to verify the master->main pipeline -->
+
 ## 📋 Project Summary
 
 **RentSecureBE** is a comprehensive Django-based backend system for rental property management. It's designed to help property owners manage their buildings, units, tenants (renters), rent collection, and related financial operations.
