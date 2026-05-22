@@ -1,0 +1,71 @@
+name: Lint
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  black:
+    name: Black
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install black
+      - name: Run Black
+        run: python -m black --check .
+
+  ruff:
+    name: Ruff
+    needs: black
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+      - name: Run Ruff
+        run: python -m ruff check .
+
+  pylint:
+    name: Pylint
+    needs: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint pylint-django
+      - name: Run Pylint
+        run: python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot
+
+  mypy:
+    name: Mypy
+    needs: pylint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install mypy
+      - name: Run Mypy
+        run: python -m mypy .
