@@ -5,10 +5,13 @@ on:
     branches:
       - main
       - dev
+  push:
+    branches:
+      - master
 
 jobs:
   validate:
-    name: PR validation
+    name: Validation
     runs-on: ubuntu-latest
     services:
       postgres:
