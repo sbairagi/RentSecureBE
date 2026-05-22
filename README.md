@@ -28,6 +28,22 @@
 - **Formatting**: black (88 char line length)
 - **Pre-commit Hooks**: Configured
 
+### Local pre-push hook
+To ensure `pre-commit` runs before any local push, enable the repository’s hook folder once:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Then install Python dependencies and pre-commit:
+
+```bash
+python -m pip install -r requirements.txt
+pre-commit install --install-hooks
+```
+
+Now every `git push` will run the configured `pre-push` hook and block the push if any hook fails.
+
 ---
 
 ## 📦 Django Applications
