@@ -20,7 +20,7 @@ def retry_failed_payouts():
             continue
 
         try:
-            response = process_rent_payout(rent)
+            process_rent_payout(rent)
             rent.payout_retries += 1
             rent.last_payout_retry = now()
             rent.save()

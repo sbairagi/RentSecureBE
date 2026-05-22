@@ -27,12 +27,12 @@ def generate_renter_onboarding_token(sender, instance, created, **kwargs):
 def update_unit_status_on_renter_save(sender, instance, created, **kwargs):
     """
     Auto-update unit status whenever a renter is created or updated.
-    
+
     Triggered when:
     - New renter is created (created=True)
     - Renter status changes (e.g., active → notice_period → deactivated)
     - Renter is revoked
-    
+
     This ensures unit occupancy status stays in sync with renter records.
     """
     update_unit_status(instance.unit)
@@ -58,7 +58,7 @@ def update_last_vacated_date_on_renter_exit(sender, instance, **kwargs):
 def update_unit_status_on_renter_delete(sender, instance, **kwargs):
     """
     Auto-update unit status when a renter is deleted.
-    
+
     This handles cases where:
     - A renter record is permanently deleted
     - The unit should revert to vacant if this was the only renter

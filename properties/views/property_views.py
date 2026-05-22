@@ -57,15 +57,15 @@ def revoke_rent_agreement(request, renter_id):
 def unit_analytics(request):
     """
     Get comprehensive unit occupancy analytics for all buildings.
-    
+
     Returns aggregated and per-building metrics including:
     - Total units, occupied, and vacant counts
     - Occupancy rates (percentage)
     - Per-building breakdown
-    
+
     Query Parameters:
         - building_id (optional): Filter to specific building
-        
+
     Returns:
         dict: Analytics with total, vacant, occupied counts and rates
     """

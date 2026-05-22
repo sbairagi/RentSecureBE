@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 def send_renter_onboarding_invite(renter):
     """
     Send WhatsApp invite to renter with secure onboarding link.
-    
+
     Args:
         renter: Renter instance to invite
-        
+
     Returns:
         bool: True if invite was sent, False otherwise
     """
@@ -66,10 +66,10 @@ def send_renter_onboarding_invite(renter):
 def send_renter_onboarding_reminder(renter):
     """
     Send a reminder to renter who received onboarding link but hasn't completed it.
-    
+
     Args:
         renter: Renter instance
-        
+
     Returns:
         bool: True if reminder was sent
     """
@@ -101,7 +101,7 @@ def send_renter_onboarding_reminder(renter):
 def notify_owner_renter_completed_kyc(renter):
     """
     Notify owner when renter completes KYC.
-    
+
     Args:
         renter: Renter instance
     """

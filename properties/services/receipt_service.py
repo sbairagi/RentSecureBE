@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 def generate_rent_receipt_pdf(rent_record):
     """
     Generate a rent receipt PDF from a RentRecord.
-    
+
     Args:
         rent_record: RentRecord instance
-        
+
     Returns:
         bytes: PDF file content
     """
@@ -46,10 +46,10 @@ def generate_rent_receipt_pdf(rent_record):
 def send_rent_receipt_email(rent_record):
     """
     Send rent receipt email to renter with PDF attachment.
-    
+
     Args:
         rent_record: RentRecord instance
-        
+
     Returns:
         bool: True if email was sent successfully
     """
@@ -105,10 +105,10 @@ def send_rent_receipt_email(rent_record):
 def send_rent_receipt_on_payment(rent_record):
     """
     Auto-send receipt when rent payment is marked as successful.
-    
+
     Args:
         rent_record: RentRecord instance
-        
+
     Returns:
         bool: True if email sent
     """

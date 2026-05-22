@@ -47,7 +47,7 @@ class BuildingSerializer(serializers.ModelSerializer):
         read_only_fields = ['owner']
 
     def validate(self, data):
-        user = self.context['request'].user
+        self.context['request'].user
         # Ownership validation etc. if needed
         return data
 

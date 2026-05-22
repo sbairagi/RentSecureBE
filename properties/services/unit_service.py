@@ -11,16 +11,16 @@ from ..models import Renter, Unit
 def update_unit_status(unit: Unit) -> None:
     """
     Auto-update unit's status based on active renters.
-    
+
     A unit is marked as "occupied" if it has an active renter,
     otherwise it's marked as "vacant".
-    
+
     Args:
         unit (Unit): The unit whose status should be updated
-        
+
     Returns:
         None
-    
+
     Side Effects:
         - Updates unit.status to "occupied" or "vacant"
         - Updates unit.is_vacant denormalized field
@@ -46,10 +46,10 @@ def update_unit_status(unit: Unit) -> None:
 def get_building_analytics(building) -> dict:
     """
     Get analytics for a specific building.
-    
+
     Args:
         building: The Building object
-        
+
     Returns:
         dict: Analytics with total, occupied, and vacant counts
     """
@@ -73,10 +73,10 @@ def get_building_analytics(building) -> dict:
 def get_owner_analytics(user) -> dict:
     """
     Get comprehensive analytics for all buildings owned by a user.
-    
+
     Args:
         user: The User/owner object
-        
+
     Returns:
         dict: Aggregated analytics across all buildings
     """

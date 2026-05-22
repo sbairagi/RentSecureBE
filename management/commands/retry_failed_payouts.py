@@ -56,7 +56,7 @@ class Command(BaseCommand):
         for rent in failed_rents:
             try:
                 self.stdout.write(f"Retrying payout for Rent ID: {rent.id}")
-                response = process_rent_payout(rent)
+                process_rent_payout(rent)
                 rent.retry_count += 1
                 rent.save()
             except Exception as e:

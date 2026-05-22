@@ -164,7 +164,7 @@ class PaymentProcessingLoopholes(TestCase):
             rent_amount=10000,
             start_date=date(2025, 1, 1)
         )
-        rent_record1 = RentRecord.objects.create(
+        RentRecord.objects.create(
             renter=renter,
             unit=self.unit,
             owner=self.user,
@@ -174,7 +174,7 @@ class PaymentProcessingLoopholes(TestCase):
         )
         # Try to create another for same month
         with self.assertRaises(Exception):  # Should be unique constraint
-            rent_record2 = RentRecord.objects.create(
+            RentRecord.objects.create(
                 renter=renter,
                 unit=self.unit,
                 owner=self.user,
@@ -538,7 +538,7 @@ class FeatureEnforcerLoopholes(TestCase):
         enforcer = FeatureEnforcer(user)
 
         # Increment multiple times
-        for i in range(5):
+        for _i in range(5):
             enforcer.increment("max_buildings")
 
         usage = UsageLimit.objects.get(user=user, feature_key="max_buildings")
@@ -588,7 +588,7 @@ class ConcurrencyLoopholes(TransactionTestCase):
         month = date(2025, 1, 1)
 
         # First request creates
-        rent1 = RentRecord.objects.create(
+        RentRecord.objects.create(
             renter=self.renter,
             unit=self.unit,
             owner=self.user,
@@ -599,7 +599,7 @@ class ConcurrencyLoopholes(TransactionTestCase):
 
         # Second concurrent request should fail
         with self.assertRaises(Exception):
-            rent2 = RentRecord.objects.create(
+            RentRecord.objects.create(
                 renter=self.renter,
                 unit=self.unit,
                 owner=self.user,

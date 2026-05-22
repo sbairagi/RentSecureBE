@@ -109,20 +109,19 @@ def smart_bot_reply(request):
     # In future, let GPT detect intent & extract name using:
     # name = extract_name_via_gpt(query)
     # intent = extract_intent_via_gpt(query)
-    action_result = ""
     if action == "send_rent_reminder":
         # extract renter name with a simple rule (improve later with GPT parsing)
         name = query.split("to")[-1].strip()
-        action_result = send_rent_reminder(name)
+        send_rent_reminder(name)
     elif action == "retry_payout":
         name = query.split("for")[-1].strip()
-        action_result = retry_payout(name)
+        retry_payout(name)
     elif action == "send_rent_agreement":
         name = query.split("to")[-1].strip()
-        action_result = send_rent_agreement(name)
+        send_rent_agreement(name)
     elif action == "send_agreement_for_signature":
         name = query.split("to")[-1].strip()
-        action_result = send_agreement_for_signature(name)
+        send_agreement_for_signature(name)
 
     # Save to DB
     SmartBotChat.objects.create(user=user, message=query, reply=context_data)

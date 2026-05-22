@@ -17,5 +17,5 @@ from smartbot.actions import send_agreement_for_signature
 def retry_signature(request, rent_id):
     if request.method == "POST":
         rent = RentRecord.objects.get(id=rent_id)
-        msg = send_agreement_for_signature(rent.renter.name)
+        send_agreement_for_signature(rent.renter.name)
         return redirect("agreement_status")

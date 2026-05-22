@@ -656,7 +656,7 @@ class SingleSubscriptionTestCase(TestCase):
             enforcer.increment("property")
 
         # 6th time increment, check usage count nahi badhna chahiye
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(Exception):
             enforcer.increment("property")  # Exception expected, but maybe FeatureEnforcer doesn't raise
 
         # Agar exception nahi aata to fail test explicitly

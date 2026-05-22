@@ -452,7 +452,7 @@ def retry_payout_api(request, rent_id):
         return Response({"error": "Payout not retryable"}, status=400)
 
     try:
-        response = process_rent_payout(rent)
+        process_rent_payout(rent)
         rent.refresh_from_db()
 
         if rent.payout_status == "SUCCESS":

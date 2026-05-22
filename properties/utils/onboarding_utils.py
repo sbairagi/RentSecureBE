@@ -13,10 +13,10 @@ from django.utils import timezone
 def generate_onboarding_token(renter):
     """
     Generate a unique, secure token for renter onboarding.
-    
+
     Args:
         renter: Renter instance
-        
+
     Returns:
         str: Secure random token
     """
@@ -30,12 +30,12 @@ def generate_onboarding_token(renter):
 def generate_onboarding_link(renter):
     """
     Generate a complete onboarding link for renter.
-    
+
     Link format: https://app.rentsecure.com/onboard-renter/<token>/
-    
+
     Args:
         renter: Renter instance
-        
+
     Returns:
         str: Full onboarding URL
     """
@@ -50,10 +50,10 @@ def generate_onboarding_link(renter):
 def verify_onboarding_token(token):
     """
     Verify that an onboarding token is valid and belongs to an active renter.
-    
+
     Args:
         token: Onboarding token to verify
-        
+
     Returns:
         Renter instance if valid, None otherwise
     """
@@ -75,7 +75,7 @@ def verify_onboarding_token(token):
 def mark_onboarding_completed(renter):
     """
     Mark renter's onboarding as completed.
-    
+
     Args:
         renter: Renter instance
     """
@@ -88,7 +88,7 @@ def mark_onboarding_completed(renter):
 def mark_kyc_verified(renter):
     """
     Mark renter's KYC as verified.
-    
+
     Args:
         renter: Renter instance
     """

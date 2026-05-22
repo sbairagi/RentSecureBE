@@ -439,7 +439,7 @@ class RenterViewSetAPITests(APITestCase):
 
     def test_list_renters_only_active(self):
         """Test listing renters returns only active/notice_period"""
-        renter1 = Renter.objects.create(
+        Renter.objects.create(
             unit=self.unit,
             name="Alice",
             phone="+919876543210",
@@ -447,7 +447,7 @@ class RenterViewSetAPITests(APITestCase):
             start_date=date(2025, 1, 1),
             status=Renter.RenterStatus.ACTIVE
         )
-        renter2 = Renter.objects.create(
+        Renter.objects.create(
             unit=self.unit,
             name="Bob",
             phone="+919876543211",
@@ -705,7 +705,7 @@ class RentAgreementDraftViewSetAPITests(APITestCase):
             "unit": self.unit.id,
             "file": draft_file2
         }
-        response = self.client.post('/api/rent-agreement-drafts/', data, format='multipart')
+        self.client.post('/api/rent-agreement-drafts/', data, format='multipart')
         # Should fail due to unique constraint
 
 
@@ -719,7 +719,7 @@ class CrossUserAccessTests(APITestCase):
 
     def test_user2_cannot_list_user1_buildings(self):
         """Test user2 cannot see user1's buildings"""
-        building = Building.objects.create(
+        Building.objects.create(
             name="User1 Building",
             address_line="123 Main St",
             city="New York",

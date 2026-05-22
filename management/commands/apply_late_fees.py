@@ -15,7 +15,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         today = now().date()
         grace_days = 3
-        late_fee_amount = Decimal('300.00')
+        Decimal('300.00')
 
         overdue_rents = RentRecord.objects.filter(
             payment_status='DUE',

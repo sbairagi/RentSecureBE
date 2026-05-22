@@ -176,7 +176,7 @@ class UnitModelTests(TestCase):
 
     def test_unit_unique_constraint(self):
         """Test unique_together constraint (owner, unit, building, address_line)"""
-        unit1 = Unit.objects.create(
+        Unit.objects.create(
             owner=self.user,
             building=self.building,
             unit="101",
@@ -1061,7 +1061,7 @@ class CachingTests(TransactionTestCase):
 
     def test_building_cache_on_list(self):
         """Test building list is cached"""
-        building = Building.objects.create(
+        Building.objects.create(
             name="Test Building",
             address_line="123 Main St",
             city="New York",
@@ -1080,7 +1080,6 @@ class CachingTests(TransactionTestCase):
 
     def test_cache_cleared_on_create(self):
         """Test cache is cleared after creating building"""
-        cache_key = f"buildings_user_{self.user.id}"
         Building.objects.create(
             name="Test Building",
             address_line="123 Main St",
@@ -1103,7 +1102,7 @@ class PermissionTests(APITestCase):
 
     def test_user_cannot_access_other_user_building(self):
         """Test user cannot view other user's buildings"""
-        building = Building.objects.create(
+        Building.objects.create(
             name="Building 1",
             address_line="123 Main St",
             city="New York",
@@ -1119,7 +1118,7 @@ class PermissionTests(APITestCase):
 
     def test_user_cannot_modify_other_user_building(self):
         """Test user cannot modify other user's buildings"""
-        building = Building.objects.create(
+        Building.objects.create(
             name="Building 1",
             address_line="123 Main St",
             city="New York",
