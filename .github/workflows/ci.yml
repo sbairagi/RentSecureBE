@@ -7,68 +7,50 @@ on:
     branches: [main, dev]
 
 jobs:
-  black:
-    name: Black
+  lint:
+    name: Lint (matrix)
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tool: [black, ruff, pylint, mypy]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: 3.12
-      - name: Install
+      - name: Install per-tool deps
         run: |
           python -m pip install --upgrade pip
-          pip install black
-      - name: Run Black
-        run: python -m black --check .
-
-  ruff:
-    name: Ruff
-    needs: black
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Install
+          case "${{ matrix.tool }}" in
+            black)
+              pip install black
+              ;;
+            ruff)
+              pip install ruff
+              ;;
+            pylint)
+              pip install pylint pylint-django
+              ;;
+            mypy)
+              pip install mypy
+              ;;
+          esac
+      - name: Run tool
         run: |
-          python -m pip install --upgrade pip
-          pip install ruff
-      - name: Run Ruff
-        run: python -m ruff check .
-
-  pylint:
-    name: Pylint
-    needs: ruff
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install pylint pylint-django
-      - name: Run Pylint
-        run: python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot
-
-  mypy:
-    name: Mypy
-    needs: pylint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install mypy
-      - name: Run Mypy
-        run: python -m mypy .
+          case "${{ matrix.tool }}" in
+            black)
+              python -m black --check .
+              ;;
+            ruff)
+              python -m ruff check .
+              ;;
+            pylint)
+              python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot
+              ;;
+            mypy)
+              python -m mypy .
+              ;;
+          esac
 
   bandit:
     name: Bandit
@@ -146,48 +128,68 @@ jobs:
           python -m coverage report --fail-under=90
           python -m coverage xml
 
-  semgrep:
-    name: Semgrep
+  security:
+    name: Security (matrix)
     needs: coverage
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tool: [semgrep, trivy, codeql]
     steps:
       - uses: actions/checkout@v4
-      - name: Install Semgrep
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install per-tool deps
         run: |
           python -m pip install --upgrade pip
-          pip install semgrep
-      - name: Run Semgrep
+          case "${{ matrix.tool }}" in
+            semgrep)
+              pip install semgrep
+              ;;
+            trivy)
+              echo "trivy action will be used"
+              ;;
+            codeql)
+              echo "codeql will initialize via action"
+              ;;
+          esac
+      - name: Run tool
+        run: |
+          case "${{ matrix.tool }}" in
+            semgrep)
+              python -m semgrep --config p/ci --json --output semgrep-report.json || true
+              ;;
+            trivy)
+              echo "Trivy scan via action"
+              ;;
+            codeql)
+              echo "CodeQL will run via dedicated action step"
+              ;;
+          esac
+      - name: Semgrep action wrapper
+        if: matrix.tool == 'semgrep'
         uses: returntocorp/semgrep-action@v1
         with:
           config: p/ci
           output: semgrep-report.sarif
-
-  trivy:
-    name: Trivy
-    needs: semgrep
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run Trivy filesystem scan
+      - name: Trivy action wrapper
+        if: matrix.tool == 'trivy'
         uses: aquasecurity/trivy-action@v0.2.0
         with:
           scan-type: fs
           scan-ref: .
           format: table
-
-  codeql:
-    name: CodeQL
-    needs: trivy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Initialize CodeQL
+      - name: CodeQL action wrapper
+        if: matrix.tool == 'codeql'
         uses: github/codeql-action/init@v3
         with:
           languages: python
-      - name: Autobuild
+      - name: CodeQL autobuild
+        if: matrix.tool == 'codeql'
         uses: github/codeql-action/autobuild@v3
-      - name: Perform CodeQL analysis
+      - name: CodeQL analyze
+        if: matrix.tool == 'codeql'
         uses: github/codeql-action/analyze@v3
         with:
           output: codeql-results.sarif
