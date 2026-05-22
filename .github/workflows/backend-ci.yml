@@ -10,8 +10,98 @@ on:
       - master
 
 jobs:
-  validate:
-    name: Validation
+  black:
+    name: Black
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black
+      - name: Run Black
+        run: python -m black --check .
+
+  ruff:
+    name: Ruff
+    needs: black
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff
+      - name: Run Ruff
+        run: python -m ruff check .
+
+  pylint:
+    name: Pylint
+    needs: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pylint pylint-django
+      - name: Run Pylint
+        run: python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot
+
+  mypy:
+    name: Mypy
+    needs: pylint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install mypy
+      - name: Run Mypy
+        run: python -m mypy .
+
+  bandit:
+    name: Bandit
+    needs: mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install bandit
+      - name: Run Bandit
+        run: python -m bandit -r . -x .venv,venv,migrations,tests
+
+  pytest:
+    name: Pytest
+    needs: bandit
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -37,65 +127,121 @@ jobs:
       DB_PORT: 5432
       PYTHONPATH: ${{ github.workspace }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.12
           cache: pip
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install black ruff pylint pylint-django mypy bandit coverage psycopg2-binary semgrep
-
-      - name: Black formatting check
-        run: python -m black --check .
-
-      - name: Ruff lint
-        run: python -m ruff check .
-
-      - name: Pylint deep analysis
-        run: python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot
-
-      - name: Mypy type check
-        run: python -m mypy .
-
-      - name: Bandit security scan
-        run: python -m bandit -r . -x .venv,venv,migrations,tests
-
-      - name: Run tests with coverage
+          pip install coverage psycopg2-binary
+      - name: Run tests
         run: |
-          python -m pytest
+          python -m coverage run -m pytest
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-artifact
+          path: coverage.xml
+
+  coverage:
+    name: Coverage
+    needs: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+      - name: Install coverage
+        run: |
+          python -m pip install --upgrade pip
+          pip install coverage
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-artifact
+      - name: Check coverage threshold
+        run: |
           python -m coverage report --fail-under=90
           python -m coverage xml
 
-      - name: Semgrep security scan
+  semgrep:
+    name: Semgrep
+    needs: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+      - name: Install Semgrep
+        run: |
+          python -m pip install --upgrade pip
+          pip install semgrep
+      - name: Run Semgrep security scan
         uses: returntocorp/semgrep-action@v1
         with:
           config: p/ci
           output: semgrep-report.sarif
 
-      - name: Trivy filesystem scan
+  trivy:
+    name: Trivy
+    needs: semgrep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@v0.2.0
         with:
           scan-type: fs
           scan-ref: .
           format: table
 
-      - name: SonarCloud analysis
+  sonarcloud:
+    name: SonarCloud
+    needs: trivy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install coverage
+      - name: Run SonarCloud analysis
         uses: SonarSource/sonarcloud-github-action@v1
         with:
           organization: sbairagi
           projectKey: sbairagi_RentSecureBE
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  codeql:
+    name: CodeQL
+    needs: sonarcloud
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          output: codeql-results.sarif
