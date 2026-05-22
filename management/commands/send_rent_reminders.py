@@ -1,7 +1,10 @@
+from datetime import date, timedelta
+
 from django.core.management.base import BaseCommand
 from rent.models import Renter
-from datetime import date, timedelta
+
 from notification.services.whatsapp_service import send_whatsapp_message
+
 
 class Command(BaseCommand):
     help = "Send rent due reminders to tenants 3 days before due date"

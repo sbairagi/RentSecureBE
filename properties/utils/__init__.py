@@ -1,14 +1,19 @@
-from notification.services.late_fees_notify_service import notify_owner_about_late_fee, notify_renter_about_late_fee
-from core.models import UsageLimit, UserSubscription, PlanFeatureLimit, AddOnPurchase
-from properties.models import RentRecord, Unit
-from rest_framework.exceptions import PermissionDenied
-from django.db import transaction
-from django.utils import timezone
-from django.core.exceptions import ValidationError
-from django.db.models import Sum
-from datetime import date
-from dateutil.relativedelta import relativedelta
 import hashlib
+from datetime import date
+
+from dateutil.relativedelta import relativedelta
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.db.models import Sum
+from django.utils import timezone
+from rest_framework.exceptions import PermissionDenied
+
+from core.models import AddOnPurchase, PlanFeatureLimit, UsageLimit, UserSubscription
+from notification.services.late_fees_notify_service import (
+    notify_owner_about_late_fee,
+    notify_renter_about_late_fee,
+)
+from properties.models import RentRecord, Unit
 
 
 def get_plan_limit(user, feature_key):
@@ -208,9 +213,10 @@ def deduct_feature_usage_with_priority(user, feature_key, units_to_deduct=1):
         raise ValidationError(f"Not enough available units for feature: {feature_key}")
 
 
+import tempfile
+
 from django.template.loader import render_to_string
 from weasyprint import HTML
-import tempfile
 
 
 def generate_rent_invoice_pdf(rent):
@@ -221,7 +227,6 @@ def generate_rent_invoice_pdf(rent):
     return result.name
 
 
-from dateutil.relativedelta import relativedelta
 
 def apply_late_fee_if_needed(rent: RentRecord):
     if rent.payment_status != "PAID":

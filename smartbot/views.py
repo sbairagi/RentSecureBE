@@ -1,5 +1,3 @@
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 # from rent.models import RentRecord
 from datetime import date
 
@@ -8,7 +6,6 @@ from datetime import date
 #     query = request.data.get("query", "").lower()
 #     user = request.user
 #     today = date.today()
-
 #     if "rent income" in query:
 #         total = RentRecord.objects.filter(
 #             renter__property__owner=user,
@@ -17,7 +14,6 @@ from datetime import date
 #             payment_status="PAID"
 #         ).aggregate(total=models.Sum("amount"))["total"] or 0
 #         return Response({"answer": f"Your rent income this month is ₹{total}."})
-
 #     if "rent nahi diya" in query or "unpaid" in query:
 #         unpaid = RentRecord.objects.filter(
 #             renter__property__owner=user,
@@ -27,24 +23,16 @@ from datetime import date
 #         ).values("renter__name")
 #         names = ", ".join([r["renter__name"] for r in unpaid]) or "None"
 #         return Response({"answer": f"Unpaid tenants: {names}"})
-
 #     return Response({"answer": "Sorry, I didn't understand that yet. Please rephrase."})
-
-
 # npm install react-native-gifted-chat
-
-
 # import { GiftedChat } from 'react-native-gifted-chat';
 # import { useState } from 'react';
 # import axios from 'axios';
-
 # export default function SmartBotScreen() {
 #   const [messages, setMessages] = useState([]);
-
 #   const handleSend = async (newMessages = []) => {
 #     setMessages(previous => GiftedChat.append(previous, newMessages));
 #     const text = newMessages[0].text;
-
 #     const res = await axios.post("/api/smartbot/", { query: text });
 #     const botReply = {
 #       _id: Math.random().toString(),
@@ -52,10 +40,8 @@ from datetime import date
 #       createdAt: new Date(),
 #       user: { _id: 2, name: "SmartBot" }
 #     };
-
 #     setMessages(previous => GiftedChat.append(previous, [botReply]));
 #   };
-
 #   return (
 #     <GiftedChat
 #       messages={messages}
@@ -64,21 +50,24 @@ from datetime import date
 #     />
 #   );
 # }
-
-
 # smartbot/views.py
-
 # from .gpt_service import gpt_smart_reply
 # from rent.models import RentRecord
-from datetime import date
-from rest_framework.decorators import permission_classes
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from smartbot.services.gpt_services import gpt_smart_reply
 from properties.models import RentRecord
-from .models import SmartBotChat
+from smartbot.services.gpt_services import gpt_smart_reply
+
+from .actions import (
+    retry_payout,
+    send_agreement_for_signature,
+    send_rent_agreement,
+    send_rent_reminder,
+)
 from .intents import extract_intent
-from .actions import send_rent_reminder, retry_payout, send_rent_agreement, send_agreement_for_signature
+from .models import SmartBotChat
 
 
 @api_view(["POST"])

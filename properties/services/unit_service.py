@@ -5,8 +5,7 @@ Provides business logic for managing unit status and operations.
 Handles automatic synchronization of unit occupancy status based on renter data.
 """
 
-from django.db.models import Q
-from ..models import Unit, Renter
+from ..models import Renter, Unit
 
 
 def update_unit_status(unit: Unit) -> None:
@@ -32,11 +31,11 @@ def update_unit_status(unit: Unit) -> None:
         unit=unit,
         status__in=["active", "notice_period"]
     ).exists()
-    
+
     # Determine new status
     new_status = Unit.VacancyStatus.OCCUPIED if active_renter else Unit.VacancyStatus.VACANT
     is_vacant = not active_renter
-    
+
     # Only update if status has changed
     if unit.status != new_status or unit.is_vacant != is_vacant:
         unit.status = new_status
@@ -55,12 +54,12 @@ def get_building_analytics(building) -> dict:
         dict: Analytics with total, occupied, and vacant counts
     """
     from ..models import Unit
-    
+
     units = Unit.objects.filter(building=building, is_archived=False)
     total = units.count()
     occupied = units.filter(status=Unit.VacancyStatus.OCCUPIED).count()
     vacant = total - occupied
-    
+
     return {
         "building_id": building.id,
         "building_name": building.name,
@@ -81,23 +80,23 @@ def get_owner_analytics(user) -> dict:
     Returns:
         dict: Aggregated analytics across all buildings
     """
-    from ..models import Building, Unit
-    
+    from ..models import Building
+
     buildings = Building.objects.filter(owner=user, is_archived=False)
     buildings_data = []
-    
+
     total_units = 0
     total_occupied = 0
     total_vacant = 0
-    
+
     for building in buildings:
         analytics = get_building_analytics(building)
         buildings_data.append(analytics)
-        
+
         total_units += analytics["total_units"]
         total_occupied += analytics["occupied_units"]
         total_vacant += analytics["vacant_units"]
-    
+
     return {
         "owner_id": user.id,
         "total_buildings": len(buildings_data),

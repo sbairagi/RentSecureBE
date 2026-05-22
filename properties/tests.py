@@ -490,7 +490,7 @@
 # from django.utils import timezone
 # from datetime import timedelta
 # from core.models import User, SubscriptionPlan, UserSubscription, PlanFeatureLimit, AddOnPurchase, UsageLimit
-# from .feature_enforcer import FeatureEnforcer  
+# from .feature_enforcer import FeatureEnforcer
 # # from core.constants import FEATURE_KEYS  # e.g., 'PROPERTY'
 
 # class FeatureEnforcerTestCase(TestCase):
@@ -607,8 +607,11 @@
 
 from django.test import TestCase
 from django.utils import timezone
-from core.models import User, SubscriptionPlan, UserSubscription, PlanFeatureLimit
+
+from core.models import PlanFeatureLimit, SubscriptionPlan, User, UserSubscription
+
 from .feature_enforcer import FeatureEnforcer
+
 
 class SingleSubscriptionTestCase(TestCase):
 

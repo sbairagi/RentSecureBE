@@ -1,7 +1,10 @@
 # utils/export_utils.py
-from properties.models import RentRecord
-import xlsxwriter
 from io import BytesIO
+
+import xlsxwriter
+
+from properties.models import RentRecord
+
 
 def generate_owner_rent_report(owner):
     rents = RentRecord.objects.filter(renter__property__owner=owner).select_related('renter', 'renter__property')

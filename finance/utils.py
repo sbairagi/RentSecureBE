@@ -1,8 +1,10 @@
-from openpyxl import Workbook
 import os
-from weasyprint import HTML
-from django.template.loader import render_to_string
 import zipfile
+
+from django.template.loader import render_to_string
+from openpyxl import Workbook
+from weasyprint import HTML
+
 
 def generate_tax_excel(user, properties, fy):
     wb = Workbook()
@@ -48,5 +50,5 @@ def create_tax_zip(user, excel_path, pdf_path, extra_docs):
         for doc in extra_docs:
             if doc and os.path.exists(doc.path):
                 zipf.write(doc.path, os.path.basename(doc.path))
-    
+
     return zip_path

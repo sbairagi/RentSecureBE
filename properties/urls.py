@@ -1,10 +1,25 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import (UnitViewSet, CaretakerViewSet, RenterViewSet, RentRecordViewSet, 
-                    RentAgreementDraftViewSet, BuildingViewSet,
-                    UnitImageViewSet, UnitDocumentViewSet, owner_rent_records, retry_payout_api,
-                    download_rent_invoice, get_latest_due_rent, rent_history, owner_rent_overview,
-                    owner_dashboard_summary, leegality_webhook, ExtraChargeViewSet)
+
+from .views import (
+                    BuildingViewSet,
+                    CaretakerViewSet,
+                    ExtraChargeViewSet,
+                    RentAgreementDraftViewSet,
+                    RenterViewSet,
+                    RentRecordViewSet,
+                    UnitDocumentViewSet,
+                    UnitImageViewSet,
+                    UnitViewSet,
+                    download_rent_invoice,
+                    get_latest_due_rent,
+                    leegality_webhook,
+                    owner_dashboard_summary,
+                    owner_rent_overview,
+                    owner_rent_records,
+                    rent_history,
+                    retry_payout_api,
+)
 
 router = DefaultRouter()
 # Active end-point

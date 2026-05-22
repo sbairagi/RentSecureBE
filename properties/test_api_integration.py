@@ -15,32 +15,17 @@ Tests covering:
 - Error handling
 """
 
-from django.test import TestCase, TransactionTestCase
+from datetime import date, timedelta
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
-from decimal import Decimal
-from datetime import timedelta, date
-from unittest.mock import patch, MagicMock
+from rest_framework.test import APIClient, APITestCase
 
-from core.models import (
-    SubscriptionPlan,
-    PlanFeatureLimit,
-    UserSubscription,
-    UsageLimit
-)
-from .models import (
-    Building,
-    Unit,
-    Caretaker,
-    Renter,
-    RentRecord,
-    ExtraCharge,
-    UnitImage,
-    UnitDocument,
-    RentAgreementDraft
-)
+from core.models import PlanFeatureLimit, SubscriptionPlan, UserSubscription
+
+from .models import Building, ExtraCharge, RentAgreementDraft, Renter, RentRecord, Unit
 
 User = get_user_model()
 
@@ -690,7 +675,7 @@ class RentAgreementDraftViewSetAPITests(APITestCase):
     def test_create_rent_agreement_draft(self):
         """Test creating a rent agreement draft"""
         from django.core.files.base import ContentFile
-        
+
         draft_file = ContentFile(b"PDF content", name="draft.pdf")
         data = {
             "renter": self.renter.id,
@@ -703,7 +688,7 @@ class RentAgreementDraftViewSetAPITests(APITestCase):
     def test_unique_renter_draft(self):
         """Test only one draft per renter"""
         from django.core.files.base import ContentFile
-        
+
         # Create first draft
         draft_file1 = ContentFile(b"PDF content 1", name="draft1.pdf")
         RentAgreementDraft.objects.create(
@@ -712,7 +697,7 @@ class RentAgreementDraftViewSetAPITests(APITestCase):
             unit=self.unit,
             file=draft_file1
         )
-        
+
         # Try to create second draft
         draft_file2 = ContentFile(b"PDF content 2", name="draft2.pdf")
         data = {

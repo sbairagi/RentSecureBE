@@ -1,14 +1,17 @@
 import logging
+
 from ai_assistant.services.i18n_service import translate_msg
 from notification.services.voice_service import generate_voice_note
-from notification.services.whatsapp_service import send_whatsapp_message, send_whatsapp_audio
-
+from notification.services.whatsapp_service import (
+    send_whatsapp_audio,
+    send_whatsapp_message,
+)
 
 logger = logging.getLogger(__name__)
 
 def notify_renter(renter, message: str):
     lang = renter.profile.language_preference or "en"
-    
+
     try:
         translated_text = translate_msg(message, lang)
     except Exception as e:

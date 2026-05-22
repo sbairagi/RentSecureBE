@@ -1,6 +1,7 @@
-from django.shortcuts import render
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
+
 from properties.models import RentRecord
+
 
 def agreement_status_view(request):
     records = RentRecord.objects.select_related("renter").all().order_by("-created_at")
@@ -8,7 +9,9 @@ def agreement_status_view(request):
 
 
 from django.views.decorators.csrf import csrf_exempt
+
 from smartbot.actions import send_agreement_for_signature
+
 
 @csrf_exempt
 def retry_signature(request, rent_id):

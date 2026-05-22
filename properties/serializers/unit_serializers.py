@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from ..models import Unit, Caretaker, Renter, UnitImage, UnitDocument, RentAgreementDraft, Building
+
+from ..models import (
+    RentAgreementDraft,
+    Unit,
+    UnitDocument,
+    UnitImage,
+)
 
 
 class UnitSerializer(serializers.ModelSerializer):

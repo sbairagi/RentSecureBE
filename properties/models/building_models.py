@@ -1,12 +1,13 @@
 # Django Imports
+from typing import TYPE_CHECKING
+
 from django.db import models
-from typing import TYPE_CHECKING, Optional
 
 # Local Imports
 from core.models import User
 
 if TYPE_CHECKING:
-    from .unit_models import Unit
+    pass
 
 
 class Building(models.Model):

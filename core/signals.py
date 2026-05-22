@@ -1,8 +1,11 @@
 # core/signals.py
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from core.models import User, UserProfile, NotificationPreference
+
+from core.models import NotificationPreference, User, UserProfile
+
 from .models import SubscriptionPlan, UserSubscription
+
 
 @receiver(post_save, sender=User)
 def assign_default_plan(sender, instance, created, **kwargs):

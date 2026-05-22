@@ -1,11 +1,13 @@
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.utils import timezone
-from django.shortcuts import get_object_or_404
-from ..models import Renter, RentRecord, Building, Unit
-from ..serializers import RenterRentRecordSerializer
+
 from notification.utils import send_whatsapp_message
+
+from ..models import Building, Renter, RentRecord
+from ..serializers import RenterRentRecordSerializer
 from ..services.unit_service import get_owner_analytics, update_unit_status
 
 
@@ -69,14 +71,14 @@ def unit_analytics(request):
     """
     user = request.user
     building_id = request.query_params.get('building_id')
-    
+
     if building_id:
         # Get analytics for specific building
         building = Building.objects.get(id=building_id, owner=user)
         from ..services.unit_service import get_building_analytics
         analytics = get_building_analytics(building)
         return Response({"data": analytics})
-    
+
     # Get analytics for all buildings
     analytics = get_owner_analytics(user)
     return Response(analytics)

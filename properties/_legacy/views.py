@@ -1,14 +1,32 @@
-from notification.services.rent_notify_service import send_payout_notification
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied, ValidationError
-from .models import ( RentAgreementDraft, UnitImage, UnitDocument, Unit, 
-                     Caretaker, Renter, RentRecord, Building )
-from .serializers import ( RentAgreementDraftSerializer, UnitImageSerializer, 
-                          UnitDocumentSerializer, UnitSerializer, CaretakerSerializer, RenterSerializer, 
-                          RentRecordSerializer, BuildingSerializer )
 from django.core.cache import cache
+from rest_framework import viewsets
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.permissions import IsAuthenticated
+
+from notification.services.rent_notify_service import send_payout_notification
+
 from .feature_enforcer import FeatureEnforcer
+from .models import (
+    Building,
+    Caretaker,
+    RentAgreementDraft,
+    Renter,
+    RentRecord,
+    Unit,
+    UnitDocument,
+    UnitImage,
+)
+from .serializers import (
+    BuildingSerializer,
+    CaretakerSerializer,
+    RentAgreementDraftSerializer,
+    RenterSerializer,
+    RentRecordSerializer,
+    UnitDocumentSerializer,
+    UnitImageSerializer,
+    UnitSerializer,
+)
+
 
 class BuildingViewSet(viewsets.ModelViewSet):
     serializer_class = BuildingSerializer
@@ -33,7 +51,7 @@ class BuildingViewSet(viewsets.ModelViewSet):
 
         return buildings
 
-    
+
     def perform_create(self, serializer):
         user = self.request.user
         enforcer = FeatureEnforcer(user)
@@ -87,7 +105,7 @@ class UnitViewSet(viewsets.ModelViewSet):
         enforcer = FeatureEnforcer(self.request.user)
         if not enforcer.can_create('max_units'):
             raise PermissionDenied("Unit creation limit reached for your plan.")
-        
+
         serializer.save(owner=self.request.user)
         enforcer.increment('max_units')
         cache.delete(f'units_user_{self.request.user.id}')
@@ -188,8 +206,9 @@ class RenterViewSet(viewsets.ModelViewSet):
         enforcer.decrement('max_renters')
         cache.delete(f'renters_user_{self.request.user.id}')
 
-from rentsecure_be.services.razorpay_service import create_payment_link
 from notification.utils import send_whatsapp_message
+from rentsecure_be.services.razorpay_service import create_payment_link
+
 
 class RentRecordViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -219,7 +238,7 @@ class RentRecordViewSet(viewsets.ModelViewSet):
         enforcer = FeatureEnforcer(user)
         if not enforcer.can_create("rent_records"):
             raise PermissionDenied("You have reached your rent record creation limit.")
-        
+
         rent = serializer.save(owner=user)
 
         try:
@@ -376,7 +395,7 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
         enforcer.increment("rent_agreement_drafts")
         cache.delete(f'rent_drafts_user_{self.request.user.id}')
-        
+
 
     def perform_update(self, serializer):
         instance = serializer.instance
@@ -420,7 +439,9 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet):
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
 from rentsecure_be.services.cashfree_service import process_rent_payout
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -433,7 +454,7 @@ def retry_payout_api(request, rent_id):
     try:
         response = process_rent_payout(rent)
         rent.refresh_from_db()
-        
+
         if rent.payout_status == "SUCCESS":
             send_payout_notification(rent)
         return Response({
@@ -465,11 +486,12 @@ def retry_payout_api(request, rent_id):
 
 
 # views.py
-from properties.models import RentRecord
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
+from properties.models import RentRecord
 from properties.serializers import RentRecordSerializer
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -482,9 +504,10 @@ def owner_rent_records(request):
 
 # views.py
 from django.http import FileResponse
-from properties.models import RentRecord
-from properties.utils import generate_rent_invoice_pdf
 from django.shortcuts import get_object_or_404
+
+from properties.utils import generate_rent_invoice_pdf
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -546,7 +569,7 @@ def rent_history(request):
 def owner_rent_overview(request):
     owner = request.user
     rents = RentRecord.objects.filter(owner=owner).select_related("renter", "unit")
-    
+
     data = []
     for r in rents:
         data.append({
@@ -568,6 +591,7 @@ def owner_rent_overview(request):
 # from rest_framework.permissions import IsAuthenticated
 # from rest_framework.response import Response
 from .serializers import RenterRentRecordSerializer
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -593,10 +617,11 @@ def update_late_fee_policy(request, property_id):
 
 from django.utils import timezone
 
+
 @api_view(['POST'])
 def revoke_rent_agreement(request, renter_id):
     renter = Renter.objects.get(id=renter_id, unit__owner=request.user)
-    
+
     renter.is_agreement_revoked = True
     renter.revoked_by_owner = True
     renter.revoked_on = timezone.now()

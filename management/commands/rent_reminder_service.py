@@ -1,5 +1,7 @@
-from notification.services.whatsapp_service import send_whatsapp_message
 from datetime import date
+
+from notification.services.whatsapp_service import send_whatsapp_message
+
 
 def send_rent_reminder(renter, days_left):
     rent_due_date = date.today().replace(day=renter.rent_due_day)

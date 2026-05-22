@@ -1,14 +1,25 @@
 from datetime import timezone
+
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
-from notification.services.voice_note_service import send_thank_you_voice_note
-from notification.models import Notification
-from notification.services.services import notify_owner_renter_flagged
+
 from ai_assistant.services.archive_service import archive_renter_data
 from ai_assistant.services.invoice_service import generate_final_invoice_pdf
-from properties.models import Unit, Caretaker, Renter, UnitImage, UnitDocument, Building, RentRecord
-from django.db.models.signals import post_save, post_delete
+from notification.models import Notification
+from notification.services.services import notify_owner_renter_flagged
+from notification.services.voice_note_service import send_thank_you_voice_note
+from properties.models import (
+    Building,
+    Caretaker,
+    Renter,
+    RentRecord,
+    Unit,
+    UnitDocument,
+    UnitImage,
+)
 from properties.scheduler import cancel_reminder_job
 from properties.utils import update_usage_count
+
 
 # Building usage update
 @receiver(post_save, sender=Building)
@@ -101,6 +112,6 @@ def generate_final_invoice_on_exit(sender, instance, **kwargs):
             pdf_path = generate_final_invoice_pdf(instance, latest_rent)
             instance.final_invoice_path = pdf_path
             instance.save(update_fields=["final_invoice_path"])
-            
+
         if instance.status in ["revoked", "deactivated"]:
             archive_renter_data(instance)

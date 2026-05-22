@@ -1,7 +1,9 @@
 # utils/pdf_utils.py
+import tempfile
+
 from django.template.loader import render_to_string
 from weasyprint import HTML
-import tempfile
+
 
 def generate_rent_invoice_pdf(rent):
     html = render_to_string("invoices/rent_invoice.html", {"rent": rent})

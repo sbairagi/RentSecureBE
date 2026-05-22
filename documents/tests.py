@@ -4,8 +4,8 @@ from io import BytesIO
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
-from weasyprint import HTML
 from PyPDF2 import PdfReader
+from weasyprint import HTML
 
 from documents.utils import generate_unit_history_pdf
 from properties.models import RentAgreementDraft, Renter, Unit

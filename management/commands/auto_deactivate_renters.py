@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from notification.utils import send_whatsapp_message
 from properties.models import Renter
+
 # from yourapp.models import Renter
 
 def auto_deactivate_notice_period_renters():

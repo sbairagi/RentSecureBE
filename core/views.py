@@ -1,28 +1,38 @@
 # views.py
 import random
-from notification.services.rent_notify_service import send_payout_notification
-from notification.services.voice_note_service import generate_voice_note
-from notification.services.whatsapp_service import send_whatsapp_audio
-from rest_framework.response import Response
-from django.utils import timezone
 from datetime import timedelta
-from twilio.rest import Client
-from rest_framework.views import APIView
+
 from django.conf import settings
+from django.contrib.auth.models import Group
+from django.utils import timezone
+from rest_framework import generics, permissions, viewsets
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.hashers import check_password
-from rest_framework import generics, permissions
+from twilio.rest import Client
 
 from core.utils.export_utils import generate_owner_rent_report
-from properties.utils import generate_rent_invoice_pdf
-from .models import (User, OTP, SubscriptionPlan, UserSubscription, AddOnPurchase, PlanFeatureLimit, UsageLimit)
-from .serializers import ( SubscriptionPlanSerializer, UserSubscriptionSerializer,AddOnPurchaseSerializer, 
-                          PlanFeatureLimitSerializer, UsageLimitSerializer)
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+from notification.services.rent_notify_service import send_payout_notification
 from referral_and_earn.models import Referral
-from rest_framework.exceptions import PermissionDenied
-from django.contrib.auth.models import Group
+
+from .models import (
+    OTP,
+    AddOnPurchase,
+    PlanFeatureLimit,
+    SubscriptionPlan,
+    UsageLimit,
+    User,
+    UserSubscription,
+)
+from .serializers import (
+    AddOnPurchaseSerializer,
+    PlanFeatureLimitSerializer,
+    SubscriptionPlanSerializer,
+    UsageLimitSerializer,
+    UserSubscriptionSerializer,
+)
 
 # python3 manage.py runserver 0.0.0.0:8000
 
@@ -182,7 +192,7 @@ class RenterVerifyOTP(APIView):
             })
 
         return Response({"error": "Invalid or expired OTP"}, status=400)
-    
+
 
 
 
@@ -237,7 +247,7 @@ class ResetPasswordView(APIView):
 class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = SubscriptionPlan.objects.filter(is_active=True)
     serializer_class = SubscriptionPlanSerializer
-    permission_classes = [permissions.AllowAny]  
+    permission_classes = [permissions.AllowAny]
 
 class PlanFeatureLimitViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PlanFeatureLimit.objects.all()
@@ -248,7 +258,7 @@ class UserSubscriptionViewSet(viewsets.ModelViewSet):
     queryset = UserSubscription.objects.all()
     serializer_class = UserSubscriptionSerializer
     permission_classes = [IsAuthenticated]
-    
+
     def get_queryset(self):
         return UserSubscription.objects.filter(user=self.request.user)
 
@@ -298,10 +308,13 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 
 # views.py
 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
 import json
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
 from properties.models import RentRecord
+
 
 @csrf_exempt
 def cashfree_payout_webhook(request):
@@ -335,10 +348,8 @@ def cashfree_payout_webhook(request):
 # views.py
 
 import razorpay
-from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from properties.models import RentRecord
+
 
 @csrf_exempt
 def create_rent_payment(request):
@@ -366,29 +377,21 @@ def create_rent_payment(request):
             "key_id": settings.RAZORPAY_KEY_ID
         })
 
-from rentsecure_be.services.cashfree_service  import process_rent_payout
+import hashlib
 
 # @csrf_exempt
 # def razorpay_webhook(request):
 #     data = json.loads(request.body)
 #     event = data.get("event")
-
 #     if event == "payment.captured":
 #         razorpay_order_id = data["payload"]["payment"]["entity"]["order_id"]
 #         rent = RentRecord.objects.get(razorpay_order_id=razorpay_order_id)
-
 #         rent.razorpay_payment_status = "PAID"
 #         rent.save()
-
 #         # Now auto-trigger payout
 #         process_rent_payout(rent)
-
 #     return JsonResponse({"status": "ok"})
-
-
 # https://yourdomain.com/api/razorpay/webhook/
-
-
 # ✅ 5. Frontend Integration (Razorpay Checkout)
 # const options = {
 #   key: "<%= key_id %>",
@@ -400,18 +403,15 @@ from rentsecure_be.services.cashfree_service  import process_rent_payout
 #     alert("Payment Successful");
 #   }
 # };
-
 # const rzp1 = new Razorpay(options);
 # rzp1.open();
+import hmac
 
-
-
-import json, hmac, hashlib
+from django.http import HttpResponseBadRequest
 from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse, HttpResponseBadRequest
-from django.conf import settings
-from properties.models import RentRecord
+
 from rentsecure_be.services.cashfree_service import process_rent_payout
+
 
 @csrf_exempt
 def razorpay_webhook(request):
@@ -458,7 +458,7 @@ def razorpay_webhook(request):
         rent = RentRecord.objects.get(id=ref_id)
         rent.payment_status = "PAID"
 
-        # iska use karna per abhi nahi samaz aaraha is liye comment kara hai isko touch mat karna 
+        # iska use karna per abhi nahi samaz aaraha is liye comment kara hai isko touch mat karna
         # pdf_path = generate_rent_invoice_pdf(rent)
         # upload_path = upload_to_s3(pdf_path, f"invoices/rent_{rent.id}.pdf")  # or store locally
         # rent.invoice_url = upload_path
@@ -471,10 +471,13 @@ def razorpay_webhook(request):
 
 
 
-from .models import OwnerBankDetails
-from rentsecure_be.services.cashfree_service import delete_beneficiary
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+
+from rentsecure_be.services.cashfree_service import delete_beneficiary
+
+from .models import OwnerBankDetails
+
 
 # views.py
 @api_view(["POST"])
@@ -539,11 +542,11 @@ def update_owner_bank_details(request):
 
 
 # views/owner.py
+from django.db.models import Sum
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Sum
+
 # from rent.models import RentRecord
-from properties.models import RentRecord
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -594,6 +597,7 @@ def owner_rent_records(request):
 
 # views/owner.py
 from django.http import HttpResponse
+
 # from utils.export_utils import generate_owner_rent_report
 
 @api_view(['GET'])

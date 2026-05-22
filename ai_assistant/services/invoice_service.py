@@ -1,8 +1,10 @@
 # services/invoice_service.py
 
-from weasyprint import HTML
-from django.template.loader import render_to_string
 import tempfile
+
+from django.template.loader import render_to_string
+from weasyprint import HTML
+
 
 def generate_final_invoice_pdf(renter, latest_rent):
     context = {

@@ -1,19 +1,21 @@
 
-from properties.models import Renter, Unit, RentRecord
-from properties.serializers import RentRecordSerializer
-from rest_framework import viewsets
-from django.http import HttpResponse
-from weasyprint import HTML
 from io import BytesIO
-from rest_framework.response import Response
-from rest_framework import status
+
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.utils.timezone import now
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
-from django.template.loader import render_to_string
+from rest_framework.response import Response
+from weasyprint import HTML
+
+from properties.models import Renter, RentRecord, Unit
+from properties.serializers import RentRecordSerializer
+
 from .utils import generate_unit_history_pdf
-from django.utils.timezone import now
-from django.shortcuts import get_object_or_404
-from rest_framework.decorators import action
 
 # Create your views here.
 
@@ -50,7 +52,7 @@ class GenerateUnitDossierPdfViewSet(viewsets.ViewSet):
     def generate_dossier_pdf(self, request, pk=None):
         # Get Unit or return 404
         unit_obj = get_object_or_404(Unit, pk=pk)
-        
+
         # Get related data
         caretakers = unit_obj.caretakers.all()
         renters = unit_obj.renters.all()
@@ -103,7 +105,7 @@ class GenerateRentReceiptPdfViewSet(viewsets.ModelViewSet):
         response = HttpResponse(pdf_file, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename=rent_receipt_{rent_record.id}.pdf'
         return response
-    
+
 
 def download_unit_history(request, unit_id):
     unit_obj = Unit.objects.get(id=unit_id, owner=request.user)

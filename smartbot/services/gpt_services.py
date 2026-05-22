@@ -1,6 +1,7 @@
+from datetime import date
+
 import openai
 from django.conf import settings
-from datetime import date
 
 openai.api_key = settings.OPENAI_API_KEY
 

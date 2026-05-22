@@ -1,6 +1,7 @@
 import openai
-from django.utils import timezone
+
 from properties.models import RentRecord
+
 
 def handle_chat_message(user, message):
     # Sample rule-based handler
@@ -10,7 +11,7 @@ def handle_chat_message(user, message):
         if next_due:
             return f"🏠 Your next rent of ₹{next_due.amount} is due on {next_due.due_date}."
         return "✅ No upcoming rent dues."
-    
+
     if "agreement" in message:
         latest = RentRecord.objects.filter(renter__user=user).last()
         return f"📄 Here is your latest rent agreement: {latest.agreement_pdf.url}" if latest and latest.agreement_pdf else "No agreement found."

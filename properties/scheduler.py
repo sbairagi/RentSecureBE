@@ -1,7 +1,12 @@
 # services/scheduler.py
 
-from notification.services.voice_note_service import alert_owner_about_delay, send_late_rent_reminder
 from django_celery_beat.models import PeriodicTask
+
+from notification.services.voice_note_service import (
+    alert_owner_about_delay,
+    send_late_rent_reminder,
+)
+
 
 def cancel_reminder_job(task_id: str):
     try:
@@ -12,7 +17,9 @@ def cancel_reminder_job(task_id: str):
 
 
 from django.utils.timezone import now
+
 from .models import RentRecord
+
 
 def get_late_rent_records():
     today = now().date()

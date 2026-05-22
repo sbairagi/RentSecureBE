@@ -12,9 +12,10 @@
 #     )
 
 
-from fcm_django.models import FCMDevice
 from django.conf import settings
+from fcm_django.models import FCMDevice
 from twilio.rest import Client
+
 
 def send_push_notification(user, title, body):
     devices = FCMDevice.objects.filter(user=user, active=True)

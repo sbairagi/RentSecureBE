@@ -1,6 +1,7 @@
 import requests
 from notifications.models import DeviceToken
 
+
 def send_push_notification(user, title, message):
     try:
         token = DeviceToken.objects.get(user=user).token

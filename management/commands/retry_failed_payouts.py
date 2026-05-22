@@ -42,6 +42,7 @@ from django.core.management.base import BaseCommand
 from rent.models import RentRecord
 from rent.services import process_rent_payout
 
+
 class Command(BaseCommand):
     help = "Retry failed payouts for paid rent records"
 

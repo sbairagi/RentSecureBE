@@ -1,14 +1,17 @@
 # from services.whatsapp_service import send_whatsapp_message
 # from rent.services import process_rent_payout
 # from rent.models import RentRecord, Renter
-from rentsecure_be.services.cashfree_service import process_rent_payout
 # from services.whatsapp_service import send_whatsapp_message
 from notification.utils import send_whatsapp_message
+from properties.models import Renter, RentRecord
+from rentsecure_be.services.cashfree_service import process_rent_payout
 from smartbot.services.agreement_service import generate_agreement_pdf
-from properties.models import RentRecord, Renter
+
+from .services.leegality_service import initiate_signature
+
 # from .services.agreement_service import generate_agreement_pdf
 from .whatsapp_service import send_agreement_via_whatsapp
-from .services.leegality_service import initiate_signature
+
 
 def send_rent_reminder(renter_name):
     try:
@@ -26,17 +29,16 @@ def retry_payout(renter_name):
         return f"✅ Payout retried: {result.get('status')}"
     except:
         return "❌ Could not retry payout."
-    
+
 
 
 def send_rent_agreement(renter_name):
     try:
-        from django.conf import settings
         renter = Renter.objects.get(name__icontains=renter_name)
         rent = RentRecord.objects.filter(renter=renter).latest("created_at")
-        
+
         pdf_path = generate_agreement_pdf(rent)
-        
+
         # Move it to media or upload to S3
         from django.core.files.storage import default_storage
         with open(pdf_path, 'rb') as f:
@@ -48,7 +50,7 @@ def send_rent_agreement(renter_name):
         return f"✅ Agreement PDF sent to {renter.name} on WhatsApp."
     except Exception as e:
         return f"❌ Failed to send agreement: {str(e)}"
-    
+
 
 def send_agreement_for_signature(renter_name):
     try:

@@ -5,8 +5,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from core.models import UserProfile
-from properties.models import ExtraCharge, Renter, Unit
 from notification.services.extra_charge_reminders import send_due_extra_charge_reminders
+from properties.models import ExtraCharge, Renter, Unit
 
 
 class ExtraChargeReminderTests(TestCase):

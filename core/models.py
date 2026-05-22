@@ -1,7 +1,8 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from simple_history.models import HistoricalRecords
-from django.conf import settings
+
 
 # User Models
 class User(AbstractUser):
@@ -14,7 +15,7 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.full_name
-    
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     whatsapp_number = models.CharField(max_length=15, help_text="Include country code, e.g. +91xxxxxxxxxx")
@@ -56,7 +57,7 @@ class OwnerBankDetails(models.Model):
     def __str__(self):
         return f"{self.owner.username} - {self.bank_account_number}"
 
-   
+
 #  Subscription Models
 class SubscriptionPlan(models.Model):
     PLAN_CHOICES = [
@@ -76,7 +77,7 @@ class SubscriptionPlan(models.Model):
 
     def __str__(self):
         return self.name.capitalize()
-    
+
 class UserSubscription(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='usersubscription')
@@ -115,7 +116,7 @@ class AddOnPurchase(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.user.username}"
-    
+
 class PlanFeatureLimit(models.Model):
     id = models.AutoField(primary_key=True)
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, related_name='limits')
@@ -127,7 +128,7 @@ class PlanFeatureLimit(models.Model):
 
     def __str__(self):
         return f"{self.plan.name} - {self.feature_key}: {self.value}"
-    
+
 class UsageLimit(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='usage_limits')
@@ -141,4 +142,3 @@ class UsageLimit(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.feature_key}: {self.usage_count}"
-    

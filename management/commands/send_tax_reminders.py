@@ -49,4 +49,3 @@
 #                         to=user.profile.whatsapp_number,
 #                         message=message
 #                     )
-                            

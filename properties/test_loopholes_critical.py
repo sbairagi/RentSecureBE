@@ -12,33 +12,23 @@ This test suite focuses on:
 - Data validation loopholes
 """
 
-from django.test import TestCase, TransactionTestCase
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from django.db import transaction
+from datetime import date, timedelta
 from decimal import Decimal
-from datetime import timedelta, date
-from unittest.mock import patch
 
-from core.models import (
-    SubscriptionPlan,
-    PlanFeatureLimit,
-    UserSubscription,
-    UsageLimit
-)
+from django.contrib.auth import get_user_model
+from django.test import TestCase, TransactionTestCase
+from django.utils import timezone
+
+from core.models import PlanFeatureLimit, SubscriptionPlan, UsageLimit, UserSubscription
+
+from .feature_enforcer import FeatureEnforcer
 from .models import (
     Building,
-    Unit,
     Caretaker,
     Renter,
     RentRecord,
-    UnitImage,
-    UnitDocument,
-    RentAgreementDraft,
-    UnitVacancy,
-    ArchivedRenter
+    Unit,
 )
-from .feature_enforcer import FeatureEnforcer
 
 User = get_user_model()
 
@@ -78,7 +68,7 @@ class PaymentProcessingLoopholes(TestCase):
             rent_amount=10000,
             start_date=date(2025, 1, 1)
         )
-        
+
         # Try to create negative rent record
         from django.core.exceptions import ValidationError
         rent_record = RentRecord(
@@ -546,14 +536,14 @@ class FeatureEnforcerLoopholes(TestCase):
         """LOOPHOLE: If deletion fails to decrement, usage count grows indefinitely"""
         user = User.objects.create_user(username="usage_user", password="pass123")
         enforcer = FeatureEnforcer(user)
-        
+
         # Increment multiple times
         for i in range(5):
             enforcer.increment("max_buildings")
-        
+
         usage = UsageLimit.objects.get(user=user, feature_key="max_buildings")
         self.assertEqual(usage.usage_count, 5)
-        
+
         # If decrement is skipped, count stays high
         # This is a potential loophole in deletion handlers
 
@@ -596,7 +586,7 @@ class ConcurrencyLoopholes(TransactionTestCase):
         # This is protected by unique constraint, but without FOR UPDATE
         # two concurrent requests might both think they can create
         month = date(2025, 1, 1)
-        
+
         # First request creates
         rent1 = RentRecord.objects.create(
             renter=self.renter,
@@ -606,7 +596,7 @@ class ConcurrencyLoopholes(TransactionTestCase):
             amount_paid=10000,
             date_paid=date(2025, 1, 5)
         )
-        
+
         # Second concurrent request should fail
         with self.assertRaises(Exception):
             rent2 = RentRecord.objects.create(
@@ -660,7 +650,7 @@ class UniquenessConstraintTests(TestCase):
             rent_amount=10000,
             start_date=date(2025, 1, 1)
         )
-        
+
         # Create another unit
         unit2 = Unit.objects.create(
             owner=self.user,
@@ -673,7 +663,7 @@ class UniquenessConstraintTests(TestCase):
             postal_code="10001",
             unit_type=Unit.UnitType.FLAT
         )
-        
+
         # Same phone, different unit - should be allowed
         renter2 = Renter.objects.create(
             unit=unit2,
@@ -682,7 +672,7 @@ class UniquenessConstraintTests(TestCase):
             rent_amount=10000,
             start_date=date(2025, 1, 1)
         )
-        
+
         # This might be unintended - same person renting two units?
         self.assertEqual(renter1.phone, renter2.phone)
         self.assertNotEqual(renter1.unit, renter2.unit)

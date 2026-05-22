@@ -1,4 +1,5 @@
 from django.db import models
+
 from core.models import User
 
 
@@ -15,13 +16,14 @@ class Building(models.Model):
 
     class Meta:
         unique_together = ('name', 'address_line', 'city', 'owner')
-from django.db import models
-from django.core.validators import RegexValidator
-from simple_history.models import HistoricalRecords
-from core.models import User
-from django.conf import settings
 from datetime import date
 
+from django.conf import settings
+from django.core.validators import RegexValidator
+from django.db import models
+from simple_history.models import HistoricalRecords
+
+from core.models import User
 
 # Phone number validator for consistent format
 phone_regex = RegexValidator(
@@ -112,6 +114,7 @@ class UnitDocument(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
+
         from properties.utils import generate_file_hash
         if self.document:
             hash_value = generate_file_hash(self.document)
@@ -130,6 +133,7 @@ class UnitImage(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
+
         from properties.utils import generate_file_hash
         if self.image:
             hash_value = generate_file_hash(self.image)
@@ -137,12 +141,12 @@ class UnitImage(models.Model):
 
             if UnitImage.objects.filter(image_hash=hash_value, unit=self.unit).exclude(pk=self.pk).exists():
                 raise ValidationError("This image already exists for this unit.")
-from django.db import models
-from django.core.validators import RegexValidator
-from simple_history.models import HistoricalRecords
 from django.conf import settings
-from .unit_models import Unit
+from django.core.validators import RegexValidator
+from django.db import models
+from simple_history.models import HistoricalRecords
 
+from .unit_models import Unit
 
 # Phone number validator for consistent format
 phone_regex = RegexValidator(
@@ -187,14 +191,15 @@ class Caretaker(models.Model):
         if self.end_date and self.start_date and self.end_date < self.start_date:
             raise ValidationError("End date cannot be earlier than start date.")
 import builtins
-from django.db import models
-from django.core.validators import RegexValidator
-from django.conf import settings
-from simple_history.models import HistoricalRecords
-from datetime import date
-from core.models import User
-from .unit_models import Unit
 
+from django.conf import settings
+from django.core.validators import RegexValidator
+from django.db import models
+from simple_history.models import HistoricalRecords
+
+from core.models import User
+
+from .unit_models import Unit
 
 phone_regex = RegexValidator(
     regex=r'^\+?1?\d{9,15}$',
@@ -333,12 +338,15 @@ class PoliceVerification(models.Model):
         from django.core.exceptions import ValidationError
         if self.renter.unit != self.unit:
             raise ValidationError("Renter must belong to the specified unit.")
-from django.db import models
-from django.core.exceptions import ValidationError
-from django.conf import settings
 from datetime import date
+
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import models
 from simple_history.models import HistoricalRecords
+
 from core.models import User
+
 from .renter_models import Renter
 from .unit_models import Unit
 

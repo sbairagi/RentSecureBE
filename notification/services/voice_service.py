@@ -1,6 +1,8 @@
 # services/voice_service.py
-from gtts import gTTS
 import tempfile
+
+from gtts import gTTS
+
 
 def generate_voice_note(text: str, lang: str = "en") -> str:
     try:

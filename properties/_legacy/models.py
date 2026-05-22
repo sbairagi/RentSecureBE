@@ -1,10 +1,11 @@
-from django.db import models
-from django.core.validators import RegexValidator
-from simple_history.models import HistoricalRecords
-from core.models import User
-from django.conf import settings
 from datetime import date
 
+from django.conf import settings
+from django.core.validators import RegexValidator
+from django.db import models
+from simple_history.models import HistoricalRecords
+
+from core.models import User
 
 # Phone number validator for consistent format
 phone_regex = RegexValidator(
@@ -292,7 +293,7 @@ class RentRecord(models.Model):
 
 class RentReminderLog(models.Model):
     renter = models.ForeignKey(Renter, on_delete=models.CASCADE)
-    message_type = models.CharField(max_length=20, help_text="EXAMPLE: PRE, DUE, LATE")  
+    message_type = models.CharField(max_length=20, help_text="EXAMPLE: PRE, DUE, LATE")
     sent_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -339,6 +340,7 @@ class UnitDocument(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
+
         from .utils import generate_file_hash
         if self.document:
             hash_value = generate_file_hash(self.document)
@@ -358,6 +360,7 @@ class UnitImage(models.Model):
 
     def clean(self):
         from django.core.exceptions import ValidationError
+
         from .utils import generate_file_hash
         if self.image:
             hash_value = generate_file_hash(self.image)

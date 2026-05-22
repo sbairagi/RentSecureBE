@@ -5,12 +5,14 @@ Generates and sends monthly rent collection summaries to property owners.
 Includes collected, pending, and defaulter information across all units.
 """
 
-from django.utils import timezone
+from datetime import date
+
 from django.core.mail import send_mail
 from django.db.models import Sum
+from django.utils import timezone
+
 from core.models import NotificationPreference
 from properties.models import RentRecord
-from datetime import date
 
 
 def get_monthly_rent_summary(owner, target_date=None):

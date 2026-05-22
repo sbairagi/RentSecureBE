@@ -2,6 +2,7 @@
 import requests
 from django.conf import settings
 
+
 def get_auth_token():
     url = f"{settings.CASHFREE_PAYOUT_BASE_URL}/payout/v1/authorize"
     res = requests.post(url, auth=(settings.CASHFREE_CLIENT_ID, settings.CASHFREE_CLIENT_SECRET))

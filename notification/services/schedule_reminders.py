@@ -1,8 +1,10 @@
 # tasks/schedule_reminders.py
 from django.utils.timezone import now, timedelta
+
 from notification.services.voice_service import generate_voice_note
 from notification.services.whatsapp_service import send_whatsapp_audio
-from properties.models import RentRecord, PropertyTaxRecord
+from properties.models import PropertyTaxRecord, RentRecord
+
 
 def get_upcoming_rent_dues():
     target_date = now().date() + timedelta(days=3)
@@ -44,7 +46,7 @@ def process_tax_reminders():
             owner = tax.property.owner
             send_whatsapp_audio(owner.profile.whatsapp_number, audio_path)
 
-        
+
 
 
 # Step 4: Schedule Cron Job (Every Morning)

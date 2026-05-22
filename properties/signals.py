@@ -7,10 +7,11 @@ Handles automated business logic triggers:
 - Trigger notifications
 """
 
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from .models import Renter, Unit
+
+from .models import Renter
 from .services.unit_service import update_unit_status
 from .utils.onboarding_utils import generate_onboarding_token
 

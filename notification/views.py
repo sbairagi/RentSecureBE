@@ -2,7 +2,9 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
 from .models import DeviceToken
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -71,7 +73,6 @@ def save_device_token(request):
 from fcm_django.models import FCMDevice
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 
 @api_view(['POST'])
@@ -79,7 +80,7 @@ from rest_framework.response import Response
 def register_fcm_token(request):
     token = request.data.get("token")
     device_type = request.data.get("type", "android")  # or "ios", "web"
-    
+
     if not token:
         return Response({"error": "Token required"}, status=400)
 

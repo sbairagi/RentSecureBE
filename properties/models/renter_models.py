@@ -1,12 +1,14 @@
 import builtins
-from django.db import models
-from django.core.validators import RegexValidator
-from django.conf import settings
-from simple_history.models import HistoricalRecords
 from datetime import date
-from core.models import User
-from .unit_models import Unit
 
+from django.conf import settings
+from django.core.validators import RegexValidator
+from django.db import models
+from simple_history.models import HistoricalRecords
+
+from core.models import User
+
+from .unit_models import Unit
 
 phone_regex = RegexValidator(
     regex=r'^\+?1?\d{9,15}$',

@@ -7,4 +7,4 @@ class ReferralConfig(AppConfig):
 
     # apps.py
     def ready(self):
-        import referral_and_earn.signals
+        pass

@@ -1,7 +1,9 @@
 from datetime import date, timedelta
 
-from properties.models import RentRecord, Renter
+from properties.models import Renter, RentRecord
+
 from ..models import AIAlert
+
 
 def generate_ai_alerts(owner):
     today = date.today()

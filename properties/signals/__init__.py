@@ -1,14 +1,25 @@
 from datetime import timezone
+
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
-from notification.services.voice_note_service import send_thank_you_voice_note
-from notification.models import Notification
-from notification.services.services import notify_owner_renter_flagged
+
 from ai_assistant.services.archive_service import archive_renter_data
 from ai_assistant.services.invoice_service import generate_final_invoice_pdf
-from ..models import Unit, Caretaker, Renter, UnitImage, UnitDocument, Building, RentRecord
-from django.db.models.signals import post_save, post_delete
+from notification.models import Notification
+from notification.services.services import notify_owner_renter_flagged
+from notification.services.voice_note_service import send_thank_you_voice_note
 from properties.scheduler import cancel_reminder_job
 from properties.utils import update_usage_count
+
+from ..models import (
+    Building,
+    Caretaker,
+    Renter,
+    RentRecord,
+    Unit,
+    UnitDocument,
+    UnitImage,
+)
 
 
 @receiver(post_save, sender=Building)
@@ -59,7 +70,7 @@ def handle_rent_payment(sender, instance, **kwargs):
                 title="Thanks for Early Rent Payment",
                 message="We appreciate your on-time rent payment. Keep it up! 🏆"
             )
-        
+
         # Send rent receipt email to renter
         try:
             from properties.services.receipt_service import send_rent_receipt_on_payment

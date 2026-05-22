@@ -5,9 +5,8 @@ Generates secure onboarding links and tokens for renter self-service KYC.
 """
 
 import secrets
-import hashlib
+
 from django.conf import settings
-from django.urls import reverse
 from django.utils import timezone
 
 
@@ -42,7 +41,7 @@ def generate_onboarding_link(renter):
     """
     if not renter.onboarding_token:
         generate_onboarding_token(renter)
-    
+
     token = renter.onboarding_token
     base_url = settings.FRONTEND_URL or "https://app.rentsecure.com"
     return f"{base_url}/onboard-renter/{token}/"
@@ -59,7 +58,7 @@ def verify_onboarding_token(token):
         Renter instance if valid, None otherwise
     """
     from properties.models import Renter
-    
+
     try:
         renter = Renter.objects.get(onboarding_token=token)
         # Ensure token hasn't expired (e.g., 90 days)
@@ -81,7 +80,7 @@ def mark_onboarding_completed(renter):
         renter: Renter instance
     """
     from properties.models import Renter
-    
+
     renter.onboarding_status = Renter.OnboardingStatus.COMPLETED
     renter.save(update_fields=['onboarding_status'])
 
@@ -94,6 +93,6 @@ def mark_kyc_verified(renter):
         renter: Renter instance
     """
     from properties.models import Renter
-    
+
     renter.kyc_status = Renter.KYCStatus.VERIFIED
     renter.save(update_fields=['kyc_status'])

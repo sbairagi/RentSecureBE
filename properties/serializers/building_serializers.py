@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from .unit_serializers import UnitSerializer
+
 from ..models import Building
+from .unit_serializers import UnitSerializer
 
 
 class BuildingSerializer(serializers.ModelSerializer):

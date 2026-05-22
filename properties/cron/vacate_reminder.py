@@ -1,10 +1,12 @@
 # cron/vacate_reminder.py
 
-from django.utils import timezone
 from datetime import timedelta
 
 from communication.utils import send_whatsapp_message
+from django.utils import timezone
+
 from properties.models import Renter
+
 # from renters.models import Renter
 # from services.whatsapp_service import send_whatsapp_message
 

@@ -1,6 +1,14 @@
 from django.contrib import admin
-from .models import User
-from .models import (SubscriptionPlan, UserSubscription, AddOnPurchase, PlanFeatureLimit, UsageLimit)
+
+from .models import (
+    AddOnPurchase,
+    PlanFeatureLimit,
+    SubscriptionPlan,
+    UsageLimit,
+    User,
+    UserSubscription,
+)
+
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):

@@ -1,16 +1,19 @@
 # services/cashfree_service.py
-from notification.services.rent_notify_service import notify_owner, notify_owner_post_payout, notify_renter, send_payout_notification
-from notification.services.voice_note_service import generate_voice_note
-from notification.services.whatsapp_service import send_whatsapp_audio
-from properties.models import RentRecord
 from core.models import OwnerBankDetails
+from notification.services.rent_notify_service import (
+    notify_owner,
+    notify_owner_post_payout,
+    notify_renter,
+    send_payout_notification,
+)
+from properties.models import RentRecord
 from rentsecure_be.utils.cashfree_payout import add_beneficiary, make_payout
-from notification.utils import send_whatsapp_message
-# from core.models import 
+
+# from core.models import
 
 def register_owner_with_cashfree(owner: OwnerBankDetails):
     bene_id = f"owner_{owner.id}"
-    
+
     data = {
         "beneId": bene_id,
         "name": owner.user.get_full_name(),
@@ -21,12 +24,12 @@ def register_owner_with_cashfree(owner: OwnerBankDetails):
         "address1": "India",  # optional
     }
     response = add_beneficiary(data)
-    
+
     if response.get("status") == "SUCCESS":
         owner.beneficiary_id = bene_id
         owner.bank_account_verified = True
         owner.save()
-    return 
+    return
 
 
 
@@ -62,9 +65,9 @@ def pay_owner_after_rent(rent: RentRecord):
     elif rent.payout_status == "FAILED":
         msg = f"⚠️ ₹{rent.amount} rent ka transfer fail ho gaya hai. Kripya apna bank detail verify karein."
         notify_renter(rent.renter, msg)
-        
+
     rent = rent.save()
-    
+
     # 🔔 WhatsApp Alert After Saving
     owner = rent.renter.property.owner
     phone = owner.profile.whatsapp_number  # Make sure this is stored in +91 format
@@ -135,6 +138,7 @@ def process_rent_payout(rent: RentRecord):
 BASE_URL = ''
 import requests
 from django.conf import settings
+
 
 # cashfree_service.py
 def delete_beneficiary(beneficiary_id: str):

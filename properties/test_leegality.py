@@ -1,13 +1,14 @@
 from datetime import date
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.test import TestCase, override_settings
-from rest_framework.test import APITestCase, APIClient
-from unittest.mock import patch, MagicMock
+from rest_framework.test import APIClient, APITestCase
 
-from .models import Building, Unit, Renter, RentAgreementDraft
 from rentsecure_be.services.leegality_service import send_agreement_for_signature
+
+from .models import Building, RentAgreementDraft, Renter, Unit
 
 User = get_user_model()
 

@@ -1,9 +1,9 @@
-from datetime import date
-from properties.models import RentRecord
-from core.models import Owner
-from django.utils.timezone import now
-from notification.services.whatsapp_service import send_whatsapp_message
 from django.core.mail import EmailMessage
+from django.utils.timezone import now
+
+from core.models import Owner
+from notification.services.whatsapp_service import send_whatsapp_message
+from properties.models import RentRecord
 
 
 def send_all_owners_monthly_summary():
@@ -57,9 +57,9 @@ def build_summary_message(owner, summary):
     m += f"✅ Total Rent Received: ₹{summary['received']}\n"
 
     if summary["pending_rents"]:
-        m += f"\n❌ *Pending Payments:*\n" + "\n".join(summary["pending_rents"])
+        m += "\n❌ *Pending Payments:*\n" + "\n".join(summary["pending_rents"])
 
     if summary["failed_payouts"]:
-        m += f"\n⚠️ *Failed Payouts:*\n" + "\n".join(summary["failed_payouts"])
+        m += "\n⚠️ *Failed Payouts:*\n" + "\n".join(summary["failed_payouts"])
 
     return m

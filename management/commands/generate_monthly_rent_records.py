@@ -1,6 +1,8 @@
+from datetime import date
+
 from django.core.management.base import BaseCommand
 from rent.models import Renter, RentRecord
-from datetime import date
+
 
 class Command(BaseCommand):
     help = "Generate RentRecords for all active renters monthly"

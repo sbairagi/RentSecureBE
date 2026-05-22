@@ -1,12 +1,15 @@
-from properties.models import RentRecord, Renter
-from rentsecure_be.services.razorpay_service import create_payment_link
-from communication.utils import send_whatsapp_message
 from datetime import date
+
+from communication.utils import send_whatsapp_message
+
+from properties.models import Renter, RentRecord
+from rentsecure_be.services.razorpay_service import create_payment_link
+
 
 def auto_generate_rent_records():
     today = date.today()
     renters = Renter.objects.all()
-    
+
     for renter in renters:
         rent, created = RentRecord.objects.get_or_create(
             renter=renter,

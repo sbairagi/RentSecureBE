@@ -1,8 +1,9 @@
 # services/agreement_service.py
 
+
 from django.template.loader import render_to_string
 from weasyprint import HTML
-import os
+
 
 def generate_agreement_pdf(rent_record):
     html_string = render_to_string("pdf/rent_agreement.html", {"rent": rent_record})

@@ -1,9 +1,12 @@
-from django.db import models
-from django.core.exceptions import ValidationError
-from django.conf import settings
 from datetime import date
+
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import models
 from simple_history.models import HistoricalRecords
+
 from core.models import User
+
 from .renter_models import Renter
 from .unit_models import Unit
 

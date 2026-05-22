@@ -1,7 +1,8 @@
 # services/whatsapp_service.py
 
-import os
 import logging
+import os
+
 from django.conf import settings
 from twilio.rest import Client
 

@@ -1,6 +1,8 @@
 from datetime import date
+
 from rent.models import Renter
 from services.rent_reminder_service import send_rent_reminder
+
 
 def run():
     today = date.today()

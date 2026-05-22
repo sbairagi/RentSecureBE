@@ -1,14 +1,14 @@
-from rest_framework import viewsets, permissions
-from .models import CAProfile, TaxSubmissionToCA
-from .serializers import ( 
-    CAProfileSerializer, 
-    TaxSubmissionToCASerializer
-)
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 from django.http import FileResponse
-from .utils import generate_tax_excel, generate_tax_pdf, create_tax_zip
+from rest_framework import permissions, viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+
 from properties.models import Unit
+
+from .models import CAProfile, TaxSubmissionToCA
+from .serializers import CAProfileSerializer, TaxSubmissionToCASerializer
+from .utils import create_tax_zip, generate_tax_excel, generate_tax_pdf
+
 
 class CAProfileViewSet(viewsets.ModelViewSet):
     queryset = CAProfile.objects.all()
@@ -26,7 +26,7 @@ class TaxSubmissionToCAViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 
-    
+
 class DownloadTaxFilesView(APIView):
     permission_classes = [IsAuthenticated]
 

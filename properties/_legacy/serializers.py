@@ -1,16 +1,22 @@
 from rest_framework import serializers
+
 from .models import (
+    Building,
+    Caretaker,
     RentAgreementDraft,
-    UnitImage, UnitDocument,
-    Unit, Caretaker, Renter,
-    RentRecord, Building
+    Renter,
+    RentRecord,
+    Unit,
+    UnitDocument,
+    UnitImage,
 )
+
 
 class UnitSerializer(serializers.ModelSerializer):
     class Meta:
         model = Unit
         fields = '__all__'
-        read_only_fields = ['owner']  
+        read_only_fields = ['owner']
 
     def validate(self, data):
         user = self.context['request'].user
@@ -31,7 +37,7 @@ class UnitSerializer(serializers.ModelSerializer):
         if building and building.owner != self.context['request'].user:
             raise serializers.ValidationError("You do not own the selected building.")
         return super().update(instance, validated_data)
-    
+
 class BuildingSerializer(serializers.ModelSerializer):
     units = UnitSerializer(many=True, read_only=True, source='units')
 
@@ -54,7 +60,7 @@ class BuildingSerializer(serializers.ModelSerializer):
         if 'owner' in validated_data:
             validated_data.pop('owner')
         return super().update(instance, validated_data)
-    
+
 class CaretakerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Caretaker
@@ -90,7 +96,7 @@ class RenterSerializer(serializers.ModelSerializer):
         if unit and unit.owner != self.context['request'].user:
             raise serializers.ValidationError("You do not own the selected unit.")
         return super().update(instance, validated_data)
-    
+
 class UnitImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = UnitImage
@@ -126,7 +132,7 @@ class UnitDocumentSerializer(serializers.ModelSerializer):
         if unit and unit.owner != self.context['request'].user:
             raise serializers.ValidationError("You do not own the selected unit.")
         return super().update(instance, validated_data)
-    
+
 class RentRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = RentRecord
@@ -141,7 +147,7 @@ class RentRecordSerializer(serializers.ModelSerializer):
 
         if not unit or unit.owner != user:
             raise serializers.ValidationError("You do not own the selected unit.")
-        
+
         if not renter or renter.unit.owner != user:
             raise serializers.ValidationError("You do not own the selected renter.")
 
@@ -176,7 +182,7 @@ class RentRecordSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Renter must be part of the selected unit.")
 
         return super().update(instance, validated_data)
-    
+
     def get_invoice_url(self, obj):
         if obj.payment_status == "PAID" and obj.invoice_pdf:
             return obj.invoice_pdf.url

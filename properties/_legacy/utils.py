@@ -1,14 +1,19 @@
-from notification.services.late_fees_notify_service import notify_owner_about_late_fee, notify_renter_about_late_fee
-from core.models import UsageLimit, UserSubscription, PlanFeatureLimit, AddOnPurchase
-from properties.models import RentRecord, Unit
-from rest_framework.exceptions import PermissionDenied
-from django.db import transaction
-from django.utils import timezone
-from django.core.exceptions import ValidationError
-from django.db.models import Sum
-from datetime import date
-from dateutil.relativedelta import relativedelta
 import hashlib
+
+from dateutil.relativedelta import relativedelta
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.db.models import Sum
+from django.utils import timezone
+from rest_framework.exceptions import PermissionDenied
+
+from core.models import AddOnPurchase, PlanFeatureLimit, UsageLimit, UserSubscription
+from notification.services.late_fees_notify_service import (
+    notify_owner_about_late_fee,
+    notify_renter_about_late_fee,
+)
+from properties.models import RentRecord, Unit
+
 
 def get_plan_limit(user, feature_key):
     try:
@@ -78,7 +83,7 @@ def enforce_limit(user, feature_key):
 
     if current_usage >= int(allowed_value):
         raise PermissionDenied(f"Feature limit exceeded for {feature_key}: allowed {allowed_value}, used {current_usage}.")
-    
+
 
 def generate_file_hash(file):
     """Generate SHA256 hash for uploaded file content"""
@@ -184,9 +189,11 @@ def deduct_feature_usage_with_priority(user, feature_key, units_to_deduct=1):
 
 
 # utils/pdf_utils.py
+import tempfile
+
 from django.template.loader import render_to_string
 from weasyprint import HTML
-import tempfile
+
 
 def generate_rent_invoice_pdf(rent):
     html_string = render_to_string("invoices/rent_invoice.html", {"rent": rent})
@@ -207,8 +214,6 @@ def generate_rent_invoice_pdf(rent):
 
 
 
-from datetime import date
-from dateutil.relativedelta import relativedelta
 
 def apply_late_fee_if_needed(rent: RentRecord):
     """

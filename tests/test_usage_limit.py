@@ -24,7 +24,7 @@
 #     user = User.objects.create(username="testuser1")
 #     plan = SubscriptionPlan.objects.create(name="free", monthly_price=0, yearly_price=0)
 #     UserSubscription.objects.create(user=user, plan=plan)
-    
+
 #     PlanFeatureLimit.objects.create(plan=plan, feature_key='max_properties', value='2')
 #     UsageLimit.objects.create(user=user, feature_key='max_properties', usage_count=1)
 
@@ -36,7 +36,7 @@
 #     user = User.objects.create(username="testuser2")
 #     plan = SubscriptionPlan.objects.create(name="free", monthly_price=0, yearly_price=0)
 #     UserSubscription.objects.create(user=user, plan=plan)
-    
+
 #     PlanFeatureLimit.objects.create(plan=plan, feature_key='max_properties', value='2')
 #     UsageLimit.objects.create(user=user, feature_key='max_properties', usage_count=2)
 

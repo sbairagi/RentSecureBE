@@ -6,4 +6,4 @@ class PropertiesConfig(AppConfig):
     name = 'properties'
 
     def ready(self):
-        import properties.signals 
+        pass

@@ -1,10 +1,10 @@
 import os
 import tempfile
 
-from weasyprint import HTML
 from django.conf import settings
 from django.template.loader import render_to_string
 from PyPDF2 import PdfMerger
+from weasyprint import HTML
 
 from properties.models import RentAgreementDraft
 

@@ -6,15 +6,14 @@ Caretakers are responsible for day-to-day maintenance and management.
 """
 
 # Django Imports
-from django.db import models
-from django.core.validators import RegexValidator
-from django.core.exceptions import ValidationError
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+from django.db import models
 from simple_history.models import HistoricalRecords
 
 # Local Imports
 from .unit_models import Unit
-
 
 # Phone number validator for consistent format
 phone_regex = RegexValidator(

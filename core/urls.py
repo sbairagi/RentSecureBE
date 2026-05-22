@@ -1,12 +1,23 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import ( SubscriptionPlanViewSet, UserSubscriptionViewSet,
-                    AddOnPurchaseViewSet, UsageLimitViewSet,
-                    ChangePasswordView, ResetPasswordView,  cashfree_payout_webhook ) #ChangePasswordView, ResetPasswordView, PlanFeatureLimitViewSet
 from rest_framework_simplejwt.views import (
-    TokenRefreshView,
+                    TokenRefreshView,
 )
-from .views import SendOTP, OwnerVerifyOTP, RenterVerifyOTP, update_owner_bank_details, razorpay_webhook
+
+from .views import (
+                    AddOnPurchaseViewSet,
+                    ChangePasswordView,  #ChangePasswordView, ResetPasswordView, PlanFeatureLimitViewSet
+                    OwnerVerifyOTP,
+                    RenterVerifyOTP,
+                    ResetPasswordView,
+                    SendOTP,
+                    SubscriptionPlanViewSet,
+                    UsageLimitViewSet,
+                    UserSubscriptionViewSet,
+                    cashfree_payout_webhook,
+                    razorpay_webhook,
+                    update_owner_bank_details,
+)
 
 # Subscription End-Points
 router = DefaultRouter()
@@ -38,5 +49,5 @@ urlpatterns = [
 # from .views import cashfree_payout_webhook
 
 # urlpatterns = [
-    
+
 # ]

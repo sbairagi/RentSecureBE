@@ -1,5 +1,7 @@
-from properties.models import RentRecord
 from communication.utils import send_whatsapp_message
+
+from properties.models import RentRecord
+
 
 def send_signature_reminders():
     rents = RentRecord.objects.filter(signature_status="PENDING")

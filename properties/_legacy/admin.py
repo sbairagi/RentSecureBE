@@ -1,9 +1,16 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
-from django.contrib import admin
-from .models import (RentAgreementDraft, UnitImage, UnitDocument, Unit,
-                     Caretaker, Renter, RentRecord)
+
+from .models import (
+    Caretaker,
+    RentAgreementDraft,
+    Renter,
+    RentRecord,
+    Unit,
+    UnitDocument,
+    UnitImage,
+)
 
 admin.site.site_header = "Wealth Concierge Admin"
 
@@ -36,9 +43,9 @@ class RenterInline(admin.TabularInline):
 @admin.register(Unit)
 class UnitAdmin(SimpleHistoryAdmin):
     list_display = (
-        'id', 'building_name', 'unit', 'owner', 'address_line', 'landmark', 'city', 'state', 'country', 
-        'postal_code', 'unit_type', 'unit_image_thumbnail', 'is_vacant', 
-        'is_verified', 'maintenance_notes', 'rent_due_reminder', 'agreement_expiry_reminder', 
+        'id', 'building_name', 'unit', 'owner', 'address_line', 'landmark', 'city', 'state', 'country',
+        'postal_code', 'unit_type', 'unit_image_thumbnail', 'is_vacant',
+        'is_verified', 'maintenance_notes', 'rent_due_reminder', 'agreement_expiry_reminder',
         'latitude', 'longitude', 'notes', 'created_at', 'updated_at'
     )
     search_fields = ('building__name', 'building_name', 'unit', 'city', 'owner__username')
@@ -80,8 +87,8 @@ class UnitAdmin(SimpleHistoryAdmin):
 @admin.register(Caretaker)
 class CaretakerAdmin(SimpleHistoryAdmin):
     list_display = (
-        'id', 'unit', 'name', 'phone', 'alternate_phone', 'whatsapp_number', 'emergency_contact_name', 
-        'emergency_contact_number', 'caretaker_image_thumbnail', 'address_line', 'landmark', 'city', 'state', 'country', 'postal_code', 
+        'id', 'unit', 'name', 'phone', 'alternate_phone', 'whatsapp_number', 'emergency_contact_name',
+        'emergency_contact_number', 'caretaker_image_thumbnail', 'address_line', 'landmark', 'city', 'state', 'country', 'postal_code',
         'start_date', 'end_date', 'notes', 'created_at', 'updated_at'
     )
     search_fields = ('name', 'phone')
@@ -118,8 +125,8 @@ class CaretakerAdmin(SimpleHistoryAdmin):
 @admin.register(Renter)
 class RenterAdmin(SimpleHistoryAdmin):
     list_display = (
-        'id', 'unit', 'name', 'phone', 'alternate_phone', 'whatsapp_number', 'emergency_contact_name', 
-        'emergency_contact_number', 'renter_image_thumbnail', 'rent_amount', 
+        'id', 'unit', 'name', 'phone', 'alternate_phone', 'whatsapp_number', 'emergency_contact_name',
+        'emergency_contact_number', 'renter_image_thumbnail', 'rent_amount',
         'start_date', 'end_date', 'is_active', 'notes', 'created_at', 'updated_at'
     )
     search_fields = ('name', 'phone')
@@ -156,7 +163,7 @@ class RenterAdmin(SimpleHistoryAdmin):
 @admin.register(RentRecord)
 class RentRecordAdmin(SimpleHistoryAdmin):
     list_display = (
-        'id', 'renter', 'unit', 'rent_month', 'amount_paid', 'date_paid', 
+        'id', 'renter', 'unit', 'rent_month', 'amount_paid', 'date_paid',
         'payment_mode', 'remarks', 'created_at', 'updated_at',
         'grace_days', 'late_fee'
     )

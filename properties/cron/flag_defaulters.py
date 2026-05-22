@@ -1,6 +1,7 @@
 # cron/flag_defaulters.py
 
 from datetime import timezone
+
 from properties.models import RentRecord
 from properties.signals import update_renter_defaulter_status
 
