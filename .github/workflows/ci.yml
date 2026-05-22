@@ -1,0 +1,27 @@
+name: CI Pipeline (staged)
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  lint:
+    name: Lint (Black → Ruff → Pylint → Mypy)
+    uses: ./.github/workflows/lint.yml
+
+  test:
+    name: Test (Bandit → Pytest → Coverage)
+    needs: lint
+    uses: ./.github/workflows/test.yml
+
+  security:
+    name: Security (Semgrep → Trivy → CodeQL)
+    needs: test
+    uses: ./.github/workflows/security.yml
+
+  quality:
+    name: Quality (SonarCloud)
+    needs: security
+    uses: ./.github/workflows/quality.yml

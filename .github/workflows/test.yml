@@ -1,9 +1,7 @@
 name: Test
 
 on:
-  workflow_run:
-    workflows: ["Lint"]
-    types: [completed]
+  workflow_call: {}
 
 jobs:
   bandit:

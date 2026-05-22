@@ -1,9 +1,7 @@
 name: Quality
 
 on:
-  workflow_run:
-    workflows: ["Security"]
-    types: [completed]
+  workflow_call: {}
 
 jobs:
   sonarcloud:
