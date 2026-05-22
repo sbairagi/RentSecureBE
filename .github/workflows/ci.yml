@@ -54,7 +54,7 @@ jobs:
 
   bandit:
     name: Bandit
-    needs: mypy
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -196,7 +196,7 @@ jobs:
 
   sonarcloud:
     name: SonarCloud
-    needs: codeql
+    needs: security
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
