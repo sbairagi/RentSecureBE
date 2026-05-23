@@ -1351,40 +1351,6 @@
   },
   {
     "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 12,
-      "row": 20
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/dashboard/views.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 15,
-            "row": 20
-          },
-          "location": {
-            "column": 9,
-            "row": 20
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `msg`"
-    },
-    "location": {
-      "column": 9,
-      "row": 20
-    },
-    "message": "Local variable `msg` is assigned to but never used",
-    "noqa_row": 20,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
-  },
-  {
-    "cell": null,
     "code": "S106",
     "end_location": {
       "column": 33,
@@ -1778,40 +1744,6 @@
     "noqa_row": 51,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/line-too-long"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 24,
-      "row": 18
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/management/commands/apply_late_fees.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 27,
-            "row": 18
-          },
-          "location": {
-            "column": 9,
-            "row": 18
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `late_fee_amount`"
-    },
-    "location": {
-      "column": 9,
-      "row": 18
-    },
-    "message": "Local variable `late_fee_amount` is assigned to but never used",
-    "noqa_row": 18,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
   },
   {
     "cell": null,
@@ -2298,40 +2230,6 @@
     "noqa_row": 32,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/line-too-long"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 25,
-      "row": 59
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/management/commands/retry_failed_payouts.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 28,
-            "row": 59
-          },
-          "location": {
-            "column": 17,
-            "row": 59
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `response`"
-    },
-    "location": {
-      "column": 17,
-      "row": 59
-    },
-    "message": "Local variable `response` is assigned to but never used",
-    "noqa_row": 59,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
   },
   {
     "cell": null,
@@ -4621,37 +4519,21 @@
   },
   {
     "cell": null,
-    "code": "F841",
+    "code": "B018",
     "end_location": {
-      "column": 13,
+      "column": 37,
       "row": 50
     },
     "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/_legacy/serializers.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 16,
-            "row": 50
-          },
-          "location": {
-            "column": 9,
-            "row": 50
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `user`"
-    },
+    "fix": null,
     "location": {
       "column": 9,
       "row": 50
     },
-    "message": "Local variable `user` is assigned to but never used",
+    "message": "Found useless attribute access. Either assign it to a variable or remove it.",
     "noqa_row": 50,
     "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+    "url": "https://docs.astral.sh/ruff/rules/useless-expression"
   },
   {
     "cell": null,
@@ -5264,40 +5146,6 @@
     "noqa_row": 443,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 17,
-      "row": 455
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/_legacy/views.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 20,
-            "row": 455
-          },
-          "location": {
-            "column": 9,
-            "row": 455
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `response`"
-    },
-    "location": {
-      "column": 9,
-      "row": 455
-    },
-    "message": "Local variable `response` is assigned to but never used",
-    "noqa_row": 455,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
   },
   {
     "cell": null,
@@ -6162,40 +6010,6 @@
     "noqa_row": 19,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/line-too-long"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 21,
-      "row": 23
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/communication/retry_failed_payouts.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 24,
-            "row": 23
-          },
-          "location": {
-            "column": 13,
-            "row": 23
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `response`"
-    },
-    "location": {
-      "column": 13,
-      "row": 23
-    },
-    "message": "Local variable `response` is assigned to but never used",
-    "noqa_row": 23,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
   },
   {
     "cell": null,
@@ -10015,74 +9829,6 @@
   },
   {
     "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 21
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/receipt_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 21
-          },
-          "location": {
-            "column": 1,
-            "row": 21
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 21
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 27,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 24
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/receipt_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 24
-          },
-          "location": {
-            "column": 1,
-            "row": 24
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 24
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 27,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
     "code": "E501",
     "end_location": {
       "column": 98,
@@ -10098,74 +9844,6 @@
     "noqa_row": 42,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/line-too-long"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 49
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/receipt_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 49
-          },
-          "location": {
-            "column": 1,
-            "row": 49
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 49
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 55,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 52
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/receipt_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 52
-          },
-          "location": {
-            "column": 1,
-            "row": 52
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 52
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 55,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
   },
   {
     "cell": null,
@@ -10205,74 +9883,6 @@
   },
   {
     "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 108
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/receipt_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 108
-          },
-          "location": {
-            "column": 1,
-            "row": 108
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 108
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 114,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 111
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/receipt_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 111
-          },
-          "location": {
-            "column": 1,
-            "row": 111
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 111
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 114,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
     "code": "E501",
     "end_location": {
       "column": 91,
@@ -10288,74 +9898,6 @@
     "noqa_row": 116,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/line-too-long"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 19
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/renter_onboarding_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 19
-          },
-          "location": {
-            "column": 1,
-            "row": 19
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 19
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 25,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 22
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/renter_onboarding_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 22
-          },
-          "location": {
-            "column": 1,
-            "row": 22
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 22
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 25,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
   },
   {
     "cell": null,
@@ -10485,74 +10027,6 @@
   },
   {
     "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 69
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/renter_onboarding_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 69
-          },
-          "location": {
-            "column": 1,
-            "row": 69
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 69
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 75,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 72
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/renter_onboarding_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 72
-          },
-          "location": {
-            "column": 1,
-            "row": 72
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 72
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 75,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
     "code": "E501",
     "end_location": {
       "column": 93,
@@ -10568,40 +10042,6 @@
     "noqa_row": 77,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/line-too-long"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 104
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/renter_onboarding_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 104
-          },
-          "location": {
-            "column": 1,
-            "row": 104
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 104
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 107,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
   },
   {
     "cell": null,
@@ -10659,142 +10099,6 @@
   },
   {
     "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 14
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/unit_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 14
-          },
-          "location": {
-            "column": 1,
-            "row": 14
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 14
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 28,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 17
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/unit_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 17
-          },
-          "location": {
-            "column": 1,
-            "row": 17
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 17
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 28,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 20
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/unit_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 20
-          },
-          "location": {
-            "column": 1,
-            "row": 20
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 20
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 28,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 23
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/unit_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 23
-          },
-          "location": {
-            "column": 1,
-            "row": 23
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 23
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 28,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
     "code": "E501",
     "end_location": {
       "column": 93,
@@ -10813,142 +10117,6 @@
   },
   {
     "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 49
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/unit_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 49
-          },
-          "location": {
-            "column": 1,
-            "row": 49
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 49
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 55,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 52
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/unit_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 52
-          },
-          "location": {
-            "column": 1,
-            "row": 52
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 52
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 55,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 76
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/unit_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 76
-          },
-          "location": {
-            "column": 1,
-            "row": 76
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 76
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 82,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 79
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/unit_service.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 79
-          },
-          "location": {
-            "column": 1,
-            "row": 79
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 79
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 82,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
     "code": "E501",
     "end_location": {
       "column": 112,
@@ -10964,108 +10132,6 @@
     "noqa_row": 108,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/line-too-long"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 30
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/signals.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 30
-          },
-          "location": {
-            "column": 1,
-            "row": 30
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 30
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 37,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 35
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/signals.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 35
-          },
-          "location": {
-            "column": 1,
-            "row": 35
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 35
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 37,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 61
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/signals.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 61
-          },
-          "location": {
-            "column": 1,
-            "row": 61
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 61
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 65,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
   },
   {
     "cell": null,
@@ -11267,74 +10333,6 @@
   },
   {
     "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 16,
-      "row": 442
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_api_integration.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 19,
-            "row": 442
-          },
-          "location": {
-            "column": 9,
-            "row": 442
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `renter1`"
-    },
-    "location": {
-      "column": 9,
-      "row": 442
-    },
-    "message": "Local variable `renter1` is assigned to but never used",
-    "noqa_row": 442,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 16,
-      "row": 450
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_api_integration.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 19,
-            "row": 450
-          },
-          "location": {
-            "column": 9,
-            "row": 450
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `renter2`"
-    },
-    "location": {
-      "column": 9,
-      "row": 450
-    },
-    "message": "Local variable `renter2` is assigned to but never used",
-    "noqa_row": 450,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
-  },
-  {
-    "cell": null,
     "code": "S106",
     "end_location": {
       "column": 83,
@@ -11407,58 +10405,6 @@
   },
   {
     "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 17,
-      "row": 708
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_api_integration.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 20,
-            "row": 708
-          },
-          "location": {
-            "column": 9,
-            "row": 708
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `response`"
-    },
-    "location": {
-      "column": 9,
-      "row": 708
-    },
-    "message": "Local variable `response` is assigned to but never used",
-    "noqa_row": 708,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
-  },
-  {
-    "cell": null,
-    "code": "E501",
-    "end_location": {
-      "column": 93,
-      "row": 708
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_api_integration.py",
-    "fix": null,
-    "location": {
-      "column": 89,
-      "row": 708
-    },
-    "message": "Line too long (92 > 88)",
-    "noqa_row": 708,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
-  },
-  {
-    "cell": null,
     "code": "S106",
     "end_location": {
       "column": 84,
@@ -11492,40 +10438,6 @@
     "noqa_row": 717,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/hardcoded-password-func-arg"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 17,
-      "row": 722
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_api_integration.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 20,
-            "row": 722
-          },
-          "location": {
-            "column": 9,
-            "row": 722
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `building`"
-    },
-    "location": {
-      "column": 9,
-      "row": 722
-    },
-    "message": "Local variable `building` is assigned to but never used",
-    "noqa_row": 722,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
   },
   {
     "cell": null,
@@ -11670,40 +10582,6 @@
     "noqa_row": 147,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/line-too-long"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 14,
-      "row": 179
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_e2e_comprehensive.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 17,
-            "row": 179
-          },
-          "location": {
-            "column": 9,
-            "row": 179
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `unit1`"
-    },
-    "location": {
-      "column": 9,
-      "row": 179
-    },
-    "message": "Local variable `unit1` is assigned to but never used",
-    "noqa_row": 179,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
   },
   {
     "cell": null,
@@ -12283,71 +11161,21 @@
   },
   {
     "cell": null,
-    "code": "F841",
+    "code": "S106",
     "end_location": {
-      "column": 17,
-      "row": 1064
+      "column": 84,
+      "row": 1099
     },
     "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_e2e_comprehensive.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 20,
-            "row": 1064
-          },
-          "location": {
-            "column": 9,
-            "row": 1064
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `building`"
-    },
+    "fix": null,
     "location": {
-      "column": 9,
-      "row": 1064
+      "column": 66,
+      "row": 1099
     },
-    "message": "Local variable `building` is assigned to but never used",
-    "noqa_row": 1064,
+    "message": "Possible hardcoded password assigned to argument: \"password\"",
+    "noqa_row": 1099,
     "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 18,
-      "row": 1083
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_e2e_comprehensive.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 1,
-            "row": 1084
-          },
-          "location": {
-            "column": 1,
-            "row": 1083
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `cache_key`"
-    },
-    "location": {
-      "column": 9,
-      "row": 1083
-    },
-    "message": "Local variable `cache_key` is assigned to but never used",
-    "noqa_row": 1083,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+    "url": "https://docs.astral.sh/ruff/rules/hardcoded-password-func-arg"
   },
   {
     "cell": null,
@@ -12371,103 +11199,17 @@
     "cell": null,
     "code": "S106",
     "end_location": {
-      "column": 84,
-      "row": 1101
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_e2e_comprehensive.py",
-    "fix": null,
-    "location": {
-      "column": 66,
-      "row": 1101
-    },
-    "message": "Possible hardcoded password assigned to argument: \"password\"",
-    "noqa_row": 1101,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/hardcoded-password-func-arg"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 17,
-      "row": 1106
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_e2e_comprehensive.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 20,
-            "row": 1106
-          },
-          "location": {
-            "column": 9,
-            "row": 1106
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `building`"
-    },
-    "location": {
-      "column": 9,
-      "row": 1106
-    },
-    "message": "Local variable `building` is assigned to but never used",
-    "noqa_row": 1106,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 17,
-      "row": 1122
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_e2e_comprehensive.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 20,
-            "row": 1122
-          },
-          "location": {
-            "column": 9,
-            "row": 1122
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `building`"
-    },
-    "location": {
-      "column": 9,
-      "row": 1122
-    },
-    "message": "Local variable `building` is assigned to but never used",
-    "noqa_row": 1122,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
-  },
-  {
-    "cell": null,
-    "code": "S106",
-    "end_location": {
       "column": 86,
-      "row": 1139
+      "row": 1138
     },
     "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_e2e_comprehensive.py",
     "fix": null,
     "location": {
       "column": 68,
-      "row": 1139
+      "row": 1138
     },
     "message": "Possible hardcoded password assigned to argument: \"password\"",
-    "noqa_row": 1139,
+    "noqa_row": 1138,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/hardcoded-password-func-arg"
   },
@@ -12476,16 +11218,16 @@
     "code": "S106",
     "end_location": {
       "column": 91,
-      "row": 1312
+      "row": 1311
     },
     "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_e2e_comprehensive.py",
     "fix": null,
     "location": {
       "column": 73,
-      "row": 1312
+      "row": 1311
     },
     "message": "Possible hardcoded password assigned to argument: \"password\"",
-    "noqa_row": 1312,
+    "noqa_row": 1311,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/hardcoded-password-func-arg"
   },
@@ -12494,16 +11236,16 @@
     "code": "E501",
     "end_location": {
       "column": 92,
-      "row": 1312
+      "row": 1311
     },
     "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_e2e_comprehensive.py",
     "fix": null,
     "location": {
       "column": 89,
-      "row": 1312
+      "row": 1311
     },
     "message": "Line too long (91 > 88)",
-    "noqa_row": 1312,
+    "noqa_row": 1311,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/line-too-long"
   },
@@ -12599,40 +11341,6 @@
   },
   {
     "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 21,
-      "row": 167
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_loopholes_critical.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 24,
-            "row": 167
-          },
-          "location": {
-            "column": 9,
-            "row": 167
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `rent_record1`"
-    },
-    "location": {
-      "column": 9,
-      "row": 167
-    },
-    "message": "Local variable `rent_record1` is assigned to but never used",
-    "noqa_row": 167,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
-  },
-  {
-    "cell": null,
     "code": "B017",
     "end_location": {
       "column": 42,
@@ -12648,40 +11356,6 @@
     "noqa_row": 176,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/assert-raises-exception"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 25,
-      "row": 177
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_loopholes_critical.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 28,
-            "row": 177
-          },
-          "location": {
-            "column": 13,
-            "row": 177
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `rent_record2`"
-    },
-    "location": {
-      "column": 13,
-      "row": 177
-    },
-    "message": "Local variable `rent_record2` is assigned to but never used",
-    "noqa_row": 177,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
   },
   {
     "cell": null,
@@ -12793,40 +11467,6 @@
   },
   {
     "cell": null,
-    "code": "B007",
-    "end_location": {
-      "column": 14,
-      "row": 541
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_loopholes_critical.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "_i",
-          "end_location": {
-            "column": 14,
-            "row": 541
-          },
-          "location": {
-            "column": 13,
-            "row": 541
-          }
-        }
-      ],
-      "message": "Rename unused `i` to `_i`"
-    },
-    "location": {
-      "column": 13,
-      "row": 541
-    },
-    "message": "Loop control variable `i` not used within loop body",
-    "noqa_row": 541,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-loop-control-variable"
-  },
-  {
-    "cell": null,
     "code": "S106",
     "end_location": {
       "column": 82,
@@ -12845,40 +11485,6 @@
   },
   {
     "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 14,
-      "row": 591
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_loopholes_critical.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 17,
-            "row": 591
-          },
-          "location": {
-            "column": 9,
-            "row": 591
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `rent1`"
-    },
-    "location": {
-      "column": 9,
-      "row": 591
-    },
-    "message": "Local variable `rent1` is assigned to but never used",
-    "noqa_row": 591,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
-  },
-  {
-    "cell": null,
     "code": "B017",
     "end_location": {
       "column": 42,
@@ -12894,40 +11500,6 @@
     "noqa_row": 601,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/assert-raises-exception"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 18,
-      "row": 602
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/test_loopholes_critical.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 21,
-            "row": 602
-          },
-          "location": {
-            "column": 13,
-            "row": 602
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `rent2`"
-    },
-    "location": {
-      "column": 13,
-      "row": 602
-    },
-    "message": "Local variable `rent2` is assigned to but never used",
-    "noqa_row": 602,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
   },
   {
     "cell": null,
@@ -14443,37 +13015,21 @@
   },
   {
     "cell": null,
-    "code": "F841",
+    "code": "B017",
     "end_location": {
-      "column": 53,
+      "column": 42,
       "row": 659
     },
     "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/tests.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 53,
-            "row": 659
-          },
-          "location": {
-            "column": 42,
-            "row": 659
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `context`"
-    },
+    "fix": null,
     "location": {
-      "column": 46,
+      "column": 14,
       "row": 659
     },
-    "message": "Local variable `context` is assigned to but never used",
+    "message": "Do not assert blind exception: `Exception`",
     "noqa_row": 659,
     "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+    "url": "https://docs.astral.sh/ruff/rules/assert-raises-exception"
   },
   {
     "cell": null,
@@ -14801,312 +13357,6 @@
   },
   {
     "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 16
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/utils/onboarding_utils.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 16
-          },
-          "location": {
-            "column": 1,
-            "row": 16
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 16
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 22,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 19
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/utils/onboarding_utils.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 19
-          },
-          "location": {
-            "column": 1,
-            "row": 19
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 19
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 22,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 33
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/utils/onboarding_utils.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 33
-          },
-          "location": {
-            "column": 1,
-            "row": 33
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 33
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 41,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 35
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/utils/onboarding_utils.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 35
-          },
-          "location": {
-            "column": 1,
-            "row": 35
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 35
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 41,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 38
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/utils/onboarding_utils.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 38
-          },
-          "location": {
-            "column": 1,
-            "row": 38
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 38
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 41,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 53
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/utils/onboarding_utils.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 53
-          },
-          "location": {
-            "column": 1,
-            "row": 53
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 53
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 59,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 56
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/utils/onboarding_utils.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 56
-          },
-          "location": {
-            "column": 1,
-            "row": 56
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 56
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 59,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 78
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/utils/onboarding_utils.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 78
-          },
-          "location": {
-            "column": 1,
-            "row": 78
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 78
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 81,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 91
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/utils/onboarding_utils.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 91
-          },
-          "location": {
-            "column": 1,
-            "row": 91
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 91
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 94,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
     "code": "E501",
     "end_location": {
       "column": 90,
@@ -15233,108 +13483,6 @@
   },
   {
     "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 60
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/views/property_views.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 60
-          },
-          "location": {
-            "column": 1,
-            "row": 60
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 60
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 71,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 5,
-      "row": 65
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/views/property_views.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 5,
-            "row": 65
-          },
-          "location": {
-            "column": 1,
-            "row": 65
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 65
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 71,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
-    "code": "W293",
-    "end_location": {
-      "column": 9,
-      "row": 68
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/views/property_views.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 9,
-            "row": 68
-          },
-          "location": {
-            "column": 1,
-            "row": 68
-          }
-        }
-      ],
-      "message": "Remove whitespace from blank line"
-    },
-    "location": {
-      "column": 1,
-      "row": 68
-    },
-    "message": "Blank line contains whitespace",
-    "noqa_row": 71,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/blank-line-with-whitespace"
-  },
-  {
-    "cell": null,
     "code": "E501",
     "end_location": {
       "column": 104,
@@ -15386,40 +13534,6 @@
     "noqa_row": 57,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/try-except-pass"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 17,
-      "row": 99
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/views/rent_record_views.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 20,
-            "row": 99
-          },
-          "location": {
-            "column": 9,
-            "row": 99
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `response`"
-    },
-    "location": {
-      "column": 9,
-      "row": 99
-    },
-    "message": "Local variable `response` is assigned to but never used",
-    "noqa_row": 99,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
   },
   {
     "cell": null,
@@ -16320,40 +14434,6 @@
     "noqa_row": 89,
     "severity": "error",
     "url": "https://docs.astral.sh/ruff/rules/line-too-long"
-  },
-  {
-    "cell": null,
-    "code": "F841",
-    "end_location": {
-      "column": 22,
-      "row": 125
-    },
-    "filename": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE/smartbot/views.py",
-    "fix": {
-      "applicability": "unsafe",
-      "edits": [
-        {
-          "content": "",
-          "end_location": {
-            "column": 25,
-            "row": 125
-          },
-          "location": {
-            "column": 9,
-            "row": 125
-          }
-        }
-      ],
-      "message": "Remove assignment to unused variable `action_result`"
-    },
-    "location": {
-      "column": 9,
-      "row": 125
-    },
-    "message": "Local variable `action_result` is assigned to but never used",
-    "noqa_row": 125,
-    "severity": "error",
-    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
   },
   {
     "cell": null,
