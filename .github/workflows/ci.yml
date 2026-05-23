@@ -59,7 +59,7 @@ jobs:
           esac
 
   tests:
-    name: Tests (${{ matrix.tool }})
+    name: ${{ format('Tests ({0})', matrix.tool) }}
     needs: lint
     runs-on: ubuntu-latest
     strategy:
@@ -114,7 +114,7 @@ jobs:
           esac
 
   security:
-    name: Security (${{ matrix.tool }})
+    name: ${{ format('Security ({0})', matrix.tool) }}
     needs: tests
     runs-on: ubuntu-latest
     strategy:
