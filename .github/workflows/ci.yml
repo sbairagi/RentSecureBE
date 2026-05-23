@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    name: Lint (matrix)
+    name: Lint (${{ matrix.tool }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -59,7 +59,7 @@ jobs:
           esac
 
   tests:
-    name: Tests (matrix)
+    name: Tests (${{ matrix.tool }})
     needs: lint
     runs-on: ubuntu-latest
     strategy:
@@ -114,7 +114,7 @@ jobs:
           esac
 
   security:
-    name: Security (matrix)
+    name: Security (${{ matrix.tool }})
     needs: tests
     runs-on: ubuntu-latest
     strategy:
