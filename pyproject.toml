@@ -23,11 +23,13 @@ exclude = '''
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-  extend-ignore = ["E203"]
-select = ["E", "F", "W", "C", "N", "I", "S", "B"]
 exclude = ["**/.venv/**", "**/venv/**", "**/migrations/**", "**/__pycache__/**", ".github/**"]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint]
+extend-ignore = ["E203"]
+select = ["E", "F", "W", "C", "N", "I", "S", "B"]
+
+[tool.ruff.lint.per-file-ignores]
 "**/migrations/**" = ["ALL"]
 "**/tests/**" = ["S101"]
 "**/*_tests.py" = ["S101"]

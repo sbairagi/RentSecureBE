@@ -21,13 +21,24 @@ def _serialize_value(value):
 
 
 def archive_renter_data(renter):
-    rent_records = _serialize_value(list(RentRecord.objects.filter(renter=renter).values()))
-    image_paths = list(UnitImage.objects.filter(renter=renter).values_list("image", flat=True))
+    rent_records = _serialize_value(
+        list(RentRecord.objects.filter(renter=renter).values())
+    )
+    image_paths = list(
+        UnitImage.objects.filter(renter=renter).values_list("image", flat=True)
+    )
 
-    renter_dict = model_to_dict(renter, exclude=['renter_image', 'id_proof', 'rent_agreement'])
-    renter_dict['renter_image'] = str(renter.renter_image) if renter.renter_image else None
+    renter_dict = model_to_dict(
+        renter,
+        exclude=['renter_image', 'id_proof', 'rent_agreement'],
+    )
+    renter_dict['renter_image'] = (
+        str(renter.renter_image) if renter.renter_image else None
+    )
     renter_dict['id_proof'] = str(renter.id_proof) if renter.id_proof else None
-    renter_dict['rent_agreement'] = str(renter.rent_agreement) if renter.rent_agreement else None
+    renter_dict['rent_agreement'] = (
+        str(renter.rent_agreement) if renter.rent_agreement else None
+    )
     renter_dict = _serialize_value(renter_dict)
 
     archived = ArchivedRenter.objects.create(

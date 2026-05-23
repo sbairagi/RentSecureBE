@@ -1,14 +1,19 @@
-# from tax.models import PropertyTaxRecord
-# from ai_assistent.services.finance_ai import analyze_financial_health
-from datetime import date
+import json
+from datetime import date, timedelta
 
+from django.db.models import Sum
+from django.db.models.functions import TruncMonth
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-# from ai_assistant.services.whatsapp_service import send_whatsapp_message
 from ai_assistant.services.finance_ai import analyze_financial_health
-from properties.models import Renter, RentRecord
+from core.models import UserProfile
+from notification.services.whatsapp_service import send_whatsapp_message
+from properties.models import PropertyTaxRecord, Renter, RentRecord
+from smartbot.services.chatbot_service import handle_chat_message
 
 
 @api_view(["GET"])
@@ -35,11 +40,15 @@ def ai_assistant_insights(request):
     failed = payouts.filter(payout_status="FAILED").count()
 
     no_agreement = Renter.objects.filter(
-        property__owner=owner, rent_agreement_pdf__isnull=True, status__in=["active", "notice_period"]
+        property__owner=owner,
+        rent_agreement_pdf__isnull=True,
+        status__in=["active", "notice_period"],
     )
 
     no_police = Renter.objects.filter(
-        property__owner=owner, police_verification_pdf__isnull=True, status__in=["active", "notice_period"]
+        property__owner=owner,
+        police_verification_pdf__isnull=True,
+        status__in=["active", "notice_period"],
     )
 
     upcoming_tax = PropertyTaxRecord.objects.filter(
@@ -75,11 +84,6 @@ def ai_assistant_insights(request):
 
 
 # dashboard/api.py
-from datetime import timedelta
-
-from django.db.models import Sum
-from django.db.models.functions import TruncMonth
-from rent.models import RentRecord
 
 
 @api_view(["GET"])
@@ -166,7 +170,6 @@ def financial_health_report(request):
 
 
 # views.py
-from smartbot.services.chatbot_service import handle_chat_message
 
 
 @api_view(["POST"])
@@ -191,16 +194,7 @@ def chat_with_assistant(request):
 #   onChangeText={setInput}
 #   onSubmitEditing={sendMessage}
 # />
-import json
 
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-
-from core.models import UserProfile
-from notification.services.whatsapp_service import send_whatsapp_message
-
-
-# views.py
 @csrf_exempt
 def whatsapp_webhook(request):
     payload = json.loads(request.body)
