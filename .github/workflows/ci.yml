@@ -7,28 +7,12 @@ on:
     branches: [main, dev]
 
 jobs:
-  pre-commit:
-    name: Pre-commit Hooks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Install pre-commit
-        run: |
-          python -m pip install --upgrade pip
-          pip install pre-commit
-      - name: Run pre-commit
-        run: pre-commit run --all-files
-
   lint:
     name: Lint (matrix)
-    needs: pre-commit
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tool: [black, ruff, pylint, mypy]
+        tool: [pre-commit, black, ruff, pylint, mypy]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,6 +22,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           case "${{ matrix.tool }}" in
+            pre-commit)
+              pip install pre-commit
+              ;;
             black)
               pip install black
               ;;
@@ -54,6 +41,9 @@ jobs:
       - name: Run tool
         run: |
           case "${{ matrix.tool }}" in
+            pre-commit)
+              pre-commit run --all-files
+              ;;
             black)
               python -m black --check .
               ;;
@@ -68,26 +58,13 @@ jobs:
               ;;
           esac
 
-  bandit:
-    name: Bandit
+  tests:
+    name: Tests (matrix)
     needs: lint
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install bandit
-      - name: Run Bandit
-        run: python -m bandit -r . -x .venv,venv,migrations,tests
-
-  pytest:
-    name: Pytest
-    needs: bandit
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tool: [bandit, pytest, coverage]
     services:
       postgres:
         image: postgres:15
@@ -110,43 +87,35 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install coverage psycopg2-binary
-      - name: Run tests with coverage
+          case "${{ matrix.tool }}" in
+            bandit)
+              pip install bandit
+              ;;
+            pytest|coverage)
+              pip install -r requirements.txt
+              pip install coverage psycopg2-binary
+              ;;
+          esac
+      - name: Run tool
         run: |
-          python -m coverage run -m pytest
-          python -m coverage xml
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-artifact
-          path: |
-            coverage.xml
-            .coverage
-
-  coverage:
-    name: Coverage
-    needs: pytest
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Download coverage artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-artifact
-      - name: Check coverage threshold
-        run: |
-          python -m pip install --upgrade pip
-          pip install coverage
-          python -m coverage report --fail-under=90
-          python -m coverage xml
+          case "${{ matrix.tool }}" in
+            bandit)
+              python -m bandit -r . -x .venv,venv,migrations,tests
+              ;;
+            pytest)
+              python -m coverage run -m pytest
+              python -m coverage xml
+              ;;
+            coverage)
+              python -m coverage run -m pytest
+              python -m coverage xml
+              python -m coverage report --fail-under=90
+              ;;
+          esac
 
   security:
     name: Security (matrix)
-    needs: coverage
+    needs: tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
