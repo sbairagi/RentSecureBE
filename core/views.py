@@ -1,6 +1,9 @@
 # views.py
-import random
+import logging
+import secrets
 from datetime import timedelta
+
+logger = logging.getLogger(__name__)
 
 from django.conf import settings
 from django.contrib.auth.models import Group
@@ -59,11 +62,16 @@ class SendOTP(APIView):
             return Response({"error": "Phone number required"}, status=400)
 
         # Prevent spamming (resend OTP limit: 60 seconds)
-        recent_otp = OTP.objects.filter(phone_number=phone).order_by('-created_at').first()
+        recent_otp = OTP.objects.filter(
+            phone_number=phone
+        ).order_by('-created_at').first()
         if recent_otp and (timezone.now() - recent_otp.created_at).seconds < 60:
-            return Response({"error": "Wait before requesting another OTP"}, status=429)
+            return Response(
+                {"error": "Wait before requesting another OTP"},
+                status=429
+            )
 
-        code = str(random.randint(100000, 999999))
+        code = str(secrets.randbelow(900000) + 100000)
 
         OTP.objects.create(phone_number=phone, code=code, referral_code=referral_code)
         send_otp(phone, code)
@@ -206,7 +214,10 @@ class ChangePasswordView(generics.UpdateAPIView):
         new_password = request.data.get("new_password")
 
         if not old_password or not new_password:
-            return Response({"error": "Both old and new passwords are required."}, status=400)
+            return Response(
+                {"error": "Both old and new passwords are required."},
+                status=400
+            )
 
         if not user.check_password(old_password):
             return Response({"error": "Old password is incorrect."}, status=400)
@@ -225,7 +236,10 @@ class ResetPasswordView(APIView):
         new_password = request.data.get("new_password")
 
         if not username_or_email or not new_password:
-            return Response({"error": "Username and new password are required."}, status=400)
+            return Response(
+                {"error": "Username and new password are required."},
+                status=400
+            )
 
         try:
             user = User.objects.get(username=username_or_email)
@@ -509,7 +523,13 @@ def update_owner_bank_details(request):
     )
 
     if response.get("subCode") != "200":
-        return Response({"error": "Bank registration failed", "response": response}, status=400)
+        return Response(
+            {
+                "error": "Bank registration failed",
+                "response": response
+            },
+            status=400
+        )
 
     # Save new bank details
     bank.account_number = data["account_number"]

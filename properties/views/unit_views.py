@@ -1,6 +1,9 @@
 import json
+import logging
 
 from django.core.cache import cache
+
+logger = logging.getLogger(__name__)
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets
@@ -182,10 +185,18 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet):
             owner_email = self.request.user.email
             renter_email = agreement.renter.email
             if not owner_email:
-                raise PermissionDenied("Owner email is required for digital signature.")
-            send_agreement_for_signature(agreement, owner_email=owner_email, renter_email=renter_email)
-        except Exception:
-            pass
+                raise PermissionDenied(
+                    "Owner email is required for digital signature."
+                )
+            send_agreement_for_signature(
+                agreement,
+                owner_email=owner_email,
+                renter_email=renter_email
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to send agreement for signature: {e}"
+            )
 
     def perform_update(self, serializer):
         instance = serializer.instance
