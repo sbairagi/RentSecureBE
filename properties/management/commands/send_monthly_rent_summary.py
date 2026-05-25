@@ -35,7 +35,9 @@ class Command(BaseCommand):
                     )
                 else:
                     self.stdout.write(
-                        self.style.ERROR(f"❌ Failed to send summary to {owner.username}")
+                        self.style.ERROR(
+                            f"❌ Failed to send summary to {owner.username}"
+                        )
                     )
             except User.DoesNotExist:
                 self.stdout.write(
@@ -60,7 +62,9 @@ class Command(BaseCommand):
                         )
                     else:
                         self.stdout.write(
-                            self.style.WARNING(f"  ⚠️ {owner.username} - partial failure")
+                            self.style.WARNING(
+                                f"  ⚠️ {owner.username} - partial failure"
+                            )
                         )
                 except Exception as exc:
                     self.stdout.write(

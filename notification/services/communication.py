@@ -32,4 +32,8 @@ def send_smart_alert(user, message, title=None, urgent=False):
 # send_smart_alert(rent.renter.user, f"Rent ₹{rent.amount} is due tomorrow.", title="🏠 Rent Due")
 
 # # Payout failed alert
-# send_smart_alert(rent.renter.property.owner, "⚠️ Rent payout failed. Please update your bank details.", urgent=True)
+# send_smart_alert(
+#     rent.renter.property.owner,
+#     "⚠️ Rent payout failed. Please update your bank details.",
+#     urgent=True
+# )

@@ -147,9 +147,15 @@ def notify_owner_post_payout(rent):
 #     Sends a WhatsApp message to renter based on payout status.
 #     """
 #     if rent.payout_status == "SUCCESS":
-#         msg = f"Namaste! Aapka ₹{rent.amount} rent {rent.updated_at.date()} ko jama hua hai."
+#         msg = (
+#             f"Namaste! Aapka ₹{rent.amount} rent "
+#             f"{rent.updated_at.date()} ko jama hua hai."
+#         )
 #     elif rent.payout_status == "FAILED":
-#         msg = f"⚠️ ₹{rent.amount} rent ka transfer fail ho gaya hai. Kripya apna bank detail verify karein."
+#         msg = (
+#             f"⚠️ ₹{rent.amount} rent ka transfer fail ho gaya hai. "
+#             f"Kripya apna bank detail verify karein."
+#         )
 #     else:
 #         msg = None
 
