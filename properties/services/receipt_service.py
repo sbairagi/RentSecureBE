@@ -39,7 +39,9 @@ def generate_rent_receipt_pdf(rent_record):
 
         return pdf_bytes
     except Exception as exc:
-        logger.exception(f"Failed to generate rent receipt PDF for rent {rent_record.id}: {exc}")
+        logger.exception(
+            f"Failed to generate rent receipt PDF for rent {rent_record.id}: {exc}"
+        )
         raise
 
 

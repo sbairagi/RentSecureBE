@@ -1,6 +1,10 @@
+import logging
+
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import Unit
@@ -46,8 +50,13 @@ class Command(BaseCommand):
                     )
                     email_sent = True
                 except Exception as exc:
+                    logger.warning(
+                        f"Failed to send vacancy email to {owner.email} "
+                        f"for unit {unit_label}: {exc}"
+                    )
                     self.stderr.write(
-                        f"Failed to send vacancy email to {owner.email} for unit {unit_label}: {exc}"
+                        f"Failed to send vacancy email to {owner.email} "
+                        f"for unit {unit_label}: {exc}"
                     )
 
             self.stdout.write(

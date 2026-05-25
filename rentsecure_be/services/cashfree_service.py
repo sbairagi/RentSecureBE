@@ -63,7 +63,10 @@ def pay_owner_after_rent(rent: RentRecord):
         notify_owner(rent.owner, msg_owner)
 
     elif rent.payout_status == "FAILED":
-        msg = f"⚠️ ₹{rent.amount} rent ka transfer fail ho gaya hai. Kripya apna bank detail verify karein."
+        msg = (
+            f"⚠️ ₹{rent.amount} rent ka transfer fail ho gaya hai. "
+            f"Kripya apna bank detail verify karein."
+        )
         notify_renter(rent.renter, msg)
 
     rent = rent.save()

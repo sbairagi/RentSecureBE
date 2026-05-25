@@ -1,9 +1,12 @@
 """Focused coverage tests for properties app"""
+import logging
 from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+
+logger = logging.getLogger(__name__)
 
 from core.models import PlanFeatureLimit, SubscriptionPlan, UsageLimit, UserSubscription
 from properties.feature_enforcer import FeatureEnforcer
@@ -122,24 +125,34 @@ class CoreModelCoverageTest(TestCase):
 class AdminImportCoverageTest(TestCase):
     def test_admin_imports(self):
         """Test that all admin module imports work"""
-        modules = ['properties.admin.building_admin', 'properties.admin.unit_admin',
-                   'properties.admin.renter_admin', 'properties.admin.caretaker_admin',
-                   'properties.admin.rent_record_admin']
+        modules = [
+            'properties.admin.building_admin',
+            'properties.admin.unit_admin',
+            'properties.admin.renter_admin',
+            'properties.admin.caretaker_admin',
+            'properties.admin.rent_record_admin'
+        ]
         for m in modules:
             try:
                 __import__(m)
-            except (ImportError, Exception):
-                pass
+            except (ImportError, Exception) as e:
+                logger.debug(f"Failed to import admin module {m}: {e}")
         self.assertTrue(True)
 
 
 class SerializerImportTest(TestCase):
     def test_serializer_imports(self):
-        for path in ['properties.serializers.building_serializers', 'properties.serializers.unit_serializers',
-                     'properties.serializers.renter_serializers', 'properties.serializers.caretaker_serializers',
-                     'properties.serializers.rent_record_serializers', 'properties.serializers.extra_charge_serializers']:
+        paths = [
+            'properties.serializers.building_serializers',
+            'properties.serializers.unit_serializers',
+            'properties.serializers.renter_serializers',
+            'properties.serializers.caretaker_serializers',
+            'properties.serializers.rent_record_serializers',
+            'properties.serializers.extra_charge_serializers'
+        ]
+        for path in paths:
             try:
                 __import__(path)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to import serializer module {path}: {e}")
         self.assertTrue(True)
