@@ -12,4 +12,4 @@ def generate_voice_note(text: str, lang: str = "en") -> str:
         return temp.name
     except Exception as e:
         print("Voice note generation failed:", e)
-        return None
+        return ""

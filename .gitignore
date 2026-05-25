@@ -71,3 +71,4 @@ celerybeat-schedule
 
 # local settings
 local_settings.py
+**/config.yaml

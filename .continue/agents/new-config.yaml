@@ -1,0 +1,35 @@
+name: RentSecure AI Config
+version: 1.0.0
+schema: v1
+
+defaultModel: DeepSeek Free
+
+models:
+  - name: DeepSeek Free
+    provider: openrouter
+    model: deepseek/deepseek-chat-v3-0324
+    apiKey: ${{ secrets.OPENROUTER_API_KEY }}
+
+  - name: Qwen 2.5 32b
+    provider: openrouter
+    model: qwen/qwen2.5-coder-7b-instruct
+    apiKey: ${{ secrets.OPENROUTER_API_KEY }}
+
+  - name: Ollama Autodetect
+    provider: ollama
+    model: AUTODETECT
+
+  - name: Claude 4 Sonnet
+    uses: anthropic/claude-4-sonnet
+    with:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  - name: My GPT-5
+    provider: openai
+    model: gpt-5
+    apiKey: ${{ secrets.OPENAI_API_KEY }}
+
+# MCP Servers that Continue can access
+# https://docs.continue.dev/customization/mcp-tools
+mcpServers:
+  - uses: anthropic/memory-mcp
