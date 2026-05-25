@@ -1,8 +1,11 @@
+import logging
 from datetime import timedelta
 
 from django.utils import timezone
 
 from ai_assistant.services.i18n_service import translate_msg
+
+logger = logging.getLogger(__name__)
 from notification.services.voice_service import generate_voice_note
 from notification.services.whatsapp_service import (
     send_whatsapp_audio,
@@ -36,14 +39,16 @@ def send_due_extra_charge_reminders(days_ahead=0):
 
         try:
             send_whatsapp_message(phone, translated_message)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to send WhatsApp message to {phone}: {e}")
             continue
 
         audio_path = generate_voice_note(translated_message, lang)
         if audio_path:
             try:
                 send_whatsapp_audio(phone, audio_path)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to send WhatsApp audio to {phone}: {e}")
                 continue
 
     return charges.count()

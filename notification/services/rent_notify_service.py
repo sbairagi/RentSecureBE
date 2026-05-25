@@ -66,11 +66,20 @@ def send_payout_notification(rent):
     """
     try:
         if rent.payout_status == "SUCCESS":
-            msg = f"Namaste! Aapka ₹{rent.amount} rent {rent.updated_at.date()} ko jama hua hai."
+            msg = (
+                f"Namaste! Aapka ₹{rent.amount} rent "
+                f"{rent.updated_at.date()} ko jama hua hai."
+            )
         elif rent.payout_status == "FAILED":
-            msg = f"⚠️ ₹{rent.amount} rent ka transfer fail ho gaya hai. Kripya apna bank detail verify karein."
+            msg = (
+                f"⚠️ ₹{rent.amount} rent ka transfer fail ho gaya hai. "
+                f"Kripya apna bank detail verify karein."
+            )
         else:
-            logger.info(f"No notification sent for rent ID {rent.id} with status {rent.payout_status}")
+            logger.info(
+                f"No notification sent for rent ID {rent.id} "
+                f"with status {rent.payout_status}"
+            )
             return
 
         notify_renter(rent.renter, msg)
@@ -85,9 +94,15 @@ def notify_owner_post_payout(rent):
     lang = owner.profile.language_preference or "hi"
 
     if rent.payout_status == "SUCCESS":
-        msg = f"Namaste! Aapka ₹{rent.amount} rent {rent.updated_at.date()} ko jama hua hai."
+        msg = (
+            f"Namaste! Aapka ₹{rent.amount} rent "
+            f"{rent.updated_at.date()} ko jama hua hai."
+        )
     else:
-        msg = f"⚠️ Aapka ₹{rent.amount} rent ka payment fail ho gaya hai. Kripya bank details verify karein."
+        msg = (
+            f"⚠️ Aapka ₹{rent.amount} rent ka payment fail ho gaya hai. "
+            f"Kripya bank details verify karein."
+        )
 
     translated_msg = translate_msg(msg, lang)
     audio_path = generate_voice_note(translated_msg, lang=lang)

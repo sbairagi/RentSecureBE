@@ -64,9 +64,13 @@ def enforce_limit(user, feature_key):
 
     try:
         from core.models import PlanFeatureLimit
-        feature_limit = PlanFeatureLimit.objects.get(plan=subscription.plan, feature_key=feature_key)
-    except PlanFeatureLimit.DoesNotExist:
-        raise PermissionDenied(f"Feature limit for {feature_key} not found in plan.")
+        feature_limit = PlanFeatureLimit.objects.get(
+            plan=subscription.plan, feature_key=feature_key
+        )
+    except PlanFeatureLimit.DoesNotExist as e:
+        raise PermissionDenied(
+            f"Feature limit for {feature_key} not found in plan."
+        ) from e
 
     allowed_value = feature_limit.value
     usage = UsageLimit.objects.filter(user=user, feature_key=feature_key).first()
@@ -76,10 +80,15 @@ def enforce_limit(user, feature_key):
         return
 
     if allowed_value.lower() == 'no':
-        raise PermissionDenied(f"This feature ({feature_key}) is not available in your plan.")
+        raise PermissionDenied(
+            f"This feature ({feature_key}) is not available in your plan."
+        )
 
     if current_usage >= int(allowed_value):
-        raise PermissionDenied(f"Feature limit exceeded for {feature_key}: allowed {allowed_value}, used {current_usage}.")
+        raise PermissionDenied(
+            f"Feature limit exceeded for {feature_key}: "
+            f"allowed {allowed_value}, used {current_usage}."
+        )
 
 
 def generate_file_hash(file):

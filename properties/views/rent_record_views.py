@@ -1,3 +1,5 @@
+import logging
+
 from django.core.cache import cache
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
@@ -6,6 +8,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+logger = logging.getLogger(__name__)
 
 from notification.services.rent_notify_service import send_payout_notification
 from notification.utils import send_whatsapp_message
@@ -54,8 +58,10 @@ class RentRecordViewSet(viewsets.ModelViewSet):
             rent.payment_link = link
             rent.save(update_fields=['payment_link'])
             send_whatsapp_message(rent.renter.phone, f"📩 Pay your rent: {link}")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                f"Failed to create payment link for rent {rent.id}: {e}"
+            )
 
         enforcer.increment("rent_records")
         cache.delete(f'rent_records_user_{user.id}')
@@ -133,7 +139,9 @@ def get_latest_due_rent(request):
     if not renter:
         return Response({"error": "Not a renter"}, status=403)
 
-    rent = RentRecord.objects.filter(renter=renter, payment_status="PENDING").order_by("-rent_due_date").first()
+    rent = RentRecord.objects.filter(
+        renter=renter, payment_status="PENDING"
+    ).order_by("-rent_due_date").first()
     if not rent:
         return Response({"message": "No pending rent"})
 
