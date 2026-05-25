@@ -19,12 +19,17 @@ class RenterViewSet(viewsets.ModelViewSet):
         cache_key = f'renters_user_{self.request.user.id}'
         renters = cache.get(cache_key)
         if renters is None:
-            renters = Renter.objects.filter(unit__owner=self.request.user, status__in=["active", "notice_period"])
+            renters = Renter.objects.filter(
+                unit__owner=self.request.user,
+                status__in=["active", "notice_period"]
+            )
             cache.set(cache_key, renters, timeout=300)
         return renters
 
     def create(self, request, *args, **kwargs):
-        allowed, current_usage, subscription_limit, add_on_limit = check_feature_limit(request.user, 'max_renters')
+        allowed, current_usage, subscription_limit, add_on_limit = (
+            check_feature_limit(request.user, 'max_renters')
+        )
         if not allowed:
             return Response({
                 'error': "You’ve reached your renter limit.",

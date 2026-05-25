@@ -232,7 +232,11 @@ def leegality_webhook(request):
     except Exception:
         return JsonResponse({'error': 'Invalid payload'}, status=400)
 
-    doc_id = payload.get('document_id') or payload.get('documentId') or payload.get('documentKey')
+    doc_id = (
+        payload.get('document_id')
+        or payload.get('documentId')
+        or payload.get('documentKey')
+    )
     status_value = payload.get('status') or payload.get('state')
     participant = payload.get('participant') or payload.get('identifier')
 

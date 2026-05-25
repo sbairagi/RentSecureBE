@@ -78,7 +78,9 @@ def handle_rent_payment(sender, instance, **kwargs):
         except Exception as exc:
             import logging
             logger = logging.getLogger(__name__)
-            logger.exception(f"Failed to send receipt email for rent {instance.id}: {exc}")
+            logger.exception(
+                f"Failed to send receipt email for rent {instance.id}: {exc}"
+            )
 
 
 def update_renter_defaulter_status(rent: RentRecord):
@@ -103,7 +105,11 @@ def notify_owner_if_unit_vacant(sender, instance, **kwargs):
             from notification.services.whatsapp_service import send_whatsapp_message
             send_whatsapp_message(
                 owner.profile.whatsapp_number,
-                f"🏠 Unit {unit.unit_number} is now vacant. Please assign a new renter or mark it as intentionally vacant from your dashboard."
+                (
+                    f"🏠 Unit {unit.unit_number} is now vacant. "
+                    f"Please assign a new renter or mark it as "
+                    f"intentionally vacant from your dashboard."
+                )
             )
 
 

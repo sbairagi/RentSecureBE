@@ -11,7 +11,10 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Send monthly rent collection summary to all property owners via email and WhatsApp."
+    help = (
+        "Send monthly rent collection summary to all property owners "
+        "via email and WhatsApp."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -32,14 +35,21 @@ class Command(BaseCommand):
         if user_id:
             try:
                 owner = User.objects.get(id=user_id)
-                success = send_monthly_rent_summary_email(owner, send_whatsapp=send_whatsapp)
+                success = send_monthly_rent_summary_email(
+                    owner, send_whatsapp=send_whatsapp
+                )
                 if success:
                     self.stdout.write(
-                        self.style.SUCCESS(f"✅ Summary sent to {owner.username} ({owner.email})")
+                        self.style.SUCCESS(
+                            f"✅ Summary sent to {owner.username} "
+                            f"({owner.email})"
+                        )
                     )
                 else:
                     self.stdout.write(
-                        self.style.ERROR(f"❌ Failed to send summary to {owner.username}")
+                        self.style.ERROR(
+                            f"❌ Failed to send summary to {owner.username}"
+                        )
                     )
             except User.DoesNotExist:
                 self.stdout.write(
@@ -53,18 +63,24 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING("No property owners found."))
                 return
 
-            self.stdout.write(f"Sending monthly summaries to {owners.count()} owner(s)...")
+            self.stdout.write(
+                f"Sending monthly summaries to {owners.count()} owner(s)..."
+            )
 
             for owner in owners:
                 try:
-                    success = send_monthly_rent_summary_email(owner, send_whatsapp=send_whatsapp)
+                    success = send_monthly_rent_summary_email(
+                        owner, send_whatsapp=send_whatsapp
+                    )
                     if success:
                         self.stdout.write(
                             self.style.SUCCESS(f"  ✅ {owner.username} ({owner.email})")
                         )
                     else:
                         self.stdout.write(
-                            self.style.WARNING(f"  ⚠️ {owner.username} - partial failure")
+                            self.style.WARNING(
+                                f"  ⚠️ {owner.username} - partial failure"
+                            )
                         )
                 except Exception as exc:
                     self.stdout.write(

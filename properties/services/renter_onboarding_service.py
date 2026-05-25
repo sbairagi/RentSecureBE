@@ -32,17 +32,27 @@ def send_renter_onboarding_invite(renter):
         link = generate_onboarding_link(renter)
 
         # Build message
-        owner_name = renter.unit.building.owner.full_name if renter.unit.building else "Your landlord"
-        unit_info = f"{renter.unit.unit} - {renter.unit.building.name}" if renter.unit.building else renter.unit.unit
+        owner_name = (
+            renter.unit.building.owner.full_name
+            if renter.unit.building
+            else "Your landlord"
+        )
+        unit_info = (
+            f"{renter.unit.unit} - {renter.unit.building.name}"
+            if renter.unit.building
+            else renter.unit.unit
+        )
 
         message = (
             f"👋 Welcome to RentSecure!\n\n"
-            f"Your landlord {owner_name} has invited you to complete your onboarding.\n\n"
+            f"Your landlord {owner_name} has invited you to complete "
+            f"your onboarding.\n\n"
             f"📍 Property: {unit_info}\n"
             f"💰 Monthly Rent: ₹{renter.rent_amount}\n\n"
             f"Please complete your KYC verification here:\n"
             f"{link}\n\n"
-            f"This helps us ensure secure rent transactions for both you and your landlord."
+            f"This helps us ensure secure rent transactions for both "
+            f"you and your landlord."
         )
 
         # Send WhatsApp
@@ -52,14 +62,22 @@ def send_renter_onboarding_invite(renter):
             # Update status
             renter.onboarding_status = Renter.OnboardingStatus.LINK_SENT
             renter.save(update_fields=['onboarding_status'])
-            logger.info(f"Onboarding invite sent to renter {renter.id} ({renter.phone})")
+            logger.info(
+                f"Onboarding invite sent to renter {renter.id} "
+                f"({renter.phone})"
+            )
             return True
         else:
-            logger.warning(f"Failed to send WhatsApp to renter {renter.id} ({renter.phone})")
+            logger.warning(
+                f"Failed to send WhatsApp to renter {renter.id} "
+                f"({renter.phone})"
+            )
             return False
 
     except Exception as exc:
-        logger.exception(f"Error sending onboarding invite to renter {renter.id}: {exc}")
+        logger.exception(
+            f"Error sending onboarding invite to renter {renter.id}: {exc}"
+        )
         return False
 
 
@@ -74,7 +92,10 @@ def send_renter_onboarding_reminder(renter):
         bool: True if reminder was sent
     """
     if renter.onboarding_status != Renter.OnboardingStatus.LINK_SENT:
-        logger.warning(f"Renter {renter.id} is not in LINK_SENT status. Skipping reminder.")
+        logger.warning(
+            f"Renter {renter.id} is not in LINK_SENT status. "
+            f"Skipping reminder."
+        )
         return False
 
     if not renter.phone:
@@ -110,15 +131,20 @@ def notify_owner_renter_completed_kyc(renter):
     owner = renter.unit.owner
 
     if not hasattr(owner, 'profile') or not owner.profile.whatsapp_number:
-        logger.warning(f"Owner {owner.id} has no WhatsApp number. Cannot send notification.")
+        logger.warning(
+            f"Owner {owner.id} has no WhatsApp number. "
+            f"Cannot send notification."
+        )
         return False
 
     try:
         message = (
-            f"✅ Great news! Renter {renter.name} has completed KYC verification.\n\n"
+            f"✅ Great news! Renter {renter.name} has completed KYC "
+            f"verification.\n\n"
             f"📍 Unit: {renter.unit.unit}\n"
             f"💰 Rent: ₹{renter.rent_amount}\n\n"
-            f"Their account is now activated. You can monitor rent payments from your dashboard."
+            f"Their account is now activated. You can monitor rent "
+            f"payments from your dashboard."
         )
 
         result = send_whatsapp_message(owner.profile.whatsapp_number, message)

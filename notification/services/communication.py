@@ -18,7 +18,9 @@ def send_smart_alert(user, message, title=None, urgent=False):
 
     device_token = getattr(user, "device_token", None)
     if device_token:
-        status["push"] = send_push_notification(user, title or "RentSecure Alert", message)
+        status["push"] = send_push_notification(
+            user, title or "RentSecure Alert", message
+        )
 
     if not any(status.values()) or urgent:
         status["sms"] = send_sms(user.profile.phone, message)
