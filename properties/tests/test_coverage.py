@@ -1,11 +1,22 @@
 """Focused coverage tests for properties app"""
-from decimal import Decimal
 from datetime import date
-from django.test import TestCase
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
-from properties.models import Building, Unit, Renter, Caretaker, ExtraCharge, UnitImage, UnitDocument, RentAgreementDraft, RentRecord
+from django.test import TestCase
+
+from core.models import PlanFeatureLimit, SubscriptionPlan, UsageLimit, UserSubscription
 from properties.feature_enforcer import FeatureEnforcer
-from core.models import SubscriptionPlan, UserSubscription, PlanFeatureLimit, UsageLimit
+from properties.models import (
+    Building,
+    Caretaker,
+    ExtraCharge,
+    RentAgreementDraft,
+    Renter,
+    Unit,
+    UnitDocument,
+    UnitImage,
+)
 
 User = get_user_model()
 

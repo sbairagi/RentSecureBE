@@ -1,8 +1,16 @@
 """Tests for core app models"""
 from decimal import Decimal
-from django.test import TestCase
+
 from django.contrib.auth import get_user_model
-from core.models import (SubscriptionPlan, PlanFeatureLimit, UsageLimit, OTP, OwnerBankDetails)
+from django.test import TestCase
+
+from core.models import (
+    OTP,
+    OwnerBankDetails,
+    PlanFeatureLimit,
+    SubscriptionPlan,
+    UsageLimit,
+)
 
 User = get_user_model()
 
@@ -27,5 +35,5 @@ class OTPTest(TestCase):
 class OwnerBankDetailsTest(TestCase):
     def setUp(self): self.u = User.objects.create_user(username='bd@t.com', email='bd@t.com', password='p', full_name='B', phone='+4')
     def test_create(self):
-        b = OwnerBankDetails.objects.create(owner=self.u, bank_account_number='1234567890', ifsc_code='HDFC0001234')
+        OwnerBankDetails.objects.create(owner=self.u, bank_account_number='1234567890', ifsc_code='HDFC0001234')
         self.assertTrue(OwnerBankDetails.objects.filter(owner=self.u).exists())

@@ -1,4 +1,5 @@
 import os
+import tempfile
 import zipfile
 
 from django.template.loader import render_to_string
@@ -25,7 +26,8 @@ def generate_tax_excel(user, properties, fy):
         ]
         ws.append(row)
 
-    path = f"/tmp/{user.username}_tax_summary_{fy}.xlsx"
+    fd, path = tempfile.mkstemp(suffix=".xlsx", prefix=f"{user.username}_tax_{fy}_")
+    os.close(fd)
     wb.save(path)
     return path
 
@@ -36,13 +38,15 @@ def generate_tax_pdf(user, properties, fy):
         "properties": properties,
         "fy": fy,
     })
-    pdf_file = f"/tmp/{user.username}_tax_summary_{fy}.pdf"
+    fd, pdf_file = tempfile.mkstemp(suffix=".pdf", prefix=f"{user.username}_tax_{fy}_")
+    os.close(fd)
     HTML(string=html_string).write_pdf(pdf_file)
     return pdf_file
 
 
 def create_tax_zip(user, excel_path, pdf_path, extra_docs):
-    zip_path = f"/tmp/{user.username}_tax_docs.zip"
+    fd, zip_path = tempfile.mkstemp(suffix=".zip", prefix=f"{user.username}_tax_docs_")
+    os.close(fd)
     with zipfile.ZipFile(zip_path, 'w') as zipf:
         zipf.write(excel_path, os.path.basename(excel_path))
         zipf.write(pdf_path, os.path.basename(pdf_path))

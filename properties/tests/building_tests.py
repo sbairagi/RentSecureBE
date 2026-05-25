@@ -1,12 +1,12 @@
 """Tests for building viewset"""
 from decimal import Decimal
-from datetime import date
-from django.test import TestCase
+
 from django.contrib.auth import get_user_model
-from rest_framework import status
+from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-from core.models import SubscriptionPlan, UserSubscription, PlanFeatureLimit, UsageLimit
+
+from core.models import PlanFeatureLimit, SubscriptionPlan, UsageLimit, UserSubscription
 from properties.models import Building
 
 User = get_user_model()

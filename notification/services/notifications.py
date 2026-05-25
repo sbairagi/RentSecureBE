@@ -1,5 +1,9 @@
+import logging
+
 import requests
 from notifications.models import DeviceToken
+
+logger = logging.getLogger(__name__)
 
 
 def send_push_notification(user, title, message):
@@ -12,9 +16,14 @@ def send_push_notification(user, title, message):
             "body": message
         }
         headers = {"Content-Type": "application/json"}
-        requests.post("https://exp.host/--/api/v2/push/send", json=payload, headers=headers)
-    except:
-        pass
+        requests.post(
+            "https://exp.host/--/api/v2/push/send",
+            json=payload,
+            headers=headers,
+            timeout=10,
+        )
+    except Exception as e:
+        logger.exception(f"Failed to send push notification to user {user.id}: {e}")
 
 
 # # Rent paid

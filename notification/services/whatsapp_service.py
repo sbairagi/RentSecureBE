@@ -41,8 +41,8 @@ def send_whatsapp_audio(phone, audio_path):
 def upload_to_s3(file_path):
     try:
         import boto3
-    except ImportError:
-        raise RuntimeError("boto3 is required for upload_to_s3")
+    except ImportError as e:
+        raise RuntimeError("boto3 is required for upload_to_s3") from e
 
     bucket_name = settings.AWS_S3_BUCKET_NAME
     if not bucket_name:
