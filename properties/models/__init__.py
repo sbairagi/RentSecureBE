@@ -3,7 +3,7 @@ from .caretaker_models import Caretaker
 from .extra_charge_models import ExtraCharge
 
 # Optional placeholders for future modules
-from .property_tax_models import *
+from .property_tax_models import PropertyTaxRecord
 from .rent_record_models import RentRecord
 from .renter_models import (
     AgreementRevocationLog,
@@ -32,4 +32,5 @@ __all__ = [
     'PoliceVerification',
     'RentRecord',
     'ExtraCharge',
+    'PropertyTaxRecord',
 ]

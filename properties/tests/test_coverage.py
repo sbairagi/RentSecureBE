@@ -31,8 +31,8 @@ class ExtraChargeModelTest(TestCase):
         u = Unit.objects.create(owner=o, building=b, unit='E2', unit_type='flat', address_line='1 St', city='C', state='S', country='CO', postal_code='1')
         r = Renter.objects.create(unit=u, name='ER2', email='er2@t.com', phone='+1444444444',
             rent_amount=Decimal('1000'), start_date=date.today(), id_proof='id.pdf', rent_agreement='ag.pdf')
-        ec = ExtraCharge.objects.create(unit=u, renter=r, charge_month=date.today().replace(day=1),
-            amount=Decimal('50'), description='Water')
+        ec = ExtraCharge.objects.create(unit=u, renter=r, name='Water',
+            amount=Decimal('50'), due_date=date.today())
         self.assertIn('Water', str(ec))
         self.assertEqual(ec.amount, Decimal('50'))
 
@@ -55,7 +55,7 @@ class RentAgreementDraftCreateTest(TestCase):
         u = Unit.objects.create(owner=o, building=b, unit='RAD2', unit_type='flat', address_line='1 St', city='C', state='S', country='CO', postal_code='1')
         r = Renter.objects.create(unit=u, name='RADR2', email='radr2@t.com', phone='+1555555555',
             rent_amount=Decimal('1000'), start_date=date.today(), id_proof='id.pdf', rent_agreement='ag.pdf')
-        rad = RentAgreementDraft.objects.create(renter=r, unit=u, draft='draft.pdf')
+        rad = RentAgreementDraft.objects.create(user=o, renter=r, unit=u, file='draft.pdf')
         self.assertTrue(RentAgreementDraft.objects.filter(id=rad.id).exists())
 
 
@@ -101,14 +101,15 @@ class FeatureEnforcerCoverageTest(TestCase):
         PlanFeatureLimit.objects.get_or_create(plan=self.fp, feature_key='max_buildings', defaults={'value': '2'})
 
     def test_feature_enforcer_instantiate(self):
-        ef = FeatureEnforcer()
+        ef = FeatureEnforcer(user=self.user)
         self.assertIsNotNone(ef)
+        self.assertEqual(ef.user, self.user)
 
     def test_feature_enforcer_active_sub(self):
-        UserSubscription.objects.get_or_create(user=self.user, defaults={'plan': self.pp, 'is_active': True})
-        ef = FeatureEnforcer()
-        r = ef.check_user_limit(self.user, 'max_buildings')
-        self.assertIsNotNone(r)
+        UserSubscription.objects.update_or_create(user=self.user, defaults={'plan': self.pp, 'is_active': True})
+        ef = FeatureEnforcer(user=self.user)
+        r = ef.can_create('max_buildings')
+        self.assertTrue(r)
 
 
 class CoreModelCoverageTest(TestCase):

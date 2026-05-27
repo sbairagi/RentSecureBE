@@ -6,4 +6,4 @@ class PropertiesConfig(AppConfig):
     name = 'properties'
 
     def ready(self):
-        pass
+        import properties.signals  # noqa

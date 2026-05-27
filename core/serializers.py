@@ -27,7 +27,7 @@ class UserSubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserSubscription
         fields = '__all__'
-        read_only_fields = ('created_at', 'updated_at')
+        read_only_fields = ('created_at', 'updated_at', 'user')
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
@@ -37,6 +37,7 @@ class AddOnPurchaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = AddOnPurchase
         fields = '__all__'
+        read_only_fields = ('user',)
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
