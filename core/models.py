@@ -32,6 +32,22 @@ class NotificationPreference(models.Model):
     payout_alerts_whatsapp = models.BooleanField(default=True)
     payout_alerts_email = models.BooleanField(default=False)
 
+    def save(self, *args, **kwargs):
+        if self.pk is None and self.owner_id:
+            existing = NotificationPreference.objects.filter(
+                owner_id=self.owner_id
+            ).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {"id", "owner"}:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Notification Preferences for {self.owner.email or self.owner.username}"
 
@@ -75,6 +91,20 @@ class SubscriptionPlan(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def save(self, *args, **kwargs):
+        if self.pk is None and self.name:
+            existing = SubscriptionPlan.objects.filter(name=self.name).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {"id", "name", "created_at", "updated_at"}:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name.capitalize()
 
@@ -90,6 +120,20 @@ class UserSubscription(models.Model):
     rent_reminder_days_before = models.PositiveIntegerField(default=7, help_text="Days before rent due date to send reminder")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk is None and self.user_id:
+            existing = UserSubscription.objects.filter(user_id=self.user_id).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {"id", "user", "start_date", "created_at", "updated_at"}:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.username} - {self.plan.name}"
@@ -126,6 +170,20 @@ class PlanFeatureLimit(models.Model):
     class Meta:
         unique_together = ('plan', 'feature_key')
 
+    def save(self, *args, **kwargs):
+        if self.pk is None and self.plan_id and self.feature_key:
+            existing = PlanFeatureLimit.objects.filter(
+                plan_id=self.plan_id,
+                feature_key=self.feature_key,
+            ).first()
+            if existing:
+                existing.value = self.value
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.plan.name} - {self.feature_key}: {self.value}"
 
@@ -139,6 +197,20 @@ class UsageLimit(models.Model):
 
     class Meta:
         unique_together = ('user', 'feature_key')
+
+    def save(self, *args, **kwargs):
+        if self.pk is None and self.user_id and self.feature_key:
+            existing = UsageLimit.objects.filter(
+                user_id=self.user_id,
+                feature_key=self.feature_key,
+            ).first()
+            if existing:
+                existing.usage_count = self.usage_count
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.username} - {self.feature_key}: {self.usage_count}"

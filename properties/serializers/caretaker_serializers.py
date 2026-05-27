@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 
 from ..models import Caretaker
 
@@ -7,12 +8,15 @@ class CaretakerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Caretaker
         fields = '__all__'
+        extra_kwargs = {
+            'id_proof': {'required': False},
+        }
 
     def validate(self, data):
         user = self.context['request'].user
         unit = data.get('unit') or getattr(self.instance, 'unit', None)
         if unit and unit.owner != user:
-            raise serializers.ValidationError("You do not own the selected unit.")
+            raise PermissionDenied("You do not own the selected unit.")
         return data
 
     def update(self, instance, validated_data):

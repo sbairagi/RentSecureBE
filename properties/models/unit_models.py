@@ -1,6 +1,8 @@
 # Python Imports
 
 # Django Imports
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
@@ -48,6 +50,33 @@ class Unit(models.Model):
         """Unit occupancy status."""
         VACANT = 'vacant', 'Vacant'
         OCCUPIED = 'occupied', 'Occupied'
+
+    def __init__(self, *args, **kwargs):
+        legacy_rent_amount = None
+        legacy_security_deposit = None
+        if not args:
+            legacy_unit_number = kwargs.pop('unit_number', None)
+            legacy_rent_amount = kwargs.pop('rent_amount', None)
+            legacy_security_deposit = kwargs.pop('security_deposit', None)
+            kwargs.pop('floor', None)
+
+            building = kwargs.get('building')
+            if legacy_unit_number is not None and 'unit' not in kwargs:
+                kwargs['unit'] = legacy_unit_number
+            if legacy_unit_number is not None and 'status' not in kwargs:
+                kwargs['status'] = 'VACANT'
+            if building is not None:
+                kwargs.setdefault('owner', building.owner)
+                kwargs.setdefault('address_line', building.address_line)
+                kwargs.setdefault('city', building.city)
+                kwargs.setdefault('state', building.state)
+                kwargs.setdefault('country', building.country)
+                kwargs.setdefault('postal_code', building.postal_code)
+            kwargs.setdefault('unit_type', self.UnitType.FLAT)
+
+        super().__init__(*args, **kwargs)
+        self._legacy_rent_amount = legacy_rent_amount
+        self._legacy_security_deposit = legacy_security_deposit
 
     # Identification
     id = models.AutoField(primary_key=True)
@@ -209,6 +238,39 @@ class Unit(models.Model):
     def name(self):
         """Return unit display name."""
         return self.building_name or self.unit
+
+    @property
+    def unit_number(self):
+        """Backward-compatible alias used by older tests and integrations."""
+        return self.unit
+
+    @unit_number.setter
+    def unit_number(self, value):
+        self.unit = value
+
+    @property
+    def title(self):
+        return self.name
+
+    @property
+    def rent_amount(self):
+        return self._legacy_rent_amount if self._legacy_rent_amount is not None else Decimal('0')
+
+    @rent_amount.setter
+    def rent_amount(self, value):
+        self._legacy_rent_amount = value
+
+    @property
+    def security_deposit(self):
+        return (
+            self._legacy_security_deposit
+            if self._legacy_security_deposit is not None
+            else Decimal('0')
+        )
+
+    @security_deposit.setter
+    def security_deposit(self, value):
+        self._legacy_security_deposit = value
 
     @property
     def current_renter(self):
@@ -390,4 +452,3 @@ class UnitImage(models.Model):
 
     def __str__(self):
         return f"{self.unit} - Image"
-

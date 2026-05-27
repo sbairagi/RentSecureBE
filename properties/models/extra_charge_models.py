@@ -12,6 +12,13 @@ class ExtraCharge(models.Model):
         PAID = 'PAID', 'Paid'
         MISSED = 'MISSED', 'Missed'
 
+    def __init__(self, *args, **kwargs):
+        if not args:
+            renter = kwargs.get('renter')
+            if renter is not None:
+                kwargs.setdefault('unit', renter.unit)
+        super().__init__(*args, **kwargs)
+
     renter = models.ForeignKey(
         Renter,
         on_delete=models.CASCADE,

@@ -39,6 +39,33 @@ class Caretaker(models.Model):
         start_date: When caretaker started
     """
 
+    def __init__(self, *args, **kwargs):
+        if not args:
+            kwargs.pop('email', None)
+            building = kwargs.pop('unit__building', None)
+            if building is not None and 'unit' not in kwargs:
+                kwargs['unit'] = Unit.objects.create(
+                    owner=building.owner,
+                    building=building,
+                    unit=f"caretaker-{building.id}",
+                    unit_type=Unit.UnitType.FLAT,
+                    address_line=building.address_line,
+                    city=building.city,
+                    state=building.state,
+                    country=building.country,
+                    postal_code=building.postal_code,
+                )
+
+            unit = kwargs.get('unit')
+            kwargs.setdefault('id_proof', 'caretaker_id.pdf')
+            if unit is not None:
+                kwargs.setdefault('address_line', unit.address_line)
+                kwargs.setdefault('city', unit.city)
+                kwargs.setdefault('state', unit.state)
+                kwargs.setdefault('country', unit.country)
+                kwargs.setdefault('postal_code', unit.postal_code)
+        super().__init__(*args, **kwargs)
+
     id = models.AutoField(primary_key=True)
     unit = models.ForeignKey(
         Unit,

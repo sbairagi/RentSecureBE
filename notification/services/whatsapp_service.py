@@ -3,6 +3,10 @@
 import logging
 import os
 
+try:
+    import boto3
+except ImportError:
+    boto3 = None
 from django.conf import settings
 from twilio.rest import Client
 
@@ -10,7 +14,9 @@ logger = logging.getLogger(__name__)
 
 def send_whatsapp_message(phone, text):
     try:
-        client = Client(settings.TWILIO_SID, settings.TWILIO_TOKEN)
+        sid = getattr(settings, 'TWILIO_SID', settings.TWILIO_ACCOUNT_SID)
+        token = getattr(settings, 'TWILIO_TOKEN', settings.TWILIO_AUTH_TOKEN)
+        client = Client(sid, token)
         client.messages.create(
             body=text,
             from_=settings.TWILIO_WHATSAPP_NUMBER,
@@ -26,7 +32,9 @@ def send_whatsapp_audio(phone, audio_path):
     try:
         media_url = upload_to_s3(audio_path)
 
-        client = Client(settings.TWILIO_SID, settings.TWILIO_TOKEN)
+        sid = getattr(settings, 'TWILIO_SID', settings.TWILIO_ACCOUNT_SID)
+        token = getattr(settings, 'TWILIO_TOKEN', settings.TWILIO_AUTH_TOKEN)
+        client = Client(sid, token)
         client.messages.create(
             media_url=[media_url],
             from_=settings.TWILIO_WHATSAPP_NUMBER,
@@ -39,14 +47,11 @@ def send_whatsapp_audio(phone, audio_path):
 
 
 def upload_to_s3(file_path):
-    try:
-        import boto3
-    except ImportError as e:
-        raise RuntimeError("boto3 is required for upload_to_s3") from e
-
     bucket_name = settings.AWS_S3_BUCKET_NAME
     if not bucket_name:
         raise RuntimeError("AWS_S3_BUCKET_NAME must be configured in settings.")
+    if boto3 is None:
+        raise RuntimeError("boto3 is required for upload_to_s3")
 
     filename = os.path.basename(file_path)
     key = f"voice_notes/{filename}"

@@ -24,7 +24,7 @@ class RenterViewSetTest(TestCase):
     def setUp(self):
         PlanFeatureLimit.objects.get_or_create(plan=self.fp, feature_key='max_renters', defaults={'value': '2'})
         PlanFeatureLimit.objects.get_or_create(plan=self.pp, feature_key='max_renters', defaults={'value': '10'})
-        UserSubscription.objects.get_or_create(user=self.o, defaults={'plan': self.pp, 'is_active': True})
+        UserSubscription.objects.update_or_create(user=self.o, defaults={'plan': self.pp, 'is_active': True})
         b, _ = Building.objects.get_or_create(owner=self.o, name='RB', defaults={'address_line': '1 St', 'city': 'C', 'state': 'S', 'country': 'CO', 'postal_code': '1'})
         self.u, _ = Unit.objects.get_or_create(owner=self.o, building=b, unit='R101', defaults={
             'unit_type': 'flat', 'address_line': '1 St', 'city': 'C', 'state': 'S', 'country': 'CO', 'postal_code': '1'})

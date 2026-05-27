@@ -23,7 +23,7 @@ class UnitViewSetTest(TestCase):
     def setUp(self):
         PlanFeatureLimit.objects.get_or_create(plan=self.fp, feature_key='max_units', defaults={'value': '3'})
         PlanFeatureLimit.objects.get_or_create(plan=self.pp, feature_key='max_units', defaults={'value': '10'})
-        UserSubscription.objects.get_or_create(user=self.o, defaults={'plan': self.pp, 'is_active': True})
+        UserSubscription.objects.update_or_create(user=self.o, defaults={'plan': self.pp, 'is_active': True})
         self.b, _ = Building.objects.get_or_create(owner=self.o, name='UB', defaults={'address_line': '1 St', 'city': 'C', 'state': 'S', 'country': 'CO', 'postal_code': '1'})
         self.u1, _ = Unit.objects.get_or_create(owner=self.o, building=self.b, unit='101', defaults={
             'unit_type': 'flat', 'address_line': '1 St', 'city': 'C', 'state': 'S', 'country': 'CO', 'postal_code': '1'})

@@ -34,7 +34,7 @@ class SignalUsageUpdateTest(TestCase):
             owner=self.user
         )
         # The signal runs post_save, usage should be tracked
-        ul = UsageLimit.objects.filter(user=self.user, feature_key='max_buldings').first()
+        ul = UsageLimit.objects.filter(user=self.user, feature_key='max_buildings').first()
         self.assertIsNotNone(ul)
         self.assertGreaterEqual(ul.usage_count, 1)
 

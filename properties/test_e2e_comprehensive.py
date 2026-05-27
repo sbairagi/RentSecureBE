@@ -786,12 +786,12 @@ class RentRecordModelTests(TestCase):
 
     def test_payment_mode_choices(self):
         """Test all payment mode choices"""
-        for mode, _ in RentRecord.PaymentMode.choices:
+        for index, (mode, _) in enumerate(RentRecord.PaymentMode.choices, start=2):
             rent_record = RentRecord.objects.create(
                 renter=self.renter,
                 unit=self.unit,
                 owner=self.user,
-                rent_month=date(2025, 2, 1),
+                rent_month=date(2025, index, 1),
                 amount_paid=10000,
                 date_paid=date(2025, 2, 5),
                 payment_mode=mode
@@ -800,12 +800,12 @@ class RentRecordModelTests(TestCase):
 
     def test_payment_status_choices(self):
         """Test all payment status choices"""
-        for status, _ in RentRecord.PaymentStatus.choices:
+        for index, (status, _) in enumerate(RentRecord.PaymentStatus.choices, start=6):
             rent_record = RentRecord.objects.create(
                 renter=self.renter,
                 unit=self.unit,
                 owner=self.user,
-                rent_month=date(2025, 3, 1),
+                rent_month=date(2025, index, 1),
                 amount_paid=10000,
                 date_paid=date(2025, 3, 5),
                 payment_status=status
@@ -974,7 +974,7 @@ class FeatureEnforcerTests(TestCase):
         UsageLimit.objects.create(user=user, feature_key="max_buildings", usage_count=2)
         enforcer = FeatureEnforcer(user)
         # Pro limit is 10, but user is past grace period, so fallback to free (1)
-        self.assertTrue(enforcer.can_create("max_buildings"))
+        self.assertFalse(enforcer.can_create("max_buildings"))
 
     def test_addon_extends_limit(self):
         """Test add-on purchase extends feature limit"""

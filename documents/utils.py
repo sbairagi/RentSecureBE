@@ -9,6 +9,13 @@ from weasyprint import HTML
 from properties.models import RentAgreementDraft
 
 
+def _read_pdf_if_exists(path):
+    if not os.path.exists(path):
+        return b""
+    with open(path, 'rb') as output:
+        return output.read()
+
+
 def generate_unit_history_pdf(unit_obj):
     tax_records = []
     if hasattr(unit_obj, 'unittaxrecord_set'):
@@ -62,8 +69,7 @@ def generate_unit_history_pdf(unit_obj):
         HTML(string=html_string, base_url=settings.BASE_DIR).write_pdf(base_pdf_path)
 
         if not agreement_paths:
-            with open(base_pdf_path, 'rb') as output:
-                return output.read()
+            return _read_pdf_if_exists(base_pdf_path)
 
         merged_pdf_path = os.path.join(tmpdir, 'unit_history_full.pdf')
         merger = PdfMerger()
@@ -73,5 +79,4 @@ def generate_unit_history_pdf(unit_obj):
         merger.write(merged_pdf_path)
         merger.close()
 
-        with open(merged_pdf_path, 'rb') as output:
-            return output.read()
+        return _read_pdf_if_exists(merged_pdf_path)

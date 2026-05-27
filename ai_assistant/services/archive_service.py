@@ -1,6 +1,7 @@
 # services/archive_service.py
 
 from datetime import date, datetime
+from decimal import Decimal
 
 from django.db.models.fields.files import FieldFile
 from django.forms import model_to_dict
@@ -11,6 +12,8 @@ from properties.models import ArchivedRenter, RentRecord, UnitImage
 def _serialize_value(value):
     if isinstance(value, (date, datetime)):
         return value.isoformat()
+    if isinstance(value, Decimal):
+        return str(value)
     if isinstance(value, FieldFile):
         return str(value) if value else None
     if isinstance(value, dict):

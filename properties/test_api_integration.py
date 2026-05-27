@@ -156,7 +156,7 @@ class BuildingViewSetAPITests(APITestCase):
         self.client.force_authenticate(user=self.user)
         data = {"name": "Hacked Building"}
         response = self.client.patch(f'/api/buildings/{building.id}/', data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_delete_building(self):
         """Test deleting a building"""
@@ -186,7 +186,7 @@ class BuildingViewSetAPITests(APITestCase):
         )
         self.client.force_authenticate(user=self.user)
         response = self.client.delete(f'/api/buildings/{building.id}/')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_archived_buildings_filtered_after_expiry(self):
         """Test archived buildings are filtered when plan expires"""
@@ -747,7 +747,7 @@ class CrossUserAccessTests(APITestCase):
         self.client.force_authenticate(user=self.user2)
         data = {"name": "Hacked"}
         response = self.client.patch(f'/api/buildings/{building.id}/', data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_user2_cannot_delete_user1_building(self):
         """Test user2 cannot delete user1's building"""
@@ -762,7 +762,7 @@ class CrossUserAccessTests(APITestCase):
         )
         self.client.force_authenticate(user=self.user2)
         response = self.client.delete(f'/api/buildings/{building.id}/')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class UnauthenticatedAccessTests(APITestCase):

@@ -23,7 +23,7 @@ class BuildingViewSetTest(TestCase):
     def setUp(self):
         PlanFeatureLimit.objects.get_or_create(plan=self.free, feature_key='max_buildings', defaults={'value': '2'})
         PlanFeatureLimit.objects.get_or_create(plan=self.pro, feature_key='max_buildings', defaults={'value': '10'})
-        UserSubscription.objects.get_or_create(user=self.owner, defaults={'plan': self.pro, 'is_active': True})
+        UserSubscription.objects.update_or_create(user=self.owner, defaults={'plan': self.pro, 'is_active': True})
         self.b1, _ = Building.objects.get_or_create(owner=self.owner, name='B1', defaults={
             'address_line': '1 St', 'city': 'C', 'state': 'S', 'country': 'CO', 'postal_code': '1'})
         self.b2, _ = Building.objects.get_or_create(owner=self.owner, name='B2', defaults={
@@ -50,7 +50,7 @@ class BuildingViewSetTest(TestCase):
             'name': 'NB', 'address_line': '4 St', 'city': 'C', 'state': 'S', 'country': 'CO', 'postal_code': '4'})
         self.assertEqual(r.status_code, 201)
     def test_limit(self):
-        UsageLimit.objects.get_or_create(user=self.owner, feature_key='max_buildings', defaults={'usage_count': 10})
+        UsageLimit.objects.update_or_create(user=self.owner, feature_key='max_buildings', defaults={'usage_count': 10})
         r = self._auth(self.owner).post('/properties/buildings/', {
             'name': 'LB', 'address_line': '5 St', 'city': 'C', 'state': 'S', 'country': 'CO', 'postal_code': '5'})
         self.assertEqual(r.status_code, 403)

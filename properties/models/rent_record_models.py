@@ -23,6 +23,29 @@ class RentRecord(models.Model):
         PAID = 'PAID', 'Paid'
         FAILED = 'FAILED', 'Failed'
 
+    def __init__(self, *args, **kwargs):
+        if not args:
+            amount = kwargs.pop('amount', None)
+            due_date = kwargs.pop('due_date', None)
+            month = kwargs.pop('month', None)
+            year = kwargs.pop('year', None)
+
+            renter = kwargs.get('renter')
+            if renter is not None:
+                kwargs.setdefault('unit', renter.unit)
+                kwargs.setdefault('owner', renter.unit.owner)
+            if amount is not None and 'amount_paid' not in kwargs:
+                kwargs['amount_paid'] = amount
+            if due_date is not None:
+                kwargs.setdefault('rent_due_date', due_date)
+                kwargs.setdefault('date_paid', due_date)
+            if month is not None and year is not None and 'rent_month' not in kwargs:
+                kwargs['rent_month'] = date(int(year), int(month), 1)
+            if 'rent_month' in kwargs:
+                kwargs.setdefault('date_paid', kwargs['rent_month'])
+
+        super().__init__(*args, **kwargs)
+
     id = models.AutoField(primary_key=True)
     renter = models.ForeignKey(Renter, on_delete=models.CASCADE, related_name='rent_records', db_index=True)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='rent_records_unit')
@@ -90,4 +113,7 @@ class RentRecord(models.Model):
         return self.rent_month.year
 
     def __str__(self):
-        return f"{self.renter.name} - {self.rent_month.strftime('%B %Y')}"
+        return (
+            f"{self.renter.name} - {self.rent_month.strftime('%B %Y')} "
+            f"- {self.amount_paid}"
+        )

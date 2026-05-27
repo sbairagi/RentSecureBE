@@ -101,7 +101,7 @@ class OwnerVerifyOTP(APIView):
             user, created = User.objects.get_or_create(phone=phone, defaults={"username": phone})
             user.is_phone_verified = True
             user.save()
-            group = Group.objects.get(name='tenant')
+            group, _ = Group.objects.get_or_create(name='tenant')
             user.groups.add(group)
 
             # Referral logic
@@ -163,7 +163,7 @@ class RenterVerifyOTP(APIView):
             user.is_phone_verified = True
             user.save()
 
-            group = Group.objects.get(name='renter')
+            group, _ = Group.objects.get_or_create(name='renter')
             user.groups.add(group)
 
             # Referral logic
@@ -207,6 +207,9 @@ class RenterVerifyOTP(APIView):
 # change Password
 class ChangePasswordView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
         user = request.user

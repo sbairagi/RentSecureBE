@@ -33,6 +33,7 @@ router.register(r'extra-charges', ExtraChargeViewSet, basename='extra-charges')
 # De-prioritized for now do not touch bellow end-point
 router.register(r'unit-images', UnitImageViewSet, basename='unit-images')
 router.register(r'rent-agreements', RentAgreementDraftViewSet, basename='rent-agreements')
+router.register(r'rent-agreement-drafts', RentAgreementDraftViewSet, basename='rent-agreement-drafts')
 router.register(r'unit-all-documents', UnitDocumentViewSet, basename='unit-all-documents')
 
 urlpatterns = [
@@ -46,5 +47,4 @@ urlpatterns = [
     path('owner/retry_payout_api/<int:rent_id>/', retry_payout_api),
     path('leegality/webhook/', leegality_webhook)
 ]
-
 

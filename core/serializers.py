@@ -31,7 +31,12 @@ class UserSubscriptionSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
+        user = validated_data.pop('user')
+        subscription, _ = UserSubscription.objects.update_or_create(
+            user=user,
+            defaults=validated_data,
+        )
+        return subscription
 
 class AddOnPurchaseSerializer(serializers.ModelSerializer):
     class Meta:

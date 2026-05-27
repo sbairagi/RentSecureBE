@@ -21,7 +21,8 @@ def send_due_extra_charge_reminders(days_ahead=0):
         due_date=target_date,
     ).select_related('renter', 'renter__user', 'renter__user__userprofile')
 
-    for charge in charges:
+    charge_list = list(charges)
+    for charge in charge_list:
         renter = charge.renter
         phone = renter.whatsapp_number or renter.phone
         if not phone:
@@ -51,4 +52,4 @@ def send_due_extra_charge_reminders(days_ahead=0):
                 logger.warning(f"Failed to send WhatsApp audio to {phone}: {e}")
                 continue
 
-    return charges.count()
+    return len(charge_list)

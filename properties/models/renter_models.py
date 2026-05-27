@@ -24,6 +24,16 @@ class Renter(models.Model):
         REVOKED = "revoked", "Revoked"
         DEACTIVATED = "deactivated", "Deactivated"
 
+    def __init__(self, *args, **kwargs):
+        if not args:
+            full_name = kwargs.pop('full_name', None)
+            if full_name is not None and 'name' not in kwargs:
+                kwargs['name'] = full_name
+            kwargs.setdefault('id_proof', 'id_proof.pdf')
+            kwargs.setdefault('rent_agreement', 'rent_agreement.pdf')
+            kwargs.setdefault('start_date', date.today())
+        super().__init__(*args, **kwargs)
+
     id = models.AutoField(primary_key=True)
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='renters', db_index=True)
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True, related_name='renter_profile')
@@ -117,6 +127,10 @@ class Renter(models.Model):
     @builtins.property
     def full_name(self):
         return self.name
+
+    @full_name.setter
+    def full_name(self, value):
+        self.name = value
 
     @builtins.property
     def rent_agreement_pdf(self):

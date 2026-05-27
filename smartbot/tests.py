@@ -1,5 +1,5 @@
 """Tests for smartbot app actions and services"""
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -26,13 +26,10 @@ class SmartBotActionsTest(TestCase):
 
     @patch('smartbot.actions.Renter')
     def test_send_rent_reminder_not_found(self, mock_renter):
-        mock_renter.objects.get.side_effect = mock_renter.model.DoesNotExist
-        mock_renter.model.DoesNotExist = Exception
         mock_renter.DoesNotExist = Exception
-        from properties.models import Renter
-        with patch.object(Renter.objects, 'get', side_effect=Renter.DoesNotExist):
-            result = send_rent_reminder('Nonexistent')
-            self.assertIn('❌', result)
+        mock_renter.objects.get.side_effect = mock_renter.DoesNotExist
+        result = send_rent_reminder('Nonexistent')
+        self.assertIn('❌', result)
 
     @patch('smartbot.actions.RentRecord')
     @patch('smartbot.actions.process_rent_payout')
@@ -61,7 +58,7 @@ class SmartBotActionsTest(TestCase):
         mock_rent.id = 1
         mock_rent_record.objects.filter.return_value.latest.return_value = mock_rent
         mock_gen_pdf.return_value = '/tmp/agreement.pdf'
-        with patch('smartbot.actions.default_storage'):
+        with patch('smartbot.actions.default_storage'), patch('builtins.open', mock_open(read_data=b'pdf')):
             result = send_rent_agreement('Test')
             self.assertIn('✅', result)
 

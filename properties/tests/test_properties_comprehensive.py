@@ -454,9 +454,9 @@ class OnboardingUtilsComprehensiveTest(TestCase):
     def test_mark_onboarding_completed(self):
         mark_onboarding_completed(self.renter)
         self.renter.refresh_from_db()
-        self.assertEqual(self.renter.onboarding_status, 'COMPLETED')
+        self.assertEqual(self.renter.onboarding_status, Renter.OnboardingStatus.COMPLETED)
 
     def test_mark_kyc_verified(self):
         mark_kyc_verified(self.renter)
         self.renter.refresh_from_db()
-        self.assertEqual(self.renter.kyc_status, 'VERIFIED')
+        self.assertEqual(self.renter.kyc_status, Renter.KYCStatus.VERIFIED)

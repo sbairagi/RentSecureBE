@@ -19,7 +19,7 @@ class RentRecordViewSetTest(TestCase):
         cls.pp, _ = SubscriptionPlan.objects.get_or_create(name='rr_pro', defaults={'monthly_price': Decimal('29.99'), 'yearly_price': Decimal('299.99'), 'features': 'Pro'})
 
     def setUp(self):
-        UserSubscription.objects.get_or_create(user=self.o, defaults={'plan': self.pp, 'is_active': True})
+        UserSubscription.objects.update_or_create(user=self.o, defaults={'plan': self.pp, 'is_active': True})
         b, _ = Building.objects.get_or_create(owner=self.o, name='RRB', defaults={'address_line': '1 St', 'city': 'C', 'state': 'S', 'country': 'CO', 'postal_code': '1'})
         self.u, _ = Unit.objects.get_or_create(owner=self.o, building=b, unit='RR101', defaults={
             'unit_type': 'flat', 'address_line': '1 St', 'city': 'C', 'state': 'S', 'country': 'CO', 'postal_code': '1'})
@@ -36,7 +36,7 @@ class ExtraChargeViewSetTest(TestCase):
         cls.pp, _ = SubscriptionPlan.objects.get_or_create(name='ec_pro', defaults={'monthly_price': Decimal('29.99'), 'yearly_price': Decimal('299.99'), 'features': 'Pro'})
 
     def setUp(self):
-        UserSubscription.objects.get_or_create(user=self.o, defaults={'plan': self.pp, 'is_active': True})
+        UserSubscription.objects.update_or_create(user=self.o, defaults={'plan': self.pp, 'is_active': True})
         b, _ = Building.objects.get_or_create(owner=self.o, name='ECB', defaults={'address_line': '1 St', 'city': 'C', 'state': 'S', 'country': 'CO', 'postal_code': '1'})
         self.u, _ = Unit.objects.get_or_create(owner=self.o, building=b, unit='EC101', defaults={
             'unit_type': 'flat', 'address_line': '1 St', 'city': 'C', 'state': 'S', 'country': 'CO', 'postal_code': '1'})

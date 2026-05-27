@@ -2,6 +2,8 @@
 # from rent.services import process_rent_payout
 # from rent.models import RentRecord, Renter
 # from services.whatsapp_service import send_whatsapp_message
+from django.core.files.storage import default_storage
+
 from notification.utils import send_whatsapp_message
 from properties.models import Renter, RentRecord
 from rentsecure_be.services.cashfree_service import process_rent_payout
@@ -40,7 +42,6 @@ def send_rent_agreement(renter_name):
         pdf_path = generate_agreement_pdf(rent)
 
         # Move it to media or upload to S3
-        from django.core.files.storage import default_storage
         with open(pdf_path, 'rb') as f:
             file_name = f"agreements/agreement_{rent.id}.pdf"
             default_storage.save(file_name, f)

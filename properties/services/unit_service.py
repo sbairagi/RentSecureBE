@@ -57,7 +57,9 @@ def get_building_analytics(building) -> dict:
 
     units = Unit.objects.filter(building=building, is_archived=False)
     total = units.count()
-    occupied = units.filter(status=Unit.VacancyStatus.OCCUPIED).count()
+    occupied = units.filter(
+        status__in=[Unit.VacancyStatus.OCCUPIED, "OCCUPIED"]
+    ).count()
     vacant = total - occupied
 
     return {

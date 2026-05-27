@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -16,10 +18,18 @@ class FeatureEnforcer:
         except UserSubscription.DoesNotExist:
             return 'free'
 
+    def _coerce_date(self, value):
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.date()
+        return value
+
     def is_expired(self):
         try:
             sub = self.user.usersubscription
-            return sub.end_date and sub.end_date < timezone.now()
+            end_date = self._coerce_date(sub.end_date)
+            return bool(end_date and end_date < timezone.localdate())
         except UserSubscription.DoesNotExist:
             return False  # free user, not expired
 
@@ -28,9 +38,10 @@ class FeatureEnforcer:
             grace_days = GRACE_PERIOD_DAYS
         try:
             sub = self.user.usersubscription
-            if not sub.end_date:
+            end_date = self._coerce_date(sub.end_date)
+            if not end_date:
                 return False
-            expired_since = timezone.now() - sub.end_date
+            expired_since = timezone.localdate() - end_date
             return expired_since.days > grace_days
         except UserSubscription.DoesNotExist:
             return False
@@ -45,7 +56,7 @@ class FeatureEnforcer:
         except UserSubscription.DoesNotExist:
             return 0
         except PlanFeatureLimit.DoesNotExist:
-            return 'unlimited'
+            return 0
         except ValueError:
             return 0
 
@@ -66,6 +77,9 @@ class FeatureEnforcer:
             return int(limit)
         except (SubscriptionPlan.DoesNotExist, PlanFeatureLimit.DoesNotExist, ValueError):
             return 0
+
+    def get_free_plan_limit(self, key):
+        return self._get_free_plan_limit(key)
 
     def get_active_limit(self, key):
         # If user has no subscription, use free plan limits.
@@ -104,4 +118,3 @@ class FeatureEnforcer:
         if obj.usage_count > 0:
             obj.usage_count -= 1
             obj.save()
-

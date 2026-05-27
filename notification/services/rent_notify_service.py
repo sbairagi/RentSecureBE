@@ -55,11 +55,6 @@ def notify_owner(owner, message: str):
     except Exception as e:
         logger.error(f"WhatsApp voice note failed for user {owner.id}: {e}")
 
-    audio_path = generate_voice_note(translated_text, lang)
-    if audio_path:
-        send_whatsapp_audio(owner.profile.whatsapp_number, audio_path)
-
-
 def send_payout_notification(rent):
     """
     Sends a WhatsApp message to renter based on payout status.
