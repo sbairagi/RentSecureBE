@@ -2,8 +2,15 @@ from django.contrib import admin
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
-from .models import (Caretaker, RentAgreementDraft, Renter, RentRecord, Unit,
-                     UnitDocument, UnitImage)
+from .models import (
+    Caretaker,
+    RentAgreementDraft,
+    Renter,
+    RentRecord,
+    Unit,
+    UnitDocument,
+    UnitImage,
+)
 
 admin.site.site_header = "Wealth Concierge Admin"
 

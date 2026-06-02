@@ -24,8 +24,13 @@ from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 from rest_framework.test import APIClient, APITestCase
 
-from core.models import (AddOnPurchase, PlanFeatureLimit, SubscriptionPlan,
-                         UsageLimit, UserSubscription)
+from core.models import (
+    AddOnPurchase,
+    PlanFeatureLimit,
+    SubscriptionPlan,
+    UsageLimit,
+    UserSubscription,
+)
 
 from .feature_enforcer import FeatureEnforcer
 from .models import Building, Caretaker, Renter, RentRecord, Unit

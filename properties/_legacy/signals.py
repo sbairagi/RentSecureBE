@@ -8,8 +8,15 @@ from ai_assistant.services.invoice_service import generate_final_invoice_pdf
 from notification.models import Notification
 from notification.services.services import notify_owner_renter_flagged
 from notification.services.voice_note_service import send_thank_you_voice_note
-from properties.models import (Building, Caretaker, Renter, RentRecord, Unit,
-                               UnitDocument, UnitImage)
+from properties.models import (
+    Building,
+    Caretaker,
+    Renter,
+    RentRecord,
+    Unit,
+    UnitDocument,
+    UnitImage,
+)
 from properties.scheduler import cancel_reminder_job
 from properties.utils import update_usage_count
 
@@ -95,8 +102,7 @@ def notify_owner_if_unit_vacant(sender, instance, **kwargs):
 
         if not Renter.objects.filter(unit=unit, status="active").exists():
             # Send alert to owner
-            from notification.services.whatsapp_service import \
-                send_whatsapp_message
+            from notification.services.whatsapp_service import send_whatsapp_message
 
             send_whatsapp_message(
                 owner.profile.whatsapp_number,

@@ -6,12 +6,12 @@ from .extra_charge_models import ExtraCharge
 from .property_tax_models import PropertyTaxRecord
 from .rent_record_models import RentRecord
 from .renter_models import (
-                            AgreementRevocationLog,
-                            ArchivedRenter,
-                            PoliceVerification,
-                            RentAgreementDraft,
-                            Renter,
-                            RentReminderLog,
+    AgreementRevocationLog,
+    ArchivedRenter,
+    PoliceVerification,
+    RentAgreementDraft,
+    Renter,
+    RentReminderLog,
 )
 from .subscription_models import *
 from .unit_models import Unit, UnitDocument, UnitImage, UnitVacancy

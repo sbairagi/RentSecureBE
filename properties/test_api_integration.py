@@ -25,8 +25,7 @@ from rest_framework.test import APIClient, APITestCase
 
 from core.models import PlanFeatureLimit, SubscriptionPlan, UserSubscription
 
-from .models import (Building, ExtraCharge, RentAgreementDraft, Renter,
-                     RentRecord, Unit)
+from .models import Building, ExtraCharge, RentAgreementDraft, Renter, RentRecord, Unit
 
 User = get_user_model()
 

@@ -19,8 +19,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
-from core.models import (PlanFeatureLimit, SubscriptionPlan, UsageLimit,
-                         UserSubscription)
+from core.models import PlanFeatureLimit, SubscriptionPlan, UsageLimit, UserSubscription
 
 from .feature_enforcer import FeatureEnforcer
 from .models import Building, Caretaker, Renter, RentRecord, Unit
