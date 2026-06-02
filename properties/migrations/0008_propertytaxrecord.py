@@ -7,21 +7,36 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('properties', '0007_rentagreementdraft_leegality_document_id_and_more'),
+        ("properties", "0007_rentagreementdraft_leegality_document_id_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='PropertyTaxRecord',
+            name="PropertyTaxRecord",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('amount', models.DecimalField(decimal_places=2, max_digits=12)),
-                ('due_date', models.DateField()),
-                ('paid', models.BooleanField(default=False)),
-                ('paid_date', models.DateField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('property', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tax_records', to='properties.building')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("amount", models.DecimalField(decimal_places=2, max_digits=12)),
+                ("due_date", models.DateField()),
+                ("paid", models.BooleanField(default=False)),
+                ("paid_date", models.DateField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "property",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="tax_records",
+                        to="properties.building",
+                    ),
+                ),
             ],
         ),
     ]

@@ -4,7 +4,7 @@
 
 ## SmartBot (`smartbot` app)
 
-**Installed:** Yes  
+**Installed:** Yes
 **URLs in root:** **No** — API not mounted in `rentsecure_be/urls.py` (bug BOT-004)
 
 **Entry view:** `smartbot/views.py` → `smart_bot_reply` (POST, authenticated)

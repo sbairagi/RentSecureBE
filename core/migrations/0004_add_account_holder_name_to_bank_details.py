@@ -8,18 +8,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0003_notificationpreference'),
+        ("core", "0003_notificationpreference"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='ownerbankdetails',
-            name='account_holder_name',
-            field=models.CharField(blank=True, default='', max_length=100),
+            model_name="ownerbankdetails",
+            name="account_holder_name",
+            field=models.CharField(blank=True, default="", max_length=100),
         ),
         migrations.AlterField(
-            model_name='ownerbankdetails',
-            name='owner',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='bank_details', to=settings.AUTH_USER_MODEL),
+            model_name="ownerbankdetails",
+            name="owner",
+            field=models.OneToOneField(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="bank_details",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

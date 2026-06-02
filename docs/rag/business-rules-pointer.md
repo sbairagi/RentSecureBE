@@ -30,7 +30,7 @@ Human-readable **intended behavior** lives in `docs/business-rules/`. Use this c
 | SmartBot | `21-smartbot.md` |
 | Signals/cron | `22-signals-and-automation.md` |
 
-**Gap analysis:** `docs/business-gaps/BUSINESS_GAPS_AUDIT.md`  
+**Gap analysis:** `docs/business-gaps/BUSINESS_GAPS_AUDIT.md`
 **Implementation bugs:** `docs/bugs/README.md`
 
 **Rule for AI:** Business-rules describe **should**; bugs/gaps describe **does** today.

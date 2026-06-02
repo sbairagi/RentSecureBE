@@ -46,7 +46,7 @@ PlanFeatureLimit (plan + feature_key + value)
 
 ## FeatureEnforcer
 
-Class: `properties/feature_enforcer.py`  
+Class: `properties/feature_enforcer.py`
 Uses User + UsageLimit + PlanFeatureLimit + AddOnPurchase to allow/deny creates.
 
 Grace period: 7 days after `UserSubscription.end_date` (`properties/constants.py`).

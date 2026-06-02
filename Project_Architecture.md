@@ -1042,4 +1042,3 @@ tum already us path par ho because:
 * linting
 * modular apps
 * SaaS logic
-

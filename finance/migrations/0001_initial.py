@@ -15,26 +15,66 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='CAProfile',
+            name="CAProfile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('firm_name', models.CharField(max_length=255)),
-                ('contact_email', models.EmailField(max_length=254)),
-                ('phone', models.CharField(max_length=15)),
-                ('verified', models.BooleanField(default=False)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("firm_name", models.CharField(max_length=255)),
+                ("contact_email", models.EmailField(max_length=254)),
+                ("phone", models.CharField(max_length=15)),
+                ("verified", models.BooleanField(default=False)),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='TaxSubmissionToCA',
+            name="TaxSubmissionToCA",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('financial_year', models.CharField(help_text='e.g., 2024-25', max_length=9)),
-                ('sent_to_email', models.EmailField(max_length=254)),
-                ('sent_at', models.DateTimeField(auto_now_add=True)),
-                ('message', models.TextField(blank=True, null=True)),
-                ('ca', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='finance.caprofile')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tax_submissions_to_ca', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "financial_year",
+                    models.CharField(help_text="e.g., 2024-25", max_length=9),
+                ),
+                ("sent_to_email", models.EmailField(max_length=254)),
+                ("sent_at", models.DateTimeField(auto_now_add=True)),
+                ("message", models.TextField(blank=True, null=True)),
+                (
+                    "ca",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="finance.caprofile",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="tax_submissions_to_ca",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

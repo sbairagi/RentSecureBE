@@ -6,18 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('properties', '0004_historicalrenter_kyc_status_and_more'),
+        ("properties", "0004_historicalrenter_kyc_status_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='historicalrenter',
-            name='email',
-            field=models.EmailField(blank=True, help_text="Renter's email for receipts and notifications", max_length=254, null=True),
+            model_name="historicalrenter",
+            name="email",
+            field=models.EmailField(
+                blank=True,
+                help_text="Renter's email for receipts and notifications",
+                max_length=254,
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='renter',
-            name='email',
-            field=models.EmailField(blank=True, help_text="Renter's email for receipts and notifications", max_length=254, null=True),
+            model_name="renter",
+            name="email",
+            field=models.EmailField(
+                blank=True,
+                help_text="Renter's email for receipts and notifications",
+                max_length=254,
+                null=True,
+            ),
         ),
     ]

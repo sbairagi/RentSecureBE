@@ -19,450 +19,1584 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Renter',
+            name="Renter",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('name', models.CharField(help_text="Renter's full name", max_length=100)),
-                ('phone', models.CharField(help_text='Primary phone number', max_length=15, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('alternate_phone', models.CharField(blank=True, help_text='Alternate phone number', max_length=15, null=True, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('emergency_contact_name', models.CharField(blank=True, help_text='Emergency contact name', max_length=100, null=True)),
-                ('emergency_contact_number', models.CharField(blank=True, help_text='Emergency contact number', max_length=15, null=True, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('renter_image', models.ImageField(blank=True, help_text='Photo of renter', null=True, upload_to='renter_image/')),
-                ('id_proof', models.FileField(help_text="Renter's ID proof document", upload_to='id_proofs/renter/')),
-                ('rent_agreement', models.FileField(help_text='Rent agreement document', upload_to='agreements/')),
-                ('rent_amount', models.DecimalField(decimal_places=2, help_text='Rent amount', max_digits=10)),
-                ('start_date', models.DateField(db_index=True, help_text='Rental start date')),
-                ('end_date', models.DateField(blank=True, help_text='Rental end date', null=True)),
-                ('is_active', models.BooleanField(default=True, help_text='Is renter currently active?')),
-                ('notes', models.TextField(blank=True, help_text='Additional notes', null=True)),
-                ('whatsapp_number', models.CharField(blank=True, help_text='For WhatsApp messages', max_length=15, null=True)),
-                ('rent_due_date', models.DateField(blank=True, default=datetime.date.today, help_text='Required for rent reminder', null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True, help_text='Move in Date')),
-                ('late_payment_count', models.IntegerField(default=0)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('missed_rents', models.PositiveIntegerField(default=0)),
-                ('is_flagged', models.BooleanField(default=False)),
-                ('flagged_reason', models.TextField(blank=True, null=True)),
-                ('is_agreement_revoked', models.BooleanField(default=False)),
-                ('revocation_reason', models.TextField(blank=True, null=True)),
-                ('revoked_by_owner', models.BooleanField(default=False)),
-                ('revoked_on', models.DateTimeField(blank=True, null=True)),
-                ('vacated_on', models.DateField(blank=True, null=True)),
-                ('status', models.CharField(choices=[('active', 'Active'), ('notice_period', 'Notice Period'), ('revoked', 'Revoked'), ('deactivated', 'Deactivated')], default='active', max_length=20)),
-                ('notice_start_date', models.DateField(blank=True, null=True)),
-                ('final_invoice_path', models.CharField(blank=True, max_length=255, null=True)),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                (
+                    "name",
+                    models.CharField(help_text="Renter's full name", max_length=100),
+                ),
+                (
+                    "phone",
+                    models.CharField(
+                        help_text="Primary phone number",
+                        max_length=15,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "alternate_phone",
+                    models.CharField(
+                        blank=True,
+                        help_text="Alternate phone number",
+                        max_length=15,
+                        null=True,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "emergency_contact_name",
+                    models.CharField(
+                        blank=True,
+                        help_text="Emergency contact name",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "emergency_contact_number",
+                    models.CharField(
+                        blank=True,
+                        help_text="Emergency contact number",
+                        max_length=15,
+                        null=True,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "renter_image",
+                    models.ImageField(
+                        blank=True,
+                        help_text="Photo of renter",
+                        null=True,
+                        upload_to="renter_image/",
+                    ),
+                ),
+                (
+                    "id_proof",
+                    models.FileField(
+                        help_text="Renter's ID proof document",
+                        upload_to="id_proofs/renter/",
+                    ),
+                ),
+                (
+                    "rent_agreement",
+                    models.FileField(
+                        help_text="Rent agreement document", upload_to="agreements/"
+                    ),
+                ),
+                (
+                    "rent_amount",
+                    models.DecimalField(
+                        decimal_places=2, help_text="Rent amount", max_digits=10
+                    ),
+                ),
+                (
+                    "start_date",
+                    models.DateField(db_index=True, help_text="Rental start date"),
+                ),
+                (
+                    "end_date",
+                    models.DateField(
+                        blank=True, help_text="Rental end date", null=True
+                    ),
+                ),
+                (
+                    "is_active",
+                    models.BooleanField(
+                        default=True, help_text="Is renter currently active?"
+                    ),
+                ),
+                (
+                    "notes",
+                    models.TextField(
+                        blank=True, help_text="Additional notes", null=True
+                    ),
+                ),
+                (
+                    "whatsapp_number",
+                    models.CharField(
+                        blank=True,
+                        help_text="For WhatsApp messages",
+                        max_length=15,
+                        null=True,
+                    ),
+                ),
+                (
+                    "rent_due_date",
+                    models.DateField(
+                        blank=True,
+                        default=datetime.date.today,
+                        help_text="Required for rent reminder",
+                        null=True,
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(auto_now_add=True, help_text="Move in Date"),
+                ),
+                ("late_payment_count", models.IntegerField(default=0)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("missed_rents", models.PositiveIntegerField(default=0)),
+                ("is_flagged", models.BooleanField(default=False)),
+                ("flagged_reason", models.TextField(blank=True, null=True)),
+                ("is_agreement_revoked", models.BooleanField(default=False)),
+                ("revocation_reason", models.TextField(blank=True, null=True)),
+                ("revoked_by_owner", models.BooleanField(default=False)),
+                ("revoked_on", models.DateTimeField(blank=True, null=True)),
+                ("vacated_on", models.DateField(blank=True, null=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("active", "Active"),
+                            ("notice_period", "Notice Period"),
+                            ("revoked", "Revoked"),
+                            ("deactivated", "Deactivated"),
+                        ],
+                        default="active",
+                        max_length=20,
+                    ),
+                ),
+                ("notice_start_date", models.DateField(blank=True, null=True)),
+                (
+                    "final_invoice_path",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
             ],
             options={
-                'ordering': ['-start_date'],
+                "ordering": ["-start_date"],
             },
         ),
         migrations.CreateModel(
-            name='Building',
+            name="Building",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('address_line', models.CharField(max_length=255)),
-                ('is_archived', models.BooleanField(default=False)),
-                ('city', models.CharField(max_length=100)),
-                ('state', models.CharField(max_length=100)),
-                ('country', models.CharField(max_length=100)),
-                ('postal_code', models.CharField(max_length=10)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='buildings', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("address_line", models.CharField(max_length=255)),
+                ("is_archived", models.BooleanField(default=False)),
+                ("city", models.CharField(max_length=100)),
+                ("state", models.CharField(max_length=100)),
+                ("country", models.CharField(max_length=100)),
+                ("postal_code", models.CharField(max_length=10)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="buildings",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('name', 'address_line', 'city', 'owner')},
+                "unique_together": {("name", "address_line", "city", "owner")},
             },
         ),
         migrations.CreateModel(
-            name='HistoricalUnit',
+            name="HistoricalUnit",
             fields=[
-                ('id', models.IntegerField(blank=True, db_index=True)),
-                ('is_archived', models.BooleanField(default=False)),
-                ('building_name', models.CharField(blank=True, help_text='name of the building', max_length=100, null=True)),
-                ('unit', models.CharField(help_text='unit of the unit', max_length=100)),
-                ('address_line', models.CharField(help_text='Street address', max_length=255)),
-                ('landmark', models.CharField(blank=True, help_text='Nearby landmark', max_length=255, null=True)),
-                ('city', models.CharField(help_text='City', max_length=100)),
-                ('state', models.CharField(help_text='State', max_length=100)),
-                ('country', models.CharField(help_text='Country', max_length=100)),
-                ('postal_code', models.CharField(help_text='Postal code', max_length=20)),
-                ('unit_type', models.CharField(choices=[('land', 'Land'), ('flat', 'Flat'), ('commercial_shop', 'Commercial Shop'), ('house', 'House'), ('villa', 'Villa'), ('office', 'Office'), ('paying_guest', 'Paying Guest')], help_text='Type of unit', max_length=50)),
-                ('status', models.CharField(choices=[('vacant', 'Vacant'), ('occupied', 'Occupied')], default='vacant', max_length=20)),
-                ('is_vacant', models.BooleanField(default=True, help_text='Is unit currently vacant?')),
-                ('is_verified', models.BooleanField(default=False, help_text='Has unit been verified?')),
-                ('maintenance_notes', models.TextField(blank=True, help_text='Maintenance related notes', null=True)),
-                ('rent_due_reminder', models.BooleanField(default=True, help_text='Enable rent due reminders?')),
-                ('agreement_expiry_reminder', models.BooleanField(default=True, help_text='Enable agreement expiry reminders?')),
-                ('latitude', models.DecimalField(blank=True, decimal_places=6, help_text='Latitude coordinate', max_digits=9, null=True)),
-                ('longitude', models.DecimalField(blank=True, decimal_places=6, help_text='Longitude coordinate', max_digits=9, null=True)),
-                ('notes', models.TextField(blank=True, help_text='Additional notes', null=True)),
-                ('created_at', models.DateTimeField(blank=True, db_index=True, editable=False)),
-                ('updated_at', models.DateTimeField(blank=True, editable=False)),
-                ('history_id', models.AutoField(primary_key=True, serialize=False)),
-                ('history_date', models.DateTimeField(db_index=True)),
-                ('history_change_reason', models.CharField(max_length=100, null=True)),
-                ('history_type', models.CharField(choices=[('+', 'Created'), ('~', 'Changed'), ('-', 'Deleted')], max_length=1)),
-                ('building', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to='properties.building')),
-                ('history_user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
-                ('owner', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to=settings.AUTH_USER_MODEL)),
+                ("id", models.IntegerField(blank=True, db_index=True)),
+                ("is_archived", models.BooleanField(default=False)),
+                (
+                    "building_name",
+                    models.CharField(
+                        blank=True,
+                        help_text="name of the building",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "unit",
+                    models.CharField(help_text="unit of the unit", max_length=100),
+                ),
+                (
+                    "address_line",
+                    models.CharField(help_text="Street address", max_length=255),
+                ),
+                (
+                    "landmark",
+                    models.CharField(
+                        blank=True,
+                        help_text="Nearby landmark",
+                        max_length=255,
+                        null=True,
+                    ),
+                ),
+                ("city", models.CharField(help_text="City", max_length=100)),
+                ("state", models.CharField(help_text="State", max_length=100)),
+                ("country", models.CharField(help_text="Country", max_length=100)),
+                (
+                    "postal_code",
+                    models.CharField(help_text="Postal code", max_length=20),
+                ),
+                (
+                    "unit_type",
+                    models.CharField(
+                        choices=[
+                            ("land", "Land"),
+                            ("flat", "Flat"),
+                            ("commercial_shop", "Commercial Shop"),
+                            ("house", "House"),
+                            ("villa", "Villa"),
+                            ("office", "Office"),
+                            ("paying_guest", "Paying Guest"),
+                        ],
+                        help_text="Type of unit",
+                        max_length=50,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("vacant", "Vacant"), ("occupied", "Occupied")],
+                        default="vacant",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "is_vacant",
+                    models.BooleanField(
+                        default=True, help_text="Is unit currently vacant?"
+                    ),
+                ),
+                (
+                    "is_verified",
+                    models.BooleanField(
+                        default=False, help_text="Has unit been verified?"
+                    ),
+                ),
+                (
+                    "maintenance_notes",
+                    models.TextField(
+                        blank=True, help_text="Maintenance related notes", null=True
+                    ),
+                ),
+                (
+                    "rent_due_reminder",
+                    models.BooleanField(
+                        default=True, help_text="Enable rent due reminders?"
+                    ),
+                ),
+                (
+                    "agreement_expiry_reminder",
+                    models.BooleanField(
+                        default=True, help_text="Enable agreement expiry reminders?"
+                    ),
+                ),
+                (
+                    "latitude",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=6,
+                        help_text="Latitude coordinate",
+                        max_digits=9,
+                        null=True,
+                    ),
+                ),
+                (
+                    "longitude",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=6,
+                        help_text="Longitude coordinate",
+                        max_digits=9,
+                        null=True,
+                    ),
+                ),
+                (
+                    "notes",
+                    models.TextField(
+                        blank=True, help_text="Additional notes", null=True
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(blank=True, db_index=True, editable=False),
+                ),
+                ("updated_at", models.DateTimeField(blank=True, editable=False)),
+                ("history_id", models.AutoField(primary_key=True, serialize=False)),
+                ("history_date", models.DateTimeField(db_index=True)),
+                ("history_change_reason", models.CharField(max_length=100, null=True)),
+                (
+                    "history_type",
+                    models.CharField(
+                        choices=[("+", "Created"), ("~", "Changed"), ("-", "Deleted")],
+                        max_length=1,
+                    ),
+                ),
+                (
+                    "building",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to="properties.building",
+                    ),
+                ),
+                (
+                    "history_user",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'historical unit',
-                'verbose_name_plural': 'historical units',
-                'ordering': ('-history_date', '-history_id'),
-                'get_latest_by': ('history_date', 'history_id'),
+                "verbose_name": "historical unit",
+                "verbose_name_plural": "historical units",
+                "ordering": ("-history_date", "-history_id"),
+                "get_latest_by": ("history_date", "history_id"),
             },
             bases=(simple_history.models.HistoricalChanges, models.Model),
         ),
         migrations.CreateModel(
-            name='ArchivedRenter',
+            name="ArchivedRenter",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('data', models.JSONField()),
-                ('agreement_pdf', models.FileField(upload_to='archived/agreements/')),
-                ('police_pdf', models.FileField(upload_to='archived/police/')),
-                ('property_images', models.JSONField(default=list)),
-                ('final_invoice', models.FileField(upload_to='archived/final_invoice/')),
-                ('archived_at', models.DateTimeField(auto_now_add=True)),
-                ('renter', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='properties.renter')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("data", models.JSONField()),
+                ("agreement_pdf", models.FileField(upload_to="archived/agreements/")),
+                ("police_pdf", models.FileField(upload_to="archived/police/")),
+                ("property_images", models.JSONField(default=list)),
+                (
+                    "final_invoice",
+                    models.FileField(upload_to="archived/final_invoice/"),
+                ),
+                ("archived_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "renter",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="properties.renter",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='AgreementRevocationLog',
+            name="AgreementRevocationLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('reason', models.TextField()),
-                ('timestamp', models.DateTimeField(auto_now_add=True)),
-                ('revoked_by', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
-                ('renter', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='properties.renter')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("reason", models.TextField()),
+                ("timestamp", models.DateTimeField(auto_now_add=True)),
+                (
+                    "revoked_by",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "renter",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="properties.renter",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='RentReminderLog',
+            name="RentReminderLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('message_type', models.CharField(help_text='EXAMPLE: PRE, DUE, LATE', max_length=20)),
-                ('sent_at', models.DateTimeField(auto_now_add=True)),
-                ('renter', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='properties.renter')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "message_type",
+                    models.CharField(
+                        help_text="EXAMPLE: PRE, DUE, LATE", max_length=20
+                    ),
+                ),
+                ("sent_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "renter",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="properties.renter",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Unit',
+            name="Unit",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('is_archived', models.BooleanField(default=False)),
-                ('building_name', models.CharField(blank=True, help_text='name of the building', max_length=100, null=True)),
-                ('unit', models.CharField(help_text='unit of the unit', max_length=100)),
-                ('address_line', models.CharField(help_text='Street address', max_length=255)),
-                ('landmark', models.CharField(blank=True, help_text='Nearby landmark', max_length=255, null=True)),
-                ('city', models.CharField(help_text='City', max_length=100)),
-                ('state', models.CharField(help_text='State', max_length=100)),
-                ('country', models.CharField(help_text='Country', max_length=100)),
-                ('postal_code', models.CharField(help_text='Postal code', max_length=20)),
-                ('unit_type', models.CharField(choices=[('land', 'Land'), ('flat', 'Flat'), ('commercial_shop', 'Commercial Shop'), ('house', 'House'), ('villa', 'Villa'), ('office', 'Office'), ('paying_guest', 'Paying Guest')], help_text='Type of unit', max_length=50)),
-                ('status', models.CharField(choices=[('vacant', 'Vacant'), ('occupied', 'Occupied')], default='vacant', max_length=20)),
-                ('is_vacant', models.BooleanField(default=True, help_text='Is unit currently vacant?')),
-                ('is_verified', models.BooleanField(default=False, help_text='Has unit been verified?')),
-                ('maintenance_notes', models.TextField(blank=True, help_text='Maintenance related notes', null=True)),
-                ('rent_due_reminder', models.BooleanField(default=True, help_text='Enable rent due reminders?')),
-                ('agreement_expiry_reminder', models.BooleanField(default=True, help_text='Enable agreement expiry reminders?')),
-                ('latitude', models.DecimalField(blank=True, decimal_places=6, help_text='Latitude coordinate', max_digits=9, null=True)),
-                ('longitude', models.DecimalField(blank=True, decimal_places=6, help_text='Longitude coordinate', max_digits=9, null=True)),
-                ('notes', models.TextField(blank=True, help_text='Additional notes', null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('building', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='properties.building')),
-                ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='unit', to=settings.AUTH_USER_MODEL)),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                ("is_archived", models.BooleanField(default=False)),
+                (
+                    "building_name",
+                    models.CharField(
+                        blank=True,
+                        help_text="name of the building",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "unit",
+                    models.CharField(help_text="unit of the unit", max_length=100),
+                ),
+                (
+                    "address_line",
+                    models.CharField(help_text="Street address", max_length=255),
+                ),
+                (
+                    "landmark",
+                    models.CharField(
+                        blank=True,
+                        help_text="Nearby landmark",
+                        max_length=255,
+                        null=True,
+                    ),
+                ),
+                ("city", models.CharField(help_text="City", max_length=100)),
+                ("state", models.CharField(help_text="State", max_length=100)),
+                ("country", models.CharField(help_text="Country", max_length=100)),
+                (
+                    "postal_code",
+                    models.CharField(help_text="Postal code", max_length=20),
+                ),
+                (
+                    "unit_type",
+                    models.CharField(
+                        choices=[
+                            ("land", "Land"),
+                            ("flat", "Flat"),
+                            ("commercial_shop", "Commercial Shop"),
+                            ("house", "House"),
+                            ("villa", "Villa"),
+                            ("office", "Office"),
+                            ("paying_guest", "Paying Guest"),
+                        ],
+                        help_text="Type of unit",
+                        max_length=50,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("vacant", "Vacant"), ("occupied", "Occupied")],
+                        default="vacant",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "is_vacant",
+                    models.BooleanField(
+                        default=True, help_text="Is unit currently vacant?"
+                    ),
+                ),
+                (
+                    "is_verified",
+                    models.BooleanField(
+                        default=False, help_text="Has unit been verified?"
+                    ),
+                ),
+                (
+                    "maintenance_notes",
+                    models.TextField(
+                        blank=True, help_text="Maintenance related notes", null=True
+                    ),
+                ),
+                (
+                    "rent_due_reminder",
+                    models.BooleanField(
+                        default=True, help_text="Enable rent due reminders?"
+                    ),
+                ),
+                (
+                    "agreement_expiry_reminder",
+                    models.BooleanField(
+                        default=True, help_text="Enable agreement expiry reminders?"
+                    ),
+                ),
+                (
+                    "latitude",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=6,
+                        help_text="Latitude coordinate",
+                        max_digits=9,
+                        null=True,
+                    ),
+                ),
+                (
+                    "longitude",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=6,
+                        help_text="Longitude coordinate",
+                        max_digits=9,
+                        null=True,
+                    ),
+                ),
+                (
+                    "notes",
+                    models.TextField(
+                        blank=True, help_text="Additional notes", null=True
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "building",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="properties.building",
+                    ),
+                ),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="unit",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created_at'],
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='RentRecord',
+            name="RentRecord",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('rent_month', models.DateField(db_index=True, help_text='Use first day of the month, e.g. 2025-05-01')),
-                ('amount_paid', models.DecimalField(decimal_places=2, help_text='Amount paid for rent', max_digits=10)),
-                ('date_paid', models.DateField(help_text='Date when payment was made')),
-                ('payment_mode', models.CharField(blank=True, choices=[('cash', 'Cash'), ('cheque', 'Cheque'), ('online', 'Online Transfer'), ('other', 'Other')], help_text='Mode of payment', max_length=20, null=True)),
-                ('remarks', models.TextField(blank=True, help_text='Additional remarks or notes', null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('payout_status', models.CharField(default='PENDING', max_length=20)),
-                ('payout_reference', models.CharField(blank=True, max_length=100, null=True)),
-                ('payout_retry_count', models.IntegerField(default=0)),
-                ('last_retry_on', models.DateTimeField(blank=True, null=True)),
-                ('razorpay_order_id', models.CharField(blank=True, max_length=100, null=True)),
-                ('razorpay_payment_status', models.CharField(default='PENDING', max_length=20)),
-                ('payout_retries', models.IntegerField(default=0)),
-                ('last_payout_retry', models.DateTimeField(blank=True, null=True)),
-                ('grace_days', models.PositiveIntegerField(default=3)),
-                ('late_fee', models.DecimalField(decimal_places=2, default=100.0, max_digits=8)),
-                ('adjustment_reason', models.TextField(blank=True, null=True)),
-                ('rent_due_date', models.DateField(default=datetime.date.today)),
-                ('payment_link', models.URLField(blank=True, null=True)),
-                ('rent_due_day', models.IntegerField(default=5)),
-                ('is_active', models.BooleanField(default=True)),
-                ('invoice_number', models.CharField(blank=True, max_length=50, null=True, unique=True)),
-                ('invoice_pdf', models.FileField(blank=True, null=True, upload_to='rent_invoices/')),
-                ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rent_records_owner', to=settings.AUTH_USER_MODEL)),
-                ('renter', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rent_records', to='properties.renter')),
-                ('unit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rent_records_unit', to='properties.unit')),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                (
+                    "rent_month",
+                    models.DateField(
+                        db_index=True,
+                        help_text="Use first day of the month, e.g. 2025-05-01",
+                    ),
+                ),
+                (
+                    "amount_paid",
+                    models.DecimalField(
+                        decimal_places=2,
+                        help_text="Amount paid for rent",
+                        max_digits=10,
+                    ),
+                ),
+                ("date_paid", models.DateField(help_text="Date when payment was made")),
+                (
+                    "payment_mode",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("cash", "Cash"),
+                            ("cheque", "Cheque"),
+                            ("online", "Online Transfer"),
+                            ("other", "Other"),
+                        ],
+                        help_text="Mode of payment",
+                        max_length=20,
+                        null=True,
+                    ),
+                ),
+                (
+                    "remarks",
+                    models.TextField(
+                        blank=True, help_text="Additional remarks or notes", null=True
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("payout_status", models.CharField(default="PENDING", max_length=20)),
+                (
+                    "payout_reference",
+                    models.CharField(blank=True, max_length=100, null=True),
+                ),
+                ("payout_retry_count", models.IntegerField(default=0)),
+                ("last_retry_on", models.DateTimeField(blank=True, null=True)),
+                (
+                    "razorpay_order_id",
+                    models.CharField(blank=True, max_length=100, null=True),
+                ),
+                (
+                    "razorpay_payment_status",
+                    models.CharField(default="PENDING", max_length=20),
+                ),
+                ("payout_retries", models.IntegerField(default=0)),
+                ("last_payout_retry", models.DateTimeField(blank=True, null=True)),
+                ("grace_days", models.PositiveIntegerField(default=3)),
+                (
+                    "late_fee",
+                    models.DecimalField(decimal_places=2, default=100.0, max_digits=8),
+                ),
+                ("adjustment_reason", models.TextField(blank=True, null=True)),
+                ("rent_due_date", models.DateField(default=datetime.date.today)),
+                ("payment_link", models.URLField(blank=True, null=True)),
+                ("rent_due_day", models.IntegerField(default=5)),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "invoice_number",
+                    models.CharField(blank=True, max_length=50, null=True, unique=True),
+                ),
+                (
+                    "invoice_pdf",
+                    models.FileField(blank=True, null=True, upload_to="rent_invoices/"),
+                ),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="rent_records_owner",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "renter",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="rent_records",
+                        to="properties.renter",
+                    ),
+                ),
+                (
+                    "unit",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="rent_records_unit",
+                        to="properties.unit",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-rent_month'],
+                "ordering": ["-rent_month"],
             },
         ),
         migrations.AddField(
-            model_name='renter',
-            name='unit',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='renters', to='properties.unit'),
+            model_name="renter",
+            name="unit",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="renters",
+                to="properties.unit",
+            ),
         ),
         migrations.CreateModel(
-            name='RentAgreementDraft',
+            name="RentAgreementDraft",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('generated_at', models.DateTimeField(auto_now_add=True)),
-                ('file', models.FileField(upload_to='auto_agreements/')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
-                ('renter', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='properties.renter')),
-                ('unit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rent_agreement_draft', to='properties.unit')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("generated_at", models.DateTimeField(auto_now_add=True)),
+                ("file", models.FileField(upload_to="auto_agreements/")),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "renter",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="properties.renter",
+                    ),
+                ),
+                (
+                    "unit",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="rent_agreement_draft",
+                        to="properties.unit",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='PoliceVerification',
+            name="PoliceVerification",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('generated_at', models.DateTimeField(auto_now_add=True)),
-                ('file', models.FileField(upload_to='rent_agreements/')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
-                ('renter', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='properties.renter')),
-                ('unit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='police_verification', to='properties.unit')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("generated_at", models.DateTimeField(auto_now_add=True)),
+                ("file", models.FileField(upload_to="rent_agreements/")),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "renter",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="properties.renter",
+                    ),
+                ),
+                (
+                    "unit",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="police_verification",
+                        to="properties.unit",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='HistoricalRentRecord',
+            name="HistoricalRentRecord",
             fields=[
-                ('id', models.IntegerField(blank=True, db_index=True)),
-                ('rent_month', models.DateField(db_index=True, help_text='Use first day of the month, e.g. 2025-05-01')),
-                ('amount_paid', models.DecimalField(decimal_places=2, help_text='Amount paid for rent', max_digits=10)),
-                ('date_paid', models.DateField(help_text='Date when payment was made')),
-                ('payment_mode', models.CharField(blank=True, choices=[('cash', 'Cash'), ('cheque', 'Cheque'), ('online', 'Online Transfer'), ('other', 'Other')], help_text='Mode of payment', max_length=20, null=True)),
-                ('remarks', models.TextField(blank=True, help_text='Additional remarks or notes', null=True)),
-                ('created_at', models.DateTimeField(blank=True, editable=False)),
-                ('updated_at', models.DateTimeField(blank=True, editable=False)),
-                ('payout_status', models.CharField(default='PENDING', max_length=20)),
-                ('payout_reference', models.CharField(blank=True, max_length=100, null=True)),
-                ('payout_retry_count', models.IntegerField(default=0)),
-                ('last_retry_on', models.DateTimeField(blank=True, null=True)),
-                ('razorpay_order_id', models.CharField(blank=True, max_length=100, null=True)),
-                ('razorpay_payment_status', models.CharField(default='PENDING', max_length=20)),
-                ('payout_retries', models.IntegerField(default=0)),
-                ('last_payout_retry', models.DateTimeField(blank=True, null=True)),
-                ('grace_days', models.PositiveIntegerField(default=3)),
-                ('late_fee', models.DecimalField(decimal_places=2, default=100.0, max_digits=8)),
-                ('adjustment_reason', models.TextField(blank=True, null=True)),
-                ('rent_due_date', models.DateField(default=datetime.date.today)),
-                ('payment_link', models.URLField(blank=True, null=True)),
-                ('rent_due_day', models.IntegerField(default=5)),
-                ('is_active', models.BooleanField(default=True)),
-                ('invoice_number', models.CharField(blank=True, db_index=True, max_length=50, null=True)),
-                ('invoice_pdf', models.TextField(blank=True, max_length=100, null=True)),
-                ('history_id', models.AutoField(primary_key=True, serialize=False)),
-                ('history_date', models.DateTimeField(db_index=True)),
-                ('history_change_reason', models.CharField(max_length=100, null=True)),
-                ('history_type', models.CharField(choices=[('+', 'Created'), ('~', 'Changed'), ('-', 'Deleted')], max_length=1)),
-                ('history_user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
-                ('owner', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to=settings.AUTH_USER_MODEL)),
-                ('renter', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to='properties.renter')),
-                ('unit', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to='properties.unit')),
+                ("id", models.IntegerField(blank=True, db_index=True)),
+                (
+                    "rent_month",
+                    models.DateField(
+                        db_index=True,
+                        help_text="Use first day of the month, e.g. 2025-05-01",
+                    ),
+                ),
+                (
+                    "amount_paid",
+                    models.DecimalField(
+                        decimal_places=2,
+                        help_text="Amount paid for rent",
+                        max_digits=10,
+                    ),
+                ),
+                ("date_paid", models.DateField(help_text="Date when payment was made")),
+                (
+                    "payment_mode",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("cash", "Cash"),
+                            ("cheque", "Cheque"),
+                            ("online", "Online Transfer"),
+                            ("other", "Other"),
+                        ],
+                        help_text="Mode of payment",
+                        max_length=20,
+                        null=True,
+                    ),
+                ),
+                (
+                    "remarks",
+                    models.TextField(
+                        blank=True, help_text="Additional remarks or notes", null=True
+                    ),
+                ),
+                ("created_at", models.DateTimeField(blank=True, editable=False)),
+                ("updated_at", models.DateTimeField(blank=True, editable=False)),
+                ("payout_status", models.CharField(default="PENDING", max_length=20)),
+                (
+                    "payout_reference",
+                    models.CharField(blank=True, max_length=100, null=True),
+                ),
+                ("payout_retry_count", models.IntegerField(default=0)),
+                ("last_retry_on", models.DateTimeField(blank=True, null=True)),
+                (
+                    "razorpay_order_id",
+                    models.CharField(blank=True, max_length=100, null=True),
+                ),
+                (
+                    "razorpay_payment_status",
+                    models.CharField(default="PENDING", max_length=20),
+                ),
+                ("payout_retries", models.IntegerField(default=0)),
+                ("last_payout_retry", models.DateTimeField(blank=True, null=True)),
+                ("grace_days", models.PositiveIntegerField(default=3)),
+                (
+                    "late_fee",
+                    models.DecimalField(decimal_places=2, default=100.0, max_digits=8),
+                ),
+                ("adjustment_reason", models.TextField(blank=True, null=True)),
+                ("rent_due_date", models.DateField(default=datetime.date.today)),
+                ("payment_link", models.URLField(blank=True, null=True)),
+                ("rent_due_day", models.IntegerField(default=5)),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "invoice_number",
+                    models.CharField(
+                        blank=True, db_index=True, max_length=50, null=True
+                    ),
+                ),
+                (
+                    "invoice_pdf",
+                    models.TextField(blank=True, max_length=100, null=True),
+                ),
+                ("history_id", models.AutoField(primary_key=True, serialize=False)),
+                ("history_date", models.DateTimeField(db_index=True)),
+                ("history_change_reason", models.CharField(max_length=100, null=True)),
+                (
+                    "history_type",
+                    models.CharField(
+                        choices=[("+", "Created"), ("~", "Changed"), ("-", "Deleted")],
+                        max_length=1,
+                    ),
+                ),
+                (
+                    "history_user",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "renter",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to="properties.renter",
+                    ),
+                ),
+                (
+                    "unit",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to="properties.unit",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'historical rent record',
-                'verbose_name_plural': 'historical rent records',
-                'ordering': ('-history_date', '-history_id'),
-                'get_latest_by': ('history_date', 'history_id'),
+                "verbose_name": "historical rent record",
+                "verbose_name_plural": "historical rent records",
+                "ordering": ("-history_date", "-history_id"),
+                "get_latest_by": ("history_date", "history_id"),
             },
             bases=(simple_history.models.HistoricalChanges, models.Model),
         ),
         migrations.CreateModel(
-            name='HistoricalRenter',
+            name="HistoricalRenter",
             fields=[
-                ('id', models.IntegerField(blank=True, db_index=True)),
-                ('name', models.CharField(help_text="Renter's full name", max_length=100)),
-                ('phone', models.CharField(help_text='Primary phone number', max_length=15, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('alternate_phone', models.CharField(blank=True, help_text='Alternate phone number', max_length=15, null=True, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('emergency_contact_name', models.CharField(blank=True, help_text='Emergency contact name', max_length=100, null=True)),
-                ('emergency_contact_number', models.CharField(blank=True, help_text='Emergency contact number', max_length=15, null=True, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('renter_image', models.TextField(blank=True, help_text='Photo of renter', max_length=100, null=True)),
-                ('id_proof', models.TextField(help_text="Renter's ID proof document", max_length=100)),
-                ('rent_agreement', models.TextField(help_text='Rent agreement document', max_length=100)),
-                ('rent_amount', models.DecimalField(decimal_places=2, help_text='Rent amount', max_digits=10)),
-                ('start_date', models.DateField(db_index=True, help_text='Rental start date')),
-                ('end_date', models.DateField(blank=True, help_text='Rental end date', null=True)),
-                ('is_active', models.BooleanField(default=True, help_text='Is renter currently active?')),
-                ('notes', models.TextField(blank=True, help_text='Additional notes', null=True)),
-                ('whatsapp_number', models.CharField(blank=True, help_text='For WhatsApp messages', max_length=15, null=True)),
-                ('rent_due_date', models.DateField(blank=True, default=datetime.date.today, help_text='Required for rent reminder', null=True)),
-                ('created_at', models.DateTimeField(blank=True, editable=False, help_text='Move in Date')),
-                ('late_payment_count', models.IntegerField(default=0)),
-                ('updated_at', models.DateTimeField(blank=True, editable=False)),
-                ('missed_rents', models.PositiveIntegerField(default=0)),
-                ('is_flagged', models.BooleanField(default=False)),
-                ('flagged_reason', models.TextField(blank=True, null=True)),
-                ('is_agreement_revoked', models.BooleanField(default=False)),
-                ('revocation_reason', models.TextField(blank=True, null=True)),
-                ('revoked_by_owner', models.BooleanField(default=False)),
-                ('revoked_on', models.DateTimeField(blank=True, null=True)),
-                ('vacated_on', models.DateField(blank=True, null=True)),
-                ('status', models.CharField(choices=[('active', 'Active'), ('notice_period', 'Notice Period'), ('revoked', 'Revoked'), ('deactivated', 'Deactivated')], default='active', max_length=20)),
-                ('notice_start_date', models.DateField(blank=True, null=True)),
-                ('final_invoice_path', models.CharField(blank=True, max_length=255, null=True)),
-                ('history_id', models.AutoField(primary_key=True, serialize=False)),
-                ('history_date', models.DateTimeField(db_index=True)),
-                ('history_change_reason', models.CharField(max_length=100, null=True)),
-                ('history_type', models.CharField(choices=[('+', 'Created'), ('~', 'Changed'), ('-', 'Deleted')], max_length=1)),
-                ('history_user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
-                ('unit', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to='properties.unit')),
+                ("id", models.IntegerField(blank=True, db_index=True)),
+                (
+                    "name",
+                    models.CharField(help_text="Renter's full name", max_length=100),
+                ),
+                (
+                    "phone",
+                    models.CharField(
+                        help_text="Primary phone number",
+                        max_length=15,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "alternate_phone",
+                    models.CharField(
+                        blank=True,
+                        help_text="Alternate phone number",
+                        max_length=15,
+                        null=True,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "emergency_contact_name",
+                    models.CharField(
+                        blank=True,
+                        help_text="Emergency contact name",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "emergency_contact_number",
+                    models.CharField(
+                        blank=True,
+                        help_text="Emergency contact number",
+                        max_length=15,
+                        null=True,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "renter_image",
+                    models.TextField(
+                        blank=True,
+                        help_text="Photo of renter",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "id_proof",
+                    models.TextField(
+                        help_text="Renter's ID proof document", max_length=100
+                    ),
+                ),
+                (
+                    "rent_agreement",
+                    models.TextField(
+                        help_text="Rent agreement document", max_length=100
+                    ),
+                ),
+                (
+                    "rent_amount",
+                    models.DecimalField(
+                        decimal_places=2, help_text="Rent amount", max_digits=10
+                    ),
+                ),
+                (
+                    "start_date",
+                    models.DateField(db_index=True, help_text="Rental start date"),
+                ),
+                (
+                    "end_date",
+                    models.DateField(
+                        blank=True, help_text="Rental end date", null=True
+                    ),
+                ),
+                (
+                    "is_active",
+                    models.BooleanField(
+                        default=True, help_text="Is renter currently active?"
+                    ),
+                ),
+                (
+                    "notes",
+                    models.TextField(
+                        blank=True, help_text="Additional notes", null=True
+                    ),
+                ),
+                (
+                    "whatsapp_number",
+                    models.CharField(
+                        blank=True,
+                        help_text="For WhatsApp messages",
+                        max_length=15,
+                        null=True,
+                    ),
+                ),
+                (
+                    "rent_due_date",
+                    models.DateField(
+                        blank=True,
+                        default=datetime.date.today,
+                        help_text="Required for rent reminder",
+                        null=True,
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        blank=True, editable=False, help_text="Move in Date"
+                    ),
+                ),
+                ("late_payment_count", models.IntegerField(default=0)),
+                ("updated_at", models.DateTimeField(blank=True, editable=False)),
+                ("missed_rents", models.PositiveIntegerField(default=0)),
+                ("is_flagged", models.BooleanField(default=False)),
+                ("flagged_reason", models.TextField(blank=True, null=True)),
+                ("is_agreement_revoked", models.BooleanField(default=False)),
+                ("revocation_reason", models.TextField(blank=True, null=True)),
+                ("revoked_by_owner", models.BooleanField(default=False)),
+                ("revoked_on", models.DateTimeField(blank=True, null=True)),
+                ("vacated_on", models.DateField(blank=True, null=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("active", "Active"),
+                            ("notice_period", "Notice Period"),
+                            ("revoked", "Revoked"),
+                            ("deactivated", "Deactivated"),
+                        ],
+                        default="active",
+                        max_length=20,
+                    ),
+                ),
+                ("notice_start_date", models.DateField(blank=True, null=True)),
+                (
+                    "final_invoice_path",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
+                ("history_id", models.AutoField(primary_key=True, serialize=False)),
+                ("history_date", models.DateTimeField(db_index=True)),
+                ("history_change_reason", models.CharField(max_length=100, null=True)),
+                (
+                    "history_type",
+                    models.CharField(
+                        choices=[("+", "Created"), ("~", "Changed"), ("-", "Deleted")],
+                        max_length=1,
+                    ),
+                ),
+                (
+                    "history_user",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "unit",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to="properties.unit",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'historical renter',
-                'verbose_name_plural': 'historical renters',
-                'ordering': ('-history_date', '-history_id'),
-                'get_latest_by': ('history_date', 'history_id'),
+                "verbose_name": "historical renter",
+                "verbose_name_plural": "historical renters",
+                "ordering": ("-history_date", "-history_id"),
+                "get_latest_by": ("history_date", "history_id"),
             },
             bases=(simple_history.models.HistoricalChanges, models.Model),
         ),
         migrations.CreateModel(
-            name='HistoricalCaretaker',
+            name="HistoricalCaretaker",
             fields=[
-                ('id', models.IntegerField(blank=True, db_index=True)),
-                ('name', models.CharField(help_text="Caretaker's full name", max_length=100)),
-                ('phone', models.CharField(help_text='Primary phone number', max_length=15, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('alternate_phone', models.CharField(blank=True, help_text='Alternate phone number', max_length=15, null=True, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('whatsapp_number', models.CharField(blank=True, help_text='For WhatsApp messages', max_length=15, null=True)),
-                ('emergency_contact_name', models.CharField(blank=True, help_text='Emergency contact name', max_length=100, null=True)),
-                ('emergency_contact_number', models.CharField(blank=True, help_text='Emergency contact number', max_length=15, null=True, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('caretaker_image', models.TextField(blank=True, help_text='Photo of caretaker', max_length=100, null=True)),
-                ('id_proof', models.TextField(help_text="Caretaker's ID proof document", max_length=100)),
-                ('address_line', models.CharField(help_text='Caretaker address line', max_length=255)),
-                ('landmark', models.CharField(blank=True, help_text='Nearby landmark', max_length=255, null=True)),
-                ('city', models.CharField(help_text='City', max_length=100)),
-                ('state', models.CharField(help_text='State', max_length=100)),
-                ('country', models.CharField(help_text='Country', max_length=100)),
-                ('postal_code', models.CharField(help_text='Postal code', max_length=20)),
-                ('start_date', models.DateField(blank=True, db_index=True, help_text='Start date of caretaker service', null=True)),
-                ('end_date', models.DateField(blank=True, help_text='End date of caretaker service', null=True)),
-                ('notes', models.TextField(blank=True, help_text='Additional notes', null=True)),
-                ('created_at', models.DateTimeField(blank=True, editable=False)),
-                ('updated_at', models.DateTimeField(blank=True, editable=False)),
-                ('history_id', models.AutoField(primary_key=True, serialize=False)),
-                ('history_date', models.DateTimeField(db_index=True)),
-                ('history_change_reason', models.CharField(max_length=100, null=True)),
-                ('history_type', models.CharField(choices=[('+', 'Created'), ('~', 'Changed'), ('-', 'Deleted')], max_length=1)),
-                ('history_user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
-                ('unit', models.ForeignKey(blank=True, db_constraint=False, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='+', to='properties.unit')),
+                ("id", models.IntegerField(blank=True, db_index=True)),
+                (
+                    "name",
+                    models.CharField(help_text="Caretaker's full name", max_length=100),
+                ),
+                (
+                    "phone",
+                    models.CharField(
+                        help_text="Primary phone number",
+                        max_length=15,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "alternate_phone",
+                    models.CharField(
+                        blank=True,
+                        help_text="Alternate phone number",
+                        max_length=15,
+                        null=True,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "whatsapp_number",
+                    models.CharField(
+                        blank=True,
+                        help_text="For WhatsApp messages",
+                        max_length=15,
+                        null=True,
+                    ),
+                ),
+                (
+                    "emergency_contact_name",
+                    models.CharField(
+                        blank=True,
+                        help_text="Emergency contact name",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "emergency_contact_number",
+                    models.CharField(
+                        blank=True,
+                        help_text="Emergency contact number",
+                        max_length=15,
+                        null=True,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "caretaker_image",
+                    models.TextField(
+                        blank=True,
+                        help_text="Photo of caretaker",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "id_proof",
+                    models.TextField(
+                        help_text="Caretaker's ID proof document", max_length=100
+                    ),
+                ),
+                (
+                    "address_line",
+                    models.CharField(
+                        help_text="Caretaker address line", max_length=255
+                    ),
+                ),
+                (
+                    "landmark",
+                    models.CharField(
+                        blank=True,
+                        help_text="Nearby landmark",
+                        max_length=255,
+                        null=True,
+                    ),
+                ),
+                ("city", models.CharField(help_text="City", max_length=100)),
+                ("state", models.CharField(help_text="State", max_length=100)),
+                ("country", models.CharField(help_text="Country", max_length=100)),
+                (
+                    "postal_code",
+                    models.CharField(help_text="Postal code", max_length=20),
+                ),
+                (
+                    "start_date",
+                    models.DateField(
+                        blank=True,
+                        db_index=True,
+                        help_text="Start date of caretaker service",
+                        null=True,
+                    ),
+                ),
+                (
+                    "end_date",
+                    models.DateField(
+                        blank=True, help_text="End date of caretaker service", null=True
+                    ),
+                ),
+                (
+                    "notes",
+                    models.TextField(
+                        blank=True, help_text="Additional notes", null=True
+                    ),
+                ),
+                ("created_at", models.DateTimeField(blank=True, editable=False)),
+                ("updated_at", models.DateTimeField(blank=True, editable=False)),
+                ("history_id", models.AutoField(primary_key=True, serialize=False)),
+                ("history_date", models.DateTimeField(db_index=True)),
+                ("history_change_reason", models.CharField(max_length=100, null=True)),
+                (
+                    "history_type",
+                    models.CharField(
+                        choices=[("+", "Created"), ("~", "Changed"), ("-", "Deleted")],
+                        max_length=1,
+                    ),
+                ),
+                (
+                    "history_user",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="+",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "unit",
+                    models.ForeignKey(
+                        blank=True,
+                        db_constraint=False,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="+",
+                        to="properties.unit",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'historical caretaker',
-                'verbose_name_plural': 'historical caretakers',
-                'ordering': ('-history_date', '-history_id'),
-                'get_latest_by': ('history_date', 'history_id'),
+                "verbose_name": "historical caretaker",
+                "verbose_name_plural": "historical caretakers",
+                "ordering": ("-history_date", "-history_id"),
+                "get_latest_by": ("history_date", "history_id"),
             },
             bases=(simple_history.models.HistoricalChanges, models.Model),
         ),
         migrations.CreateModel(
-            name='Caretaker',
+            name="Caretaker",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('name', models.CharField(help_text="Caretaker's full name", max_length=100)),
-                ('phone', models.CharField(help_text='Primary phone number', max_length=15, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('alternate_phone', models.CharField(blank=True, help_text='Alternate phone number', max_length=15, null=True, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('whatsapp_number', models.CharField(blank=True, help_text='For WhatsApp messages', max_length=15, null=True)),
-                ('emergency_contact_name', models.CharField(blank=True, help_text='Emergency contact name', max_length=100, null=True)),
-                ('emergency_contact_number', models.CharField(blank=True, help_text='Emergency contact number', max_length=15, null=True, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')])),
-                ('caretaker_image', models.ImageField(blank=True, help_text='Photo of caretaker', null=True, upload_to='caretaker_image/')),
-                ('id_proof', models.FileField(help_text="Caretaker's ID proof document", upload_to='id_proof/caretaker/')),
-                ('address_line', models.CharField(help_text='Caretaker address line', max_length=255)),
-                ('landmark', models.CharField(blank=True, help_text='Nearby landmark', max_length=255, null=True)),
-                ('city', models.CharField(help_text='City', max_length=100)),
-                ('state', models.CharField(help_text='State', max_length=100)),
-                ('country', models.CharField(help_text='Country', max_length=100)),
-                ('postal_code', models.CharField(help_text='Postal code', max_length=20)),
-                ('start_date', models.DateField(blank=True, db_index=True, help_text='Start date of caretaker service', null=True)),
-                ('end_date', models.DateField(blank=True, help_text='End date of caretaker service', null=True)),
-                ('notes', models.TextField(blank=True, help_text='Additional notes', null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('unit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='caretakers', to='properties.unit')),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                (
+                    "name",
+                    models.CharField(help_text="Caretaker's full name", max_length=100),
+                ),
+                (
+                    "phone",
+                    models.CharField(
+                        help_text="Primary phone number",
+                        max_length=15,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "alternate_phone",
+                    models.CharField(
+                        blank=True,
+                        help_text="Alternate phone number",
+                        max_length=15,
+                        null=True,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "whatsapp_number",
+                    models.CharField(
+                        blank=True,
+                        help_text="For WhatsApp messages",
+                        max_length=15,
+                        null=True,
+                    ),
+                ),
+                (
+                    "emergency_contact_name",
+                    models.CharField(
+                        blank=True,
+                        help_text="Emergency contact name",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                (
+                    "emergency_contact_number",
+                    models.CharField(
+                        blank=True,
+                        help_text="Emergency contact number",
+                        max_length=15,
+                        null=True,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                                regex="^\\+?1?\\d{9,15}$",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "caretaker_image",
+                    models.ImageField(
+                        blank=True,
+                        help_text="Photo of caretaker",
+                        null=True,
+                        upload_to="caretaker_image/",
+                    ),
+                ),
+                (
+                    "id_proof",
+                    models.FileField(
+                        help_text="Caretaker's ID proof document",
+                        upload_to="id_proof/caretaker/",
+                    ),
+                ),
+                (
+                    "address_line",
+                    models.CharField(
+                        help_text="Caretaker address line", max_length=255
+                    ),
+                ),
+                (
+                    "landmark",
+                    models.CharField(
+                        blank=True,
+                        help_text="Nearby landmark",
+                        max_length=255,
+                        null=True,
+                    ),
+                ),
+                ("city", models.CharField(help_text="City", max_length=100)),
+                ("state", models.CharField(help_text="State", max_length=100)),
+                ("country", models.CharField(help_text="Country", max_length=100)),
+                (
+                    "postal_code",
+                    models.CharField(help_text="Postal code", max_length=20),
+                ),
+                (
+                    "start_date",
+                    models.DateField(
+                        blank=True,
+                        db_index=True,
+                        help_text="Start date of caretaker service",
+                        null=True,
+                    ),
+                ),
+                (
+                    "end_date",
+                    models.DateField(
+                        blank=True, help_text="End date of caretaker service", null=True
+                    ),
+                ),
+                (
+                    "notes",
+                    models.TextField(
+                        blank=True, help_text="Additional notes", null=True
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "unit",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="caretakers",
+                        to="properties.unit",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-start_date'],
+                "ordering": ["-start_date"],
             },
         ),
         migrations.CreateModel(
-            name='UnitDocument',
+            name="UnitDocument",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('document', models.FileField(upload_to='unit_documents/')),
-                ('file_hash', models.CharField(db_index=True, editable=False, max_length=64)),
-                ('uploaded_at', models.DateTimeField(auto_now_add=True)),
-                ('renter', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='properties.renter')),
-                ('unit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='properties.unit')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("document", models.FileField(upload_to="unit_documents/")),
+                (
+                    "file_hash",
+                    models.CharField(db_index=True, editable=False, max_length=64),
+                ),
+                ("uploaded_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "renter",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="properties.renter",
+                    ),
+                ),
+                (
+                    "unit",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="properties.unit",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='UnitImage',
+            name="UnitImage",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('image', models.ImageField(upload_to='unit_images/')),
-                ('image_hash', models.CharField(editable=False, max_length=64)),
-                ('uploaded_at', models.DateTimeField(auto_now_add=True)),
-                ('renter', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='properties.renter')),
-                ('unit', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='properties.unit')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("image", models.ImageField(upload_to="unit_images/")),
+                ("image_hash", models.CharField(editable=False, max_length=64)),
+                ("uploaded_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "renter",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="properties.renter",
+                    ),
+                ),
+                (
+                    "unit",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="properties.unit",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='UnitVacancy',
+            name="UnitVacancy",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('reason', models.CharField(choices=[('renovation', 'Renovation'), ('cleaning', 'Cleaning'), ('between renters', 'Between Renters'), ('long-term vacancy', 'Long-Term Vacancy'), ('other', 'Other')], max_length=100)),
-                ('noted_on', models.DateField(auto_now_add=True)),
-                ('unit', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='properties.unit')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "reason",
+                    models.CharField(
+                        choices=[
+                            ("renovation", "Renovation"),
+                            ("cleaning", "Cleaning"),
+                            ("between renters", "Between Renters"),
+                            ("long-term vacancy", "Long-Term Vacancy"),
+                            ("other", "Other"),
+                        ],
+                        max_length=100,
+                    ),
+                ),
+                ("noted_on", models.DateField(auto_now_add=True)),
+                (
+                    "unit",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="properties.unit",
+                    ),
+                ),
             ],
         ),
         migrations.AddIndex(
-            model_name='unit',
-            index=models.Index(fields=['city'], name='properties__city_dc07b3_idx'),
+            model_name="unit",
+            index=models.Index(fields=["city"], name="properties__city_dc07b3_idx"),
         ),
         migrations.AddIndex(
-            model_name='unit',
-            index=models.Index(fields=['owner'], name='properties__owner_i_4b6a80_idx'),
+            model_name="unit",
+            index=models.Index(fields=["owner"], name="properties__owner_i_4b6a80_idx"),
         ),
         migrations.AlterUniqueTogether(
-            name='unit',
-            unique_together={('owner', 'unit', 'building', 'address_line')},
+            name="unit",
+            unique_together={("owner", "unit", "building", "address_line")},
         ),
         migrations.AlterUniqueTogether(
-            name='rentrecord',
-            unique_together={('renter', 'rent_month')},
+            name="rentrecord",
+            unique_together={("renter", "rent_month")},
         ),
         migrations.AlterUniqueTogether(
-            name='renter',
-            unique_together={('unit', 'phone')},
+            name="renter",
+            unique_together={("unit", "phone")},
         ),
         migrations.AlterUniqueTogether(
-            name='rentagreementdraft',
-            unique_together={('renter', 'unit')},
+            name="rentagreementdraft",
+            unique_together={("renter", "unit")},
         ),
         migrations.AlterUniqueTogether(
-            name='policeverification',
-            unique_together={('renter', 'unit')},
+            name="policeverification",
+            unique_together={("renter", "unit")},
         ),
         migrations.AlterUniqueTogether(
-            name='caretaker',
-            unique_together={('unit', 'phone')},
+            name="caretaker",
+            unique_together={("unit", "phone")},
         ),
     ]

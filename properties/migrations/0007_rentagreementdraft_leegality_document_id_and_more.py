@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('properties', '0006_add_extra_charge'),
+        ("properties", "0006_add_extra_charge"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='rentagreementdraft',
-            name='leegality_document_id',
+            model_name="rentagreementdraft",
+            name="leegality_document_id",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='rentagreementdraft',
-            name='owner_signed',
+            model_name="rentagreementdraft",
+            name="owner_signed",
             field=models.BooleanField(default=False),
         ),
         migrations.AddField(
-            model_name='rentagreementdraft',
-            name='renter_signed',
+            model_name="rentagreementdraft",
+            name="renter_signed",
             field=models.BooleanField(default=False),
         ),
     ]

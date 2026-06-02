@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0001_initial'),
+        ("core", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userprofile',
-            name='language_preference',
-            field=models.CharField(choices=[('en', 'English'), ('hi', 'Hindi')], default='en', max_length=2),
+            model_name="userprofile",
+            name="language_preference",
+            field=models.CharField(
+                choices=[("en", "English"), ("hi", "Hindi")], default="en", max_length=2
+            ),
         ),
     ]

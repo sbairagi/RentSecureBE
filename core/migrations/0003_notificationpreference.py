@@ -8,21 +8,36 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0002_userprofile_language_preference'),
+        ("core", "0002_userprofile_language_preference"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='NotificationPreference',
+            name="NotificationPreference",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('rent_alerts_whatsapp', models.BooleanField(default=True)),
-                ('rent_alerts_email', models.BooleanField(default=True)),
-                ('monthly_summary_email', models.BooleanField(default=True)),
-                ('monthly_summary_whatsapp', models.BooleanField(default=False)),
-                ('payout_alerts_whatsapp', models.BooleanField(default=True)),
-                ('payout_alerts_email', models.BooleanField(default=False)),
-                ('owner', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='notification_preference', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("rent_alerts_whatsapp", models.BooleanField(default=True)),
+                ("rent_alerts_email", models.BooleanField(default=True)),
+                ("monthly_summary_email", models.BooleanField(default=True)),
+                ("monthly_summary_whatsapp", models.BooleanField(default=False)),
+                ("payout_alerts_whatsapp", models.BooleanField(default=True)),
+                ("payout_alerts_email", models.BooleanField(default=False)),
+                (
+                    "owner",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="notification_preference",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]
