@@ -6,7 +6,7 @@ from twilio.rest import Client
 logger = logging.getLogger(__name__)
 
 
-def send_sms(phone, message):
+def send_sms(phone: str, message: str) -> bool:
     try:
         client = Client(settings.TWILIO_SID, settings.TWILIO_TOKEN)
         client.messages.create(

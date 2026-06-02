@@ -2,6 +2,7 @@
 
 import logging
 import os
+from typing import List, Optional
 
 try:
     import boto3
@@ -13,7 +14,7 @@ from twilio.rest import Client
 logger = logging.getLogger(__name__)
 
 
-def send_whatsapp_message(phone, text):
+def send_whatsapp_message(phone: str, text: str) -> bool:
     try:
         sid = getattr(settings, "TWILIO_SID", settings.TWILIO_ACCOUNT_SID)
         token = getattr(settings, "TWILIO_TOKEN", settings.TWILIO_AUTH_TOKEN)
@@ -27,7 +28,7 @@ def send_whatsapp_message(phone, text):
         return False
 
 
-def send_whatsapp_audio(phone, audio_path):
+def send_whatsapp_audio(phone: str, audio_path: str) -> bool:
     try:
         media_url = upload_to_s3(audio_path)
 
@@ -45,7 +46,7 @@ def send_whatsapp_audio(phone, audio_path):
         return False
 
 
-def upload_to_s3(file_path):
+def upload_to_s3(file_path: str) -> Optional[str]:
     bucket_name = settings.AWS_S3_BUCKET_NAME
     if not bucket_name:
         raise RuntimeError("AWS_S3_BUCKET_NAME must be configured in settings.")
@@ -60,6 +61,6 @@ def upload_to_s3(file_path):
     return f"https://{bucket_name}.s3.amazonaws.com/{key}"
 
 
-def send_agreement_via_whatsapp(renter, pdf_url):
+def send_agreement_via_whatsapp(renter: Any, pdf_url: str) -> bool:
     msg = f"📄 Your rent agreement is ready.\nDownload: {pdf_url}"
-    send_whatsapp_message(renter.phone, msg)
+    return send_whatsapp_message(renter.phone, msg)

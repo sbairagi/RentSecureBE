@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Optional
 
 import requests
 from notifications.models import DeviceToken
@@ -6,7 +7,7 @@ from notifications.models import DeviceToken
 logger = logging.getLogger(__name__)
 
 
-def send_push_notification(user, title, message):
+def send_push_notification(user: Any, title: str, message: str) -> Optional[bool]:
     try:
         token = DeviceToken.objects.get(user=user).token
         payload = {"to": token, "sound": "default", "title": title, "body": message}
@@ -17,8 +18,10 @@ def send_push_notification(user, title, message):
             headers=headers,
             timeout=10,
         )
+        return True
     except Exception as e:
         logger.exception(f"Failed to send push notification to user {user.id}: {e}")
+        return False
 
 
 # # Rent paid
