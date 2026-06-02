@@ -64,9 +64,10 @@ class OTP(models.Model):
 # models.py
 
 class OwnerBankDetails(models.Model):
-    owner = models.OneToOneField(User, on_delete=models.CASCADE)  # or PropertyOwner if you have that
+    owner = models.OneToOneField(User, on_delete=models.CASCADE, related_name='bank_details')
     bank_account_number = models.CharField(max_length=30)
     ifsc_code = models.CharField(max_length=20)
+    account_holder_name = models.CharField(max_length=100, blank=True, default="")
     beneficiary_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
     bank_account_verified = models.BooleanField(default=False)
 

@@ -1,5 +1,9 @@
 # services/cashfree_service.py
+import logging
+
 from core.models import OwnerBankDetails
+
+logger = logging.getLogger(__name__)
 from notification.services.rent_notify_service import (
     notify_owner,
     notify_owner_post_payout,
@@ -105,35 +109,54 @@ def register_cashfree_beneficiary(bank_details: OwnerBankDetails):
 
 
 def process_rent_payout(rent: RentRecord):
-    bank_details = OwnerBankDetails.objects.get(owner=rent.renter.property.owner)
+    """Process payout to owner via Cashfree after rent is marked PAID."""
+    try:
+        bank_details = OwnerBankDetails.objects.get(owner=rent.owner)
+    except OwnerBankDetails.DoesNotExist:
+        logger.warning(f"No bank details found for owner {rent.owner.id} (rent {rent.id})")
+        rent.payout_status = "FAILED"
+        rent.save(update_fields=['payout_status'])
+        return {"status": "FAILED", "message": "Owner bank details not found"}
 
     if not bank_details.beneficiary_id:
-        raise Exception("Owner not yet registered as beneficiary")
+        logger.warning(f"No beneficiary_id for owner {rent.owner.id} (rent {rent.id})")
+        rent.payout_status = "FAILED"
+        rent.save(update_fields=['payout_status'])
+        return {"status": "FAILED", "message": "Owner not yet registered as beneficiary"}
 
     transfer_id = f"rent_{rent.id}"
-    response = make_payout(
-        transfer_id=transfer_id,
-        amount=rent.amount,
-        remarks="Monthly rent payout",
-        bene_id=bank_details.beneficiary_id
-    )
+    try:
+        response = make_payout(
+            transfer_id=transfer_id,
+            amount=rent.amount,
+            remarks="Monthly rent payout",
+            bene_id=bank_details.beneficiary_id
+        )
+    except Exception as e:
+        logger.error(f"Cashfree payout API error for rent {rent.id}: {e}")
+        rent.payout_status = "FAILED"
+        rent.save(update_fields=['payout_status'])
+        return {"status": "FAILED", "message": str(e)}
 
-    # Set initial status
+    # Set payout status based on response
     if response.get("status") == "SUCCESS":
         rent.payout_status = "SUCCESS"
         rent.payout_reference = transfer_id
     else:
         rent.payout_status = "FAILED"
 
-    rent = rent.save()
-    notify_owner_post_payout(rent)
+    rent.save(update_fields=['payout_status', 'payout_reference'])
 
-    # 🔔 WhatsApp Alert After Saving
-    owner = rent.renter.property.owner
-    phone = owner.profile.whatsapp_number  # Make sure this is stored in +91 format
+    # Send notifications
+    try:
+        notify_owner_post_payout(rent)
+    except Exception as e:
+        logger.warning(f"Failed to notify owner after payout for rent {rent.id}: {e}")
 
-    if phone:
+    try:
         send_payout_notification(rent)
+    except Exception as e:
+        logger.warning(f"Failed to send payout notification for rent {rent.id}: {e}")
 
     return response
 

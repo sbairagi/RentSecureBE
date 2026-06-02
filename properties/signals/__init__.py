@@ -73,7 +73,7 @@ def update_unit_images_usage(sender, instance, **kwargs):
 @receiver(post_save, sender=UnitDocument)
 @receiver(post_delete, sender=UnitDocument)
 def update_unit_document_usage(sender, instance, **kwargs):
-    update_usage_count(instance.unit.owner, 'max_documents_uploads', UnitDocument)
+    update_usage_count(instance.unit.owner, 'max_unit_images', UnitDocument)
 
 
 @receiver(post_save, sender=RentRecord)
@@ -102,15 +102,22 @@ def handle_rent_payment(sender, instance, **kwargs):
 
 
 def update_renter_defaulter_status(rent: RentRecord):
-    if rent.status == "UNPAID" and rent.due_date < timezone.now().date():
+    """Check if rent is overdue and flag renter as defaulter if needed.
+
+    Fixed: Uses rent.payment_status (not rent.status).
+    Fixed: Removed invalid renter.active_agreement field.
+    """
+    if rent.payment_status == "PENDING" and rent.rent_due_date < timezone.now().date():
         renter = rent.renter
         renter.missed_rents += 1
         if renter.missed_rents >= 3 and not renter.is_flagged:
             renter.is_flagged = True
             renter.flagged_reason = "Missed 3 or more rent payments."
-            renter.active_agreement = None
-            notify_owner_renter_flagged(renter)
-        renter.save()
+            try:
+                notify_owner_renter_flagged(renter)
+            except Exception:
+                pass
+        renter.save(update_fields=['missed_rents', 'is_flagged', 'flagged_reason', 'updated_at'])
 
 
 @receiver(post_save, sender=Renter)
@@ -130,7 +137,7 @@ def notify_owner_if_unit_vacant(sender, instance, **kwargs):
                 send_whatsapp_message(
                     phone,
                     (
-                        f"Unit {unit.unit_number} is now vacant. "
+                        f"Unit {unit.unit} is now vacant. "
                         f"Please assign a new renter or mark it as "
                         f"intentionally vacant from your dashboard."
                     ),
