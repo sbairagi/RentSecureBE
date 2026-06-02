@@ -26,6 +26,7 @@ from twilio.rest import Client
 from core.utils.export_utils import generate_owner_rent_report
 from notification.services.rent_notify_service import send_payout_notification
 from referral_and_earn.models import Referral
+from properties.models import RentRecord
 from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
     process_rent_payout,
@@ -295,8 +296,6 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 # ---------------------------------------------------------------------------
 # Webhooks
 # ---------------------------------------------------------------------------
-
-from properties.models import RentRecord
 
 
 @csrf_exempt

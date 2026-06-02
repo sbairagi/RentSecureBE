@@ -4,8 +4,6 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-logger = logging.getLogger(__name__)
-
 from ai_assistant.services.archive_service import archive_renter_data
 from ai_assistant.services.invoice_service import generate_final_invoice_pdf
 from notification.models import Notification
@@ -26,6 +24,8 @@ from ..models import (
     UnitImage,
 )
 from ..services.unit_service import update_unit_status
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=Renter)
@@ -99,9 +99,6 @@ def handle_rent_payment(sender, instance, **kwargs):
 
             send_rent_receipt_on_payment(instance)
         except Exception as exc:
-            import logging
-
-            logger = logging.getLogger(__name__)
             logger.exception(
                 f"Failed to send receipt email for rent {instance.id}: {exc}"
             )
