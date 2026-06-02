@@ -1,8 +1,7 @@
 import logging
 
-from services.notifications import send_push_notification
-from services.sms_service import send_sms
-
+from notification.services.notifications import send_push_notification
+from notification.services.sms_service import send_sms
 from notification.services.whatsapp_service import send_whatsapp_message
 
 logger = logging.getLogger(__name__)
