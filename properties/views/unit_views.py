@@ -2,8 +2,6 @@ import json
 import logging
 
 from django.core.cache import cache
-
-logger = logging.getLogger(__name__)
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets
@@ -21,6 +19,8 @@ from ..serializers import (
     UnitImageSerializer,
     UnitSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class UnitViewSet(viewsets.ModelViewSet):

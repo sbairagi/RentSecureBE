@@ -3,9 +3,9 @@ import logging
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
-logger = logging.getLogger(__name__)
-
 from properties.services.summary_service import send_monthly_rent_summary_email
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 

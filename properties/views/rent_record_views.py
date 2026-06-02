@@ -9,8 +9,6 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-logger = logging.getLogger(__name__)
-
 from notification.services.rent_notify_service import send_payout_notification
 from notification.utils import send_whatsapp_message
 from rentsecure_be.services.cashfree_service import process_rent_payout
@@ -20,6 +18,8 @@ from ..feature_enforcer import FeatureEnforcer
 from ..models import Renter, RentRecord
 from ..serializers import RentRecordSerializer
 from ..utils import generate_rent_invoice_pdf
+
+logger = logging.getLogger(__name__)
 
 
 class RentRecordViewSet(viewsets.ModelViewSet):

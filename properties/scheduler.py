@@ -1,11 +1,14 @@
 # services/scheduler.py
 
+from django.utils.timezone import now
 from django_celery_beat.models import PeriodicTask
 
 from notification.services.voice_note_service import (
     alert_owner_about_delay,
     send_late_rent_reminder,
 )
+
+from .models import RentRecord
 
 
 def cancel_reminder_job(task_id: str):
@@ -14,11 +17,6 @@ def cancel_reminder_job(task_id: str):
         task.delete()
     except PeriodicTask.DoesNotExist:
         pass
-
-
-from django.utils.timezone import now
-
-from .models import RentRecord
 
 
 def get_late_rent_records():

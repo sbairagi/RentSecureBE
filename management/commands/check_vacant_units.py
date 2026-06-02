@@ -4,10 +4,10 @@ from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-logger = logging.getLogger(__name__)
-
 from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import Unit
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
