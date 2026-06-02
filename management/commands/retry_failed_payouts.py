@@ -3,8 +3,6 @@
 ######################################################################################################################
 
 
-
-
 from django.core.management.base import BaseCommand
 from rent.models import RentRecord
 from rent.services import process_rent_payout
@@ -17,7 +15,7 @@ class Command(BaseCommand):
         failed_rents = RentRecord.objects.filter(
             payment_status="PAID",
             payout_status="FAILED",
-            retry_count__lt=3  # 👈 Limit max retries
+            retry_count__lt=3,  # 👈 Limit max retries
         )
 
         for rent in failed_rents:

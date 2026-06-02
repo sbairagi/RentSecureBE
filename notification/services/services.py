@@ -27,6 +27,7 @@ from ..utils import send_whatsapp_message
 #     message=f"Payout for ₹{rent.amount} failed. Retry or check bank details."
 # )
 
+
 def notify_user(user, title, message):
     Notification.objects.create(user=user, title=title, message=message)
 

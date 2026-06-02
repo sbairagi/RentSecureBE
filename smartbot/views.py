@@ -79,14 +79,19 @@ def smart_bot_reply(request):
     # Step 1: Get context
     today = date.today()
     current_month_rents = RentRecord.objects.filter(
-        renter__property__owner=user,
-        month=today.month,
-        year=today.year
+        renter__property__owner=user, month=today.month, year=today.year
     )
-    context = "\n".join([f"{r.renter.name}: ₹{r.amount} - {r.payment_status}" for r in current_month_rents])
+    context = "\n".join(
+        [
+            f"{r.renter.name}: ₹{r.amount} - {r.payment_status}"
+            for r in current_month_rents
+        ]
+    )
 
     last_5_chats = SmartBotChat.objects.filter(user=user).order_by("-timestamp")[:5]
-    chat_context = "\n".join([f"User: {c.message}\nBot: {c.reply}" for c in last_5_chats])
+    chat_context = "\n".join(
+        [f"User: {c.message}\nBot: {c.reply}" for c in last_5_chats]
+    )
 
     # Merge with rent data, etc.
     context_data = f"""
@@ -126,4 +131,3 @@ def smart_bot_reply(request):
     # Save to DB
     SmartBotChat.objects.create(user=user, message=query, reply=context_data)
     return Response({"answer": answer})
-

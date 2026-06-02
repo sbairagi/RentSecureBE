@@ -10,6 +10,7 @@ from properties.models import Renter
 # from renters.models import Renter
 # from services.whatsapp_service import send_whatsapp_message
 
+
 def send_vacate_reminders():
     cutoff_date = timezone.now() - timedelta(days=3)
 
@@ -17,7 +18,7 @@ def send_vacate_reminders():
         is_agreement_revoked=True,
         vacated_on__isnull=True,
         revoked_on__lte=cutoff_date,
-        status__in=["active", "notice_period"]
+        status__in=["active", "notice_period"],
     )
 
     for renter in renters_to_remind:

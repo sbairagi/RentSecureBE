@@ -51,7 +51,7 @@ def update_last_vacated_date_on_renter_exit(sender, instance, **kwargs):
             today = timezone.now().date()
             if unit.last_vacated_at != today:
                 unit.last_vacated_at = today
-                unit.save(update_fields=['last_vacated_at'])
+                unit.save(update_fields=["last_vacated_at"])
 
 
 @receiver(post_delete, sender=Renter)

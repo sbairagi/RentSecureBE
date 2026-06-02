@@ -28,19 +28,20 @@ def update_unit_status(unit: Unit) -> None:
     """
     # Check if there's an active renter
     active_renter = Renter.objects.filter(
-        unit=unit,
-        status__in=["active", "notice_period"]
+        unit=unit, status__in=["active", "notice_period"]
     ).exists()
 
     # Determine new status
-    new_status = Unit.VacancyStatus.OCCUPIED if active_renter else Unit.VacancyStatus.VACANT
+    new_status = (
+        Unit.VacancyStatus.OCCUPIED if active_renter else Unit.VacancyStatus.VACANT
+    )
     is_vacant = not active_renter
 
     # Only update if status has changed
     if unit.status != new_status or unit.is_vacant != is_vacant:
         unit.status = new_status
         unit.is_vacant = is_vacant
-        unit.save(update_fields=['status', 'is_vacant', 'updated_at'])
+        unit.save(update_fields=["status", "is_vacant", "updated_at"])
 
 
 def get_building_analytics(building) -> dict:
@@ -107,6 +108,8 @@ def get_owner_analytics(user) -> dict:
             "total_units": total_units,
             "occupied_units": total_occupied,
             "vacant_units": total_vacant,
-            "overall_occupancy_rate": round((total_occupied / total_units * 100), 2) if total_units > 0 else 0,
-        }
+            "overall_occupancy_rate": (
+                round((total_occupied / total_units * 100), 2) if total_units > 0 else 0
+            ),
+        },
     }

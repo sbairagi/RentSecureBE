@@ -9,7 +9,9 @@ def generate_ai_alerts(owner):
     today = date.today()
     six_months_ago = today - timedelta(days=180)
 
-    renters = Renter.objects.filter(property__owner=owner, status__in=["active", "notice_period"])
+    renters = Renter.objects.filter(
+        property__owner=owner, status__in=["active", "notice_period"]
+    )
 
     for renter in renters:
         rents = RentRecord.objects.filter(renter=renter).order_by("-month", "-year")
@@ -20,17 +22,21 @@ def generate_ai_alerts(owner):
             AIAlert.objects.get_or_create(
                 owner=owner,
                 alert_type="Missed Rent",
-                message=f"{renter.name} missed last 2+ months rent."
+                message=f"{renter.name} missed last 2+ months rent.",
             )
 
         # 2. Irregular rent pattern
         past_six = rents.filter(created_at__gte=six_months_ago)
-        delayed = [r for r in past_six if r.payment_status == "PAID" and r.paid_date and r.paid_date > r.due_date]
+        delayed = [
+            r
+            for r in past_six
+            if r.payment_status == "PAID" and r.paid_date and r.paid_date > r.due_date
+        ]
         if len(delayed) >= 3:
             AIAlert.objects.get_or_create(
                 owner=owner,
                 alert_type="Irregular Rent",
-                message=f"{renter.name} has delayed rent 3+ times recently."
+                message=f"{renter.name} has delayed rent 3+ times recently.",
             )
 
 

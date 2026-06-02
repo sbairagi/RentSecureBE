@@ -5,6 +5,7 @@ from django.conf import settings
 
 openai.api_key = settings.OPENAI_API_KEY
 
+
 def gpt_smart_reply(user, user_query, context_data):
     # prompt = f"""
     # You are a smart assistant for a rent management system. Based on the following data, answer the user's question smartly.
@@ -34,9 +35,12 @@ def gpt_smart_reply(user, user_query, context_data):
     response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant for rent management."},
-            {"role": "user", "content": prompt}
-        ]
+            {
+                "role": "system",
+                "content": "You are a helpful assistant for rent management.",
+            },
+            {"role": "user", "content": prompt},
+        ],
     )
 
-    return response['choices'][0]['message']['content']
+    return response["choices"][0]["message"]["content"]

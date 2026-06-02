@@ -45,7 +45,7 @@ class PaymentProcessingLoopholes(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         self.unit = Unit.objects.create(
             owner=self.user,
@@ -56,7 +56,7 @@ class PaymentProcessingLoopholes(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
 
     def test_loophole_negative_rent_payment(self):
@@ -66,18 +66,19 @@ class PaymentProcessingLoopholes(TestCase):
             name="Alice",
             phone="+919876543210",
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
 
         # Try to create negative rent record
         from django.core.exceptions import ValidationError
+
         rent_record = RentRecord(
             renter=renter,
             unit=self.unit,
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=Decimal("-100"),  # LOOPHOLE: Should fail
-            date_paid=date(2025, 1, 5)
+            date_paid=date(2025, 1, 5),
         )
         with self.assertRaises(ValidationError):
             rent_record.full_clean()
@@ -89,7 +90,7 @@ class PaymentProcessingLoopholes(TestCase):
             name="Bob",
             phone="+919876543211",
             rent_amount=Decimal("0.00"),
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
         # This is allowed but might be unintended
         self.assertEqual(renter.rent_amount, Decimal("0.00"))
@@ -101,7 +102,7 @@ class PaymentProcessingLoopholes(TestCase):
             name="Charlie",
             phone="+919876543212",
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
         rent_record = RentRecord.objects.create(
             renter=renter,
@@ -109,7 +110,7 @@ class PaymentProcessingLoopholes(TestCase):
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=Decimal("999999"),  # Excessive overpayment
-            date_paid=date(2025, 1, 5)
+            date_paid=date(2025, 1, 5),
         )
         # No validation prevents this
         self.assertEqual(rent_record.amount_paid, Decimal("999999"))
@@ -121,7 +122,7 @@ class PaymentProcessingLoopholes(TestCase):
             name="Diana",
             phone="+919876543213",
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
         rent_record = RentRecord.objects.create(
             renter=renter,
@@ -129,7 +130,7 @@ class PaymentProcessingLoopholes(TestCase):
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=10000,
-            date_paid=date(2025, 1, 1)  # Same date - early payment
+            date_paid=date(2025, 1, 1),  # Same date - early payment
         )
         # This is technically allowed
         self.assertEqual(rent_record.date_paid, date(2025, 1, 1))
@@ -141,7 +142,7 @@ class PaymentProcessingLoopholes(TestCase):
             name="Eve",
             phone="+919876543214",
             rent_amount=10000,
-            start_date=date(2025, 1, 15)
+            start_date=date(2025, 1, 15),
         )
         # Payment for first month recorded before start date
         rent_record = RentRecord.objects.create(
@@ -150,7 +151,7 @@ class PaymentProcessingLoopholes(TestCase):
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=10000,
-            date_paid=date(2025, 1, 10)  # Before renter start date!
+            date_paid=date(2025, 1, 10),  # Before renter start date!
         )
         # This might be unintended
         self.assertLess(rent_record.date_paid, renter.start_date)
@@ -162,7 +163,7 @@ class PaymentProcessingLoopholes(TestCase):
             name="Frank",
             phone="+919876543215",
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
         RentRecord.objects.create(
             renter=renter,
@@ -170,7 +171,7 @@ class PaymentProcessingLoopholes(TestCase):
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=5000,
-            date_paid=date(2025, 1, 5)
+            date_paid=date(2025, 1, 5),
         )
         # Try to create another for same month
         with self.assertRaises(Exception):  # Should be unique constraint
@@ -180,7 +181,7 @@ class PaymentProcessingLoopholes(TestCase):
                 owner=self.user,
                 rent_month=date(2025, 1, 1),
                 amount_paid=5000,
-                date_paid=date(2025, 1, 10)
+                date_paid=date(2025, 1, 10),
             )
 
 
@@ -196,7 +197,7 @@ class RenterStatusLoopholes(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         self.unit = Unit.objects.create(
             owner=self.user,
@@ -207,7 +208,7 @@ class RenterStatusLoopholes(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
 
     def test_loophole_inconsistent_is_active_status(self):
@@ -219,7 +220,7 @@ class RenterStatusLoopholes(TestCase):
             rent_amount=10000,
             start_date=date(2025, 1, 1),
             is_active=True,
-            status=Renter.RenterStatus.DEACTIVATED  # INCONSISTENT!
+            status=Renter.RenterStatus.DEACTIVATED,  # INCONSISTENT!
         )
         # Both fields can contradict each other
         self.assertTrue(renter.is_active)
@@ -235,7 +236,7 @@ class RenterStatusLoopholes(TestCase):
             start_date=date(2025, 1, 1),
             is_active=True,
             is_agreement_revoked=True,
-            revoked_by_owner=True
+            revoked_by_owner=True,
         )
         # These two states contradict each other
         self.assertTrue(renter.is_active)
@@ -250,7 +251,7 @@ class RenterStatusLoopholes(TestCase):
             rent_amount=10000,
             start_date=date(2025, 1, 1),
             is_agreement_revoked=True,
-            revoked_on=None  # No timestamp!
+            revoked_on=None,  # No timestamp!
         )
         self.assertTrue(renter.is_agreement_revoked)
         self.assertIsNone(renter.revoked_on)
@@ -265,7 +266,7 @@ class RenterStatusLoopholes(TestCase):
             start_date=date(2025, 1, 1),
             end_date=date(2025, 6, 30),
             is_active=True,
-            status=Renter.RenterStatus.ACTIVE
+            status=Renter.RenterStatus.ACTIVE,
         )
         # Past end date but still active
         past_end = renter.end_date < date.today()
@@ -283,7 +284,7 @@ class RenterStatusLoopholes(TestCase):
             start_date=date(2025, 1, 1),
             is_agreement_revoked=True,
             revoked_by_owner=False,  # Revoked but not by owner?
-            revocation_reason="Mutual agreement"
+            revocation_reason="Mutual agreement",
         )
         # Unclear who revoked the agreement
         self.assertTrue(renter.is_agreement_revoked)
@@ -300,7 +301,7 @@ class RenterStatusLoopholes(TestCase):
             is_active=True,
             status=Renter.RenterStatus.ACTIVE,
             is_flagged=True,
-            flagged_reason="Multiple late payments"
+            flagged_reason="Multiple late payments",
         )
         # Flagged for issues but still active
         self.assertTrue(renter.is_active)
@@ -314,7 +315,7 @@ class RenterStatusLoopholes(TestCase):
             phone="+919876543216",
             rent_amount=10000,
             start_date=date(2025, 1, 1),
-            missed_rents=5
+            missed_rents=5,
         )
         # missed_rents is manually set, not calculated
         self.assertEqual(renter.missed_rents, 5)
@@ -332,7 +333,7 @@ class DataConsistencyLoopholes(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
 
     def test_loophole_unit_status_is_vacant_mismatch(self):
@@ -348,7 +349,7 @@ class DataConsistencyLoopholes(TestCase):
             postal_code="10001",
             unit_type=Unit.UnitType.FLAT,
             status="occupied",
-            is_vacant=True  # CONTRADICTION!
+            is_vacant=True,  # CONTRADICTION!
         )
         self.assertEqual(unit.status, "occupied")
         self.assertTrue(unit.is_vacant)
@@ -365,7 +366,7 @@ class DataConsistencyLoopholes(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
         # building_name doesn't match building relationship
         self.assertNotEqual(unit.building_name, unit.building.name)
@@ -386,7 +387,7 @@ class DataConsistencyLoopholes(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
         caretaker1 = Caretaker.objects.create(
             unit=unit,
@@ -398,7 +399,7 @@ class DataConsistencyLoopholes(TestCase):
             country="USA",
             postal_code="10001",
             start_date=date(2025, 1, 1),
-            end_date=date(2025, 6, 30)
+            end_date=date(2025, 6, 30),
         )
         caretaker2 = Caretaker.objects.create(
             unit=unit,
@@ -410,7 +411,7 @@ class DataConsistencyLoopholes(TestCase):
             country="USA",
             postal_code="10001",
             start_date=date(2025, 3, 1),  # Overlaps!
-            end_date=date(2025, 12, 31)
+            end_date=date(2025, 12, 31),
         )
         # No validation prevents overlapping caretaker dates
         self.assertEqual(caretaker1.unit, caretaker2.unit)
@@ -428,7 +429,7 @@ class UnitArchivingLoopholes(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
 
     def test_loophole_archived_unit_still_has_active_renters(self):
@@ -443,7 +444,7 @@ class UnitArchivingLoopholes(TestCase):
             country="USA",
             postal_code="10001",
             unit_type=Unit.UnitType.FLAT,
-            is_archived=True
+            is_archived=True,
         )
         renter = Renter.objects.create(
             unit=unit,
@@ -451,7 +452,7 @@ class UnitArchivingLoopholes(TestCase):
             phone="+919876543210",
             rent_amount=10000,
             start_date=date(2025, 1, 1),
-            is_active=True
+            is_active=True,
         )
         # Active renter in archived unit
         self.assertTrue(unit.is_archived)
@@ -469,7 +470,7 @@ class UnitArchivingLoopholes(TestCase):
             country="USA",
             postal_code="10001",
             unit_type=Unit.UnitType.FLAT,
-            is_archived=True
+            is_archived=True,
         )
         caretaker = Caretaker.objects.create(
             unit=unit,
@@ -479,7 +480,7 @@ class UnitArchivingLoopholes(TestCase):
             city="New York",
             state="NY",
             country="USA",
-            postal_code="10001"
+            postal_code="10001",
         )
         # Can create caretaker on archived unit
         self.assertTrue(unit.is_archived)
@@ -491,24 +492,16 @@ class FeatureEnforcerLoopholes(TestCase):
 
     def setUp(self):
         self.free_plan = SubscriptionPlan.objects.create(
-            name="free",
-            monthly_price=0,
-            yearly_price=0
+            name="free", monthly_price=0, yearly_price=0
         )
         self.pro_plan = SubscriptionPlan.objects.create(
-            name="pro",
-            monthly_price=Decimal("29.99"),
-            yearly_price=Decimal("299.99")
+            name="pro", monthly_price=Decimal("29.99"), yearly_price=Decimal("299.99")
         )
         PlanFeatureLimit.objects.create(
-            plan=self.free_plan,
-            feature_key="max_buildings",
-            value="1"
+            plan=self.free_plan, feature_key="max_buildings", value="1"
         )
         PlanFeatureLimit.objects.create(
-            plan=self.pro_plan,
-            feature_key="max_buildings",
-            value="10"
+            plan=self.pro_plan, feature_key="max_buildings", value="10"
         )
         self.now = timezone.now()
 
@@ -517,7 +510,7 @@ class FeatureEnforcerLoopholes(TestCase):
         user = User.objects.create_user(username="noplan_user", password="pass123")
         enforcer = FeatureEnforcer(user)
         plan = enforcer.get_plan_name()
-        self.assertEqual(plan, 'free')
+        self.assertEqual(plan, "free")
 
     def test_loophole_expired_plan_immediate_enforcement(self):
         """LOOPHOLE: Grace period handling might not be applied correctly"""
@@ -525,7 +518,7 @@ class FeatureEnforcerLoopholes(TestCase):
         UserSubscription.objects.create(
             user=user,
             plan=self.pro_plan,
-            end_date=self.now - timedelta(days=3)  # 3 days ago
+            end_date=self.now - timedelta(days=3),  # 3 days ago
         )
         enforcer = FeatureEnforcer(user)
         # Should still use pro limits (within grace period)
@@ -560,7 +553,7 @@ class ConcurrencyLoopholes(TransactionTestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         self.unit = Unit.objects.create(
             owner=self.user,
@@ -571,14 +564,14 @@ class ConcurrencyLoopholes(TransactionTestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
         self.renter = Renter.objects.create(
             unit=self.unit,
             name="Alice",
             phone="+919876543210",
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
 
     def test_loophole_concurrent_rent_record_creation(self):
@@ -594,7 +587,7 @@ class ConcurrencyLoopholes(TransactionTestCase):
             owner=self.user,
             rent_month=month,
             amount_paid=10000,
-            date_paid=date(2025, 1, 5)
+            date_paid=date(2025, 1, 5),
         )
 
         # Second concurrent request should fail
@@ -605,7 +598,7 @@ class ConcurrencyLoopholes(TransactionTestCase):
                 owner=self.user,
                 rent_month=month,
                 amount_paid=10000,
-                date_paid=date(2025, 1, 5)
+                date_paid=date(2025, 1, 5),
             )
 
 
@@ -621,7 +614,7 @@ class UniquenessConstraintTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         self.unit = Unit.objects.create(
             owner=self.user,
@@ -632,7 +625,7 @@ class UniquenessConstraintTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
 
     def test_loophole_null_phone_uniqueness(self):
@@ -648,7 +641,7 @@ class UniquenessConstraintTests(TestCase):
             name="Alice",
             phone="+919876543210",
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
 
         # Create another unit
@@ -661,7 +654,7 @@ class UniquenessConstraintTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
 
         # Same phone, different unit - should be allowed
@@ -670,7 +663,7 @@ class UniquenessConstraintTests(TestCase):
             name="Alice Smith",
             phone="+919876543210",  # Same phone!
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
 
         # This might be unintended - same person renting two units?

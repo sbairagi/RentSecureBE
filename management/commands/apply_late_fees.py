@@ -10,17 +10,17 @@ from notification.services.whatsapp_service import send_whatsapp_message
 
 
 class Command(BaseCommand):
-    help = 'Apply late fee to unpaid rents after due date and send reminders'
+    help = "Apply late fee to unpaid rents after due date and send reminders"
 
     def handle(self, *args, **kwargs):
         today = now().date()
         grace_days = 3
-        Decimal('300.00')
+        Decimal("300.00")
 
         overdue_rents = RentRecord.objects.filter(
-            payment_status='DUE',
+            payment_status="DUE",
             late_fee=0,
-            due_date__lt=today - timedelta(days=grace_days)
+            due_date__lt=today - timedelta(days=grace_days),
         )
 
         for rent in overdue_rents:
@@ -50,7 +50,11 @@ class Command(BaseCommand):
 
         #     send_whatsapp_message(phone, message)
 
-        self.stdout.write(self.style.SUCCESS(f'Late fees applied to {overdue_rents.count()} rent records.'))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Late fees applied to {overdue_rents.count()} rent records."
+            )
+        )
 
 
 # 0 2 * * * /path/to/venv/bin/python /path/to/manage.py apply_late_fees

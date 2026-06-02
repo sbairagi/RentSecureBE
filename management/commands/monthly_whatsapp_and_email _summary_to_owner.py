@@ -15,21 +15,19 @@ def send_all_owners_monthly_summary():
 
         # Optional: Email with Invoices Attache
         email = EmailMessage(
-            subject="Your Monthly Rent Summary",
-            body=msg,
-            to=[owner.email]
+            subject="Your Monthly Rent Summary", body=msg, to=[owner.email]
         )
         email.send()
 
 
 def generate_monthly_summary_for_owner(owner: Owner):
     today = now().date()
-    month, year = today.month - 1 or 12, today.year if today.month > 1 else today.year - 1
+    month, year = today.month - 1 or 12, (
+        today.year if today.month > 1 else today.year - 1
+    )
 
     rents = RentRecord.objects.filter(
-        renter__property__owner=owner,
-        month=month,
-        year=year
+        renter__property__owner=owner, month=month, year=year
     ).select_related("renter", "renter__property")
 
     summary = {
@@ -44,12 +42,15 @@ def generate_monthly_summary_for_owner(owner: Owner):
         if r.payment_status == "PAID":
             summary["received"] += r.amount
             if r.payout_status != "SUCCESS":
-                summary["failed_payouts"].append(f"{r.renter.name} ({r.renter.property.name}) - ₹{r.amount}")
+                summary["failed_payouts"].append(
+                    f"{r.renter.name} ({r.renter.property.name}) - ₹{r.amount}"
+                )
         else:
-            summary["pending_rents"].append(f"{r.renter.name} ({r.renter.property.name}) - ₹{r.amount}")
+            summary["pending_rents"].append(
+                f"{r.renter.name} ({r.renter.property.name}) - ₹{r.amount}"
+            )
 
     return summary
-
 
 
 def build_summary_message(owner, summary):

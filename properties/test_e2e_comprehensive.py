@@ -49,7 +49,9 @@ class BuildingModelTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(username="owner1", password="pass123")
-        self.other_user = User.objects.create_user(username="owner2", password="pass123")
+        self.other_user = User.objects.create_user(
+            username="owner2", password="pass123"
+        )
 
     def test_create_building(self):
         """Test creating a building"""
@@ -60,7 +62,7 @@ class BuildingModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         self.assertEqual(building.name, "Test Building")
         self.assertEqual(building.owner, self.user)
@@ -75,7 +77,7 @@ class BuildingModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         with self.assertRaises(Exception):  # IntegrityError
             Building.objects.create(
@@ -85,7 +87,7 @@ class BuildingModelTests(TestCase):
                 state="NY",
                 country="USA",
                 postal_code="10001",
-                owner=self.user
+                owner=self.user,
             )
 
     def test_same_building_different_owners_allowed(self):
@@ -97,7 +99,7 @@ class BuildingModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         building2 = Building.objects.create(
             name="Test Building",
@@ -106,7 +108,7 @@ class BuildingModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.other_user
+            owner=self.other_user,
         )
         self.assertEqual(building1.owner, self.user)
         self.assertEqual(building2.owner, self.other_user)
@@ -121,7 +123,7 @@ class BuildingModelTests(TestCase):
             country="USA",
             postal_code="10001",
             owner=self.user,
-            is_archived=True
+            is_archived=True,
         )
         self.assertTrue(building.is_archived)
 
@@ -134,7 +136,7 @@ class BuildingModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         self.assertIsNotNone(str(building))
 
@@ -144,7 +146,9 @@ class UnitModelTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(username="owner1", password="pass123")
-        self.other_user = User.objects.create_user(username="owner2", password="pass123")
+        self.other_user = User.objects.create_user(
+            username="owner2", password="pass123"
+        )
         self.building = Building.objects.create(
             name="Test Building",
             address_line="123 Main St",
@@ -152,7 +156,7 @@ class UnitModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
 
     def test_create_unit(self):
@@ -168,7 +172,7 @@ class UnitModelTests(TestCase):
             postal_code="10001",
             unit_type=Unit.UnitType.FLAT,
             status="vacant",
-            is_vacant=True
+            is_vacant=True,
         )
         self.assertEqual(unit.unit, "101")
         self.assertTrue(unit.is_vacant)
@@ -186,7 +190,7 @@ class UnitModelTests(TestCase):
             country="USA",
             postal_code="10001",
             unit_type=Unit.UnitType.FLAT,
-            status="vacant"
+            status="vacant",
         )
         with self.assertRaises(Exception):  # IntegrityError
             Unit.objects.create(
@@ -199,7 +203,7 @@ class UnitModelTests(TestCase):
                 country="USA",
                 postal_code="10001",
                 unit_type=Unit.UnitType.FLAT,
-                status="vacant"
+                status="vacant",
             )
 
     def test_unit_without_building(self):
@@ -214,7 +218,7 @@ class UnitModelTests(TestCase):
             country="USA",
             postal_code="02101",
             unit_type=Unit.UnitType.HOUSE,
-            status="vacant"
+            status="vacant",
         )
         self.assertIsNone(unit.building)
         self.assertEqual(unit.unit, "Standalone101")
@@ -231,7 +235,7 @@ class UnitModelTests(TestCase):
             country="USA",
             postal_code="10001",
             unit_type=Unit.UnitType.FLAT,
-            latitude=91  # Invalid
+            latitude=91,  # Invalid
         )
         with self.assertRaises(ValidationError):
             unit.full_clean()
@@ -248,7 +252,7 @@ class UnitModelTests(TestCase):
             country="USA",
             postal_code="10001",
             unit_type=Unit.UnitType.FLAT,
-            longitude=181  # Invalid
+            longitude=181,  # Invalid
         )
         with self.assertRaises(ValidationError):
             unit.full_clean()
@@ -266,7 +270,7 @@ class UnitModelTests(TestCase):
             postal_code="10001",
             unit_type=Unit.UnitType.FLAT,
             latitude=Decimal("40.7128"),
-            longitude=Decimal("-74.0060")
+            longitude=Decimal("-74.0060"),
         )
         self.assertEqual(str(unit.latitude), "40.7128")
         self.assertEqual(str(unit.longitude), "-74.0060")
@@ -283,7 +287,7 @@ class UnitModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
         self.assertEqual(unit.name, "Apt Complex")
 
@@ -297,7 +301,7 @@ class UnitModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
         self.assertEqual(unit2.name, "106")
 
@@ -313,7 +317,7 @@ class UnitModelTests(TestCase):
                 state="NY",
                 country="USA",
                 postal_code="10001",
-                unit_type=unit_type
+                unit_type=unit_type,
             )
             self.assertEqual(unit.unit_type, unit_type)
 
@@ -330,7 +334,7 @@ class UnitModelTests(TestCase):
             postal_code="10001",
             unit_type=Unit.UnitType.FLAT,
             status="vacant",
-            is_vacant=True
+            is_vacant=True,
         )
         self.assertEqual(unit.status, "vacant")
         self.assertTrue(unit.is_vacant)
@@ -346,7 +350,7 @@ class UnitModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
 
         building2 = Building.objects.create(
@@ -356,7 +360,7 @@ class UnitModelTests(TestCase):
             state="MA",
             country="USA",
             postal_code="02101",
-            owner=self.other_user
+            owner=self.other_user,
         )
 
         unit2 = Unit.objects.create(
@@ -368,7 +372,7 @@ class UnitModelTests(TestCase):
             state="MA",
             country="USA",
             postal_code="02101",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
         self.assertEqual(unit1.unit, unit2.unit)
 
@@ -385,7 +389,7 @@ class CaretakerModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         self.unit = Unit.objects.create(
             owner=self.user,
@@ -396,7 +400,7 @@ class CaretakerModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
 
     def test_create_caretaker(self):
@@ -409,7 +413,7 @@ class CaretakerModelTests(TestCase):
             city="New York",
             state="NY",
             country="USA",
-            postal_code="10001"
+            postal_code="10001",
         )
         self.assertEqual(caretaker.name, "John Doe")
         self.assertEqual(caretaker.phone, "+919876543210")
@@ -425,7 +429,7 @@ class CaretakerModelTests(TestCase):
                 city="New York",
                 state="NY",
                 country="USA",
-                postal_code="10001"
+                postal_code="10001",
             )
             caretaker.full_clean()
 
@@ -439,7 +443,7 @@ class CaretakerModelTests(TestCase):
             city="New York",
             state="NY",
             country="USA",
-            postal_code="10001"
+            postal_code="10001",
         )
         with self.assertRaises(Exception):
             Caretaker.objects.create(
@@ -450,7 +454,7 @@ class CaretakerModelTests(TestCase):
                 city="New York",
                 state="NY",
                 country="USA",
-                postal_code="10001"
+                postal_code="10001",
             )
 
     def test_end_date_before_start_date(self):
@@ -465,7 +469,7 @@ class CaretakerModelTests(TestCase):
             country="USA",
             postal_code="10001",
             start_date=date(2025, 1, 15),
-            end_date=date(2025, 1, 10)
+            end_date=date(2025, 1, 10),
         )
         with self.assertRaises(ValidationError):
             caretaker.full_clean()
@@ -482,7 +486,7 @@ class CaretakerModelTests(TestCase):
             country="USA",
             postal_code="10001",
             start_date=date(2025, 1, 1),
-            end_date=date(2025, 12, 31)
+            end_date=date(2025, 12, 31),
         )
         self.assertEqual(caretaker.start_date, date(2025, 1, 1))
         self.assertEqual(caretaker.end_date, date(2025, 12, 31))
@@ -493,7 +497,9 @@ class RenterModelTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(username="owner1", password="pass123")
-        self.renter_user = User.objects.create_user(username="renter1", password="pass123")
+        self.renter_user = User.objects.create_user(
+            username="renter1", password="pass123"
+        )
         self.building = Building.objects.create(
             name="Test Building",
             address_line="123 Main St",
@@ -501,7 +507,7 @@ class RenterModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         self.unit = Unit.objects.create(
             owner=self.user,
@@ -512,7 +518,7 @@ class RenterModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
 
     def test_create_renter(self):
@@ -523,7 +529,7 @@ class RenterModelTests(TestCase):
             phone="+919876543210",
             rent_amount=10000,
             start_date=date(2025, 1, 1),
-            user=self.renter_user
+            user=self.renter_user,
         )
         self.assertEqual(renter.name, "Alice Smith")
         self.assertEqual(renter.status, Renter.RenterStatus.ACTIVE)
@@ -538,7 +544,7 @@ class RenterModelTests(TestCase):
                 phone=f"+9198765432{status_choice[:2]}",
                 rent_amount=10000,
                 start_date=date(2025, 1, 1),
-                status=status_choice
+                status=status_choice,
             )
             self.assertEqual(renter.status, status_choice)
 
@@ -549,7 +555,7 @@ class RenterModelTests(TestCase):
             name="Alice Smith",
             phone="+919876543210",
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
         with self.assertRaises(Exception):
             Renter.objects.create(
@@ -557,7 +563,7 @@ class RenterModelTests(TestCase):
                 name="Bob Smith",
                 phone="+919876543210",
                 rent_amount=10000,
-                start_date=date(2025, 1, 1)
+                start_date=date(2025, 1, 1),
             )
 
     def test_end_date_before_start_date(self):
@@ -568,7 +574,7 @@ class RenterModelTests(TestCase):
             phone="+919876543210",
             rent_amount=10000,
             start_date=date(2025, 1, 15),
-            end_date=date(2025, 1, 10)
+            end_date=date(2025, 1, 10),
         )
         with self.assertRaises(ValidationError):
             renter.full_clean()
@@ -581,7 +587,7 @@ class RenterModelTests(TestCase):
             phone="+919876543210",
             rent_amount=10000,
             start_date=date(2025, 1, 1),
-            end_date=date(2025, 12, 31)
+            end_date=date(2025, 12, 31),
         )
         self.assertEqual(renter.start_date, date(2025, 1, 1))
         self.assertEqual(renter.end_date, date(2025, 12, 31))
@@ -595,7 +601,7 @@ class RenterModelTests(TestCase):
             rent_amount=10000,
             start_date=date(2025, 1, 1),
             is_flagged=True,
-            flagged_reason="Multiple late payments"
+            flagged_reason="Multiple late payments",
         )
         self.assertTrue(renter.is_flagged)
         self.assertIsNotNone(renter.flagged_reason)
@@ -611,7 +617,7 @@ class RenterModelTests(TestCase):
             is_agreement_revoked=True,
             revoked_by_owner=True,
             revocation_reason="Non-payment",
-            revoked_on=timezone.now()
+            revoked_on=timezone.now(),
         )
         self.assertTrue(renter.is_agreement_revoked)
         self.assertTrue(renter.revoked_by_owner)
@@ -624,7 +630,7 @@ class RenterModelTests(TestCase):
             phone="+919876543210",
             rent_amount=10000,
             start_date=date(2025, 1, 1),
-            vacated_on=date(2025, 12, 31)
+            vacated_on=date(2025, 12, 31),
         )
         self.assertEqual(renter.vacated_on, date(2025, 12, 31))
 
@@ -636,7 +642,7 @@ class RenterModelTests(TestCase):
             phone="+919876543210",
             rent_amount=10000,
             start_date=date(2025, 1, 1),
-            late_payment_count=3
+            late_payment_count=3,
         )
         self.assertEqual(renter.late_payment_count, 3)
 
@@ -648,7 +654,7 @@ class RenterModelTests(TestCase):
             phone="+919876543210",
             rent_amount=10000,
             start_date=date(2025, 1, 1),
-            missed_rents=2
+            missed_rents=2,
         )
         self.assertEqual(renter.missed_rents, 2)
 
@@ -665,7 +671,7 @@ class RentRecordModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         self.unit = Unit.objects.create(
             owner=self.user,
@@ -676,14 +682,14 @@ class RentRecordModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
         self.renter = Renter.objects.create(
             unit=self.unit,
             name="Alice Smith",
             phone="+919876543210",
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
 
     def test_create_rent_record(self):
@@ -696,7 +702,7 @@ class RentRecordModelTests(TestCase):
             amount_paid=10000,
             date_paid=date(2025, 1, 5),
             payment_status=RentRecord.PaymentStatus.PAID,
-            payment_mode=RentRecord.PaymentMode.CASH
+            payment_mode=RentRecord.PaymentMode.CASH,
         )
         self.assertEqual(rent_record.amount_paid, Decimal("10000"))
         self.assertEqual(rent_record.payment_status, RentRecord.PaymentStatus.PAID)
@@ -709,7 +715,7 @@ class RentRecordModelTests(TestCase):
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=-1000,
-            date_paid=date(2025, 1, 5)
+            date_paid=date(2025, 1, 5),
         )
         with self.assertRaises(ValidationError):
             rent_record.full_clean()
@@ -722,7 +728,7 @@ class RentRecordModelTests(TestCase):
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=10000,
-            date_paid=date(2024, 12, 1)
+            date_paid=date(2024, 12, 1),
         )
         with self.assertRaises(ValidationError):
             rent_record.full_clean()
@@ -735,7 +741,7 @@ class RentRecordModelTests(TestCase):
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=10000,
-            date_paid=date(2025, 1, 1)
+            date_paid=date(2025, 1, 1),
         )
         self.assertEqual(rent_record.rent_month, date(2025, 1, 1))
         self.assertEqual(rent_record.date_paid, date(2025, 1, 1))
@@ -751,7 +757,7 @@ class RentRecordModelTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
         rent_record = RentRecord(
             renter=self.renter,
@@ -759,7 +765,7 @@ class RentRecordModelTests(TestCase):
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=10000,
-            date_paid=date(2025, 1, 5)
+            date_paid=date(2025, 1, 5),
         )
         with self.assertRaises(ValidationError):
             rent_record.full_clean()
@@ -772,7 +778,7 @@ class RentRecordModelTests(TestCase):
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=10000,
-            date_paid=date(2025, 1, 5)
+            date_paid=date(2025, 1, 5),
         )
         with self.assertRaises(Exception):
             RentRecord.objects.create(
@@ -781,7 +787,7 @@ class RentRecordModelTests(TestCase):
                 owner=self.user,
                 rent_month=date(2025, 1, 1),
                 amount_paid=10000,
-                date_paid=date(2025, 1, 5)
+                date_paid=date(2025, 1, 5),
             )
 
     def test_payment_mode_choices(self):
@@ -794,7 +800,7 @@ class RentRecordModelTests(TestCase):
                 rent_month=date(2025, index, 1),
                 amount_paid=10000,
                 date_paid=date(2025, 2, 5),
-                payment_mode=mode
+                payment_mode=mode,
             )
             self.assertEqual(rent_record.payment_mode, mode)
 
@@ -808,7 +814,7 @@ class RentRecordModelTests(TestCase):
                 rent_month=date(2025, index, 1),
                 amount_paid=10000,
                 date_paid=date(2025, 3, 5),
-                payment_status=status
+                payment_status=status,
             )
             self.assertEqual(rent_record.payment_status, status)
 
@@ -823,7 +829,7 @@ class RentRecordModelTests(TestCase):
             date_paid=date(2025, 1, 5),
             payout_status="PENDING",
             payout_reference="PAY123456",
-            payout_retry_count=2
+            payout_retry_count=2,
         )
         self.assertEqual(rent_record.payout_status, "PENDING")
         self.assertEqual(rent_record.payout_reference, "PAY123456")
@@ -839,7 +845,7 @@ class RentRecordModelTests(TestCase):
             amount_paid=10000,
             date_paid=date(2025, 1, 5),
             razorpay_order_id="order_12345",
-            razorpay_payment_status="PAID"
+            razorpay_payment_status="PAID",
         )
         self.assertEqual(rent_record.razorpay_order_id, "order_12345")
         self.assertEqual(rent_record.razorpay_payment_status, "PAID")
@@ -855,7 +861,7 @@ class RentRecordModelTests(TestCase):
             date_paid=date(2025, 1, 5),
             grace_days=5,
             late_fee=Decimal("100.00"),
-            adjustment_reason="Applied grace period"
+            adjustment_reason="Applied grace period",
         )
         self.assertEqual(rent_record.grace_days, 5)
         self.assertEqual(rent_record.late_fee, Decimal("100.00"))
@@ -866,29 +872,35 @@ class FeatureEnforcerTests(TestCase):
 
     def setUp(self):
         self.free_plan = SubscriptionPlan.objects.create(
-            name="free",
-            monthly_price=0,
-            yearly_price=0
+            name="free", monthly_price=0, yearly_price=0
         )
         self.pro_plan = SubscriptionPlan.objects.create(
-            name="pro",
-            monthly_price=Decimal("29.99"),
-            yearly_price=Decimal("299.99")
+            name="pro", monthly_price=Decimal("29.99"), yearly_price=Decimal("299.99")
         )
         self.unlimited_plan = SubscriptionPlan.objects.create(
-            name="unlimited",
-            monthly_price=999,
-            yearly_price=9999
+            name="unlimited", monthly_price=999, yearly_price=9999
         )
 
         # Setup feature limits
-        PlanFeatureLimit.objects.create(plan=self.free_plan, feature_key="max_buildings", value="1")
-        PlanFeatureLimit.objects.create(plan=self.pro_plan, feature_key="max_buildings", value="10")
-        PlanFeatureLimit.objects.create(plan=self.unlimited_plan, feature_key="max_buildings", value="unlimited")
+        PlanFeatureLimit.objects.create(
+            plan=self.free_plan, feature_key="max_buildings", value="1"
+        )
+        PlanFeatureLimit.objects.create(
+            plan=self.pro_plan, feature_key="max_buildings", value="10"
+        )
+        PlanFeatureLimit.objects.create(
+            plan=self.unlimited_plan, feature_key="max_buildings", value="unlimited"
+        )
 
-        PlanFeatureLimit.objects.create(plan=self.free_plan, feature_key="max_units", value="3")
-        PlanFeatureLimit.objects.create(plan=self.pro_plan, feature_key="max_units", value="50")
-        PlanFeatureLimit.objects.create(plan=self.unlimited_plan, feature_key="max_units", value="unlimited")
+        PlanFeatureLimit.objects.create(
+            plan=self.free_plan, feature_key="max_units", value="3"
+        )
+        PlanFeatureLimit.objects.create(
+            plan=self.pro_plan, feature_key="max_units", value="50"
+        )
+        PlanFeatureLimit.objects.create(
+            plan=self.unlimited_plan, feature_key="max_units", value="unlimited"
+        )
 
         self.now = timezone.now()
 
@@ -896,9 +908,7 @@ class FeatureEnforcerTests(TestCase):
         """Test free user can create within limit"""
         user = User.objects.create_user(username="free_user", password="pass123")
         UserSubscription.objects.create(
-            user=user,
-            plan=self.free_plan,
-            end_date=self.now + timedelta(days=30)
+            user=user, plan=self.free_plan, end_date=self.now + timedelta(days=30)
         )
         enforcer = FeatureEnforcer(user)
         self.assertTrue(enforcer.can_create("max_buildings"))
@@ -907,9 +917,7 @@ class FeatureEnforcerTests(TestCase):
         """Test free user cannot create after hitting limit"""
         user = User.objects.create_user(username="free_user2", password="pass123")
         UserSubscription.objects.create(
-            user=user,
-            plan=self.free_plan,
-            end_date=self.now + timedelta(days=30)
+            user=user, plan=self.free_plan, end_date=self.now + timedelta(days=30)
         )
         UsageLimit.objects.create(user=user, feature_key="max_buildings", usage_count=1)
         enforcer = FeatureEnforcer(user)
@@ -919,9 +927,7 @@ class FeatureEnforcerTests(TestCase):
         """Test pro user can create within limit"""
         user = User.objects.create_user(username="pro_user", password="pass123")
         UserSubscription.objects.create(
-            user=user,
-            plan=self.pro_plan,
-            end_date=self.now + timedelta(days=30)
+            user=user, plan=self.pro_plan, end_date=self.now + timedelta(days=30)
         )
         UsageLimit.objects.create(user=user, feature_key="max_buildings", usage_count=5)
         enforcer = FeatureEnforcer(user)
@@ -931,11 +937,11 @@ class FeatureEnforcerTests(TestCase):
         """Test pro user cannot create after hitting limit"""
         user = User.objects.create_user(username="pro_user2", password="pass123")
         UserSubscription.objects.create(
-            user=user,
-            plan=self.pro_plan,
-            end_date=self.now + timedelta(days=30)
+            user=user, plan=self.pro_plan, end_date=self.now + timedelta(days=30)
         )
-        UsageLimit.objects.create(user=user, feature_key="max_buildings", usage_count=10)
+        UsageLimit.objects.create(
+            user=user, feature_key="max_buildings", usage_count=10
+        )
         enforcer = FeatureEnforcer(user)
         self.assertFalse(enforcer.can_create("max_buildings"))
 
@@ -943,11 +949,11 @@ class FeatureEnforcerTests(TestCase):
         """Test unlimited user can always create"""
         user = User.objects.create_user(username="unlimited_user", password="pass123")
         UserSubscription.objects.create(
-            user=user,
-            plan=self.unlimited_plan,
-            end_date=self.now + timedelta(days=365)
+            user=user, plan=self.unlimited_plan, end_date=self.now + timedelta(days=365)
         )
-        UsageLimit.objects.create(user=user, feature_key="max_buildings", usage_count=999)
+        UsageLimit.objects.create(
+            user=user, feature_key="max_buildings", usage_count=999
+        )
         enforcer = FeatureEnforcer(user)
         self.assertTrue(enforcer.can_create("max_buildings"))
 
@@ -957,7 +963,7 @@ class FeatureEnforcerTests(TestCase):
         UserSubscription.objects.create(
             user=user,
             plan=self.pro_plan,
-            end_date=self.now - timedelta(days=3)  # 3 days ago, still in grace
+            end_date=self.now - timedelta(days=3),  # 3 days ago, still in grace
         )
         UsageLimit.objects.create(user=user, feature_key="max_buildings", usage_count=5)
         enforcer = FeatureEnforcer(user)
@@ -969,7 +975,7 @@ class FeatureEnforcerTests(TestCase):
         UserSubscription.objects.create(
             user=user,
             plan=self.pro_plan,
-            end_date=self.now - timedelta(days=10)  # 10 days ago, past grace
+            end_date=self.now - timedelta(days=10),  # 10 days ago, past grace
         )
         UsageLimit.objects.create(user=user, feature_key="max_buildings", usage_count=2)
         enforcer = FeatureEnforcer(user)
@@ -980,15 +986,9 @@ class FeatureEnforcerTests(TestCase):
         """Test add-on purchase extends feature limit"""
         user = User.objects.create_user(username="addon_user", password="pass123")
         UserSubscription.objects.create(
-            user=user,
-            plan=self.free_plan,
-            end_date=self.now + timedelta(days=30)
+            user=user, plan=self.free_plan, end_date=self.now + timedelta(days=30)
         )
-        AddOnPurchase.objects.create(
-            user=user,
-            name="max_buildings",
-            amount=5
-        )
+        AddOnPurchase.objects.create(user=user, name="max_buildings", amount=5)
         UsageLimit.objects.create(user=user, feature_key="max_buildings", usage_count=2)
         enforcer = FeatureEnforcer(user)
         # Free: 1 + AddOn: 5 = 6 limit, usage: 2
@@ -996,16 +996,14 @@ class FeatureEnforcerTests(TestCase):
 
     def test_unlimited_string_value(self):
         """Test plan feature with unlimited string value"""
-        user = User.objects.create_user(username="unlimited_str_user", password="pass123")
+        user = User.objects.create_user(
+            username="unlimited_str_user", password="pass123"
+        )
         UserSubscription.objects.create(
-            user=user,
-            plan=self.pro_plan,
-            end_date=self.now + timedelta(days=30)
+            user=user, plan=self.pro_plan, end_date=self.now + timedelta(days=30)
         )
         PlanFeatureLimit.objects.create(
-            plan=self.pro_plan,
-            feature_key="max_caretakers",
-            value="unlimited"
+            plan=self.pro_plan, feature_key="max_caretakers", value="unlimited"
         )
         enforcer = FeatureEnforcer(user)
         self.assertTrue(enforcer.can_create("max_caretakers"))
@@ -1014,9 +1012,7 @@ class FeatureEnforcerTests(TestCase):
         """Test feature with no limit defined falls back to 0"""
         user = User.objects.create_user(username="nolimit_user", password="pass123")
         UserSubscription.objects.create(
-            user=user,
-            plan=self.pro_plan,
-            end_date=self.now + timedelta(days=30)
+            user=user, plan=self.pro_plan, end_date=self.now + timedelta(days=30)
         )
         enforcer = FeatureEnforcer(user)
         # No limit defined for "max_images", should default to 0
@@ -1068,7 +1064,7 @@ class CachingTests(TransactionTestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         cache_key = f"buildings_user_{self.user.id}"
         self.assertIsNone(cache.get(cache_key))
@@ -1087,7 +1083,7 @@ class CachingTests(TransactionTestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         # Manual cache invalidation would be tested in API tests
 
@@ -1109,7 +1105,7 @@ class PermissionTests(APITestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user1
+            owner=self.user1,
         )
         self.client.force_authenticate(user=self.user2)
         # Query should not return user1's building
@@ -1125,7 +1121,7 @@ class PermissionTests(APITestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user1
+            owner=self.user1,
         )
         # This should fail if enforcer checks ownership
         # Tested in actual API tests
@@ -1143,7 +1139,7 @@ class EdgeCasesTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         self.unit = Unit.objects.create(
             owner=self.user,
@@ -1154,7 +1150,7 @@ class EdgeCasesTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
 
     def test_renter_with_zero_rent_amount(self):
@@ -1164,7 +1160,7 @@ class EdgeCasesTests(TestCase):
             name="Free Renter",
             phone="+919876543210",
             rent_amount=Decimal("0.00"),
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
         self.assertEqual(renter.rent_amount, Decimal("0.00"))
 
@@ -1175,7 +1171,7 @@ class EdgeCasesTests(TestCase):
             name="Alice",
             phone="+919876543210",
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
         rent_record = RentRecord.objects.create(
             renter=renter,
@@ -1183,7 +1179,7 @@ class EdgeCasesTests(TestCase):
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=5000,  # Only half
-            date_paid=date(2025, 1, 5)
+            date_paid=date(2025, 1, 5),
         )
         self.assertEqual(rent_record.amount_paid, Decimal("5000"))
 
@@ -1194,7 +1190,7 @@ class EdgeCasesTests(TestCase):
             name="Alice",
             phone="+919876543210",
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
         rent_record = RentRecord.objects.create(
             renter=renter,
@@ -1202,7 +1198,7 @@ class EdgeCasesTests(TestCase):
             owner=self.user,
             rent_month=date(2025, 1, 1),
             amount_paid=15000,  # Overpayment
-            date_paid=date(2025, 1, 5)
+            date_paid=date(2025, 1, 5),
         )
         self.assertEqual(rent_record.amount_paid, Decimal("15000"))
 
@@ -1219,7 +1215,7 @@ class EdgeCasesTests(TestCase):
             postal_code="10001",
             unit_type=Unit.UnitType.FLAT,
             latitude=None,
-            longitude=None
+            longitude=None,
         )
         self.assertIsNone(unit.latitude)
         self.assertIsNone(unit.longitude)
@@ -1236,7 +1232,7 @@ class EdgeCasesTests(TestCase):
             country="USA",
             postal_code="10001",
             start_date=date(2025, 1, 1),
-            end_date=date(2025, 6, 30)
+            end_date=date(2025, 6, 30),
         )
         # Different phone, so this is allowed
         caretaker2 = Caretaker.objects.create(
@@ -1249,7 +1245,7 @@ class EdgeCasesTests(TestCase):
             country="USA",
             postal_code="10001",
             start_date=date(2025, 3, 1),  # Overlaps with caretaker1
-            end_date=date(2025, 12, 31)
+            end_date=date(2025, 12, 31),
         )
         self.assertEqual(caretaker1.unit, caretaker2.unit)
 
@@ -1261,7 +1257,7 @@ class EdgeCasesTests(TestCase):
             phone="+919876543210",
             rent_amount=10000,
             start_date=date(2025, 1, 1),
-            end_date=date(2025, 6, 30)
+            end_date=date(2025, 6, 30),
         )
         # Different phone, so this is allowed
         renter2 = Renter.objects.create(
@@ -1270,7 +1266,7 @@ class EdgeCasesTests(TestCase):
             phone="+919876543211",
             rent_amount=10000,
             start_date=date(2025, 1, 1),  # Overlaps with Alice
-            end_date=date(2025, 6, 30)
+            end_date=date(2025, 6, 30),
         )
         self.assertEqual(renter1.unit, renter2.unit)
 
@@ -1283,7 +1279,7 @@ class EdgeCasesTests(TestCase):
             rent_amount=10000,
             start_date=date(2025, 1, 1),
             is_active=True,
-            is_agreement_revoked=True
+            is_agreement_revoked=True,
         )
         self.assertTrue(renter.is_active)
         self.assertTrue(renter.is_agreement_revoked)
@@ -1298,7 +1294,7 @@ class EdgeCasesTests(TestCase):
             start_date=date(2025, 1, 1),
             revoked_by_owner=False,
             is_agreement_revoked=True,
-            revocation_reason="Renter requested"
+            revocation_reason="Renter requested",
         )
         self.assertFalse(renter.revoked_by_owner)
         self.assertTrue(renter.is_agreement_revoked)
@@ -1308,7 +1304,9 @@ class DataIntegrityTests(TestCase):
     """Test data integrity and consistency"""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="integrity_user", password="pass123")
+        self.user = User.objects.create_user(
+            username="integrity_user", password="pass123"
+        )
 
     def test_building_created_at_timestamp(self):
         """Test building creation timestamp"""
@@ -1319,7 +1317,7 @@ class DataIntegrityTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            owner=self.user
+            owner=self.user,
         )
         self.assertIsNotNone(building.created_at)
 
@@ -1334,14 +1332,14 @@ class DataIntegrityTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
         renter = Renter.objects.create(
             unit=unit,
             name="Alice",
             phone="+919876543210",
             rent_amount=10000,
-            start_date=date(2025, 1, 1)
+            start_date=date(2025, 1, 1),
         )
         original_updated_at = renter.updated_at
         renter.name = "Alice Updated"
@@ -1359,7 +1357,7 @@ class DataIntegrityTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
         unit2 = Unit.objects.create(
             owner=self.user,
@@ -1370,7 +1368,7 @@ class DataIntegrityTests(TestCase):
             state="NY",
             country="USA",
             postal_code="10001",
-            unit_type=Unit.UnitType.FLAT
+            unit_type=Unit.UnitType.FLAT,
         )
         units = Unit.objects.filter(owner=self.user)
         # Should be ordered by -created_at (newest first)

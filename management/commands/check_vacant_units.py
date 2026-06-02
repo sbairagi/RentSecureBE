@@ -15,10 +15,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         today = timezone.now().date()
-        units = Unit.objects.filter(current_renter__isnull=True, last_vacated_at__isnull=False)
+        units = Unit.objects.filter(
+            current_renter__isnull=True, last_vacated_at__isnull=False
+        )
 
         if not units.exists():
-            self.stdout.write(self.style.NOTICE("No vacant units found with a vacancy date."))
+            self.stdout.write(
+                self.style.NOTICE("No vacant units found with a vacancy date.")
+            )
             return
 
         for unit in units:
@@ -27,17 +31,23 @@ class Command(BaseCommand):
                 continue
 
             owner = unit.owner
-            building_name = unit.building.name if unit.building else unit.building_name or "your property"
-            unit_label = unit.unit
-            message = (
-                f"📭 Your unit {unit_label} in {building_name} has been vacant for {days_vacant} days."
+            building_name = (
+                unit.building.name
+                if unit.building
+                else unit.building_name or "your property"
             )
+            unit_label = unit.unit
+            message = f"📭 Your unit {unit_label} in {building_name} has been vacant for {days_vacant} days."
 
             whatsapp_sent = False
             email_sent = False
 
-            if hasattr(owner, 'profile') and getattr(owner.profile, 'whatsapp_number', None):
-                whatsapp_sent = send_whatsapp_message(owner.profile.whatsapp_number, message)
+            if hasattr(owner, "profile") and getattr(
+                owner.profile, "whatsapp_number", None
+            ):
+                whatsapp_sent = send_whatsapp_message(
+                    owner.profile.whatsapp_number, message
+                )
 
             if owner.email:
                 try:

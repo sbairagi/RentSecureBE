@@ -16,7 +16,7 @@ class FeatureEnforcer:
         try:
             return self.user.usersubscription.plan.name.lower()
         except UserSubscription.DoesNotExist:
-            return 'free'
+            return "free"
 
     def _coerce_date(self, value):
         if value is None:
@@ -49,9 +49,11 @@ class FeatureEnforcer:
     def _get_plan_limit(self, key):
         try:
             sub = self.user.usersubscription
-            limit_value = PlanFeatureLimit.objects.get(plan=sub.plan, feature_key=key).value
-            if limit_value == 'unlimited':
-                return 'unlimited'
+            limit_value = PlanFeatureLimit.objects.get(
+                plan=sub.plan, feature_key=key
+            ).value
+            if limit_value == "unlimited":
+                return "unlimited"
             return int(limit_value)
         except UserSubscription.DoesNotExist:
             return 0
@@ -63,19 +65,24 @@ class FeatureEnforcer:
     def _get_addon_limit(self, key):
         # Sum all add-ons of this feature_key for the user
         addon_sum = AddOnPurchase.objects.filter(user=self.user, name=key).aggregate(
-            total=Sum('amount')
-        )['total']
+            total=Sum("amount")
+        )["total"]
         return int(addon_sum) if addon_sum else 0
 
     def _get_free_plan_limit(self, key):
         from core.models import SubscriptionPlan
+
         try:
-            free_plan = SubscriptionPlan.objects.get(name__iexact='free')
+            free_plan = SubscriptionPlan.objects.get(name__iexact="free")
             limit = PlanFeatureLimit.objects.get(plan=free_plan, feature_key=key).value
-            if limit == 'unlimited':
-                return 'unlimited'
+            if limit == "unlimited":
+                return "unlimited"
             return int(limit)
-        except (SubscriptionPlan.DoesNotExist, PlanFeatureLimit.DoesNotExist, ValueError):
+        except (
+            SubscriptionPlan.DoesNotExist,
+            PlanFeatureLimit.DoesNotExist,
+            ValueError,
+        ):
             return 0
 
     def get_free_plan_limit(self, key):
@@ -93,18 +100,20 @@ class FeatureEnforcer:
             return self._get_free_plan_limit(key)
 
         plan_limit = self._get_plan_limit(key)
-        if plan_limit == 'unlimited':
-            return 'unlimited'
+        if plan_limit == "unlimited":
+            return "unlimited"
 
         addon_limit = self._get_addon_limit(key)
         return plan_limit + addon_limit
 
     def can_create(self, key):
         limit = self.get_active_limit(key)
-        if limit == 'unlimited':
+        if limit == "unlimited":
             return True
 
-        current_usage = UsageLimit.objects.filter(user=self.user, feature_key=key).first()
+        current_usage = UsageLimit.objects.filter(
+            user=self.user, feature_key=key
+        ).first()
         current_count = current_usage.usage_count if current_usage else 0
         return current_count < limit
 

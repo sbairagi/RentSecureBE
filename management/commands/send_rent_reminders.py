@@ -13,7 +13,9 @@ class Command(BaseCommand):
         today = date.today()
         target_date = today + timedelta(days=3)
 
-        renters = Renter.objects.filter(rent_due_date=target_date, status__in=["active", "notice_period"])
+        renters = Renter.objects.filter(
+            rent_due_date=target_date, status__in=["active", "notice_period"]
+        )
 
         for renter in renters:
             if not renter.whatsapp_number:

@@ -11,27 +11,31 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--user-id',
+            "--user-id",
             type=int,
-            help='Send summary for a specific user ID only',
+            help="Send summary for a specific user ID only",
         )
         parser.add_argument(
-            '--no-whatsapp',
-            action='store_true',
-            help='Skip WhatsApp notifications',
+            "--no-whatsapp",
+            action="store_true",
+            help="Skip WhatsApp notifications",
         )
 
     def handle(self, *args, **options):
-        user_id = options.get('user_id')
-        send_whatsapp = not options.get('no_whatsapp')
+        user_id = options.get("user_id")
+        send_whatsapp = not options.get("no_whatsapp")
 
         if user_id:
             try:
                 owner = User.objects.get(id=user_id)
-                success = send_monthly_rent_summary_email(owner, send_whatsapp=send_whatsapp)
+                success = send_monthly_rent_summary_email(
+                    owner, send_whatsapp=send_whatsapp
+                )
                 if success:
                     self.stdout.write(
-                        self.style.SUCCESS(f"✅ Summary sent to {owner.username} ({owner.email})")
+                        self.style.SUCCESS(
+                            f"✅ Summary sent to {owner.username} ({owner.email})"
+                        )
                     )
                 else:
                     self.stdout.write(
@@ -51,11 +55,15 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING("No property owners found."))
                 return
 
-            self.stdout.write(f"Sending monthly summaries to {owners.count()} owner(s)...")
+            self.stdout.write(
+                f"Sending monthly summaries to {owners.count()} owner(s)..."
+            )
 
             for owner in owners:
                 try:
-                    success = send_monthly_rent_summary_email(owner, send_whatsapp=send_whatsapp)
+                    success = send_monthly_rent_summary_email(
+                        owner, send_whatsapp=send_whatsapp
+                    )
                     if success:
                         self.stdout.write(
                             self.style.SUCCESS(f"  ✅ {owner.username} ({owner.email})")
@@ -67,8 +75,6 @@ class Command(BaseCommand):
                             )
                         )
                 except Exception as exc:
-                    self.stdout.write(
-                        self.style.ERROR(f"  ❌ {owner.username}: {exc}")
-                    )
+                    self.stdout.write(self.style.ERROR(f"  ❌ {owner.username}: {exc}"))
 
             self.stdout.write(self.style.SUCCESS("\n✅ Monthly summary job completed."))

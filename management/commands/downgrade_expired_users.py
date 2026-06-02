@@ -75,4 +75,3 @@
 #             sub.expiry_date = None  # Free plan doesn't expire
 #             sub.save()
 #             print(f"  Downgraded to Free plan.\n")
-

@@ -33,13 +33,13 @@ def archive_renter_data(renter):
 
     renter_dict = model_to_dict(
         renter,
-        exclude=['renter_image', 'id_proof', 'rent_agreement'],
+        exclude=["renter_image", "id_proof", "rent_agreement"],
     )
-    renter_dict['renter_image'] = (
+    renter_dict["renter_image"] = (
         str(renter.renter_image) if renter.renter_image else None
     )
-    renter_dict['id_proof'] = str(renter.id_proof) if renter.id_proof else None
-    renter_dict['rent_agreement'] = (
+    renter_dict["id_proof"] = str(renter.id_proof) if renter.id_proof else None
+    renter_dict["rent_agreement"] = (
         str(renter.rent_agreement) if renter.rent_agreement else None
     )
     renter_dict = _serialize_value(renter_dict)
@@ -50,8 +50,8 @@ def archive_renter_data(renter):
             "profile": renter_dict,
             "rent_records": rent_records,
         },
-        agreement_pdf=getattr(renter, 'rent_agreement_pdf', None),
-        police_pdf=getattr(renter, 'police_verification_pdf', None),
+        agreement_pdf=getattr(renter, "rent_agreement_pdf", None),
+        police_pdf=getattr(renter, "police_verification_pdf", None),
         property_images=image_paths,
         final_invoice=renter.final_invoice_path,
     )

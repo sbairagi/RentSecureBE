@@ -19,7 +19,7 @@ def send_due_extra_charge_reminders(days_ahead=0):
     charges = ExtraCharge.objects.filter(
         status=ExtraCharge.Status.DUE,
         due_date=target_date,
-    ).select_related('renter', 'renter__user', 'renter__user__userprofile')
+    ).select_related("renter", "renter__user", "renter__user__userprofile")
 
     charge_list = list(charges)
     for charge in charge_list:
@@ -28,9 +28,9 @@ def send_due_extra_charge_reminders(days_ahead=0):
         if not phone:
             continue
 
-        lang = 'en'
-        if renter.user and hasattr(renter.user, 'userprofile'):
-            lang = getattr(renter.user.userprofile, 'language_preference', 'en') or 'en'
+        lang = "en"
+        if renter.user and hasattr(renter.user, "userprofile"):
+            lang = getattr(renter.user.userprofile, "language_preference", "en") or "en"
 
         message = (
             f"Reminder: You have an unpaid charge of ₹{charge.amount} for '{charge.name}' "

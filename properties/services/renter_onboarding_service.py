@@ -61,16 +61,14 @@ def send_renter_onboarding_invite(renter):
         if result:
             # Update status
             renter.onboarding_status = Renter.OnboardingStatus.LINK_SENT
-            renter.save(update_fields=['onboarding_status'])
+            renter.save(update_fields=["onboarding_status"])
             logger.info(
-                f"Onboarding invite sent to renter {renter.id} "
-                f"({renter.phone})"
+                f"Onboarding invite sent to renter {renter.id} " f"({renter.phone})"
             )
             return True
         else:
             logger.warning(
-                f"Failed to send WhatsApp to renter {renter.id} "
-                f"({renter.phone})"
+                f"Failed to send WhatsApp to renter {renter.id} " f"({renter.phone})"
             )
             return False
 
@@ -93,8 +91,7 @@ def send_renter_onboarding_reminder(renter):
     """
     if renter.onboarding_status != Renter.OnboardingStatus.LINK_SENT:
         logger.warning(
-            f"Renter {renter.id} is not in LINK_SENT status. "
-            f"Skipping reminder."
+            f"Renter {renter.id} is not in LINK_SENT status. " f"Skipping reminder."
         )
         return False
 
@@ -130,10 +127,9 @@ def notify_owner_renter_completed_kyc(renter):
 
     owner = renter.unit.owner
 
-    if not hasattr(owner, 'profile') or not owner.profile.whatsapp_number:
+    if not hasattr(owner, "profile") or not owner.profile.whatsapp_number:
         logger.warning(
-            f"Owner {owner.id} has no WhatsApp number. "
-            f"Cannot send notification."
+            f"Owner {owner.id} has no WhatsApp number. " f"Cannot send notification."
         )
         return False
 

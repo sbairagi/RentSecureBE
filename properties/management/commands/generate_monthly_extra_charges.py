@@ -9,6 +9,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         created = generate_monthly_extra_charges()
         if created:
-            self.stdout.write(self.style.SUCCESS(f"✅ Created {len(created)} extra charge(s)."))
+            self.stdout.write(
+                self.style.SUCCESS(f"✅ Created {len(created)} extra charge(s).")
+            )
         else:
-            self.stdout.write(self.style.WARNING("No new extra charges generated for this month."))
+            self.stdout.write(
+                self.style.WARNING("No new extra charges generated for this month.")
+            )

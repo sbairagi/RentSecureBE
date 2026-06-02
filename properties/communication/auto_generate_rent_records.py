@@ -15,7 +15,7 @@ def auto_generate_rent_records():
             renter=renter,
             month=today.month,
             year=today.year,
-            defaults={"amount": renter.monthly_rent}
+            defaults={"amount": renter.monthly_rent},
         )
 
         if created:
@@ -25,4 +25,6 @@ def auto_generate_rent_records():
             rent.save()
 
             # ✅ Send WhatsApp reminder
-            send_whatsapp_message(renter.phone, f"📩 Pay your rent for {today.strftime('%B')}:\n{link}")
+            send_whatsapp_message(
+                renter.phone, f"📩 Pay your rent for {today.strftime('%B')}:\n{link}"
+            )

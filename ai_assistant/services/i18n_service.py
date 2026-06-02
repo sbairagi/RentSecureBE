@@ -8,10 +8,9 @@ def translate_msg(message: str, target_lang: str = "en") -> str:
         return message
 
     try:
-        translated = GoogleTranslator(
-            source='auto',
-            target=target_lang
-        ).translate(message)
+        translated = GoogleTranslator(source="auto", target=target_lang).translate(
+            message
+        )
 
         return translated
 

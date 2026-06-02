@@ -2,16 +2,14 @@
 Property Tax Record model for tracking property tax payments and due dates.
 """
 
-from django.conf import settings
 from django.db import models
 
 
 class PropertyTaxRecord(models.Model):
     """Tracks property tax payments and due dates."""
+
     property = models.ForeignKey(
-        'properties.Building',
-        on_delete=models.CASCADE,
-        related_name='tax_records'
+        "properties.Building", on_delete=models.CASCADE, related_name="tax_records"
     )
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     due_date = models.DateField()

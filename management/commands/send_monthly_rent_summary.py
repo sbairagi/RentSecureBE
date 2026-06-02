@@ -18,19 +18,19 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--user-id',
+            "--user-id",
             type=int,
-            help='Send summary for a specific user ID only',
+            help="Send summary for a specific user ID only",
         )
         parser.add_argument(
-            '--no-whatsapp',
-            action='store_true',
-            help='Skip WhatsApp notifications',
+            "--no-whatsapp",
+            action="store_true",
+            help="Skip WhatsApp notifications",
         )
 
     def handle(self, *args, **options):
-        user_id = options.get('user_id')
-        send_whatsapp = not options.get('no_whatsapp')
+        user_id = options.get("user_id")
+        send_whatsapp = not options.get("no_whatsapp")
 
         if user_id:
             try:
@@ -41,8 +41,7 @@ class Command(BaseCommand):
                 if success:
                     self.stdout.write(
                         self.style.SUCCESS(
-                            f"✅ Summary sent to {owner.username} "
-                            f"({owner.email})"
+                            f"✅ Summary sent to {owner.username} " f"({owner.email})"
                         )
                     )
                 else:
@@ -83,8 +82,6 @@ class Command(BaseCommand):
                             )
                         )
                 except Exception as exc:
-                    self.stdout.write(
-                        self.style.ERROR(f"  ❌ {owner.username}: {exc}")
-                    )
+                    self.stdout.write(self.style.ERROR(f"  ❌ {owner.username}: {exc}"))
 
             self.stdout.write(self.style.SUCCESS("\n✅ Monthly summary job completed."))

@@ -33,59 +33,47 @@ class Building(models.Model):
     # Building Information
     name = models.CharField(
         max_length=255,
-        help_text="Building name or identifier (e.g., 'Sunshine Complex', 'Tower A')"
+        help_text="Building name or identifier (e.g., 'Sunshine Complex', 'Tower A')",
     )
     address_line = models.CharField(
-        max_length=255,
-        help_text="Street address of the building"
+        max_length=255, help_text="Street address of the building"
     )
     city = models.CharField(
-        max_length=100,
-        help_text="City where building is located",
-        db_index=True
+        max_length=100, help_text="City where building is located", db_index=True
     )
-    state = models.CharField(
-        max_length=100,
-        help_text="State or province"
-    )
-    country = models.CharField(
-        max_length=100,
-        help_text="Country name"
-    )
-    postal_code = models.CharField(
-        max_length=10,
-        help_text="ZIP or postal code"
-    )
+    state = models.CharField(max_length=100, help_text="State or province")
+    country = models.CharField(max_length=100, help_text="Country name")
+    postal_code = models.CharField(max_length=10, help_text="ZIP or postal code")
 
     # Owner & Status
     owner = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='buildings',
+        related_name="buildings",
         help_text="Owner of this building",
-        db_index=True
+        db_index=True,
     )
     is_archived = models.BooleanField(
         default=False,
-        help_text="Soft-delete: archived buildings are excluded from queries"
+        help_text="Soft-delete: archived buildings are excluded from queries",
     )
 
     # Timestamps
     created_at = models.DateTimeField(
         auto_now_add=True,
         db_index=True,
-        help_text="When this building was added to the system"
+        help_text="When this building was added to the system",
     )
 
     class Meta:
-        unique_together = ('name', 'address_line', 'city', 'owner')
+        unique_together = ("name", "address_line", "city", "owner")
         indexes = [
-            models.Index(fields=['owner', 'is_archived']),
-            models.Index(fields=['city', 'owner']),
+            models.Index(fields=["owner", "is_archived"]),
+            models.Index(fields=["city", "owner"]),
         ]
         verbose_name = "Building"
         verbose_name_plural = "Buildings"
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
     def __str__(self) -> str:
         """Return building identifier with city."""

@@ -38,27 +38,37 @@ def get_monthly_rent_summary(owner, target_date=None):
 
     # Filter rent records for this month
     rents = RentRecord.objects.filter(
-        owner=owner,
-        rent_month__gte=first_day,
-        rent_month__lt=last_day
-    ).select_related('renter', 'unit')
+        owner=owner, rent_month__gte=first_day, rent_month__lt=last_day
+    ).select_related("renter", "unit")
 
     # Calculate aggregates
-    collected = rents.filter(
-        payment_status=RentRecord.PaymentStatus.PAID
-    ).aggregate(total=Sum('amount_paid'))['total'] or 0
+    collected = (
+        rents.filter(payment_status=RentRecord.PaymentStatus.PAID).aggregate(
+            total=Sum("amount_paid")
+        )["total"]
+        or 0
+    )
 
-    pending = rents.filter(
-        payment_status=RentRecord.PaymentStatus.PENDING
-    ).aggregate(total=Sum('amount_paid'))['total'] or 0
+    pending = (
+        rents.filter(payment_status=RentRecord.PaymentStatus.PENDING).aggregate(
+            total=Sum("amount_paid")
+        )["total"]
+        or 0
+    )
 
-    failed = rents.filter(
-        payment_status=RentRecord.PaymentStatus.FAILED
-    ).aggregate(total=Sum('amount_paid'))['total'] or 0
+    failed = (
+        rents.filter(payment_status=RentRecord.PaymentStatus.FAILED).aggregate(
+            total=Sum("amount_paid")
+        )["total"]
+        or 0
+    )
 
-    defaulters = rents.filter(
-        payment_status=RentRecord.PaymentStatus.PENDING
-    ).values('renter').distinct().count()
+    defaulters = (
+        rents.filter(payment_status=RentRecord.PaymentStatus.PENDING)
+        .values("renter")
+        .distinct()
+        .count()
+    )
 
     return {
         "month": target_date.month,
@@ -103,18 +113,21 @@ def send_monthly_rent_summary_email(owner, target_date=None, send_whatsapp=True)
         except Exception as exc:
             print(f"Failed to send email to {owner.email}: {exc}")
 
-    if send_whatsapp and prefs.monthly_summary_whatsapp and hasattr(owner, 'profile'):
-        whatsapp_number = getattr(owner.profile, 'whatsapp_number', None)
+    if send_whatsapp and prefs.monthly_summary_whatsapp and hasattr(owner, "profile"):
+        whatsapp_number = getattr(owner.profile, "whatsapp_number", None)
         if whatsapp_number:
             try:
                 from notification.services.whatsapp_service import send_whatsapp_message
+
                 result = send_whatsapp_message(whatsapp_number, message_text)
                 sent_any = sent_any or bool(result)
             except Exception as exc:
                 print(f"Failed to send WhatsApp to {whatsapp_number}: {exc}")
 
     if not sent_any:
-        print(f"No monthly summary notification was sent for {owner.email or owner.username}. Preferences: email={prefs.monthly_summary_email}, whatsapp={prefs.monthly_summary_whatsapp}")
+        print(
+            f"No monthly summary notification was sent for {owner.email or owner.username}. Preferences: email={prefs.monthly_summary_email}, whatsapp={prefs.monthly_summary_whatsapp}"
+        )
 
     return sent_any
 

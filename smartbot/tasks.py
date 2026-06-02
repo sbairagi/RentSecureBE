@@ -2,6 +2,7 @@ from properties.models import RentRecord
 
 # tasks.py (Celery or cron)
 
+
 def poll_signature_status():
     rents = RentRecord.objects.filter(signature_status="PENDING")
     for rent in rents:

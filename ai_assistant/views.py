@@ -26,13 +26,11 @@ def ai_assistant_insights(request):
         renter__property__owner=owner,
         payment_status="PAID",
         month=today.month,
-        year=today.year
+        year=today.year,
     )
 
     late_rents = RentRecord.objects.filter(
-        renter__property__owner=owner,
-        due_date__lt=today,
-        payment_status="UNPAID"
+        renter__property__owner=owner, due_date__lt=today, payment_status="UNPAID"
     )
 
     payouts = RentRecord.objects.filter(renter__property__owner=owner)
@@ -52,26 +50,26 @@ def ai_assistant_insights(request):
     )
 
     upcoming_tax = PropertyTaxRecord.objects.filter(
-        property__owner=owner,
-        paid=False,
-        due_date__gte=today
+        property__owner=owner, paid=False, due_date__gte=today
     ).order_by("due_date")[:5]
 
-    return Response({
-        "total_rent_this_month": sum([r.amount for r in paid_rents]),
-        "late_rent_count": late_rents.count(),
-        "payout_success_rate": f"{success} success / {failed} failed",
-        "missing_agreements": no_agreement.count(),
-        "missing_police_verifications": no_police.count(),
-        "upcoming_tax_dues": [
-            {
-                "property": tax.property.name,
-                "due": tax.due_date,
-                "amount": tax.amount
-            } for tax in upcoming_tax
-        ]
-    })
-
+    return Response(
+        {
+            "total_rent_this_month": sum([r.amount for r in paid_rents]),
+            "late_rent_count": late_rents.count(),
+            "payout_success_rate": f"{success} success / {failed} failed",
+            "missing_agreements": no_agreement.count(),
+            "missing_police_verifications": no_police.count(),
+            "upcoming_tax_dues": [
+                {
+                    "property": tax.property.name,
+                    "due": tax.due_date,
+                    "amount": tax.amount,
+                }
+                for tax in upcoming_tax
+            ],
+        }
+    )
 
 
 # <Card title="📊 Smart Insights">
@@ -97,8 +95,7 @@ def rent_analytics_data(request):
 
     monthly_rent = (
         RentRecord.objects.filter(
-            renter__property__owner=owner,
-            created_at__gte=start_date
+            renter__property__owner=owner, created_at__gte=start_date
         )
         .annotate(month=TruncMonth("created_at"))
         .values("month")
@@ -109,25 +106,27 @@ def rent_analytics_data(request):
     this_month = today.month
     this_year = today.year
 
-    paid = RentRecord.objects.filter(
-        renter__property__owner=owner,
-        month=this_month,
-        year=this_year,
-        payment_status="PAID"
-    ).aggregate(total=Sum("amount"))["total"] or 0
+    paid = (
+        RentRecord.objects.filter(
+            renter__property__owner=owner,
+            month=this_month,
+            year=this_year,
+            payment_status="PAID",
+        ).aggregate(total=Sum("amount"))["total"]
+        or 0
+    )
 
-    unpaid = RentRecord.objects.filter(
-        renter__property__owner=owner,
-        month=this_month,
-        year=this_year,
-        payment_status="UNPAID"
-    ).aggregate(total=Sum("amount"))["total"] or 0
+    unpaid = (
+        RentRecord.objects.filter(
+            renter__property__owner=owner,
+            month=this_month,
+            year=this_year,
+            payment_status="UNPAID",
+        ).aggregate(total=Sum("amount"))["total"]
+        or 0
+    )
 
-    return Response({
-        "monthly_rent": monthly_rent,
-        "paid": paid,
-        "unpaid": unpaid
-    })
+    return Response({"monthly_rent": monthly_rent, "paid": paid, "unpaid": unpaid})
 
 
 # npx expo install react-native-svg
@@ -154,7 +153,6 @@ def rent_analytics_data(request):
 # />
 
 # views.py
-
 
 
 @api_view(["GET"])
@@ -194,6 +192,7 @@ def chat_with_assistant(request):
 #   onChangeText={setInput}
 #   onSubmitEditing={sendMessage}
 # />
+
 
 @csrf_exempt
 def whatsapp_webhook(request):

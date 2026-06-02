@@ -12,20 +12,24 @@ class ExtraChargeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        renter_profile = getattr(user, 'renter_profile', None)
+        renter_profile = getattr(user, "renter_profile", None)
 
         if renter_profile:
-            return ExtraCharge.objects.filter(renter=renter_profile).select_related('renter', 'unit')
+            return ExtraCharge.objects.filter(renter=renter_profile).select_related(
+                "renter", "unit"
+            )
 
-        return ExtraCharge.objects.filter(unit__owner=user).select_related('renter', 'unit')
+        return ExtraCharge.objects.filter(unit__owner=user).select_related(
+            "renter", "unit"
+        )
 
     def perform_create(self, serializer):
-        unit = serializer.validated_data['unit']
-        renter = serializer.validated_data['renter']
+        unit = serializer.validated_data["unit"]
+        renter = serializer.validated_data["renter"]
 
         if unit.owner != self.request.user:
-            raise ValidationError('You do not own this unit.')
+            raise ValidationError("You do not own this unit.")
         if renter.unit != unit:
-            raise ValidationError('Renter does not belong to the selected unit.')
+            raise ValidationError("Renter does not belong to the selected unit.")
 
         serializer.save()

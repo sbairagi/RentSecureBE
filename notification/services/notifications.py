@@ -9,12 +9,7 @@ logger = logging.getLogger(__name__)
 def send_push_notification(user, title, message):
     try:
         token = DeviceToken.objects.get(user=user).token
-        payload = {
-            "to": token,
-            "sound": "default",
-            "title": title,
-            "body": message
-        }
+        payload = {"to": token, "sound": "default", "title": title, "body": message}
         headers = {"Content-Type": "application/json"}
         requests.post(
             "https://exp.host/--/api/v2/push/send",

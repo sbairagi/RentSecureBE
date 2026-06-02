@@ -28,23 +28,27 @@ class RentRecordViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        cache_key = f'rent_records_user_{user.id}'
+        cache_key = f"rent_records_user_{user.id}"
         rent_records = cache.get(cache_key)
         if rent_records is None:
-            rent_records = RentRecord.objects.filter(unit__owner=user).select_related('unit', 'renter')
+            rent_records = RentRecord.objects.filter(unit__owner=user).select_related(
+                "unit", "renter"
+            )
             cache.set(cache_key, rent_records, timeout=300)
         return rent_records
 
     def perform_create(self, serializer):
-        unit = serializer.validated_data.get('unit')
-        renter = serializer.validated_data.get('renter')
+        unit = serializer.validated_data.get("unit")
+        renter = serializer.validated_data.get("renter")
         user = self.request.user
 
         if unit.owner != user:
             raise PermissionDenied("You do not own this unit.")
         if renter.unit != unit:
             raise ValidationError("Renter does not belong to the selected unit.")
-        if RentRecord.objects.filter(renter=renter, rent_month=serializer.validated_data.get('rent_month')).exists():
+        if RentRecord.objects.filter(
+            renter=renter, rent_month=serializer.validated_data.get("rent_month")
+        ).exists():
             raise ValidationError("Rent record for this month already exists.")
 
         enforcer = FeatureEnforcer(user)
@@ -56,15 +60,13 @@ class RentRecordViewSet(viewsets.ModelViewSet):
         try:
             link = create_payment_link(rent)
             rent.payment_link = link
-            rent.save(update_fields=['payment_link'])
+            rent.save(update_fields=["payment_link"])
             send_whatsapp_message(rent.renter.phone, f"📩 Pay your rent: {link}")
         except Exception as e:
-            logger.warning(
-                f"Failed to create payment link for rent {rent.id}: {e}"
-            )
+            logger.warning(f"Failed to create payment link for rent {rent.id}: {e}")
 
         enforcer.increment("rent_records")
-        cache.delete(f'rent_records_user_{user.id}')
+        cache.delete(f"rent_records_user_{user.id}")
 
     def perform_update(self, serializer):
         instance = serializer.instance
@@ -73,8 +75,8 @@ class RentRecordViewSet(viewsets.ModelViewSet):
         if instance.unit.owner != user:
             raise PermissionDenied("You do not own this unit.")
 
-        new_unit = serializer.validated_data.get('unit', instance.unit)
-        new_renter = serializer.validated_data.get('renter', instance.renter)
+        new_unit = serializer.validated_data.get("unit", instance.unit)
+        new_renter = serializer.validated_data.get("renter", instance.renter)
 
         if new_unit.owner != user:
             raise PermissionDenied("You do not own the selected unit.")
@@ -82,15 +84,15 @@ class RentRecordViewSet(viewsets.ModelViewSet):
             raise ValidationError("Renter does not belong to the selected unit.")
 
         serializer.save()
-        cache.delete(f'rent_records_user_{user.id}')
+        cache.delete(f"rent_records_user_{user.id}")
 
     def perform_destroy(self, instance):
         if instance.unit.owner != self.request.user:
             raise PermissionDenied("You do not own this rent record.")
         enforcer = FeatureEnforcer(self.request.user)
         instance.delete()
-        enforcer.decrement('rent_records')
-        cache.delete(f'rent_records_user_{self.request.user.id}')
+        enforcer.decrement("rent_records")
+        cache.delete(f"rent_records_user_{self.request.user.id}")
 
 
 @api_view(["POST"])
@@ -106,19 +108,18 @@ def retry_payout_api(request, rent_id):
         rent.refresh_from_db()
         if rent.payout_status == "SUCCESS":
             send_payout_notification(rent)
-        return Response({
-            "message": "Payout retry attempted",
-            "status": rent.payout_status
-        })
+        return Response(
+            {"message": "Payout retry attempted", "status": rent.payout_status}
+        )
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def owner_rent_records(request):
     owner = request.user
-    rents = RentRecord.objects.filter(owner=owner).select_related('renter', 'unit')
+    rents = RentRecord.objects.filter(owner=owner).select_related("renter", "unit")
     serializer = RentRecordSerializer(rents, many=True)
     return Response(serializer.data)
 
@@ -134,44 +135,55 @@ def download_rent_invoice(request, rent_id):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_latest_due_rent(request):
-    renter = Renter.objects.filter(user=request.user, status__in=["active", "notice_period"]).first()
+    renter = Renter.objects.filter(
+        user=request.user, status__in=["active", "notice_period"]
+    ).first()
 
     if not renter:
         return Response({"error": "Not a renter"}, status=403)
 
-    rent = RentRecord.objects.filter(
-        renter=renter, payment_status="PENDING"
-    ).order_by("-rent_due_date").first()
+    rent = (
+        RentRecord.objects.filter(renter=renter, payment_status="PENDING")
+        .order_by("-rent_due_date")
+        .first()
+    )
     if not rent:
         return Response({"message": "No pending rent"})
 
-    return Response({
-        "amount": float(rent.amount),
-        "month": rent.month,
-        "year": rent.year,
-        "property": renter.unit.unit,
-        "building": renter.unit.building.name if renter.unit.building else None,
-        "payment_link": rent.payment_link,
-        "due_date": rent.due_date,
-    })
+    return Response(
+        {
+            "amount": float(rent.amount),
+            "month": rent.month,
+            "year": rent.year,
+            "property": renter.unit.unit,
+            "building": renter.unit.building.name if renter.unit.building else None,
+            "payment_link": rent.payment_link,
+            "due_date": rent.due_date,
+        }
+    )
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def rent_history(request):
-    renter = Renter.objects.filter(user=request.user, status__in=["active", "notice_period"]).first()
+    renter = Renter.objects.filter(
+        user=request.user, status__in=["active", "notice_period"]
+    ).first()
     if not renter:
         return Response({"error": "Not a renter"}, status=403)
 
     rents = RentRecord.objects.filter(renter=renter).order_by("-rent_due_date")
-    data = [{
-        "month": r.month,
-        "year": r.year,
-        "amount": r.amount,
-        "status": r.payment_status,
-        "invoice_url": r.invoice_pdf.url if r.invoice_pdf else None,
-        "payment_link": r.payment_link,
-    } for r in rents]
+    data = [
+        {
+            "month": r.month,
+            "year": r.year,
+            "amount": r.amount,
+            "status": r.payment_status,
+            "invoice_url": r.invoice_pdf.url if r.invoice_pdf else None,
+            "payment_link": r.payment_link,
+        }
+        for r in rents
+    ]
     return Response(data)
 
 
@@ -182,15 +194,17 @@ def owner_rent_overview(request):
     rents = RentRecord.objects.filter(owner=owner).select_related("renter", "unit")
     data = []
     for r in rents:
-        data.append({
-            "tenant": r.renter.name,
-            "unit": r.unit.unit,
-            "building": r.unit.building.name if r.unit.building else None,
-            "amount": float(r.amount),
-            "month": r.month,
-            "year": r.year,
-            "status": r.payment_status,
-            "payout": r.payout_status,
-            "invoice_url": r.invoice_pdf.url if r.invoice_pdf else None
-        })
+        data.append(
+            {
+                "tenant": r.renter.name,
+                "unit": r.unit.unit,
+                "building": r.unit.building.name if r.unit.building else None,
+                "amount": float(r.amount),
+                "month": r.month,
+                "year": r.year,
+                "status": r.payment_status,
+                "payout": r.payout_status,
+                "invoice_url": r.invoice_pdf.url if r.invoice_pdf else None,
+            }
+        )
     return Response(data)

@@ -23,7 +23,7 @@ def generate_onboarding_token(renter):
     token = secrets.token_urlsafe(32)
     renter.onboarding_token = token
     renter.onboarding_link_sent_at = timezone.now()
-    renter.save(update_fields=['onboarding_token', 'onboarding_link_sent_at'])
+    renter.save(update_fields=["onboarding_token", "onboarding_link_sent_at"])
     return token
 
 
@@ -63,6 +63,7 @@ def verify_onboarding_token(token):
         renter = Renter.objects.get(onboarding_token=token)
         # Ensure token hasn't expired (e.g., 90 days)
         from datetime import timedelta
+
         if renter.onboarding_link_sent_at:
             expiry_date = renter.onboarding_link_sent_at + timedelta(days=90)
             if timezone.now() > expiry_date:
@@ -82,7 +83,7 @@ def mark_onboarding_completed(renter):
     from properties.models import Renter
 
     renter.onboarding_status = Renter.OnboardingStatus.COMPLETED
-    renter.save(update_fields=['onboarding_status'])
+    renter.save(update_fields=["onboarding_status"])
 
 
 def mark_kyc_verified(renter):
@@ -95,4 +96,4 @@ def mark_kyc_verified(renter):
     from properties.models import Renter
 
     renter.kyc_status = Renter.KYCStatus.VERIFIED
-    renter.save(update_fields=['kyc_status'])
+    renter.save(update_fields=["kyc_status"])

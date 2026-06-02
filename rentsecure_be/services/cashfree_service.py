@@ -15,6 +15,7 @@ from rentsecure_be.utils.cashfree_payout import add_beneficiary, make_payout
 
 # from core.models import
 
+
 def register_owner_with_cashfree(owner: OwnerBankDetails):
     bene_id = f"owner_{owner.id}"
 
@@ -36,7 +37,6 @@ def register_owner_with_cashfree(owner: OwnerBankDetails):
     return
 
 
-
 def pay_owner_after_rent(rent: RentRecord):
     if not rent.owner.beneficiary_id:
         raise Exception("Owner not registered with Cashfree")
@@ -46,7 +46,7 @@ def pay_owner_after_rent(rent: RentRecord):
         transfer_id=transfer_id,
         amount=rent.amount,
         remarks=f"Rent for property {rent.property.id}",
-        bene_id=rent.owner.beneficiary_id
+        bene_id=rent.owner.beneficiary_id,
     )
 
     # Save result
@@ -55,7 +55,6 @@ def pay_owner_after_rent(rent: RentRecord):
         rent.payout_reference = transfer_id
     else:
         rent.payout_status = "FAILED"
-
 
     if rent.payout_status == "SUCCESS":
         # msg = f"Namaste! Aapka ₹{rent.amount} rent {rent.updated_at.date()} ko jama hua hai."
@@ -94,7 +93,7 @@ def register_cashfree_beneficiary(bank_details: OwnerBankDetails):
         "phone": bank_details.owner.profile.phone_number,  # adjust as per your model
         "bankAccount": bank_details.bank_account_number,
         "ifsc": bank_details.ifsc_code,
-        "address1": "India"
+        "address1": "India",
     }
 
     response = add_beneficiary(payload)
@@ -107,22 +106,26 @@ def register_cashfree_beneficiary(bank_details: OwnerBankDetails):
     return response
 
 
-
 def process_rent_payout(rent: RentRecord):
     """Process payout to owner via Cashfree after rent is marked PAID."""
     try:
         bank_details = OwnerBankDetails.objects.get(owner=rent.owner)
     except OwnerBankDetails.DoesNotExist:
-        logger.warning(f"No bank details found for owner {rent.owner.id} (rent {rent.id})")
+        logger.warning(
+            f"No bank details found for owner {rent.owner.id} (rent {rent.id})"
+        )
         rent.payout_status = "FAILED"
-        rent.save(update_fields=['payout_status'])
+        rent.save(update_fields=["payout_status"])
         return {"status": "FAILED", "message": "Owner bank details not found"}
 
     if not bank_details.beneficiary_id:
         logger.warning(f"No beneficiary_id for owner {rent.owner.id} (rent {rent.id})")
         rent.payout_status = "FAILED"
-        rent.save(update_fields=['payout_status'])
-        return {"status": "FAILED", "message": "Owner not yet registered as beneficiary"}
+        rent.save(update_fields=["payout_status"])
+        return {
+            "status": "FAILED",
+            "message": "Owner not yet registered as beneficiary",
+        }
 
     transfer_id = f"rent_{rent.id}"
     try:
@@ -130,12 +133,12 @@ def process_rent_payout(rent: RentRecord):
             transfer_id=transfer_id,
             amount=rent.amount,
             remarks="Monthly rent payout",
-            bene_id=bank_details.beneficiary_id
+            bene_id=bank_details.beneficiary_id,
         )
     except Exception as e:
         logger.error(f"Cashfree payout API error for rent {rent.id}: {e}")
         rent.payout_status = "FAILED"
-        rent.save(update_fields=['payout_status'])
+        rent.save(update_fields=["payout_status"])
         return {"status": "FAILED", "message": str(e)}
 
     # Set payout status based on response
@@ -145,7 +148,7 @@ def process_rent_payout(rent: RentRecord):
     else:
         rent.payout_status = "FAILED"
 
-    rent.save(update_fields=['payout_status', 'payout_reference'])
+    rent.save(update_fields=["payout_status", "payout_reference"])
 
     # Send notifications
     try:
@@ -161,7 +164,7 @@ def process_rent_payout(rent: RentRecord):
     return response
 
 
-BASE_URL = ''
+BASE_URL = ""
 import requests
 from django.conf import settings
 
@@ -169,13 +172,12 @@ from django.conf import settings
 # cashfree_service.py
 def delete_beneficiary(beneficiary_id: str):
     from .cashfree_service import get_auth_token
+
     url = f"{settings.CASHFREE_PAYOUT_BASE_TEST_URL}/payout/v1/deleteBeneficiary"
-    payload = {
-        "beneId": beneficiary_id
-    }
+    payload = {"beneId": beneficiary_id}
     headers = {
         "Authorization": f"Bearer {get_auth_token()}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     response = requests.post(url, headers=headers, json=payload)
     return response.json()

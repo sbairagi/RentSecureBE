@@ -1,6 +1,3 @@
-
-
-
 # Notify Renter
 from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import RentRecord

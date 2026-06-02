@@ -12,11 +12,15 @@ class Command(BaseCommand):
         month = today.month
         year = today.year
 
-        renters = Renter.objects.filter(is_active=True, status__in=["active", "notice_period"])
+        renters = Renter.objects.filter(
+            is_active=True, status__in=["active", "notice_period"]
+        )
 
         for renter in renters:
             # Prevent duplicate rent record
-            exists = RentRecord.objects.filter(renter=renter, month=month, year=year).exists()
+            exists = RentRecord.objects.filter(
+                renter=renter, month=month, year=year
+            ).exists()
             if exists:
                 continue
 
@@ -26,6 +30,6 @@ class Command(BaseCommand):
                 month=month,
                 year=year,
                 payment_status="UNPAID",
-                payout_status="PENDING"
+                payout_status="PENDING",
             )
             self.stdout.write(f"RentRecord created for renter: {renter.name}")

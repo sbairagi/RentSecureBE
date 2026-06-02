@@ -24,14 +24,16 @@ def send_rent_reminder(renter_name):
     except Renter.DoesNotExist:
         return "❌ Renter not found."
 
+
 def retry_payout(renter_name):
     try:
-        rent = RentRecord.objects.filter(renter__name__icontains=renter_name).latest("created_at")
+        rent = RentRecord.objects.filter(renter__name__icontains=renter_name).latest(
+            "created_at"
+        )
         result = process_rent_payout(rent)
         return f"✅ Payout retried: {result.get('status')}"
     except:
         return "❌ Could not retry payout."
-
 
 
 def send_rent_agreement(renter_name):
@@ -42,7 +44,7 @@ def send_rent_agreement(renter_name):
         pdf_path = generate_agreement_pdf(rent)
 
         # Move it to media or upload to S3
-        with open(pdf_path, 'rb') as f:
+        with open(pdf_path, "rb") as f:
             file_name = f"agreements/agreement_{rent.id}.pdf"
             default_storage.save(file_name, f)
             file_url = default_storage.url(file_name)

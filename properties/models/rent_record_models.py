@@ -13,49 +13,72 @@ from .unit_models import Unit
 
 class RentRecord(models.Model):
     class PaymentMode(models.TextChoices):
-        CASH = 'cash', 'Cash'
-        CHEQUE = 'cheque', 'Cheque'
-        ONLINE = 'online', 'Online Transfer'
-        OTHER = 'other', 'Other'
+        CASH = "cash", "Cash"
+        CHEQUE = "cheque", "Cheque"
+        ONLINE = "online", "Online Transfer"
+        OTHER = "other", "Other"
 
     class PaymentStatus(models.TextChoices):
-        PENDING = 'PENDING', 'Pending'
-        PAID = 'PAID', 'Paid'
-        FAILED = 'FAILED', 'Failed'
+        PENDING = "PENDING", "Pending"
+        PAID = "PAID", "Paid"
+        FAILED = "FAILED", "Failed"
 
     def __init__(self, *args, **kwargs):
         if not args:
-            amount = kwargs.pop('amount', None)
-            due_date = kwargs.pop('due_date', None)
-            month = kwargs.pop('month', None)
-            year = kwargs.pop('year', None)
+            amount = kwargs.pop("amount", None)
+            due_date = kwargs.pop("due_date", None)
+            month = kwargs.pop("month", None)
+            year = kwargs.pop("year", None)
 
-            renter = kwargs.get('renter')
+            renter = kwargs.get("renter")
             if renter is not None:
-                kwargs.setdefault('unit', renter.unit)
-                kwargs.setdefault('owner', renter.unit.owner)
-            if amount is not None and 'amount_paid' not in kwargs:
-                kwargs['amount_paid'] = amount
+                kwargs.setdefault("unit", renter.unit)
+                kwargs.setdefault("owner", renter.unit.owner)
+            if amount is not None and "amount_paid" not in kwargs:
+                kwargs["amount_paid"] = amount
             if due_date is not None:
-                kwargs.setdefault('rent_due_date', due_date)
-                kwargs.setdefault('date_paid', due_date)
-            if month is not None and year is not None and 'rent_month' not in kwargs:
-                kwargs['rent_month'] = date(int(year), int(month), 1)
-            if 'rent_month' in kwargs:
-                kwargs.setdefault('date_paid', kwargs['rent_month'])
+                kwargs.setdefault("rent_due_date", due_date)
+                kwargs.setdefault("date_paid", due_date)
+            if month is not None and year is not None and "rent_month" not in kwargs:
+                kwargs["rent_month"] = date(int(year), int(month), 1)
+            if "rent_month" in kwargs:
+                kwargs.setdefault("date_paid", kwargs["rent_month"])
 
         super().__init__(*args, **kwargs)
 
     id = models.AutoField(primary_key=True)
-    renter = models.ForeignKey(Renter, on_delete=models.CASCADE, related_name='rent_records', db_index=True)
-    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='rent_records_unit')
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='rent_records_owner', db_index=True)
-    rent_month = models.DateField(help_text="Use first day of the month, e.g. 2025-05-01", db_index=True)
-    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, help_text="Amount paid for rent")
+    renter = models.ForeignKey(
+        Renter, on_delete=models.CASCADE, related_name="rent_records", db_index=True
+    )
+    unit = models.ForeignKey(
+        Unit, on_delete=models.CASCADE, related_name="rent_records_unit"
+    )
+    owner = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="rent_records_owner", db_index=True
+    )
+    rent_month = models.DateField(
+        help_text="Use first day of the month, e.g. 2025-05-01", db_index=True
+    )
+    amount_paid = models.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Amount paid for rent"
+    )
     date_paid = models.DateField(help_text="Date when payment was made")
-    payment_status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING, help_text="Payment status")
-    payment_mode = models.CharField(max_length=20, choices=PaymentMode.choices, blank=True, null=True, help_text="Mode of payment")
-    remarks = models.TextField(blank=True, null=True, help_text="Additional remarks or notes")
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.PENDING,
+        help_text="Payment status",
+    )
+    payment_mode = models.CharField(
+        max_length=20,
+        choices=PaymentMode.choices,
+        blank=True,
+        null=True,
+        help_text="Mode of payment",
+    )
+    remarks = models.TextField(
+        blank=True, null=True, help_text="Additional remarks or notes"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
@@ -79,8 +102,8 @@ class RentRecord(models.Model):
     invoice_pdf = models.FileField(upload_to="rent_invoices/", null=True, blank=True)
 
     class Meta:
-        unique_together = ('renter', 'rent_month')
-        ordering = ['-rent_month']
+        unique_together = ("renter", "rent_month")
+        ordering = ["-rent_month"]
 
     def clean(self):
         if self.amount_paid < 0:

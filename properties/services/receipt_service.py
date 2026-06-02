@@ -27,13 +27,13 @@ def generate_rent_receipt_pdf(rent_record):
     """
     try:
         context = {
-            'rent': rent_record,
-            'renter': rent_record.renter,
-            'unit': rent_record.unit,
-            'owner': rent_record.owner,
+            "rent": rent_record,
+            "renter": rent_record.renter,
+            "unit": rent_record.unit,
+            "owner": rent_record.owner,
         }
 
-        html_string = render_to_string('pdf/rent_receipt.html', context)
+        html_string = render_to_string("pdf/rent_receipt.html", context)
         html = HTML(string=html_string)
         pdf_bytes = html.write_pdf()
 
@@ -86,17 +86,19 @@ def send_rent_receipt_email(rent_record):
             subject=subject,
             body=body,
             from_email="no-reply@rentsecure.in",
-            to=[renter.email]
+            to=[renter.email],
         )
 
         # Attach PDF
         filename = f"rent_receipt_{rent_record.id}_{rent_record.rent_month.strftime('%Y%m')}.pdf"
-        email.attach(filename, pdf_bytes, 'application/pdf')
+        email.attach(filename, pdf_bytes, "application/pdf")
 
         # Send
         email.send(fail_silently=False)
 
-        logger.info(f"Rent receipt email sent to {renter.email} for rent {rent_record.id}")
+        logger.info(
+            f"Rent receipt email sent to {renter.email} for rent {rent_record.id}"
+        )
         return True
 
     except Exception as exc:
@@ -115,7 +117,9 @@ def send_rent_receipt_on_payment(rent_record):
         bool: True if email sent
     """
     if rent_record.payment_status != RentRecord.PaymentStatus.PAID:
-        logger.debug(f"Rent {rent_record.id} not marked as PAID. Skipping receipt email.")
+        logger.debug(
+            f"Rent {rent_record.id} not marked as PAID. Skipping receipt email."
+        )
         return False
 
     return send_rent_receipt_email(rent_record)

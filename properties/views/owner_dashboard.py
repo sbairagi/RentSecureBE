@@ -19,14 +19,19 @@ def owner_dashboard_summary(request):
 
     rents = RentRecord.objects.filter(owner=owner)
 
-    total_rent_collected = rents.filter(payment_status=RentRecord.PaymentStatus.PAID).aggregate(
-        total=Sum("amount_paid")
-    )["total"] or 0
+    total_rent_collected = (
+        rents.filter(payment_status=RentRecord.PaymentStatus.PAID).aggregate(
+            total=Sum("amount_paid")
+        )["total"]
+        or 0
+    )
 
-    rent_collected_this_month = rents.filter(
-        payment_status=RentRecord.PaymentStatus.PAID,
-        rent_month__gte=current_month
-    ).aggregate(total=Sum("amount_paid"))["total"] or 0
+    rent_collected_this_month = (
+        rents.filter(
+            payment_status=RentRecord.PaymentStatus.PAID, rent_month__gte=current_month
+        ).aggregate(total=Sum("amount_paid"))["total"]
+        or 0
+    )
 
     payouts = {
         "success": rents.filter(payout_status="SUCCESS").count(),
@@ -37,7 +42,7 @@ def owner_dashboard_summary(request):
     rent_payment_trends = (
         rents.filter(
             payment_status=RentRecord.PaymentStatus.PAID,
-            rent_month__gte=previous_six_months
+            rent_month__gte=previous_six_months,
         )
         .annotate(month=TruncMonth("rent_month"))
         .values("month")

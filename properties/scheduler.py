@@ -26,8 +26,9 @@ def get_late_rent_records():
     return RentRecord.objects.filter(
         due_date__lt=today,
         payment_status="UNPAID",
-        reminder_sent=False  # Prevent repeat reminders
+        reminder_sent=False,  # Prevent repeat reminders
     )
+
 
 def process_late_rent_followups():
     for rent in get_late_rent_records():
@@ -37,4 +38,3 @@ def process_late_rent_followups():
         # Example: Increment "late_count" for renter
         rent.renter.late_payment_count += 1
         rent.renter.save()
-

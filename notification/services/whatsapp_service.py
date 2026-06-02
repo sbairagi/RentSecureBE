@@ -12,15 +12,14 @@ from twilio.rest import Client
 
 logger = logging.getLogger(__name__)
 
+
 def send_whatsapp_message(phone, text):
     try:
-        sid = getattr(settings, 'TWILIO_SID', settings.TWILIO_ACCOUNT_SID)
-        token = getattr(settings, 'TWILIO_TOKEN', settings.TWILIO_AUTH_TOKEN)
+        sid = getattr(settings, "TWILIO_SID", settings.TWILIO_ACCOUNT_SID)
+        token = getattr(settings, "TWILIO_TOKEN", settings.TWILIO_AUTH_TOKEN)
         client = Client(sid, token)
         client.messages.create(
-            body=text,
-            from_=settings.TWILIO_WHATSAPP_NUMBER,
-            to=f'whatsapp:{phone}'
+            body=text, from_=settings.TWILIO_WHATSAPP_NUMBER, to=f"whatsapp:{phone}"
         )
         return True
     except Exception as exc:
@@ -32,13 +31,13 @@ def send_whatsapp_audio(phone, audio_path):
     try:
         media_url = upload_to_s3(audio_path)
 
-        sid = getattr(settings, 'TWILIO_SID', settings.TWILIO_ACCOUNT_SID)
-        token = getattr(settings, 'TWILIO_TOKEN', settings.TWILIO_AUTH_TOKEN)
+        sid = getattr(settings, "TWILIO_SID", settings.TWILIO_ACCOUNT_SID)
+        token = getattr(settings, "TWILIO_TOKEN", settings.TWILIO_AUTH_TOKEN)
         client = Client(sid, token)
         client.messages.create(
             media_url=[media_url],
             from_=settings.TWILIO_WHATSAPP_NUMBER,
-            to=f'whatsapp:{phone}'
+            to=f"whatsapp:{phone}",
         )
         return True
     except Exception as exc:
@@ -56,8 +55,8 @@ def upload_to_s3(file_path):
     filename = os.path.basename(file_path)
     key = f"voice_notes/{filename}"
 
-    s3 = boto3.client('s3')
-    s3.upload_file(file_path, bucket_name, key, ExtraArgs={'ContentType': 'audio/mpeg'})
+    s3 = boto3.client("s3")
+    s3.upload_file(file_path, bucket_name, key, ExtraArgs={"ContentType": "audio/mpeg"})
     return f"https://{bucket_name}.s3.amazonaws.com/{key}"
 
 

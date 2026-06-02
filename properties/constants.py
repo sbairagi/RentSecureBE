@@ -19,15 +19,15 @@ DEFAULT_CURRENCY = "INR"
 
 # Status Choices (for reference)
 PAYMENT_STATUS_CHOICES = [
-    ('PENDING', 'Pending'),
-    ('PAID', 'Paid'),
-    ('FAILED', 'Failed'),
-    ('CANCELLED', 'Cancelled'),
+    ("PENDING", "Pending"),
+    ("PAID", "Paid"),
+    ("FAILED", "Failed"),
+    ("CANCELLED", "Cancelled"),
 ]
 
 UNIT_STATUS_CHOICES = [
-    ('VACANT', 'Vacant'),
-    ('OCCUPIED', 'Occupied'),
+    ("VACANT", "Vacant"),
+    ("OCCUPIED", "Occupied"),
 ]
 
 # Validation Constants

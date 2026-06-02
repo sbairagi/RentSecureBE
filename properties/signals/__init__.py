@@ -1,6 +1,10 @@
+import logging
+
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 from ai_assistant.services.archive_service import archive_renter_data
 from ai_assistant.services.invoice_service import generate_final_invoice_pdf
@@ -12,9 +16,9 @@ from properties.utils import update_usage_count
 from properties.utils.onboarding_utils import generate_onboarding_token
 
 from ..models import (
+    ArchivedRenter,
     Building,
     Caretaker,
-    ArchivedRenter,
     Renter,
     RentRecord,
     Unit,
@@ -43,37 +47,37 @@ def update_unit_status_on_renter_delete(sender, instance, **kwargs):
 @receiver(post_save, sender=Building)
 @receiver(post_delete, sender=Building)
 def update_building_usage(sender, instance, **kwargs):
-    update_usage_count(instance.owner, 'max_buildings', Building)
+    update_usage_count(instance.owner, "max_buildings", Building)
 
 
 @receiver(post_save, sender=Unit)
 @receiver(post_delete, sender=Unit)
 def update_unit_usage(sender, instance, **kwargs):
-    update_usage_count(instance.owner, 'max_units', Unit)
+    update_usage_count(instance.owner, "max_units", Unit)
 
 
 @receiver(post_save, sender=Caretaker)
 @receiver(post_delete, sender=Caretaker)
 def update_caretaker_usage(sender, instance, **kwargs):
-    update_usage_count(instance.unit.owner, 'max_caretakers', Caretaker)
+    update_usage_count(instance.unit.owner, "max_caretakers", Caretaker)
 
 
 @receiver(post_save, sender=Renter)
 @receiver(post_delete, sender=Renter)
 def update_renter_usage(sender, instance, **kwargs):
-    update_usage_count(instance.unit.owner, 'max_renters', Renter)
+    update_usage_count(instance.unit.owner, "max_renters", Renter)
 
 
 @receiver(post_save, sender=UnitImage)
 @receiver(post_delete, sender=UnitImage)
 def update_unit_images_usage(sender, instance, **kwargs):
-    update_usage_count(instance.unit.owner, 'max_unit_images', UnitImage)
+    update_usage_count(instance.unit.owner, "max_unit_images", UnitImage)
 
 
 @receiver(post_save, sender=UnitDocument)
 @receiver(post_delete, sender=UnitDocument)
 def update_unit_document_usage(sender, instance, **kwargs):
-    update_usage_count(instance.unit.owner, 'max_unit_images', UnitDocument)
+    update_usage_count(instance.unit.owner, "max_unit_images", UnitDocument)
 
 
 @receiver(post_save, sender=RentRecord)
@@ -86,15 +90,17 @@ def handle_rent_payment(sender, instance, **kwargs):
             Notification.objects.create(
                 user=instance.renter.user,
                 title="Thanks for Early Rent Payment",
-                message="We appreciate your on-time rent payment. Keep it up! 🏆"
+                message="We appreciate your on-time rent payment. Keep it up! 🏆",
             )
 
         # Send rent receipt email to renter
         try:
             from properties.services.receipt_service import send_rent_receipt_on_payment
+
             send_rent_receipt_on_payment(instance)
         except Exception as exc:
             import logging
+
             logger = logging.getLogger(__name__)
             logger.exception(
                 f"Failed to send receipt email for rent {instance.id}: {exc}"
@@ -115,9 +121,13 @@ def update_renter_defaulter_status(rent: RentRecord):
             renter.flagged_reason = "Missed 3 or more rent payments."
             try:
                 notify_owner_renter_flagged(renter)
-            except Exception:
-                pass
-        renter.save(update_fields=['missed_rents', 'is_flagged', 'flagged_reason', 'updated_at'])
+            except Exception as e:
+                logger.warning(
+                    f"Failed to notify owner about flagged renter {renter.id}: {e}"
+                )
+        renter.save(
+            update_fields=["missed_rents", "is_flagged", "flagged_reason", "updated_at"]
+        )
 
 
 @receiver(post_save, sender=Renter)
@@ -128,6 +138,7 @@ def notify_owner_if_unit_vacant(sender, instance, **kwargs):
 
         if not Renter.objects.filter(unit=unit, status="active").exists():
             from notification.services.whatsapp_service import send_whatsapp_message
+
             phone = getattr(
                 getattr(owner, "userprofile", None),
                 "whatsapp_number",

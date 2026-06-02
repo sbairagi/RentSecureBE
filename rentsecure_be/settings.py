@@ -22,52 +22,60 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Environment configuration
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-placeholder-key')
-DEBUG = config('DEBUG', default=True, cast=bool)
-ENVIRONMENT = config('DJANGO_ENV', default='development')
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-placeholder-key")
+DEBUG = config("DEBUG", default=True, cast=bool)
+ENVIRONMENT = config("DJANGO_ENV", default="development")
 
-if not DEBUG and SECRET_KEY == 'django-insecure-placeholder-key':
-    raise ImproperlyConfigured('A secure SECRET_KEY must be set in production.')
+if not DEBUG and SECRET_KEY == "django-insecure-placeholder-key":
+    raise ImproperlyConfigured("A secure SECRET_KEY must be set in production.")
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
+CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
 
 # Application URLs
-FRONTEND_URL = config('FRONTEND_URL', default='https://app.rentsecure.com')
-BACKEND_URL = config('BACKEND_URL', default='http://localhost:8000')
+FRONTEND_URL = config("FRONTEND_URL", default="https://app.rentsecure.com")
+BACKEND_URL = config("BACKEND_URL", default="http://localhost:8000")
 
 # Email details
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@example.com')
+EMAIL_BACKEND = config(
+    "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
+)
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@example.com")
 
 # Third-party service credentials
-TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
-TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
-TWILIO_WHATSAPP_NUMBER = config('TWILIO_WHATSAPP_NUMBER', default='whatsapp:+14155238886')
-TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='+1234567890')
+TWILIO_ACCOUNT_SID = config("TWILIO_ACCOUNT_SID", default="")
+TWILIO_AUTH_TOKEN = config("TWILIO_AUTH_TOKEN", default="")
+TWILIO_WHATSAPP_NUMBER = config(
+    "TWILIO_WHATSAPP_NUMBER", default="whatsapp:+14155238886"
+)
+TWILIO_PHONE_NUMBER = config("TWILIO_PHONE_NUMBER", default="+1234567890")
 
-CASHFREE_CLIENT_ID = config('CASHFREE_CLIENT_ID', default='')
-CASHFREE_CLIENT_SECRET = config('CASHFREE_CLIENT_SECRET', default='')
-CASHFREE_PAYOUT_BASE_TEST_URL = config('CASHFREE_PAYOUT_BASE_TEST_URL', default='https://payout-gamma.cashfree.com')
-CASHFREE_PAYOUT_BASE_URL = config('CASHFREE_PAYOUT_BASE_URL', default='https://payout-api.cashfree.com')
+CASHFREE_CLIENT_ID = config("CASHFREE_CLIENT_ID", default="")
+CASHFREE_CLIENT_SECRET = config("CASHFREE_CLIENT_SECRET", default="")
+CASHFREE_PAYOUT_BASE_TEST_URL = config(
+    "CASHFREE_PAYOUT_BASE_TEST_URL", default="https://payout-gamma.cashfree.com"
+)
+CASHFREE_PAYOUT_BASE_URL = config(
+    "CASHFREE_PAYOUT_BASE_URL", default="https://payout-api.cashfree.com"
+)
 
-RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID', default='')
-RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET', default='')
-RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
+RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
+RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
+RAZORPAY_WEBHOOK_SECRET = config("RAZORPAY_WEBHOOK_SECRET", default="")
 
-OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
-LEEGALITY_API_KEY = config('LEEGALITY_API_KEY', default='')
-LEEGALITY_ORG_ID = config('LEEGALITY_ORG_ID', default='')
-LEEGALITY_WORKFLOW_ID = config('LEEGALITY_WORKFLOW_ID', default='')
-LEEGALITY_TEMPLATE_ID = config('LEEGALITY_TEMPLATE_ID', default='')
+OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
+LEEGALITY_API_KEY = config("LEEGALITY_API_KEY", default="")
+LEEGALITY_ORG_ID = config("LEEGALITY_ORG_ID", default="")
+LEEGALITY_WORKFLOW_ID = config("LEEGALITY_WORKFLOW_ID", default="")
+LEEGALITY_TEMPLATE_ID = config("LEEGALITY_TEMPLATE_ID", default="")
 
-AWS_S3_BUCKET_NAME = config('AWS_S3_BUCKET_NAME', default='')
-AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='')
+AWS_S3_BUCKET_NAME = config("AWS_S3_BUCKET_NAME", default="")
+AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="")
 
 LOGGING = {
     "version": 1,
@@ -84,79 +92,76 @@ LOGGING = {
 }
 
 
-
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'simple_history',
-    'fcm_django',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "simple_history",
+    "fcm_django",
     "django_celery_beat",
-
-    #custome app
-    'core',
-    'notification',
-    'properties',
-    'finance',
-    'referral_and_earn',
-    'documents',
-    'smartbot',
-
+    # custome app
+    "core",
+    "notification",
+    "properties",
+    "finance",
+    "referral_and_earn",
+    "documents",
+    "smartbot",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'simple_history.middleware.HistoryRequestMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",
 ]
 
-ROOT_URLCONF = 'rentsecure_be.urls'
+ROOT_URLCONF = "rentsecure_be.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'rentsecure_be.wsgi.application'
+WSGI_APPLICATION = "rentsecure_be.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
-        'NAME': config('DB_NAME', default=str(BASE_DIR / 'db.sqlite3')),
-        'USER': config('DB_USER', default=''),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default=''),
-        'PORT': config('DB_PORT', default=''),
+    "default": {
+        "ENGINE": config("DB_ENGINE", default="django.db.backends.sqlite3"),
+        "NAME": config("DB_NAME", default=str(BASE_DIR / "db.sqlite3")),
+        "USER": config("DB_USER", default=""),
+        "PASSWORD": config("DB_PASSWORD", default=""),
+        "HOST": config("DB_HOST", default=""),
+        "PORT": config("DB_PORT", default=""),
     }
 }
 
-AUTH_USER_MODEL = 'core.User'
+AUTH_USER_MODEL = "core.User"
 
 
 # Password validation
@@ -164,22 +169,22 @@ AUTH_USER_MODEL = 'core.User'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     )
 }
 
@@ -187,28 +192,30 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         "LOCATION": "unique-rentsecure-cache",
-        "TIMEOUT": 300   # 5 min
+        "TIMEOUT": 300,  # 5 min
     }
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=35),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=35),
 }
 
 FCM_DJANGO_SETTINGS = {
-    "FCM_SERVER_KEY": config('FCM_SERVER_KEY', default=''),
-    "ONE_DEVICE_PER_USER": config('FCM_ONE_DEVICE_PER_USER', default=False, cast=bool),
-    "DELETE_INACTIVE_DEVICES": config('FCM_DELETE_INACTIVE_DEVICES', default=True, cast=bool),
+    "FCM_SERVER_KEY": config("FCM_SERVER_KEY", default=""),
+    "ONE_DEVICE_PER_USER": config("FCM_ONE_DEVICE_PER_USER", default=False, cast=bool),
+    "DELETE_INACTIVE_DEVICES": config(
+        "FCM_DELETE_INACTIVE_DEVICES", default=True, cast=bool
+    ),
 }
 
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -218,22 +225,26 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
 
 # Add this at the end of settings.py
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-SECURE_BROWSER_XSS_FILTER = config('SECURE_BROWSER_XSS_FILTER', default=True, cast=bool)
-SECURE_CONTENT_TYPE_NOSNIFF = config('SECURE_CONTENT_TYPE_NOSNIFF', default=True, cast=bool)
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=not DEBUG, cast=bool)
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=not DEBUG, cast=bool)
-SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=not DEBUG, cast=bool)
-SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=31536000, cast=int)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True, cast=bool)
-SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=True, cast=bool)
+SECURE_BROWSER_XSS_FILTER = config("SECURE_BROWSER_XSS_FILTER", default=True, cast=bool)
+SECURE_CONTENT_TYPE_NOSNIFF = config(
+    "SECURE_CONTENT_TYPE_NOSNIFF", default=True, cast=bool
+)
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=not DEBUG, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=not DEBUG, cast=bool)
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=not DEBUG, cast=bool)
+SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=31536000, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True, cast=bool
+)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=True, cast=bool)

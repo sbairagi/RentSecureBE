@@ -20,5 +20,5 @@ def analyze_financial_health(rents, taxes):
         "rent_score": round(rent_score, 2),
         "tax_score": round(tax_score, 2),
         "overall_score": overall_score,
-        "suggestions": suggestions
+        "suggestions": suggestions,
     }

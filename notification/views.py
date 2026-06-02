@@ -1,4 +1,3 @@
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -13,6 +12,7 @@ def get_notifications(request):
         "id", "title", "message", "is_read", "created_at"
     )
     return Response(list(data))
+
 
 # Response
 
@@ -41,7 +41,9 @@ def mark_notification_read(request, notification_id):
 def save_device_token(request):
     token = request.data.get("token")
     if token:
-        DeviceToken.objects.update_or_create(user=request.user, defaults={"token": token})
+        DeviceToken.objects.update_or_create(
+            user=request.user, defaults={"token": token}
+        )
     return Response({"status": "saved"})
 
 
@@ -75,7 +77,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def register_fcm_token(request):
     token = request.data.get("token")
@@ -87,6 +89,6 @@ def register_fcm_token(request):
     FCMDevice.objects.update_or_create(
         user=request.user,
         registration_id=token,
-        defaults={"type": device_type, "active": True}
+        defaults={"type": device_type, "active": True},
     )
     return Response({"status": "Token registered"})

@@ -9,6 +9,7 @@ from notification.services.whatsapp_service import (
 
 logger = logging.getLogger(__name__)
 
+
 def notify_renter(renter, message: str):
     lang = renter.profile.language_preference or "en"
 
@@ -55,6 +56,7 @@ def notify_owner(owner, message: str):
     except Exception as e:
         logger.error(f"WhatsApp voice note failed for user {owner.id}: {e}")
 
+
 def send_payout_notification(rent):
     """
     Sends a WhatsApp message to renter based on payout status.
@@ -82,7 +84,6 @@ def send_payout_notification(rent):
         logger.exception(f"Failed to notify renter for rent ID {rent.id}: {e}")
 
 
-
 def notify_owner_post_payout(rent):
     owner = rent.renter.property.owner
     phone = owner.profile.whatsapp_number
@@ -108,12 +109,6 @@ def notify_owner_post_payout(rent):
     # 2. Send voice note
     if audio_path:
         send_whatsapp_audio(phone, audio_path)
-
-
-
-
-
-
 
 
 # # services/rent_notify_service.py

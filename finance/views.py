@@ -15,6 +15,7 @@ class CAProfileViewSet(viewsets.ModelViewSet):
     serializer_class = CAProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+
 class TaxSubmissionToCAViewSet(viewsets.ModelViewSet):
     serializer_class = TaxSubmissionToCASerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -32,7 +33,7 @@ class DownloadTaxFilesView(APIView):
 
     def get(self, request):
         user = request.user
-        fy = request.query_params.get('fy', '2024-25')
+        fy = request.query_params.get("fy", "2024-25")
 
         properties = Unit.objects.filter(owner=user)
         excel = generate_tax_excel(user, properties, fy)
@@ -48,4 +49,6 @@ class DownloadTaxFilesView(APIView):
 
         zip_file = create_tax_zip(user, excel, pdf, extra_files)
 
-        return FileResponse(open(zip_file, 'rb'), as_attachment=True, filename="tax_documents.zip")
+        return FileResponse(
+            open(zip_file, "rb"), as_attachment=True, filename="tax_documents.zip"
+        )

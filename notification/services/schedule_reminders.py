@@ -10,6 +10,7 @@ def get_upcoming_rent_dues():
     target_date = now().date() + timedelta(days=3)
     return RentRecord.objects.filter(due_date=target_date)
 
+
 def get_upcoming_tax_dues():
     target_date = now().date() + timedelta(days=3)
     return PropertyTaxRecord.objects.filter(due_date=target_date, is_paid=False)
@@ -20,6 +21,7 @@ def generate_rent_reminder_msg(rent: RentRecord, lang="hi"):
     amount = rent.amount
     date = rent.due_date.strftime("%d %B")
     return f"Namaste {name}! Aapka ₹{amount} rent {date} ko due hai. Kripya samay par jama karein."
+
 
 def generate_tax_reminder_msg(tax: PropertyTaxRecord, lang="hi"):
     amount = tax.amount
@@ -36,6 +38,7 @@ def process_rent_reminders():
             audio_path = generate_voice_note(msg, lang)
             send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)
 
+
 def process_tax_reminders():
     for tax in get_upcoming_tax_dues():
         phone = tax.user.profile.whatsapp_number
@@ -45,8 +48,6 @@ def process_tax_reminders():
             audio_path = generate_voice_note(msg, lang)
             owner = tax.property.owner
             send_whatsapp_audio(owner.profile.whatsapp_number, audio_path)
-
-
 
 
 # Step 4: Schedule Cron Job (Every Morning)

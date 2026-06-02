@@ -25,38 +25,42 @@ from properties.utils import update_usage_count
 @receiver(post_save, sender=Building)
 @receiver(post_delete, sender=Building)
 def update_building_usage(sender, instance, **kwargs):
-    update_usage_count(instance.owner, 'max_buldings', Building)
+    update_usage_count(instance.owner, "max_buldings", Building)
+
 
 # Unit usage update
 @receiver(post_save, sender=Unit)
 @receiver(post_delete, sender=Unit)
 def update_unit_usage(sender, instance, **kwargs):
-    update_usage_count(instance.owner, 'max_units', Unit)
+    update_usage_count(instance.owner, "max_units", Unit)
+
 
 # Caretaker usage update
 @receiver(post_save, sender=Caretaker)
 @receiver(post_delete, sender=Caretaker)
 def update_caretaker_usage(sender, instance, **kwargs):
-    update_usage_count(instance.unit.owner, 'max_caretakers', Caretaker)
+    update_usage_count(instance.unit.owner, "max_caretakers", Caretaker)
+
 
 # Renter usage update
 @receiver(post_save, sender=Renter)
 @receiver(post_delete, sender=Renter)
 def update_renter_usage(sender, instance, **kwargs):
-    update_usage_count(instance.unit.owner, 'max_renters', Renter)
+    update_usage_count(instance.unit.owner, "max_renters", Renter)
+
 
 # Unit Images usage update
 @receiver(post_save, sender=UnitImage)
 @receiver(post_delete, sender=UnitImage)
 def update_unit_images_usage(sender, instance, **kwargs):
-    update_usage_count(instance.unit.owner, 'max_unit_images', UnitImage)
+    update_usage_count(instance.unit.owner, "max_unit_images", UnitImage)
+
 
 # Unit Document usage update
 @receiver(post_save, sender=UnitDocument)
 @receiver(post_delete, sender=UnitDocument)
 def update_unit_document_usage(sender, instance, **kwargs):
-    update_usage_count(instance.unit.owner, 'max_documents_uploads', UnitDocument)
-
+    update_usage_count(instance.unit.owner, "max_documents_uploads", UnitDocument)
 
 
 @receiver(post_save, sender=RentRecord)
@@ -68,8 +72,9 @@ def handle_rent_payment(sender, instance, **kwargs):
         Notification.objects.create(
             user=instance.renter.user,
             title="Thanks for Early Rent Payment",
-            message="We appreciate your on-time rent payment. Keep it up! 🏆"
+            message="We appreciate your on-time rent payment. Keep it up! 🏆",
         )
+
 
 def update_renter_defaulter_status(rent: RentRecord):
     if rent.status == "UNPAID" and rent.due_date < timezone.now().date():
@@ -83,9 +88,11 @@ def update_renter_defaulter_status(rent: RentRecord):
             notify_owner_renter_flagged(renter)
         renter.save()
 
+
 # models.py
 # from django.db.models.signals import post_save
 # from django.dispatch import receiver
+
 
 @receiver(post_save, sender=Renter)
 def notify_owner_if_unit_vacant(sender, instance, **kwargs):
@@ -96,13 +103,15 @@ def notify_owner_if_unit_vacant(sender, instance, **kwargs):
         if not Renter.objects.filter(unit=unit, status="active").exists():
             # Send alert to owner
             from notification.services.whatsapp_service import send_whatsapp_message
+
             send_whatsapp_message(
                 owner.profile.whatsapp_number,
-                f"🏠 Unit {unit.unit_number} is now vacant. Please assign a new renter or mark it as intentionally vacant from your dashboard."
+                f"🏠 Unit {unit.unit_number} is now vacant. Please assign a new renter or mark it as intentionally vacant from your dashboard.",
             )
 
 
 # renters/signals.py or override Renter model's save()
+
 
 @receiver(post_save, sender=Renter)
 def generate_final_invoice_on_exit(sender, instance, **kwargs):

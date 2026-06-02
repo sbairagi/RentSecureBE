@@ -14,5 +14,3 @@ def send_rent_reminder(renter, days_left):
         msg = f"⚠️ Rent payment is overdue since {rent_due_date.strftime('%d %b')}. Please pay immediately to avoid late fees."
 
     send_whatsapp_message(renter.phone, msg)
-
-

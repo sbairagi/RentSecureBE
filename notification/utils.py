@@ -26,13 +26,9 @@ def send_push_notification(user, title, body):
 def send_whatsapp_message(to, message):
     client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
     from_whatsapp = settings.TWILIO_WHATSAPP_NUMBER
-    to_whatsapp = f'whatsapp:{to}'
+    to_whatsapp = f"whatsapp:{to}"
 
-    message = client.messages.create(
-        body=message,
-        from_=from_whatsapp,
-        to=to_whatsapp
-    )
+    message = client.messages.create(body=message, from_=from_whatsapp, to=to_whatsapp)
     return message.sid
 
 

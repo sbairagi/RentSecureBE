@@ -1,1 +1,1 @@
-default_app_config = 'properties.apps.PropertiesConfig'
+default_app_config = "properties.apps.PropertiesConfig"
