@@ -36,6 +36,7 @@ jobs:
               pip install pylint pylint-django
               ;;
             mypy)
+              pip install -r requirements.txt
               pip install mypy django-stubs
               ;;
           esac
