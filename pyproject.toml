@@ -37,6 +37,7 @@ select = ["E", "F", "W", "C", "N", "I", "S", "B"]
 "core/tests/**" = ["S106"]
 "documents/tests.py" = ["S106"]
 "**/__init__.py" = ["F403"]
+"management/commands/**" = ["E501"]
 
 [tool.pylint.MASTER]
 load-plugins = ["pylint_django"]
