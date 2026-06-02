@@ -6,7 +6,8 @@ from django.core.files.base import ContentFile
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient, APITestCase
 
-from rentsecure_be.services.leegality_service import send_agreement_for_signature
+from rentsecure_be.services.leegality_service import \
+    send_agreement_for_signature
 
 from .models import Building, RentAgreementDraft, Renter, Unit
 

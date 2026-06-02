@@ -6,9 +6,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from documents.utils import generate_unit_history_pdf
-from documents.views import (
-    GenerateRentAgreementPdfViewSet,
-)
+from documents.views import GenerateRentAgreementPdfViewSet
 
 User = get_user_model()
 

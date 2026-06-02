@@ -7,11 +7,10 @@ from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 
-from core.models import AddOnPurchase, PlanFeatureLimit, UsageLimit, UserSubscription
+from core.models import (AddOnPurchase, PlanFeatureLimit, UsageLimit,
+                         UserSubscription)
 from notification.services.late_fees_notify_service import (
-    notify_owner_about_late_fee,
-    notify_renter_about_late_fee,
-)
+    notify_owner_about_late_fee, notify_renter_about_late_fee)
 from properties.models import RentRecord, Unit
 
 

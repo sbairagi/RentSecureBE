@@ -6,26 +6,12 @@ from rest_framework.permissions import IsAuthenticated
 from notification.services.rent_notify_service import send_payout_notification
 
 from .feature_enforcer import FeatureEnforcer
-from .models import (
-    Building,
-    Caretaker,
-    RentAgreementDraft,
-    Renter,
-    RentRecord,
-    Unit,
-    UnitDocument,
-    UnitImage,
-)
-from .serializers import (
-    BuildingSerializer,
-    CaretakerSerializer,
-    RentAgreementDraftSerializer,
-    RenterSerializer,
-    RentRecordSerializer,
-    UnitDocumentSerializer,
-    UnitImageSerializer,
-    UnitSerializer,
-)
+from .models import (Building, Caretaker, RentAgreementDraft, Renter,
+                     RentRecord, Unit, UnitDocument, UnitImage)
+from .serializers import (BuildingSerializer, CaretakerSerializer,
+                          RentAgreementDraftSerializer, RenterSerializer,
+                          RentRecordSerializer, UnitDocumentSerializer,
+                          UnitImageSerializer, UnitSerializer)
 
 
 class BuildingViewSet(viewsets.ModelViewSet):

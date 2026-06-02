@@ -5,12 +5,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from properties.models import (
-    Building,
-    Caretaker,
-    Renter,
-    Unit,
-)
+from properties.models import Building, Caretaker, Renter, Unit
 
 User = get_user_model()
 
