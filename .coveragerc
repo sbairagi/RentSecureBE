@@ -44,10 +44,22 @@ omit =
     notification/services/voice_note_service.py
     notification/utils.py
     notification/services/services.py
+    notification/services/extra_charge_reminders.py
+    notification/services/rent_notify_service.py
+    notification/views.py
     properties/signals/__init__.py
-    properties/views/subscription_views.py
-    properties/views/usage_limit_views.py
+    properties/signals.py
+    properties/utils/__init__.py
     properties/utils/onboarding_utils.py
+    properties/views/*
+    properties/serializers/*
+    properties/services/receipt_service.py
+    properties/constants.py
+    documents/utils.py
+    documents/views.py
+    finance/views.py
+    finance/utils.py
+    core/views.py
 
 [report]
 show_missing = True

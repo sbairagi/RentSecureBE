@@ -13,6 +13,7 @@ from notification.services.late_fees_notify_service import (
     notify_owner_about_late_fee,
     notify_renter_about_late_fee,
 )
+from properties.feature_enforcer import FeatureEnforcer
 from properties.models import RentRecord, Unit
 
 
@@ -185,41 +186,23 @@ def get_used_units(user, feature_key, source):
 
 
 def deduct_feature_usage_with_priority(user, feature_key, units_to_deduct=1):
-    now = timezone.now()
-    active_subs = UserSubscription.objects.filter(
-        user=user,
-        is_active=True,
-        end_date__gt=now
-    ).order_by('end_date')
-    active_addons = AddOnPurchase.objects.filter(
-        user=user,
-        is_active=True,
-        expires_at__gt=now
-    ).order_by('created_at')
-    usage_sources = list(active_subs) + list(active_addons)
-    units_remaining = units_to_deduct
+    """Deduct feature usage from the user's subscription and add-ons.
 
-    with transaction.atomic():
-        for source in usage_sources:
-            limit = get_limit_for_source(source, feature_key)
-            used = get_used_units(user, feature_key, source)
-            available = limit - used
-            if available <= 0:
-                continue
-            deduct = min(available, units_remaining)
-            UsageLimit.objects.create(
-                user=user,
-                feature_key=feature_key,
-                used_units=deduct,
-                user_subscription=source if isinstance(source, UserSubscription) else None,
-                addon_purchase=source if isinstance(source, AddOnPurchase) else None,
-            )
-            units_remaining -= deduct
-            if units_remaining <= 0:
-                break
+    Fixed: Uses correct fields (usage_count instead of used_units,
+    removed references to non-existent fields on AddOnPurchase and UsageLimit).
+    """
+    enforcer = FeatureEnforcer(user)
 
-    if units_remaining > 0:
+    # Check if there's enough capacity
+    if not enforcer.can_create(feature_key):
         raise ValidationError(f"Not enough available units for feature: {feature_key}")
+
+    # Simple approach: increment the usage counter
+    for _ in range(units_to_deduct):
+        if enforcer.can_create(feature_key):
+            enforcer.increment(feature_key)
+        else:
+            raise ValidationError(f"Not enough available units for feature: {feature_key}")
 
 
 import tempfile

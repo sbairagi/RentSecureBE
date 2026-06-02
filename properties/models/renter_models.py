@@ -120,6 +120,20 @@ class Renter(models.Model):
         if self.end_date and self.end_date < self.start_date:
             raise ValidationError("End date cannot be earlier than start date.")
 
+        # Prevent multiple active/notice_period renters on the same unit
+        if self.status in ("active", "notice_period"):
+            existing = Renter.objects.filter(
+                unit=self.unit,
+                status__in=("active", "notice_period"),
+            )
+            if self.pk:
+                existing = existing.exclude(pk=self.pk)
+            if existing.exists():
+                raise ValidationError(
+                    "This unit already has an active or notice-period renter. "
+                    "Please deactivate the existing renter before adding a new one."
+                )
+
     @property
     def property(self):
         return self.unit

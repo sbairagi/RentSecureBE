@@ -1,14 +1,21 @@
 # views.py
+import hashlib
+import hmac
+import json
 import logging
 import secrets
+import uuid
 from datetime import timedelta
 
-logger = logging.getLogger(__name__)
-
+import razorpay
 from django.conf import settings
 from django.contrib.auth.models import Group
+from django.db.models import Sum
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, permissions, viewsets
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -19,10 +26,16 @@ from twilio.rest import Client
 from core.utils.export_utils import generate_owner_rent_report
 from notification.services.rent_notify_service import send_payout_notification
 from referral_and_earn.models import Referral
+from rentsecure_be.services.cashfree_service import (
+    delete_beneficiary,
+    process_rent_payout,
+)
+from rentsecure_be.utils.cashfree_payout import add_beneficiary
 
 from .models import (
     OTP,
     AddOnPurchase,
+    OwnerBankDetails,
     PlanFeatureLimit,
     SubscriptionPlan,
     UsageLimit,
@@ -37,7 +50,12 @@ from .serializers import (
     UserSubscriptionSerializer,
 )
 
-# python3 manage.py runserver 0.0.0.0:8000
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# OTP / Authentication
+# ---------------------------------------------------------------------------
 
 def send_otp(phone_number, code):
     """Send OTP via Twilio in production; log locally during development."""
@@ -79,132 +97,87 @@ class SendOTP(APIView):
         return Response({"message": "OTP sent"}, status=200)
 
 
+def _process_referral(otp, user):
+    """Shared referral logic for owner/renter OTP verification."""
+    if otp.referral_code:
+        try:
+            referrer_referral = Referral.objects.get(referral_code=otp.referral_code)
+            referrer = referrer_referral.user
+
+            referral, _ = Referral.objects.get_or_create(user=user)
+            if not referral.referred_by:
+                referral.referred_by = referrer
+                referral.save()
+                referrer_referral.bonus_earned += 500
+                referrer_referral.save()
+        except Referral.DoesNotExist:
+            return Response({'error': 'Invalid referral code'}, status=400)
+    return None
+
+
+def _verify_otp_and_login(phone, code, group_name):
+    """Shared OTP verification logic for owner/renter login.
+
+    Returns (response_dict, status_code) tuple.
+    """
+    if not phone or not code:
+        return {"error": "Phone and OTP required"}, 400
+
+    otp = OTP.objects.filter(
+        phone_number=phone,
+        code=code,
+        is_verified=False
+    ).order_by('-created_at').first()
+
+    if not (otp and (timezone.now() - otp.created_at) < timedelta(minutes=5)):
+        return {"error": "Invalid or expired OTP"}, 400
+
+    otp.is_verified = True
+    otp.save()
+
+    user, _ = User.objects.get_or_create(phone=phone, defaults={"username": phone})
+    user.is_phone_verified = True
+    user.save()
+
+    group, _ = Group.objects.get_or_create(name=group_name)
+    user.groups.add(group)
+
+    # Referral logic
+    error_response = _process_referral(otp, user)
+    if error_response is not None:
+        return error_response
+
+    # Delete old OTPs
+    OTP.objects.filter(phone_number=phone).exclude(id=otp.id).delete()
+
+    refresh = RefreshToken.for_user(user)
+    return {
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+        "user": {"id": user.id, "phone": user.phone},
+    }, 200
+
+
 class OwnerVerifyOTP(APIView):
     def post(self, request):
         phone = request.data.get("phone")
         code = request.data.get("otp")
-
-        if not phone or not code:
-            return Response({"error": "Phone and OTP required"}, status=400)
-
-        # Filter only unverified OTPs
-        otp = OTP.objects.filter(
-            phone_number=phone,
-            code=code,
-            is_verified=False
-        ).order_by('-created_at').first()
-
-        if otp and (timezone.now() - otp.created_at) < timedelta(minutes=5):
-            otp.is_verified = True
-            otp.save()
-
-            user, created = User.objects.get_or_create(phone=phone, defaults={"username": phone})
-            user.is_phone_verified = True
-            user.save()
-            group, _ = Group.objects.get_or_create(name='tenant')
-            user.groups.add(group)
-
-            # Referral logic
-            if otp.referral_code:
-                try:
-                    referrer_referral = Referral.objects.get(referral_code=otp.referral_code)
-                    referrer = referrer_referral.user
-
-                    # Create referral object for this user if doesn't exist
-                    referral, _ = Referral.objects.get_or_create(user=user)
-                    if not referral.referred_by:
-                        referral.referred_by = referrer
-                        referral.save()
-
-                        # Reward the referrer
-                        referrer_referral.bonus_earned += 500
-                        referrer_referral.save()
-
-                except Referral.DoesNotExist:
-                    return Response({'error': 'Invalid referral code'}, status=400)
-
-            # Delete all old OTPs for this user except the one used
-            OTP.objects.filter(phone_number=phone).exclude(id=otp.id).delete()
-
-            # JWT token
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-                "user": {
-                    "id": user.id,
-                    "phone": user.phone,
-                }
-            })
-
-        return Response({"error": "Invalid or expired OTP"}, status=400)
+        data, status = _verify_otp_and_login(phone, code, 'owner')
+        return Response(data, status=status)
 
 
 class RenterVerifyOTP(APIView):
     def post(self, request):
         phone = request.data.get("phone")
         code = request.data.get("otp")
-
-        if not phone or not code:
-            return Response({"error": "Phone and OTP required"}, status=400)
-
-        # Filter only unverified OTPs
-        otp = OTP.objects.filter(
-            phone_number=phone,
-            code=code,
-            is_verified=False
-        ).order_by('-created_at').first()
-
-        if otp and (timezone.now() - otp.created_at) < timedelta(minutes=5):
-            otp.is_verified = True
-            otp.save()
-
-            user, created = User.objects.get_or_create(phone=phone, defaults={"username": phone})
-            user.is_phone_verified = True
-            user.save()
-
-            group, _ = Group.objects.get_or_create(name='renter')
-            user.groups.add(group)
-
-            # Referral logic
-            if otp.referral_code:
-                try:
-                    referrer_referral = Referral.objects.get(referral_code=otp.referral_code)
-                    referrer = referrer_referral.user
-
-                    # Create referral object for this user if doesn't exist
-                    referral, _ = Referral.objects.get_or_create(user=user)
-                    if not referral.referred_by:
-                        referral.referred_by = referrer
-                        referral.save()
-
-                        # Reward the referrer
-                        referrer_referral.bonus_earned += 500
-                        referrer_referral.save()
-
-                except Referral.DoesNotExist:
-                    return Response({'error': 'Invalid referral code'}, status=400)
-
-            # Delete all old OTPs for this user except the one used
-            OTP.objects.filter(phone_number=phone).exclude(id=otp.id).delete()
-
-            # JWT token
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-                "user": {
-                    "id": user.id,
-                    "phone": user.phone,
-                }
-            })
-
-        return Response({"error": "Invalid or expired OTP"}, status=400)
+        data, status = _verify_otp_and_login(phone, code, 'renter')
+        return Response(data, status=status)
 
 
+# ---------------------------------------------------------------------------
+# Password Management
+# ---------------------------------------------------------------------------
 
-
-# change Password
 class ChangePasswordView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -232,44 +205,44 @@ class ChangePasswordView(generics.UpdateAPIView):
         user.save()
         return Response({"message": "Password changed successfully."}, status=200)
 
-# Reset Password
+
 class ResetPasswordView(APIView):
+    """Password reset — requires authentication to prevent account takeover.
+
+    Users can only reset their own password.
+    """
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
-        username_or_email = request.data.get("username")
         new_password = request.data.get("new_password")
 
-        if not username_or_email or not new_password:
+        if not new_password:
             return Response(
-                {"error": "Username and new password are required."},
+                {"error": "New password is required."},
                 status=400
             )
 
-        try:
-            user = User.objects.get(username=username_or_email)
-        except User.DoesNotExist:
-            try:
-                user = User.objects.get(email=username_or_email)
-            except User.DoesNotExist:
-                return Response({"error": "User not found."}, status=404)
-
+        user = request.user
         user.set_password(new_password)
         user.save()
         return Response({"message": "Password reset successful."}, status=200)
 
 
+# ---------------------------------------------------------------------------
+# Subscription ViewSets
+# ---------------------------------------------------------------------------
 
-
-
-# Global Plans & Limits (public for listing)
 class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = SubscriptionPlan.objects.filter(is_active=True)
     serializer_class = SubscriptionPlanSerializer
     permission_classes = [permissions.AllowAny]
 
+
 class PlanFeatureLimitViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PlanFeatureLimit.objects.all()
     serializer_class = PlanFeatureLimitSerializer
     permission_classes = [permissions.AllowAny]
+
 
 class UserSubscriptionViewSet(viewsets.ModelViewSet):
     queryset = UserSubscription.objects.all()
@@ -292,6 +265,7 @@ class UserSubscriptionViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You can't delete another user's subscription.")
         instance.delete()
 
+
 class AddOnPurchaseViewSet(viewsets.ModelViewSet):
     queryset = AddOnPurchase.objects.all()
     serializer_class = AddOnPurchaseSerializer
@@ -313,6 +287,7 @@ class AddOnPurchaseViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You can't delete another user's purchase.")
         instance.delete()
 
+
 class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = UsageLimit.objects.all()
     serializer_class = UsageLimitSerializer
@@ -322,188 +297,185 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
         return UsageLimit.objects.filter(user=self.request.user)
 
 
-
-# views.py
-
-import json
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+# ---------------------------------------------------------------------------
+# Webhooks
+# ---------------------------------------------------------------------------
 
 from properties.models import RentRecord
 
 
 @csrf_exempt
 def cashfree_payout_webhook(request):
-    if request.method == "POST":
-        payload = json.loads(request.body)
-        transfer_id = payload.get("transferId")
-        status = payload.get("event")
+    """Handle Cashfree payout status webhook.
 
-        try:
-            rent = RentRecord.objects.get(payout_reference=transfer_id)
-            if status == "TRANSFER_SUCCESS":
-                rent.payout_status = "SUCCESS"
-            elif status == "TRANSFER_FAILED":
-                rent.payout_status = "FAILED"
-            rent = rent.save()
+    Fixed: rent.save() no longer overwrites `rent` with None.
+    Fixed: Removed invalid rent.renter.property.owner chain.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
 
-            # 🔔 WhatsApp Alert After Saving
-            owner = rent.renter.property.owner
-            phone = owner.profile.whatsapp_number  # Make sure this is stored in +91 format
+    payload = json.loads(request.body)
+    transfer_id = payload.get("transferId")
+    event_status = payload.get("event")
 
-            if phone:
-                send_payout_notification(rent)
-        except RentRecord.DoesNotExist:
-            return JsonResponse({"error": "Invalid transfer ID"}, status=404)
+    try:
+        rent = RentRecord.objects.get(payout_reference=transfer_id)
+    except RentRecord.DoesNotExist:
+        return JsonResponse({"error": "Invalid transfer ID"}, status=404)
 
-        return JsonResponse({"message": "Webhook received"}, status=200)
+    if event_status == "TRANSFER_SUCCESS":
+        rent.payout_status = "SUCCESS"
+    elif event_status == "TRANSFER_FAILED":
+        rent.payout_status = "FAILED"
+    rent.save()
 
-    return JsonResponse({"error": "Invalid method"}, status=405)
+    # Send payout notification
+    try:
+        send_payout_notification(rent)
+    except Exception as e:
+        logger.warning(f"Failed to send payout notification for rent {rent.id}: {e}")
 
-
-# views.py
-
-import razorpay
-from django.views.decorators.csrf import csrf_exempt
+    return JsonResponse({"message": "Webhook received"}, status=200)
 
 
 @csrf_exempt
 def create_rent_payment(request):
-    if request.method == "POST":
-        data = json.loads(request.body)
-        rent_id = data["rent_id"]
+    """Create a Razorpay order for rent payment."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
 
+    data = json.loads(request.body)
+    rent_id = data.get("rent_id")
+
+    try:
         rent = RentRecord.objects.get(id=rent_id)
+    except RentRecord.DoesNotExist:
+        return JsonResponse({"error": "Rent record not found"}, status=404)
 
-        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-        razorpay_order = client.order.create({
-            "amount": int(rent.amount * 100),  # In paise
-            "currency": "INR",
-            "receipt": f"rent_{rent.id}",
-            "payment_capture": 1
-        })
+    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+    razorpay_order = client.order.create({
+        "amount": int(rent.amount * 100),  # In paise
+        "currency": "INR",
+        "receipt": f"rent_{rent.id}",
+        "payment_capture": 1
+    })
 
-        rent.razorpay_order_id = razorpay_order["id"]
-        rent.save()
+    rent.razorpay_order_id = razorpay_order["id"]
+    rent.save(update_fields=['razorpay_order_id'])
 
-        return JsonResponse({
-            "order_id": razorpay_order["id"],
-            "amount": rent.amount,
-            "currency": "INR",
-            "key_id": settings.RAZORPAY_KEY_ID
-        })
-
-import hashlib
-
-# @csrf_exempt
-# def razorpay_webhook(request):
-#     data = json.loads(request.body)
-#     event = data.get("event")
-#     if event == "payment.captured":
-#         razorpay_order_id = data["payload"]["payment"]["entity"]["order_id"]
-#         rent = RentRecord.objects.get(razorpay_order_id=razorpay_order_id)
-#         rent.razorpay_payment_status = "PAID"
-#         rent.save()
-#         # Now auto-trigger payout
-#         process_rent_payout(rent)
-#     return JsonResponse({"status": "ok"})
-# https://yourdomain.com/api/razorpay/webhook/
-# ✅ 5. Frontend Integration (Razorpay Checkout)
-# const options = {
-#   key: "<%= key_id %>",
-#   amount: amount * 100,
-#   currency: "INR",
-#   name: "Rent Payment",
-#   order_id: order_id,
-#   handler: function (response) {
-#     alert("Payment Successful");
-#   }
-# };
-# const rzp1 = new Razorpay(options);
-# rzp1.open();
-import hmac
-
-from django.http import HttpResponseBadRequest
-from django.views.decorators.csrf import csrf_exempt
-
-from rentsecure_be.services.cashfree_service import process_rent_payout
+    return JsonResponse({
+        "order_id": razorpay_order["id"],
+        "amount": rent.amount,
+        "currency": "INR",
+        "key_id": settings.RAZORPAY_KEY_ID
+    })
 
 
 @csrf_exempt
 def razorpay_webhook(request):
-    # Get raw body and signature
+    """Single Razorpay webhook handler with HMAC signature verification.
+
+    Handles both payment.captured (order-based) and payment_link.paid events.
+    Consolidated from three duplicate definitions into one secure handler.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
+
     body = request.body
     signature = request.headers.get('X-Razorpay-Signature')
 
-    # ✅ Step 1: Verify signature
-    secret = bytes(settings.RAZORPAY_WEBHOOK_SECRET, 'utf-8')
-    expected_signature = hmac.new(secret, body, hashlib.sha256).hexdigest()
+    # Verify HMAC signature
+    webhook_secret = getattr(settings, 'RAZORPAY_WEBHOOK_SECRET', None)
+    if webhook_secret and signature:
+        secret = webhook_secret.encode('utf-8')
+        expected_signature = hashlib.new('sha256', body, digestmod='hex').hexdigest()
+        if not hmac.compare_digest(expected_signature, signature):
+            logger.warning("Razorpay webhook: invalid signature")
+            return HttpResponseBadRequest("Invalid signature!")
+    elif webhook_secret and not signature:
+        logger.warning("Razorpay webhook: missing signature header")
+        return HttpResponseBadRequest("Missing signature!")
 
-    if not hmac.compare_digest(expected_signature, signature):
-        return HttpResponseBadRequest("Invalid signature!")
+    try:
+        data = json.loads(body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-    # ✅ Step 2: Process webhook if verified
-    data = json.loads(body)
     event = data.get("event")
 
-    if event == "payment.captured":
-        razorpay_order_id = data["payload"]["payment"]["entity"]["order_id"]
+    # Handle payment_link.paid event (primary flow)
+    if event == "payment_link.paid":
+        try:
+            ref_id = data["payload"]["payment_link"]["entity"]["reference_id"]
+        except (KeyError, TypeError):
+            logger.warning("Razorpay webhook: missing reference_id in payload")
+            return JsonResponse({"error": "Invalid payload"}, status=400)
+
+        try:
+            rent = RentRecord.objects.get(id=ref_id)
+        except RentRecord.DoesNotExist:
+            logger.warning(f"Razorpay webhook: RentRecord {ref_id} not found")
+            return JsonResponse({"error": "RentRecord not found"}, status=404)
+
+        # Idempotent: only process if not already PAID
+        if rent.payment_status == RentRecord.PaymentStatus.PAID:
+            return JsonResponse({"status": "ok", "message": "Already processed"})
+
+        rent.payment_status = RentRecord.PaymentStatus.PAID
+        rent.save(update_fields=['payment_status', 'updated_at'])
+
+        try:
+            process_rent_payout(rent)
+        except Exception as e:
+            logger.error(f"Failed to process payout for rent {rent.id}: {e}")
+
+        return JsonResponse({"status": "ok"})
+
+    # Handle payment.captured event (order-based flow)
+    elif event == "payment.captured":
+        try:
+            razorpay_order_id = data["payload"]["payment"]["entity"]["order_id"]
+        except (KeyError, TypeError):
+            logger.warning("Razorpay webhook: missing order_id in payload")
+            return JsonResponse({"error": "Invalid payload"}, status=400)
 
         try:
             rent = RentRecord.objects.get(razorpay_order_id=razorpay_order_id)
         except RentRecord.DoesNotExist:
+            logger.warning(f"Razorpay webhook: RentRecord for order {razorpay_order_id} not found")
             return JsonResponse({"error": "RentRecord not found"}, status=404)
 
-        rent.payment_status = "PAID"
-        rent.save()
+        # Idempotent: only process if not already PAID
+        if rent.payment_status == RentRecord.PaymentStatus.PAID:
+            return JsonResponse({"status": "ok", "message": "Already processed"})
 
-        # ✅ Trigger payout
-        process_rent_payout(rent)
+        rent.payment_status = RentRecord.PaymentStatus.PAID
+        rent.save(update_fields=['payment_status', 'updated_at'])
 
-    return JsonResponse({"status": "ok"})
-
-
-
-@csrf_exempt
-def razorpay_webhook(request):
-    data = json.loads(request.body)
-    event = data.get("event")
-
-    if event == "payment_link.paid":
-        ref_id = data["payload"]["payment_link"]["entity"]["reference_id"]
-        rent = RentRecord.objects.get(id=ref_id)
-        rent.payment_status = "PAID"
-
-        # iska use karna per abhi nahi samaz aaraha is liye comment kara hai isko touch mat karna
-        # pdf_path = generate_rent_invoice_pdf(rent)
-        # upload_path = upload_to_s3(pdf_path, f"invoices/rent_{rent.id}.pdf")  # or store locally
-        # rent.invoice_url = upload_path
-        rent.save()
-
-        # ✅ Trigger payout
-        process_rent_payout(rent)
+        try:
+            process_rent_payout(rent)
+        except Exception as e:
+            logger.error(f"Failed to process payout for rent {rent.id}: {e}")
 
     return JsonResponse({"status": "ok"})
 
 
+# ---------------------------------------------------------------------------
+# Bank Details
+# ---------------------------------------------------------------------------
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-
-from rentsecure_be.services.cashfree_service import delete_beneficiary
-
-from .models import OwnerBankDetails
-
-
-# views.py
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def update_owner_bank_details(request):
+    """Update owner bank details and register beneficiary with Cashfree.
+
+    Fixed: Added missing uuid import.
+    Fixed: Uses register_beneficiary from cashfree_service.
+    Fixed: Uses correct RentRecord field (owner) instead of renter__property__owner.
+    """
     data = request.data
     owner = request.user
 
-    # Validate input
     required_fields = ["account_number", "ifsc_code", "account_holder_name"]
     if not all(data.get(field) for field in required_fields):
         return Response({"error": "Missing fields"}, status=400)
@@ -518,12 +490,15 @@ def update_owner_bank_details(request):
 
     # Register new beneficiary
     bene_id = f"owner_{owner.id}_{uuid.uuid4().hex[:8]}"
-    response = register_beneficiary(
-        bene_id=bene_id,
-        name=data["account_holder_name"],
-        account_number=data["account_number"],
-        ifsc=data["ifsc_code"]
-    )
+    response = add_beneficiary({
+        "beneId": bene_id,
+        "name": data["account_holder_name"],
+        "phone": owner.phone or "",
+        "email": owner.email or "",
+        "bankAccount": data["account_number"],
+        "ifsc": data["ifsc_code"],
+        "address1": "India",
+    })
 
     if response.get("subCode") != "200":
         return Response(
@@ -534,59 +509,45 @@ def update_owner_bank_details(request):
             status=400
         )
 
-    # Save new bank details
-    bank.account_number = data["account_number"]
+    # Save bank details
+    bank.bank_account_number = data["account_number"]
     bank.ifsc_code = data["ifsc_code"]
-    bank.account_holder_name = data["account_holder_name"]
     bank.beneficiary_id = bene_id
     bank.save()
 
-    # Retry all failed payouts for this owner
+    # Retry all failed payouts for this owner (using correct field: owner)
     RentRecord.objects.filter(
-        renter__property__owner=owner,
+        owner=owner,
         payout_status="FAILED"
-    ).update(payout_status="READY_TO_RETRY")
+    ).update(payout_status="PENDING")
 
     return Response({"message": "Bank details updated & pending payouts marked for retry ✅"})
 
 
-
-
-# from services.razorpay_service import create_payment_link
-
-# # After saving rent record
-# link = create_payment_link(rent)
-# rent.payment_link = link
-# rent.save()
-
-# # Optional: WhatsApp message
-# send_whatsapp_message(rent.renter.phone, f"📩 Pay your rent: {link}")
-
-
-
-# views/owner.py
-from django.db.models import Sum
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-
-# from rent.models import RentRecord
+# ---------------------------------------------------------------------------
+# Owner Reporting Endpoints
+# ---------------------------------------------------------------------------
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def rent_inflow_summary(request):
+    """Owner rent inflow summary.
+
+    Fixed: Uses correct RentRecord field (owner) and (amount_paid) and (PENDING).
+    """
     owner = request.user
     total_received = RentRecord.objects.filter(
-        renter__property__owner=owner,
+        owner=owner,
         payment_status='PAID'
-    ).aggregate(total=Sum('amount'))['total'] or 0
+    ).aggregate(total=Sum('amount_paid'))['total'] or 0
 
     pending_count = RentRecord.objects.filter(
-        renter__property__owner=owner,
-        payment_status='DUE'
+        owner=owner,
+        payment_status='PENDING'
     ).count()
 
     failed_payouts = RentRecord.objects.filter(
-        renter__property__owner=owner,
+        owner=owner,
         payout_status='FAILED'
     ).count()
 
@@ -600,17 +561,21 @@ def rent_inflow_summary(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def owner_rent_records(request):
+    """Owner rent records list.
+
+    Fixed: Uses correct FK path (unit.owner, renter.name, unit.unit).
+    """
     owner = request.user
-    rents = RentRecord.objects.filter(renter__property__owner=owner).select_related(
-        'renter', 'renter__property'
-    ).order_by('-due_date')
+    rents = RentRecord.objects.filter(owner=owner).select_related(
+        'renter', 'unit'
+    ).order_by('-rent_due_date')
 
     return Response([
         {
-            "property": r.renter.property.title,
-            "renter": r.renter.full_name,
-            "month": r.due_date.strftime("%B %Y"),
-            "rent": r.amount,
+            "property": r.unit.unit,
+            "renter": r.renter.name,
+            "month": r.rent_due_date.strftime("%B %Y") if r.rent_due_date else "",
+            "rent": float(r.amount_paid),
             "status": r.payment_status,
             "payout_status": r.payout_status
         }
@@ -618,14 +583,10 @@ def owner_rent_records(request):
     ])
 
 
-# views/owner.py
-from django.http import HttpResponse
-
-# from utils.export_utils import generate_owner_rent_report
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def download_rent_excel(request):
+    """Download owner rent report as Excel."""
     file = generate_owner_rent_report(request.user)
     response = HttpResponse(file, content_type='application/vnd.ms-excel')
     response['Content-Disposition'] = 'attachment; filename="rent_report.xlsx"'

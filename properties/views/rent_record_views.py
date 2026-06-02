@@ -146,10 +146,11 @@ def get_latest_due_rent(request):
         return Response({"message": "No pending rent"})
 
     return Response({
-        "amount": rent.amount,
+        "amount": float(rent.amount),
         "month": rent.month,
         "year": rent.year,
-        "property": renter.property.name,
+        "property": renter.unit.unit,
+        "building": renter.unit.building.name if renter.unit.building else None,
         "payment_link": rent.payment_link,
         "due_date": rent.due_date,
     })
@@ -183,8 +184,9 @@ def owner_rent_overview(request):
     for r in rents:
         data.append({
             "tenant": r.renter.name,
-            "unit": r.renter.property.name,
-            "amount": r.amount,
+            "unit": r.unit.unit,
+            "building": r.unit.building.name if r.unit.building else None,
+            "amount": float(r.amount),
             "month": r.month,
             "year": r.year,
             "status": r.payment_status,
