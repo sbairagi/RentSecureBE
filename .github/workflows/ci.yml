@@ -35,7 +35,7 @@ jobs:
               pip install pylint pylint-django
               ;;
             mypy)
-              pip install mypy django-stubs
+              pip install mypy django-stubs mypy-django-plugin
               ;;
           esac
       - name: Run tool
