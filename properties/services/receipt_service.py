@@ -90,7 +90,8 @@ def send_rent_receipt_email(rent_record):
         )
 
         # Attach PDF
-        filename = f"rent_receipt_{rent_record.id}_{rent_record.rent_month.strftime('%Y%m')}.pdf"
+        receipt_month = rent_record.rent_month.strftime("%Y%m")
+        filename = f"rent_receipt_{rent_record.id}_{receipt_month}.pdf"
         email.attach(filename, pdf_bytes, "application/pdf")
 
         # Send

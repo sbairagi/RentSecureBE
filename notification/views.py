@@ -1,3 +1,4 @@
+from fcm_django.models import FCMDevice
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -70,11 +71,6 @@ def save_device_token(request):
 #   };
 #   register();
 # }, []);
-
-
-from fcm_django.models import FCMDevice
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 
 
 @api_view(["POST"])

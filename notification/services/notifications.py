@@ -25,7 +25,15 @@ def send_push_notification(user: Any, title: str, message: str) -> Optional[bool
 
 
 # # Rent paid
-# send_push_notification(rent.renter.user, "✅ Rent Paid", f"Your rent ₹{rent.amount} has been paid.")
+# send_push_notification(
+#     rent.renter.user,
+#     "✅ Rent Paid",
+#     f"Your rent ₹{rent.amount} has been paid.",
+# )
 
 # # Agreement signed
-# send_push_notification(rent.renter.user, "📝 Agreement Signed", "Thanks for signing the rent agreement.")
+# send_push_notification(
+#     rent.renter.user,
+#     "📝 Agreement Signed",
+#     "Thanks for signing the rent agreement.",
+# )

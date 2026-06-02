@@ -38,7 +38,10 @@ def retry_failed_payouts():
                     owner = rent.renter.property.owner
                     send_whatsapp_message(
                         owner.profile.whatsapp_number,
-                        f"✅ Rent ₹{rent.amount} has now been credited to your account (after retry).",
+                        (
+                            f"✅ Rent ₹{rent.amount} has now been credited "
+                            "to your account (after retry)."
+                        ),
                     )
 
         except Exception as e:

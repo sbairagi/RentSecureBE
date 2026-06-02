@@ -4,7 +4,10 @@ from properties.services.extra_charge_service import generate_monthly_extra_char
 
 
 class Command(BaseCommand):
-    help = "Generate recurring monthly extra charges such as electricity and maintenance for active renters."
+    help = (
+        "Generate recurring monthly extra charges such as electricity and "
+        "maintenance for active renters."
+    )
 
     def handle(self, *args, **options):
         created = generate_monthly_extra_charges()

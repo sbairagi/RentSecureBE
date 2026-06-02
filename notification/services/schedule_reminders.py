@@ -20,7 +20,10 @@ def generate_rent_reminder_msg(rent: RentRecord, lang="hi"):
     name = rent.renter.full_name
     amount = rent.amount
     date = rent.due_date.strftime("%d %B")
-    return f"Namaste {name}! Aapka ₹{amount} rent {date} ko due hai. Kripya samay par jama karein."
+    return (
+        f"Namaste {name}! Aapka ₹{amount} rent {date} ko due hai. "
+        "Kripya samay par jama karein."
+    )
 
 
 def generate_tax_reminder_msg(tax: PropertyTaxRecord, lang="hi"):

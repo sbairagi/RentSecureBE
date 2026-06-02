@@ -8,7 +8,10 @@ from ..utils import send_whatsapp_message
 # notify_user(
 #     user=rent.renter.user,
 #     title="📩 New Rent Due",
-#     message=f"₹{rent.amount} rent due for {rent.month}/{rent.year}. Please pay using the link."
+#     message=(
+#         f"₹{rent.amount} rent due for {rent.month}/{rent.year}. "
+#         "Please pay using the link."
+#     )
 # )
 
 # Payout Success
@@ -34,5 +37,8 @@ def notify_user(user, title, message):
 
 def notify_owner_renter_flagged(renter):
     owner = renter.property.owner
-    msg = f"🚨 Alert: Renter {renter.name} missed 3 rent payments. Their rent agreement has been revoked."
+    msg = (
+        f"🚨 Alert: Renter {renter.name} missed 3 rent payments. "
+        "Their rent agreement has been revoked."
+    )
     send_whatsapp_message(owner.profile.whatsapp_number, msg)

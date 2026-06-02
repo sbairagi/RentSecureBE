@@ -7,8 +7,6 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-logger = logging.getLogger(__name__)
-
 from core.models import PlanFeatureLimit, SubscriptionPlan, UsageLimit, UserSubscription
 from properties.feature_enforcer import FeatureEnforcer
 from properties.models import (
@@ -21,6 +19,8 @@ from properties.models import (
     UnitDocument,
     UnitImage,
 )
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 

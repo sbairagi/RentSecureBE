@@ -4,6 +4,7 @@ import requests
 from django.conf import settings
 
 LEEGALITY_API_URL = "https://api.leegality.com/v3/document/upload"
+LEEGALITY_DOCUMENT_URL = "https://api.leegality.com/v3/document"
 
 
 def initiate_signature(renter, file_path):
@@ -31,5 +32,21 @@ def initiate_signature(renter, file_path):
             files=files,
             data={"data": json.dumps(data)},
             headers=headers,
+            timeout=10,
         )
         return response.json()
+
+
+def check_signature_status(signature_request_id):
+    headers = {
+        "X-API-KEY": settings.LEEGALITY_API_KEY,
+        "X-ORG-ID": settings.LEEGALITY_ORG_ID,
+    }
+    response = requests.get(
+        f"{LEEGALITY_DOCUMENT_URL}/{signature_request_id}",
+        headers=headers,
+        timeout=10,
+    )
+    response.raise_for_status()
+    data = response.json()
+    return data.get("status") or data.get("documentStatus")

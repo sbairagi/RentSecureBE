@@ -48,7 +48,10 @@ def revoke_rent_agreement(request, renter_id):
 
     send_whatsapp_message(
         renter.phone,
-        f"⚠️ Your rent agreement has been revoked by the owner. Reason: {renter.revocation_reason}",
+        (
+            "⚠️ Your rent agreement has been revoked by the owner. "
+            f"Reason: {renter.revocation_reason}"
+        ),
     )
 
     return Response({"success": True, "message": "Agreement revoked successfully"})

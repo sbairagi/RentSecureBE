@@ -31,7 +31,11 @@ def send_smart_alert(
 
 
 # # Rent due alert example
-# send_smart_alert(rent.renter.user, f"Rent ₹{rent.amount} is due tomorrow.", title="🏠 Rent Due")
+# send_smart_alert(
+#     rent.renter.user,
+#     f"Rent ₹{rent.amount} is due tomorrow.",
+#     title="🏠 Rent Due",
+# )
 
 # # Payout failed alert
 # send_smart_alert(

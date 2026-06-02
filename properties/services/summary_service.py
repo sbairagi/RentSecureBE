@@ -125,8 +125,11 @@ def send_monthly_rent_summary_email(owner, target_date=None, send_whatsapp=True)
                 print(f"Failed to send WhatsApp to {whatsapp_number}: {exc}")
 
     if not sent_any:
+        owner_label = owner.email or owner.username
         print(
-            f"No monthly summary notification was sent for {owner.email or owner.username}. Preferences: email={prefs.monthly_summary_email}, whatsapp={prefs.monthly_summary_whatsapp}"
+            f"No monthly summary notification was sent for {owner_label}. "
+            f"Preferences: email={prefs.monthly_summary_email}, "
+            f"whatsapp={prefs.monthly_summary_whatsapp}"
         )
 
     return sent_any

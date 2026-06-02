@@ -1,4 +1,5 @@
 from properties.models import RentRecord
+from smartbot.services.leegality_service import check_signature_status
 
 # tasks.py (Celery or cron)
 

@@ -1,9 +1,10 @@
 # services/cashfree_service.py
 import logging
 
-from core.models import OwnerBankDetails
+import requests
+from django.conf import settings
 
-logger = logging.getLogger(__name__)
+from core.models import OwnerBankDetails
 from notification.services.rent_notify_service import (
     notify_owner,
     notify_owner_post_payout,
@@ -12,6 +13,8 @@ from notification.services.rent_notify_service import (
 )
 from properties.models import RentRecord
 from rentsecure_be.utils.cashfree_payout import add_beneficiary, make_payout
+
+logger = logging.getLogger(__name__)
 
 # from core.models import
 
@@ -57,12 +60,21 @@ def pay_owner_after_rent(rent: RentRecord):
         rent.payout_status = "FAILED"
 
     if rent.payout_status == "SUCCESS":
-        # msg = f"Namaste! Aapka ₹{rent.amount} rent {rent.updated_at.date()} ko jama hua hai."
+        # msg = (
+        #     f"Namaste! Aapka ₹{rent.amount} rent "
+        #     f"{rent.updated_at.date()} ko jama hua hai."
+        # )
         # notify_renter(rent.renter, msg)
-        msg_renter = f"✅ Aapka ₹{rent.amount} rent {rent.updated_at.date()} ko jama ho gaya hai."
+        msg_renter = (
+            f"✅ Aapka ₹{rent.amount} rent {rent.updated_at.date()} "
+            "ko jama ho gaya hai."
+        )
         notify_renter(rent.renter, msg_renter)
 
-        msg_owner = f"🎉 ₹{rent.amount} rent {rent.updated_at.date()} ko aapke account mein transfer ho gaya hai."
+        msg_owner = (
+            f"🎉 ₹{rent.amount} rent {rent.updated_at.date()} "
+            "ko aapke account mein transfer ho gaya hai."
+        )
         notify_owner(rent.owner, msg_owner)
 
     elif rent.payout_status == "FAILED":
@@ -72,7 +84,7 @@ def pay_owner_after_rent(rent: RentRecord):
         )
         notify_renter(rent.renter, msg)
 
-    rent = rent.save()
+    rent.save()
 
     # 🔔 WhatsApp Alert After Saving
     owner = rent.renter.property.owner
@@ -165,8 +177,6 @@ def process_rent_payout(rent: RentRecord):
 
 
 BASE_URL = ""
-import requests
-from django.conf import settings
 
 
 # cashfree_service.py
@@ -179,5 +189,5 @@ def delete_beneficiary(beneficiary_id: str):
         "Authorization": f"Bearer {get_auth_token()}",
         "Content-Type": "application/json",
     }
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(url, headers=headers, json=payload, timeout=10)
     return response.json()

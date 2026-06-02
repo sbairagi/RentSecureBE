@@ -16,7 +16,7 @@ def _read_pdf_if_exists(path):
         return output.read()
 
 
-def generate_unit_history_pdf(unit_obj):
+def generate_unit_history_pdf(unit_obj):  # noqa: C901
     tax_records = []
     if hasattr(unit_obj, "unittaxrecord_set"):
         tax_records = unit_obj.unittaxrecord_set.all()

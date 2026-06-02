@@ -1,13 +1,10 @@
 import hashlib
 import tempfile
-from datetime import date
 
 from dateutil.relativedelta import relativedelta
 from django.core.exceptions import ValidationError
-from django.db import transaction
 from django.db.models import Sum
 from django.template.loader import render_to_string
-from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 from weasyprint import HTML
 
@@ -22,12 +19,14 @@ from properties.models import RentRecord, Unit
 
 def get_plan_limit(user, feature_key):
     try:
-        from core.models import PlanFeatureLimit
-
         plan = user.usersubscription.plan
         limit = PlanFeatureLimit.objects.get(plan=plan, feature_key=feature_key)
         return limit.value
-    except:
+    except (
+        AttributeError,
+        PlanFeatureLimit.DoesNotExist,
+        UserSubscription.DoesNotExist,
+    ):
         return None
 
 
@@ -39,7 +38,7 @@ def has_remaining_usage(user, feature_key):
         allowed = int(plan_limit)
         used = UsageLimit.objects.get(user=user, feature_key=feature_key).usage_count
         return used < allowed
-    except:
+    except (TypeError, ValueError, UsageLimit.DoesNotExist):
         return False
 
 

@@ -23,7 +23,9 @@ from datetime import date
 #         ).values("renter__name")
 #         names = ", ".join([r["renter__name"] for r in unpaid]) or "None"
 #         return Response({"answer": f"Unpaid tenants: {names}"})
-#     return Response({"answer": "Sorry, I didn't understand that yet. Please rephrase."})
+#     return Response({
+#         "answer": "Sorry, I didn't understand that yet. Please rephrase."
+#     })
 # npm install react-native-gifted-chat
 # import { GiftedChat } from 'react-native-gifted-chat';
 # import { useState } from 'react';

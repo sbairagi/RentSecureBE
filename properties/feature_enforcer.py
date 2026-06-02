@@ -91,7 +91,7 @@ class FeatureEnforcer:
     def get_active_limit(self, key):
         # If user has no subscription, use free plan limits.
         try:
-            self.user.usersubscription
+            _subscription = self.user.usersubscription
         except UserSubscription.DoesNotExist:
             return self._get_free_plan_limit(key)
 

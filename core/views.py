@@ -372,7 +372,7 @@ def create_rent_payment(request):
 
 
 @csrf_exempt
-def razorpay_webhook(request):
+def razorpay_webhook(request):  # noqa: C901
     """Single Razorpay webhook handler with HMAC signature verification.
 
     Handles both payment.captured (order-based) and payment_link.paid events.

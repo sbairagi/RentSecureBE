@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
     AddOnPurchaseViewSet,
-    ChangePasswordView,  # ChangePasswordView, ResetPasswordView, PlanFeatureLimitViewSet
+    ChangePasswordView,
     OwnerVerifyOTP,
     RenterVerifyOTP,
     ResetPasswordView,

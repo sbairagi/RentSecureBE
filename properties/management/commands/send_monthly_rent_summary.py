@@ -7,7 +7,10 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Send monthly rent collection summary to all property owners via email and WhatsApp."
+    help = (
+        "Send monthly rent collection summary to all property owners via "
+        "email and WhatsApp."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(

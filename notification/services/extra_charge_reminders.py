@@ -33,7 +33,8 @@ def send_due_extra_charge_reminders(days_ahead=0):
             lang = getattr(renter.user.userprofile, "language_preference", "en") or "en"
 
         message = (
-            f"Reminder: You have an unpaid charge of ₹{charge.amount} for '{charge.name}' "
+            f"Reminder: You have an unpaid charge of ₹{charge.amount} "
+            f"for '{charge.name}' "
             f"due today ({charge.due_date}). Please pay on time to avoid late fees."
         )
         translated_message = translate_msg(message, lang)

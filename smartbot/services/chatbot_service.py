@@ -13,7 +13,10 @@ def handle_chat_message(user, message):
             .first()
         )
         if next_due:
-            return f"🏠 Your next rent of ₹{next_due.amount} is due on {next_due.due_date}."
+            return (
+                f"🏠 Your next rent of ₹{next_due.amount} "
+                f"is due on {next_due.due_date}."
+            )
         return "✅ No upcoming rent dues."
 
     if "agreement" in message:

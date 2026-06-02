@@ -42,7 +42,7 @@ def send_agreement_for_signature(agreement, owner_email, renter_email=None):
             }
         )
 
-    response = requests.post(LEEGALITY_URL, headers=headers, json=data)
+    response = requests.post(LEEGALITY_URL, headers=headers, json=data, timeout=10)
     response.raise_for_status()
     resp_json = response.json()
 

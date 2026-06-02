@@ -12,7 +12,10 @@ def send_thank_you_voice_note(rent: RentRecord):
     name = rent.renter.full_name
     amount = rent.amount
     date = rent.payment_date.strftime("%d %B")
-    msg = f"Shukriya {name}! Aapne ₹{amount} rent {date} ko time se pehle jama kiya. Aapki samay par payment ki hum sarahna karte hain."
+    msg = (
+        f"Shukriya {name}! Aapne ₹{amount} rent {date} ko time se pehle "
+        "jama kiya. Aapki samay par payment ki hum sarahna karte hain."
+    )
 
     audio_path = generate_voice_note(msg, lang="hi")
     send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)
@@ -23,7 +26,10 @@ def send_late_rent_reminder(rent: RentRecord):
     amount = rent.amount
     due_date = rent.due_date.strftime("%d %B")
 
-    msg = f"Namaste {name}, aapka ₹{amount} rent {due_date} ko due tha. Kripya jald se jald jama karein. Dhanyawaad."
+    msg = (
+        f"Namaste {name}, aapka ₹{amount} rent {due_date} ko due tha. "
+        "Kripya jald se jald jama karein. Dhanyawaad."
+    )
 
     audio_path = generate_voice_note(msg, lang="hi")
     send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)

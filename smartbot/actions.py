@@ -18,7 +18,10 @@ from .whatsapp_service import send_agreement_via_whatsapp
 def send_rent_reminder(renter_name):
     try:
         renter = Renter.objects.get(name__icontains=renter_name)
-        msg = f"📢 Rent Reminder: Please pay your rent ₹{renter.rent_amount} for {renter.property.name}."
+        msg = (
+            f"📢 Rent Reminder: Please pay your rent ₹{renter.rent_amount} "
+            f"for {renter.property.name}."
+        )
         send_whatsapp_message(renter.phone, msg)
         return f"✅ Reminder sent to {renter.name}"
     except Renter.DoesNotExist:
@@ -32,7 +35,7 @@ def retry_payout(renter_name):
         )
         result = process_rent_payout(rent)
         return f"✅ Payout retried: {result.get('status')}"
-    except:
+    except Exception:
         return "❌ Could not retry payout."
 
 
