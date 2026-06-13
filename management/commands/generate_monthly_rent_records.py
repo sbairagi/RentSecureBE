@@ -1,7 +1,8 @@
 from datetime import date
 
 from django.core.management.base import BaseCommand
-from rent.models import Renter, RentRecord
+
+from properties.models import Renter, RentRecord
 
 
 class Command(BaseCommand):
@@ -19,7 +20,7 @@ class Command(BaseCommand):
         for renter in renters:
             # Prevent duplicate rent record
             exists = RentRecord.objects.filter(
-                renter=renter, month=month, year=year
+                renter=renter, rent_month__month=month, rent_month__year=year
             ).exists()
             if exists:
                 continue
@@ -29,7 +30,7 @@ class Command(BaseCommand):
                 amount=renter.rent_amount,
                 month=month,
                 year=year,
-                payment_status="UNPAID",
+                payment_status="PENDING",
                 payout_status="PENDING",
             )
             self.stdout.write(f"RentRecord created for renter: {renter.name}")

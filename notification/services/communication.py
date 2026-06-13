@@ -25,7 +25,7 @@ def send_smart_alert(
         )
 
     if not any(status.values()) or urgent:
-        status["sms"] = send_sms(user.profile.phone, message)
+        status["sms"] = send_sms(user.phone, message)
 
     return status
 

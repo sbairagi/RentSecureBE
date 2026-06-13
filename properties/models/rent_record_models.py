@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -116,23 +117,28 @@ class RentRecord(models.Model):
             raise ValidationError("Renter does not belong to the selected unit.")
 
     @property
-    def amount(self):
+    def amount(self) -> Decimal:
+        """Alias for ``amount_paid`` used by older code paths."""
         return self.amount_paid
 
     @property
-    def payment_date(self):
+    def payment_date(self) -> date:
+        """Alias for ``date_paid`` used by older code paths."""
         return self.date_paid
 
     @property
-    def due_date(self):
+    def due_date(self) -> date:
+        """Alias for ``rent_due_date`` used by older code paths."""
         return self.rent_due_date
 
     @property
-    def month(self):
+    def month(self) -> int:
+        """Convenience accessor for ``rent_month.month``."""
         return self.rent_month.month
 
     @property
-    def year(self):
+    def year(self) -> int:
+        """Convenience accessor for ``rent_month.year``."""
         return self.rent_month.year
 
     def __str__(self):

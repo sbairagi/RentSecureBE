@@ -24,8 +24,7 @@ exclude = '''
 line-length = 88
 target-version = "py312"
 exclude = ["**/.venv/**", "**/venv/**", "**/migrations/**", "**/__pycache__/**", ".github/**", "properties/refactored_models_combined.py", "properties/original_models.py", "properties/_legacy/**", "properties/test_*.py"]
-extend-ignore = ["E203"]
-select = ["E", "F", "W", "C", "N", "I", "S", "B"]
+select = ["E", "F", "W", "C", "N", "I", "S", "B", "UP"]
 
 [tool.ruff.per-file-ignores]
 "**/migrations/**" = ["ALL"]
@@ -80,3 +79,7 @@ show_missing = true
 skip_covered = true
 precision = 2
 fail_under = 90
+
+[tool.bandit]
+exclude = ["/venv/", "/.venv/", "/migrations/", "/tests/", "/.github/", "/properties/_legacy/", "/properties/refactored_models_combined.py"]
+skips = ["S404", "S403"]

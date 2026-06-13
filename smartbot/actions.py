@@ -67,9 +67,15 @@ def send_agreement_for_signature(renter_name):
         result = initiate_signature(renter, pdf_path)
 
         if result.get("status") == "success":
-            rent.signature_request_id = result.get("documentId")
-            rent.signature_status = "PENDING"
-            rent.save()
+            # The Leegality document id lives on the RentAgreementDraft
+            # model (not on RentRecord). Persist it there so the
+            # leegality_webhook can later match the status callback.
+            from properties.models import RentAgreementDraft
+
+            draft = RentAgreementDraft.objects.filter(renter=renter).first()
+            if draft is not None:
+                draft.leegality_document_id = result.get("documentId")
+                draft.save(update_fields=["leegality_document_id"])
             return f"📨 Signature request sent to {renter.name}!"
         return f"❌ Error: {result}"
     except Exception as e:

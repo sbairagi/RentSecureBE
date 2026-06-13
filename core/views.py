@@ -422,7 +422,8 @@ def razorpay_webhook(request):  # noqa: C901
             return JsonResponse({"status": "ok", "message": "Already processed"})
 
         rent.payment_status = RentRecord.PaymentStatus.PAID
-        rent.save(update_fields=["payment_status", "updated_at"])
+        rent.date_paid = timezone.now().date()
+        rent.save(update_fields=["payment_status", "date_paid", "updated_at"])
 
         try:
             process_rent_payout(rent)
@@ -452,7 +453,8 @@ def razorpay_webhook(request):  # noqa: C901
             return JsonResponse({"status": "ok", "message": "Already processed"})
 
         rent.payment_status = RentRecord.PaymentStatus.PAID
-        rent.save(update_fields=["payment_status", "updated_at"])
+        rent.date_paid = timezone.now().date()
+        rent.save(update_fields=["payment_status", "date_paid", "updated_at"])
 
         try:
             process_rent_payout(rent)

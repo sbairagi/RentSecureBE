@@ -23,35 +23,40 @@ def ai_assistant_insights(request):
     today = date.today()
 
     paid_rents = RentRecord.objects.filter(
-        renter__property__owner=owner,
+        renter__unit__owner=owner,
         payment_status="PAID",
-        month=today.month,
-        year=today.year,
+        rent_month__month=today.month,
+        rent_month__year=today.year,
     )
 
     late_rents = RentRecord.objects.filter(
-        renter__property__owner=owner, due_date__lt=today, payment_status="UNPAID"
+        renter__unit__owner=owner,
+        rent_due_date__lt=today,
+        payment_status="PENDING",
     )
 
-    payouts = RentRecord.objects.filter(renter__property__owner=owner)
+    payouts = RentRecord.objects.filter(renter__unit__owner=owner)
     success = payouts.filter(payout_status="SUCCESS").count()
     failed = payouts.filter(payout_status="FAILED").count()
 
     no_agreement = Renter.objects.filter(
-        property__owner=owner,
-        rent_agreement_pdf__isnull=True,
+        unit__owner=owner,
+        rent_agreement="",
         status__in=["active", "notice_period"],
     )
 
     no_police = Renter.objects.filter(
-        property__owner=owner,
-        police_verification_pdf__isnull=True,
+        unit__owner=owner,
+        policeverification__isnull=True,
         status__in=["active", "notice_period"],
     )
 
+    # PropertyTaxRecord has ``paid_date`` (nullable); use the absence
+    # of a payment date as the "not yet paid" signal.
     upcoming_tax = PropertyTaxRecord.objects.filter(
-        property__owner=owner, paid=False, due_date__gte=today
-    ).order_by("due_date")[:5]
+        unit__owner=owner,
+        paid_date__isnull=True,
+    ).order_by("rent_due_date")[:5]
 
     return Response(
         {
@@ -62,8 +67,8 @@ def ai_assistant_insights(request):
             "missing_police_verifications": no_police.count(),
             "upcoming_tax_dues": [
                 {
-                    "property": tax.property.name,
-                    "due": tax.due_date,
+                    "property": tax.unit.name if hasattr(tax, "unit") else "",
+                    "due": getattr(tax, "rent_due_date", None) or getattr(tax, "due_date", None),
                     "amount": tax.amount,
                 }
                 for tax in upcoming_tax
@@ -95,11 +100,11 @@ def rent_analytics_data(request):
 
     monthly_rent = (
         RentRecord.objects.filter(
-            renter__property__owner=owner, created_at__gte=start_date
+            renter__unit__owner=owner, created_at__gte=start_date
         )
         .annotate(month=TruncMonth("created_at"))
         .values("month")
-        .annotate(total=Sum("amount"))
+        .annotate(total=Sum("amount_paid"))
         .order_by("month")
     )
 
@@ -108,25 +113,25 @@ def rent_analytics_data(request):
 
     paid = (
         RentRecord.objects.filter(
-            renter__property__owner=owner,
-            month=this_month,
-            year=this_year,
+            renter__unit__owner=owner,
+            rent_month__month=this_month,
+            rent_month__year=this_year,
             payment_status="PAID",
-        ).aggregate(total=Sum("amount"))["total"]
+        ).aggregate(total=Sum("amount_paid"))["total"]
         or 0
     )
 
     unpaid = (
         RentRecord.objects.filter(
-            renter__property__owner=owner,
-            month=this_month,
-            year=this_year,
-            payment_status="UNPAID",
-        ).aggregate(total=Sum("amount"))["total"]
+            renter__unit__owner=owner,
+            rent_month__month=this_month,
+            rent_month__year=this_year,
+            payment_status="PENDING",
+        ).aggregate(total=Sum("amount_paid"))["total"]
         or 0
     )
 
-    return Response({"monthly_rent": monthly_rent, "paid": paid, "unpaid": unpaid})
+    return Response({"monthly_rent": list(monthly_rent), "paid": paid, "unpaid": unpaid})
 
 
 # npx expo install react-native-svg
@@ -152,6 +157,7 @@ def rent_analytics_data(request):
 #   colorScale={["#4CAF50", "#FF5722"]}
 # />
 
+
 # views.py
 
 
@@ -161,7 +167,9 @@ def financial_health_report(request):
     user = request.user
 
     rent_records = RentRecord.objects.filter(renter__user=user)
-    tax_records = PropertyTaxRecord.objects.filter(property__owner=user)
+    # PropertyTaxRecord has no ``property`` FK; it is bound directly
+    # to a Unit. Use the canonical relation.
+    tax_records = PropertyTaxRecord.objects.filter(unit__owner=user)
 
     analysis = analyze_financial_health(rent_records, tax_records)
     return Response(analysis)
@@ -184,14 +192,14 @@ def chat_with_assistant(request):
 #   renderItem={({ item }) => (
 #     <Text style={{ alignSelf: item.sender === 'user' ? 'flex-end' : 'flex-start' }}>
 #       {item.text}
-#     </Text>
-#   )}
+# //     </Text>
+# //   )}
 # />
 # <TextInput
 #   value={input}
-#   onChangeText={setInput}
-#   onSubmitEditing={sendMessage}
-# />
+# //   onChangeText={setInput}
+# //   onSubmitEditing={sendMessage}
+# // />
 
 
 @csrf_exempt
@@ -201,7 +209,10 @@ def whatsapp_webhook(request):
     message = payload.get("text")
 
     # user = get_user_by_whatsapp_number(phone)
-    user = UserProfile.objects.get(whatsapp_number=phone)
+    try:
+        user = UserProfile.objects.get(whatsapp_number=phone)
+    except UserProfile.DoesNotExist:
+        return JsonResponse({"message": "User not found"}, status=404)
     if not user:
         return JsonResponse({"message": "User not found"}, status=404)
 

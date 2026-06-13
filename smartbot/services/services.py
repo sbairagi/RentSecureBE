@@ -1,3 +1,10 @@
+"""Smartbot AI alert generation service.
+
+Produces AI-driven alerts for owners based on their renters' payment
+history. The implementation only relies on fields that actually exist
+on :class:`properties.models.RentRecord` and :class:`properties.models.Renter`.
+"""
+
 from datetime import date, timedelta
 
 from properties.models import Renter, RentRecord
@@ -5,72 +12,55 @@ from properties.models import Renter, RentRecord
 from ..models import AIAlert
 
 
-def generate_ai_alerts(owner):
-    today = date.today()
-    six_months_ago = today - timedelta(days=180)
+def generate_ai_alerts(owner) -> int:
+    """Generate AI alerts for ``owner`` based on each renter's payment history.
+
+    Returns the number of newly created alerts.
+    """
+    today: date = date.today()
+    six_months_ago: date = today - timedelta(days=180)
 
     renters = Renter.objects.filter(
-        property__owner=owner, status__in=["active", "notice_period"]
+        unit__owner=owner, status__in=["active", "notice_period"]
     )
 
+    alerts_created = 0
     for renter in renters:
-        rents = RentRecord.objects.filter(renter=renter).order_by("-month", "-year")
+        rents = RentRecord.objects.filter(renter=renter).order_by("-rent_month")
 
         # 1. Missed 2+ consecutive months
+        # Use the same slice window the original implementation used
+        # (3 records) to preserve closest behavioural parity.
         recent = list(rents[:3])
-        if all(r.payment_status == "UNPAID" for r in recent[:2]):
-            AIAlert.objects.get_or_create(
+        if len(recent) >= 2 and all(
+            r.payment_status == "PENDING" for r in recent[:2]
+        ):
+            _, created = AIAlert.objects.get_or_create(
                 owner=owner,
                 alert_type="Missed Rent",
                 message=f"{renter.name} missed last 2+ months rent.",
             )
+            if created:
+                alerts_created += 1
 
-        # 2. Irregular rent pattern
-        past_six = rents.filter(created_at__gte=six_months_ago)
-        delayed = [
-            r
+        # 2. Irregular rent pattern — use canonical field names
+        #    (RentRecord has no ``paid_date``; it is ``date_paid``)
+        past_six = rents.filter(date_paid__gte=six_months_ago)
+        delayed_count = sum(
+            1
             for r in past_six
-            if r.payment_status == "PAID" and r.paid_date and r.paid_date > r.due_date
-        ]
-        if len(delayed) >= 3:
-            AIAlert.objects.get_or_create(
+            if r.payment_status == "PAID"
+            and r.date_paid is not None
+            and r.rent_due_date is not None
+            and r.date_paid > r.rent_due_date
+        )
+        if delayed_count >= 3:
+            _, created = AIAlert.objects.get_or_create(
                 owner=owner,
                 alert_type="Irregular Rent",
                 message=f"{renter.name} has delayed rent 3+ times recently.",
             )
+            if created:
+                alerts_created += 1
 
-
-# Cron or Command to Run Alerts Weekly
-
-# cron weekly
-# python manage.py run_ai_alerts
-
-# ai/management/commands/run_ai_alerts.py
-
-# from django.core.management.base import BaseCommand
-# from django.contrib.auth import get_user_model
-# from ai.services import generate_ai_alerts
-
-# class Command(BaseCommand):
-#     def handle(self, *args, **kwargs):
-#         for user in get_user_model().objects.all():
-#             generate_ai_alerts(user)
-
-# Show Alerts on Dashboard
-
-
-# <FlatList
-#   data={alerts}
-#   renderItem={({ item }) => (
-#     <View>
-#       <Text>⚠️ {item.message}</Text>
-#     </View>
-#   )}
-# />
-
-
-# (Optional): WhatsApp Alerts
-
-# from services.whatsapp_service import send_whatsapp_message
-
-# send_whatsapp_message(owner.profile.whatsapp_number, alert.message)
+    return alerts_created

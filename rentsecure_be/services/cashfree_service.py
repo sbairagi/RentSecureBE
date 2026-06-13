@@ -26,7 +26,8 @@ def register_owner_with_cashfree(owner: OwnerBankDetails):
         "beneId": bene_id,
         "name": owner.user.get_full_name(),
         "email": owner.user.email,
-        "phone": owner.user.phone_number,
+        # ``User`` has a single ``phone`` field (no ``phone_number``).
+        "phone": owner.user.phone,
         "bankAccount": owner.bank_account_number,
         "ifsc": owner.ifsc_code,
         "address1": "India",  # optional
@@ -41,14 +42,19 @@ def register_owner_with_cashfree(owner: OwnerBankDetails):
 
 
 def pay_owner_after_rent(rent: RentRecord):
+    if rent.payout_status == "SUCCESS":
+        return {"status": "ALREADY_PAID", "message": "Payout already completed"}
+
     if not rent.owner.beneficiary_id:
         raise Exception("Owner not registered with Cashfree")
 
     transfer_id = f"rent_{rent.id}"
     response = make_payout(
         transfer_id=transfer_id,
-        amount=rent.amount,
-        remarks=f"Rent for property {rent.property.id}",
+        amount=rent.amount_paid,
+        # ``RentRecord`` has no ``property`` field; the unit is
+        # accessed via ``rent.unit``.
+        remarks=f"Rent for property {rent.unit.id}",
         bene_id=rent.owner.beneficiary_id,
     )
 
@@ -61,25 +67,25 @@ def pay_owner_after_rent(rent: RentRecord):
 
     if rent.payout_status == "SUCCESS":
         # msg = (
-        #     f"Namaste! Aapka ₹{rent.amount} rent "
+        #     f"Namaste! Aapka ₹{rent.amount_paid} rent "
         #     f"{rent.updated_at.date()} ko jama hua hai."
         # )
         # notify_renter(rent.renter, msg)
         msg_renter = (
-            f"✅ Aapka ₹{rent.amount} rent {rent.updated_at.date()} "
+            f"✅ Aapka ₹{rent.amount_paid} rent {rent.updated_at.date()} "
             "ko jama ho gaya hai."
         )
         notify_renter(rent.renter, msg_renter)
 
         msg_owner = (
-            f"🎉 ₹{rent.amount} rent {rent.updated_at.date()} "
+            f"🎉 ₹{rent.amount_paid} rent {rent.updated_at.date()} "
             "ko aapke account mein transfer ho gaya hai."
         )
         notify_owner(rent.owner, msg_owner)
 
     elif rent.payout_status == "FAILED":
         msg = (
-            f"⚠️ ₹{rent.amount} rent ka transfer fail ho gaya hai. "
+            f"⚠️ ₹{rent.amount_paid} rent ka transfer fail ho gaya hai. "
             f"Kripya apna bank detail verify karein."
         )
         notify_renter(rent.renter, msg)
@@ -87,8 +93,12 @@ def pay_owner_after_rent(rent: RentRecord):
     rent.save()
 
     # 🔔 WhatsApp Alert After Saving
-    owner = rent.renter.property.owner
-    phone = owner.profile.whatsapp_number  # Make sure this is stored in +91 format
+    # ``Renter.property`` is a @property returning self.unit. We
+    # chain to the unit's owner directly to avoid the deprecated
+    # indirection and to make the relationship explicit.
+    owner = rent.renter.unit.owner
+    profile = getattr(owner, "profile", None)
+    phone = getattr(profile, "whatsapp_number", None)  # Make sure this is stored in +91 format
 
     if phone:
         send_payout_notification(rent)
@@ -102,7 +112,13 @@ def register_cashfree_beneficiary(bank_details: OwnerBankDetails):
         "beneId": bene_id,
         "name": bank_details.owner.get_full_name(),
         "email": bank_details.owner.email,
-        "phone": bank_details.owner.profile.phone_number,  # adjust as per your model
+        # ``UserProfile`` does not have ``phone_number``; the canonical
+        # field is ``whatsapp_number``. Fall back to the User's phone
+        # if the profile has none.
+        "phone": (
+            getattr(getattr(bank_details.owner, "profile", None), "whatsapp_number", None)
+            or bank_details.owner.phone
+        ),
         "bankAccount": bank_details.bank_account_number,
         "ifsc": bank_details.ifsc_code,
         "address1": "India",
@@ -143,7 +159,9 @@ def process_rent_payout(rent: RentRecord):
     try:
         response = make_payout(
             transfer_id=transfer_id,
-            amount=rent.amount,
+            # ``RentRecord`` exposes the canonical amount as
+            # ``amount_paid``; ``rent.amount`` is a read-only @property.
+            amount=rent.amount_paid,
             remarks="Monthly rent payout",
             bene_id=bank_details.beneficiary_id,
         )

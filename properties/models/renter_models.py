@@ -182,15 +182,17 @@ class Renter(models.Model):
                 )
 
     @property
-    def property(self):
+    def property(self) -> "Unit":
+        """Backward-compatible alias for ``self.unit``."""
         return self.unit
 
     @builtins.property
-    def full_name(self):
+    def full_name(self) -> str:
+        """Backward-compatible alias for ``self.name``."""
         return self.name
 
     @full_name.setter
-    def full_name(self, value):
+    def full_name(self, value: str) -> None:
         self.name = value
 
     @builtins.property

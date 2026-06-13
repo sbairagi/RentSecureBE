@@ -1,9 +1,20 @@
+"""Property utility functions.
+
+All helpers here are pure, type-safe, and safe to call from views, services
+or management commands. Anything that touches external systems (PDF,
+email, notifications) lives in dedicated service modules.
+"""
+
+from __future__ import annotations
+
 import hashlib
 import tempfile
+from typing import TYPE_CHECKING, Literal, Union
 
 from dateutil.relativedelta import relativedelta
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
+from django.core.files.uploadedfile import UploadedFile
+from django.db.models import Model, Sum
 from django.template.loader import render_to_string
 from rest_framework.exceptions import PermissionDenied
 from weasyprint import HTML
@@ -16,43 +27,73 @@ from notification.services.late_fees_notify_service import (
 from properties.feature_enforcer import FeatureEnforcer
 from properties.models import RentRecord, Unit
 
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractUser
 
-def get_plan_limit(user, feature_key):
+
+# ---------------------------------------------------------------------------
+# Type aliases
+# ---------------------------------------------------------------------------
+
+#: A normalized feature limit is either an integer count or the literal
+#: ``"unlimited"``.
+FeatureLimit = Union[int, Literal["unlimited"]]
+
+#: Result of :func:`check_feature_limit`.
+FeatureCheckResult = tuple[bool, int, FeatureLimit, int]
+
+
+# ---------------------------------------------------------------------------
+# Plan / feature helpers
+# ---------------------------------------------------------------------------
+
+
+def get_plan_limit(user: AbstractUser, feature_key: str) -> str | None:
+    """Return the raw ``value`` for the user's plan/feature, or ``None``."""
     try:
         plan = user.usersubscription.plan
-        limit = PlanFeatureLimit.objects.get(plan=plan, feature_key=feature_key)
-        return limit.value
+        limit: PlanFeatureLimit = PlanFeatureLimit.objects.get(
+            plan=plan, feature_key=feature_key
+        )
     except (
         AttributeError,
         PlanFeatureLimit.DoesNotExist,
         UserSubscription.DoesNotExist,
     ):
         return None
+    return limit.value
 
 
-def has_remaining_usage(user, feature_key):
-    plan_limit = get_plan_limit(user, feature_key)
-    if plan_limit in ["unlimited", "yes"]:
+def has_remaining_usage(user: AbstractUser, feature_key: str) -> bool:
+    """Return ``True`` if the user can perform one more action of ``feature_key``."""
+    plan_limit: str | None = get_plan_limit(user, feature_key)
+    if plan_limit in ("unlimited", "yes"):
         return True
     try:
-        allowed = int(plan_limit)
-        used = UsageLimit.objects.get(user=user, feature_key=feature_key).usage_count
-        return used < allowed
+        allowed: int = int(plan_limit)  # type: ignore[arg-type]
+        used: int = UsageLimit.objects.get(
+            user=user, feature_key=feature_key
+        ).usage_count
     except (TypeError, ValueError, UsageLimit.DoesNotExist):
         return False
+    return used < allowed
 
 
-def update_usage_count(user, feature_key, model_class):
+def update_usage_count(
+    user: AbstractUser, feature_key: str, model_class: type[Model]
+) -> None:
+    """Recompute and persist the user's usage count for ``feature_key``."""
     if not user.is_authenticated:
         return
 
-    if model_class == Unit:
-        count = model_class.objects.filter(owner=user).count()
+    if model_class is Unit:
+        count: int = model_class.objects.filter(owner=user).count()
     elif model_class.__name__ == "Building":
         count = model_class.objects.filter(owner=user).count()
     else:
         count = model_class.objects.filter(unit__owner=user).count()
 
+    usage_limit: UsageLimit
     usage_limit, _ = UsageLimit.objects.get_or_create(
         user=user, feature_key=feature_key
     )
@@ -60,30 +101,33 @@ def update_usage_count(user, feature_key, model_class):
     usage_limit.save()
 
 
-def enforce_limit(user, feature_key):
+def enforce_limit(user: AbstractUser, feature_key: str) -> None:
+    """Raise :class:`PermissionDenied` if the user is not allowed to use ``feature_key``."""
     if not user.is_authenticated:
         return
 
-    subscription = UserSubscription.objects.filter(user=user, is_active=True).first()
+    subscription: UserSubscription | None = UserSubscription.objects.filter(
+        user=user, is_active=True
+    ).first()
     if not subscription:
         raise PermissionDenied("No active subscription found.")
 
     try:
-        from core.models import PlanFeatureLimit
-
-        feature_limit = PlanFeatureLimit.objects.get(
+        feature_limit: PlanFeatureLimit = PlanFeatureLimit.objects.get(
             plan=subscription.plan, feature_key=feature_key
         )
-    except PlanFeatureLimit.DoesNotExist as e:
+    except PlanFeatureLimit.DoesNotExist as exc:
         raise PermissionDenied(
             f"Feature limit for {feature_key} not found in plan."
-        ) from e
+        ) from exc
 
-    allowed_value = feature_limit.value
-    usage = UsageLimit.objects.filter(user=user, feature_key=feature_key).first()
-    current_usage = usage.usage_count if usage else 0
+    allowed_value: str = feature_limit.value
+    usage: UsageLimit | None = UsageLimit.objects.filter(
+        user=user, feature_key=feature_key
+    ).first()
+    current_usage: int = usage.usage_count if usage else 0
 
-    if allowed_value.lower() in ["unlimited", "yes"]:
+    if allowed_value.lower() in ("unlimited", "yes"):
         return
 
     if allowed_value.lower() == "no":
@@ -98,43 +142,53 @@ def enforce_limit(user, feature_key):
         )
 
 
-def generate_file_hash(file):
-    """Generate SHA256 hash for uploaded file content"""
+# ---------------------------------------------------------------------------
+# File utilities
+# ---------------------------------------------------------------------------
+
+
+def generate_file_hash(file: UploadedFile) -> str:
+    """Compute the SHA-256 hex digest of an uploaded file's content."""
     hash_sha256 = hashlib.sha256()
     for chunk in file.chunks():
         hash_sha256.update(chunk)
     return hash_sha256.hexdigest()
 
 
-def _normalize_feature_limit_value(value):
+def _normalize_feature_limit_value(value: object) -> FeatureLimit:
+    """Normalize a raw plan-limit string to :data:`FeatureLimit`."""
     if value is None:
         return 0
     if isinstance(value, str):
-        lower = value.strip().lower()
-        if lower in ["unlimited", "yes"]:
+        lower: str = value.strip().lower()
+        if lower in ("unlimited", "yes"):
             return "unlimited"
-        if lower in ["no"]:
+        if lower == "no":
             return 0
         try:
             return int(lower)
         except ValueError:
             return 0
-    return value
+    if isinstance(value, int):
+        return value
+    return 0
 
 
-def check_feature_limit(user, feature_key):
+def check_feature_limit(
+    user: AbstractUser, feature_key: str
+) -> FeatureCheckResult:
+    """Compute whether the user can perform one more action of ``feature_key``.
+
+    Returns:
+        A 4-tuple ``(allowed, current_usage, subscription_limit, add_on_limit)``.
     """
-    Check whether the user can create a resource under a feature limit.
-
-    Returns a tuple: (allowed, current_usage, subscription_limit, add_on_limit)
-    """
-    subscription_limit = 0
-    add_on_limit = 0
-    current_usage = 0
+    subscription_limit: FeatureLimit = 0
+    add_on_limit: int = 0
+    current_usage: int = 0
 
     try:
-        subscription = user.usersubscription
-        plan_limit = PlanFeatureLimit.objects.filter(
+        subscription: UserSubscription = user.usersubscription
+        plan_limit: PlanFeatureLimit | None = PlanFeatureLimit.objects.filter(
             plan=subscription.plan, feature_key=feature_key
         ).first()
         if plan_limit is not None:
@@ -142,30 +196,38 @@ def check_feature_limit(user, feature_key):
     except UserSubscription.DoesNotExist:
         subscription_limit = 0
 
-    addon_sum = AddOnPurchase.objects.filter(user=user, name=feature_key).aggregate(
-        total=Sum("amount")
-    )["total"]
+    addon_sum = AddOnPurchase.objects.filter(
+        user=user, name=feature_key
+    ).aggregate(total=Sum("amount"))["total"]
     add_on_limit = int(addon_sum) if addon_sum else 0
 
-    usage = UsageLimit.objects.filter(user=user, feature_key=feature_key).first()
+    usage: UsageLimit | None = UsageLimit.objects.filter(
+        user=user, feature_key=feature_key
+    ).first()
     current_usage = usage.usage_count if usage else 0
 
     if subscription_limit == "unlimited":
         return True, current_usage, subscription_limit, add_on_limit
 
-    total_allowed = subscription_limit + add_on_limit
-    allowed = current_usage < total_allowed
+    total_allowed: int = subscription_limit + add_on_limit
+    allowed: bool = current_usage < total_allowed
     return allowed, current_usage, subscription_limit, add_on_limit
 
 
-def get_feature_limit(user, feature_key):
-    from core.models import PlanFeatureLimit
+def get_feature_limit(user: AbstractUser, feature_key: str) -> int | float:
+    """Return the effective plan limit for ``feature_key`` as a number.
 
-    addon = UsageLimit.objects.filter(user=user, feature_key=feature_key).first()
+    ``float('inf')`` is returned for unlimited plans so callers can compare
+    without special-casing.
+    """
+    addon: UsageLimit | None = UsageLimit.objects.filter(
+        user=user, feature_key=feature_key
+    ).first()
     if addon:
         return int(addon.usage_count)
+
     plan = user.usersubscription.plan
-    plan_limit = PlanFeatureLimit.objects.filter(
+    plan_limit: PlanFeatureLimit | None = PlanFeatureLimit.objects.filter(
         plan=plan, feature_key=feature_key
     ).first()
     if not plan_limit:
@@ -173,44 +235,45 @@ def get_feature_limit(user, feature_key):
     return float("inf") if plan_limit.value == "unlimited" else int(plan_limit.value)
 
 
-def get_limit_for_source(source, feature_key):
+def get_limit_for_source(
+    source: UserSubscription | AddOnPurchase, feature_key: str
+) -> int | str:
+    """Return the limit value from a given subscription or add-on source."""
     if isinstance(source, UserSubscription):
         return PlanFeatureLimit.objects.get(
             plan=source.plan, feature_key=feature_key
         ).value
-    elif isinstance(source, AddOnPurchase):
+    if isinstance(source, AddOnPurchase):
         return source.features.get(feature_key, 0)
     return 0
 
 
-def get_used_units(user, feature_key, source):
-    filters = {
-        "user": user,
-        "feature_key": feature_key,
-    }
+def get_used_units(
+    user: AbstractUser, feature_key: str, source: UserSubscription | AddOnPurchase
+) -> int:
+    """Return the units used for ``feature_key`` under the given ``source``."""
+    filters: dict[str, object] = {"user": user, "feature_key": feature_key}
     if isinstance(source, UserSubscription):
         filters["user_subscription"] = source
     else:
         filters["addon_purchase"] = source
-    return (
-        UsageLimit.objects.filter(**filters).aggregate(total=Sum("used_units"))["total"]
+    used: int = (
+        UsageLimit.objects.filter(**filters).aggregate(total=Sum("usage_count"))["total"]
         or 0
     )
+    return int(used)
 
 
-def deduct_feature_usage_with_priority(user, feature_key, units_to_deduct=1):
-    """Deduct feature usage from the user's subscription and add-ons.
-
-    Fixed: Uses correct fields (usage_count instead of used_units,
-    removed references to non-existent fields on AddOnPurchase and UsageLimit).
-    """
+def deduct_feature_usage_with_priority(
+    user: AbstractUser, feature_key: str, units_to_deduct: int = 1
+) -> None:
+    """Deduct ``units_to_deduct`` units from the user's quota."""
     enforcer = FeatureEnforcer(user)
-
-    # Check if there's enough capacity
     if not enforcer.can_create(feature_key):
-        raise ValidationError(f"Not enough available units for feature: {feature_key}")
+        raise ValidationError(
+            f"Not enough available units for feature: {feature_key}"
+        )
 
-    # Simple approach: increment the usage counter
     for _ in range(units_to_deduct):
         if enforcer.can_create(feature_key):
             enforcer.increment(feature_key)
@@ -220,37 +283,50 @@ def deduct_feature_usage_with_priority(user, feature_key, units_to_deduct=1):
             )
 
 
-def generate_rent_invoice_pdf(rent):
-    html_string = render_to_string("invoices/rent_invoice.html", {"rent": rent})
+# ---------------------------------------------------------------------------
+# PDF & late-fee helpers
+# ---------------------------------------------------------------------------
+
+
+def generate_rent_invoice_pdf(rent: RentRecord) -> str:
+    """Render the rent invoice PDF to a temp file and return the path."""
+    html_string: str = render_to_string(
+        "invoices/rent_invoice.html", {"rent": rent}
+    )
     html = HTML(string=html_string)
     result = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     html.write_pdf(target=result.name)
     return result.name
 
 
-def apply_late_fee_if_needed(rent: RentRecord):
+def apply_late_fee_if_needed(rent: RentRecord) -> None:
+    """Apply a late fee and notify both renter and owner if the rent was paid late."""
     if rent.payment_status != "PAID":
         return
-    if rent.date_paid and rent.date_paid > rent.rent_due_date:
-        days_late = (rent.date_paid - rent.rent_due_date).days
-        late_fee = days_late * 100
-        rent.late_fee = late_fee
-        rent.adjustment_reason = f"{days_late} days late x ₹100 = ₹{late_fee}"
-        rent.save(update_fields=["late_fee", "adjustment_reason"])
-        next_month = rent.rent_due_date.replace(day=1) + relativedelta(months=1)
-        next_rent, _ = RentRecord.objects.get_or_create(
-            renter=rent.renter,
-            rent_month=next_month,
-            defaults={
-                "amount_paid": rent.renter.rent_amount,
-                "rent_due_date": next_month,
-                "payment_status": RentRecord.PaymentStatus.PENDING,
-                "unit": rent.unit,
-                "owner": rent.owner,
-                "date_paid": next_month,
-            },
-        )
-        next_rent.adjustment_reason = f"Late fee from {rent.rent_due_date}"
-        next_rent.save(update_fields=["adjustment_reason"])
-        notify_renter_about_late_fee(rent, late_fee)
-        notify_owner_about_late_fee(rent, late_fee)
+    if rent.date_paid is None or rent.date_paid <= rent.rent_due_date:
+        return
+
+    days_late: int = (rent.date_paid - rent.rent_due_date).days
+    late_fee: int = days_late * 100
+    rent.late_fee = late_fee
+    rent.adjustment_reason = f"{days_late} days late x ₹100 = ₹{late_fee}"
+    rent.save(update_fields=["late_fee", "adjustment_reason"])
+
+    next_month = rent.rent_due_date.replace(day=1) + relativedelta(months=1)
+    next_rent: RentRecord
+    next_rent, _ = RentRecord.objects.get_or_create(
+        renter=rent.renter,
+        rent_month=next_month,
+        defaults={
+            "amount_paid": rent.renter.rent_amount,
+            "rent_due_date": next_month,
+            "payment_status": RentRecord.PaymentStatus.PENDING,
+            "unit": rent.unit,
+            "owner": rent.owner,
+            "date_paid": next_month,
+        },
+    )
+    next_rent.adjustment_reason = f"Late fee from {rent.rent_due_date}"
+    next_rent.save(update_fields=["adjustment_reason"])
+    notify_renter_about_late_fee(rent, late_fee)
+    notify_owner_about_late_fee(rent, late_fee)

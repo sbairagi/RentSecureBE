@@ -1,6 +1,20 @@
+"""DRF views for the finance app — strict-typed and thin.
+
+Views are intentionally kept small. All business logic lives in
+:mod:`finance.utils` or in dedicated service modules. Each view handler
+has full type annotations including the ``Request`` and ``Response``
+shapes it produces.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 from django.http import FileResponse
 from rest_framework import permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from properties.models import Unit
@@ -9,45 +23,66 @@ from .models import CAProfile, TaxSubmissionToCA
 from .serializers import CAProfileSerializer, TaxSubmissionToCASerializer
 from .utils import create_tax_zip, generate_tax_excel, generate_tax_pdf
 
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractUser
+    from django.db.models import QuerySet
 
-class CAProfileViewSet(viewsets.ModelViewSet):
-    queryset = CAProfile.objects.all()
+
+class CAProfileViewSet(viewsets.ModelViewSet[CAProfile]):
+    """CRUD for the ``CAProfile`` model — used by owners to onboard their CA."""
+
+    queryset: QuerySet[CAProfile] = CAProfile.objects.all()
     serializer_class = CAProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes: list[type[permissions.BasePermission]] = [permissions.IsAuthenticated]
 
 
-class TaxSubmissionToCAViewSet(viewsets.ModelViewSet):
+class TaxSubmissionToCAViewSet(viewsets.ModelViewSet[TaxSubmissionToCA]):
+    """CRUD for tax submissions belonging to the authenticated user only."""
+
     serializer_class = TaxSubmissionToCASerializer
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = TaxSubmissionToCA.objects.all()
+    permission_classes: list[type[permissions.BasePermission]] = [permissions.IsAuthenticated]
+    queryset: QuerySet[TaxSubmissionToCA] = TaxSubmissionToCA.objects.all()
 
-    def get_queryset(self):
-        return TaxSubmissionToCA.objects.filter(tax_summary__user=self.request.user)
+    def get_queryset(self) -> QuerySet[TaxSubmissionToCA]:
+        """Return only the current user's tax submissions.
 
-    def perform_create(self, serializer):
+        ``TaxSubmissionToCA`` has a direct ``user`` FK (not a
+        ``tax_summary`` reverse), so we filter on that.
+        """
+        return TaxSubmissionToCA.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer: TaxSubmissionToCASerializer) -> None:
+        """Persist the submission; ownership is bound by the related tax summary."""
         serializer.save()
 
 
 class DownloadTaxFilesView(APIView):
-    permission_classes = [IsAuthenticated]
+    """Build a zip containing the user's tax Excel, PDF, and rent-agreement files."""
 
-    def get(self, request):
-        user = request.user
-        fy = request.query_params.get("fy", "2024-25")
+    permission_classes: list[type[permissions.BasePermission]] = [IsAuthenticated]
 
-        properties = Unit.objects.filter(owner=user)
-        excel = generate_tax_excel(user, properties, fy)
-        pdf = generate_tax_pdf(user, properties, fy)
+    def get(self, request: Request) -> FileResponse:
+        """Generate and return a downloadable tax-document zip."""
+        user: AbstractUser = request.user
+        fy: str = request.query_params.get("fy", "2024-25")
 
-        # Assuming your model has FileFields like rent_agreement, police_verification
-        extra_files = []
+        properties: QuerySet[Unit] = Unit.objects.filter(owner=user)
+        excel: str = generate_tax_excel(user, properties, fy)
+        pdf: str = generate_tax_pdf(user, properties, fy)
+
+        extra_files: list[Any] = []
         for p in properties:
-            if p.renter and p.renter.rent_agreement:
-                extra_files.append(p.renter.rent_agreement)
-            if p.renter and p.renter.police_verification:
-                extra_files.append(p.renter.police_verification)
+            renter = getattr(p, "renter", None)
+            if renter is None:
+                continue
+            agreement = getattr(renter, "rent_agreement", None)
+            police_verification = getattr(renter, "police_verification", None)
+            if agreement:
+                extra_files.append(agreement)
+            if police_verification:
+                extra_files.append(police_verification)
 
-        zip_file = create_tax_zip(user, excel, pdf, extra_files)
+        zip_file: str = create_tax_zip(user, excel, pdf, extra_files)
 
         return FileResponse(
             open(zip_file, "rb"), as_attachment=True, filename="tax_documents.zip"

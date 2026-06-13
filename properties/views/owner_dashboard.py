@@ -59,7 +59,7 @@ def owner_dashboard_summary(request):
     ]
 
     rent_defaulters = rents.filter(
-        Q(payment_status=RentRecord.PaymentStatus.PENDING) | Q(payment_status="UNPAID"),
+        Q(payment_status=RentRecord.PaymentStatus.PENDING),
         rent_due_date__lt=today,
     ).select_related("renter", "unit")
 

@@ -1,0 +1,124 @@
+# =============================================================================
+# RentSecureBE – FINAL Production Runtime Dependencies
+# =============================================================================
+# Generated: 2026-05-06 (Phase 4 validation, post-audit)
+# Auditor: Principal Staff Engineer / SaaS Architect
+# DO NOT APPLY — ANALYSIS ONLY — AWAITING APPROVAL
+#
+# Total: 30 production top-level packages
+# Strategy: KEEP NOW (24) + KEEP FOR ROADMAP (6)
+# Removed: 19 (no current use, no roadmap value)
+#
+# Compared to current requirements.txt:
+#   - Before: 217 untracked packages
+#   - After:  30 pinned production packages
+#   - Reduction: 86% top-level packages
+#
+# Python: 3.12 (project target) / 3.13 (live, compatible)
+# Framework: Django 4.2 LTS (upgrade to 5.x within 12 months)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# --- A. KEEP NOW: Currently required by production code (24 packages) ---
+# -----------------------------------------------------------------------------
+
+# --- Django core (LTS) ---
+Django==4.2.30                              # LTS; plan upgrade to 5.0/5.2 LTS
+asgiref==3.8.1                             # Django internal
+
+# --- REST API + JWT Auth ---
+djangorestframework==3.16.0                # 20+ import sites
+djangorestframework_simplejwt==5.5.0       # core/urls.py, core/views.py, settings
+
+# --- Audit / History tracking ---
+django-simple-history==3.8.0               # HistoricalRecords; in INSTALLED_APPS + MIDDLEWARE
+
+# --- Configuration / Environment ---
+python-decouple==3.5                       # settings.py: from decouple import Csv, config
+
+# --- Date / Time helpers ---
+python-dateutil==2.9.0.post0               # 2 imports of dateutil.relativedelta
+
+# --- HTTP / Networking ---
+requests==2.32.3                           # 5 import sites (cashfree, leegality, twilio, etc.)
+
+# --- PDF Generation & Merging ---
+weasyprint==66.0                           # 9 import sites
+PyPDF2==3.0.1                              # documents/utils.py: from PyPDF2 import PdfMerger
+
+# --- Image handling (ImageField backend) ---
+Pillow==11.2.1                             # 3 models use ImageField (caretaker, renter, unit)
+
+# --- Spreadsheet / Excel exports ---
+openpyxl==3.1.5                            # finance/utils.py
+xlsxwriter==3.2.9                          # core/utils/export_utils.py
+
+# --- Twilio: SMS / WhatsApp / Voice ---
+twilio==9.6.1                              # 4 import sites
+
+# --- Voice notes via gTTS ---
+gTTS==2.5.4                                # 1 import (smartbot voice notes)
+
+# --- Razorpay Payments ---
+razorpay==1.4.2                            # ⚠ UPGRADE in Phase 2C (4+ years stale)
+
+# --- AWS SDK + S3 (active production use in whatsapp_service.py) ---
+boto3==1.18.53                             # ⚠ URGENT UPGRADE to 1.35+ in Phase 2C
+                                            # Active use: notification/services/whatsapp_service.py
+                                            #   boto3.client("s3") → s3.upload_file(...)
+
+# --- Firebase Cloud Messaging ---
+fcm-django==2.2.1                          # 2 import sites; in INSTALLED_APPS
+firebase-admin==6.8.0                     # Backend for fcm-django
+
+# --- AI Assistant (OpenAI) ---
+openai>=1.0.0                              # ⚠ MISSING from current requirements.txt
+                                            # smartbot/services/chatbot_service.py: import openai
+                                            # smartbot/services/gpt_services.py: import openai
+
+# --- Translations ---
+deep-translator==1.11.4                    # ai_assistant/services/i18n_service.py
+
+# --- PostgreSQL production driver ---
+psycopg2-binary==2.9.10                    # Currently CI-only; MUST be in production
+                                            # Project roadmap: PostgreSQL production
+
+# -----------------------------------------------------------------------------
+# --- B. KEEP FOR ROADMAP: Required within 12 months (6 packages) ---
+# -----------------------------------------------------------------------------
+
+# --- Celery: Background Jobs, Workers, Beat, Queue Processing ---
+celery==5.6.3                              # ⚠ Architecturally inert today (no celery.py)
+                                            # Roadmap MUST wire up: create rentsecure_be/celery.py
+                                            # Convert management commands to @shared_task
+django-celery-beat==2.9.0                  # PeriodicTask model in INSTALLED_APPS
+                                            # Used in properties/scheduler.py (read-only today)
+
+# --- CORS for React Native + Angular admin ---
+django-cors-headers==4.4.0                  # ⚠ Upgrade 3.9 → 4.4 latest
+                                            # MUST wire up: add to INSTALLED_APPS + MIDDLEWARE
+
+# --- WhiteNoise static files for AWS / Angular admin ---
+whitenoise==6.6.0                          # ⚠ Upgrade 5.3 → 6.x latest
+                                            # MUST wire up: add to MIDDLEWARE, set STATIC_ROOT
+
+# --- S3 media storage abstraction (Django layer over boto3) ---
+django-storages==1.14.4                    # ⚠ Upgrade 1.11 → 1.14 latest
+                                            # Configure DEFAULT_FILE_STORAGE when S3 enabled
+
+# --- 12-factor DB config (ECS / K8s / Docker) ---
+dj-database-url==2.3.0                     # Refactor settings.py to use it
+                                            # parse(config("DATABASE_URL"))
+
+# --- Nested DRF serializers (parent + child POSTs) ---
+drf-writable-nested==0.7.0                 # Roadmap: Renter + RentAgreementDraft together
+
+# =============================================================================
+# END — Total: 30 production top-level packages
+# =============================================================================
+# Future maintenance:
+#   - pip-audit: monitor CVE in this list
+#   - pip list --outdated: detect stale pins
+#   - CI: pip install -r requirements.txt -r requirements-dev.txt
+#   - Production: pip install --no-deps -r requirements.txt  (if pinning all transitives)
+# =============================================================================

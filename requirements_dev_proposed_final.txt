@@ -1,0 +1,56 @@
+# =============================================================================
+# RentSecureBE – FINAL Development / Test Dependencies
+# =============================================================================
+# Generated: 2026-05-06 (Phase 4 validation, post-audit)
+# Auditor: Principal Staff Engineer / SaaS Architect
+# DO NOT APPLY — ANALYSIS ONLY — AWAITING APPROVAL
+#
+# Install with: pip install -r requirements.txt -r requirements-dev.txt
+# These are NOT shipped to production.
+#
+# Total: 13 development / test packages
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# --- Test framework (currently in requirements.txt — must MOVE here) ---
+# -----------------------------------------------------------------------------
+pytest==8.3.5                               # conftest.py
+pytest-django==4.11.1                      # Django test integration
+
+# -----------------------------------------------------------------------------
+# --- Coverage / Test infra ---
+# -----------------------------------------------------------------------------
+coverage                                   # .coveragerc + pyproject.toml
+psycopg2-binary                            # for PostgreSQL test DB
+
+# -----------------------------------------------------------------------------
+# --- Type checking ---
+# -----------------------------------------------------------------------------
+mypy                                       # mypy.ini
+django-stubs
+djangorestframework-stubs
+
+# -----------------------------------------------------------------------------
+# --- Formatters / Linters ---
+# -----------------------------------------------------------------------------
+black                                      # pyproject.toml [tool.black]
+ruff                                       # pyproject.toml [tool.ruff]
+pylint                                     # pyproject.toml [tool.pylint]
+pylint-django
+
+# -----------------------------------------------------------------------------
+# --- Security tools ---
+# -----------------------------------------------------------------------------
+bandit                                     # .github/workflows/test.yml (bandit job)
+semgrep                                    # .github/workflows/security.yml (semgrep job)
+pip-audit                                  # Phase 1 integration
+
+# =============================================================================
+# END — Total: 13 development / test packages
+# =============================================================================
+# Future maintenance:
+#   - These are installed by CI (per-job) and can be consolidated to install
+#     from this file: `pip install -r requirements-dev.txt`
+#   - Optional: remove black (Ruff is sufficient) and pylint (mypy is sufficient)
+#     to slim down dev deps to ~9 packages
+# =============================================================================
