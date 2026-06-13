@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Literal
 
 from django.db.models import Sum
 from django.utils import timezone
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 #: A limit value is either a concrete non-negative ``int`` or the literal
 #: string ``"unlimited"`` (which is never consumed numerically).
-FeatureLimit = Union[int, Literal["unlimited"]]
+FeatureLimit = int | Literal["unlimited"]
 
 
 class FeatureEnforcer:

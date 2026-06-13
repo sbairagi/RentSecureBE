@@ -80,7 +80,7 @@ def send_renter_onboarding_invite(renter: Renter) -> bool:
 
 
 def send_renter_onboarding_reminder(renter: Renter) -> bool:
-    """Send a reminder to a renter who received an onboarding link but never finished it.
+    """Send a reminder to a renter who never finished their onboarding.
 
     Args:
         renter: The :class:`Renter` instance.

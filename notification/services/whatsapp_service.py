@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Any, Optional
+from typing import Any
 
 try:
     import boto3
@@ -46,7 +46,7 @@ def send_whatsapp_audio(phone: str, audio_path: str) -> bool:
         return False
 
 
-def upload_to_s3(file_path: str) -> Optional[str]:
+def upload_to_s3(file_path: str) -> str | None:
     bucket_name = settings.AWS_S3_BUCKET_NAME
     if not bucket_name:
         raise RuntimeError("AWS_S3_BUCKET_NAME must be configured in settings.")

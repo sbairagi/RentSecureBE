@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from properties.models import RentRecord
 
 
-def send_thank_you_voice_note(rent: "RentRecord") -> None:
+def send_thank_you_voice_note(rent: RentRecord) -> None:
     """Send a thank-you voice note to a renter after a successful payment."""
     name: str = rent.renter.full_name
     amount = rent.amount_paid
@@ -37,7 +37,7 @@ def send_thank_you_voice_note(rent: "RentRecord") -> None:
         send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)
 
 
-def send_late_rent_reminder(rent: "RentRecord") -> None:
+def send_late_rent_reminder(rent: RentRecord) -> None:
     """Send a Hindi voice-note reminder to a renter with overdue rent.
 
     Records the reminder in :class:`RentReminderLog` so we never spam
@@ -64,7 +64,7 @@ def send_late_rent_reminder(rent: "RentRecord") -> None:
     )
 
 
-def alert_owner_about_delay(rent: "RentRecord") -> None:
+def alert_owner_about_delay(rent: RentRecord) -> None:
     """Send a WhatsApp text alert to the owner about a delayed rent."""
     owner = rent.renter.unit.owner
     msg: str = (

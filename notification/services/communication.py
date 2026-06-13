@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from notification.services.notifications import send_push_notification
 from notification.services.sms_service import send_sms
@@ -9,16 +9,16 @@ logger = logging.getLogger(__name__)
 
 
 def send_smart_alert(
-    user: Any, message: str, title: Optional[str] = None, urgent: bool = False
-) -> Dict[str, bool]:
-    status: Dict[str, bool] = {"whatsapp": False, "push": False, "sms": False}
+    user: Any, message: str, title: str | None = None, urgent: bool = False
+) -> dict[str, bool]:
+    status: dict[str, bool] = {"whatsapp": False, "push": False, "sms": False}
 
     if user.profile.whatsapp_opt_in and user.profile.whatsapp_number:
         status["whatsapp"] = send_whatsapp_message(
             user.profile.whatsapp_number, message
         )
 
-    device_token: Optional[str] = getattr(user, "device_token", None)
+    device_token: str | None = getattr(user, "device_token", None)
     if device_token:
         status["push"] = send_push_notification(
             user, title or "RentSecure Alert", message

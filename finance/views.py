@@ -14,7 +14,6 @@ from django.http import FileResponse
 from rest_framework import permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
-from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from properties.models import Unit

@@ -24,9 +24,11 @@ exclude = '''
 line-length = 88
 target-version = "py312"
 exclude = ["**/.venv/**", "**/venv/**", "**/migrations/**", "**/__pycache__/**", ".github/**", "properties/refactored_models_combined.py", "properties/original_models.py", "properties/_legacy/**", "properties/test_*.py"]
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "C", "N", "I", "S", "B", "UP"]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "**/migrations/**" = ["ALL"]
 "**/tests/**" = ["S101", "S105", "S106", "S108"]
 "**/*_tests.py" = ["S101", "S105", "S106", "S108"]

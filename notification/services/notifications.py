@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import requests
 from notifications.models import DeviceToken
@@ -7,7 +7,7 @@ from notifications.models import DeviceToken
 logger = logging.getLogger(__name__)
 
 
-def send_push_notification(user: Any, title: str, message: str) -> Optional[bool]:
+def send_push_notification(user: Any, title: str, message: str) -> bool | None:
     try:
         token = DeviceToken.objects.get(user=user).token
         payload = {"to": token, "sound": "default", "title": title, "body": message}

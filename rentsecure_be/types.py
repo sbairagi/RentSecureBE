@@ -6,7 +6,7 @@ typed payloads should be added here, not scattered across modules.
 
 from __future__ import annotations
 
-from typing import Literal, TypedDict, Union
+from typing import Literal, TypedDict
 
 # ---------------------------------------------------------------------------
 # Status / state literals
@@ -34,7 +34,7 @@ class FeatureLimitError(ErrorPayload):
     """Specialised error for feature-limit violations."""
 
     required_add_on: str
-    subscription_limit: Union[int, Literal["unlimited"]]
+    subscription_limit: int | Literal["unlimited"]
     add_on_limit: int
     current_usage: int
 

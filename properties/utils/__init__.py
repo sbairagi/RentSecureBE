@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import tempfile
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Literal
 
 from dateutil.relativedelta import relativedelta
 from django.core.exceptions import ValidationError
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 #: A normalized feature limit is either an integer count or the literal
 #: ``"unlimited"``.
-FeatureLimit = Union[int, Literal["unlimited"]]
+FeatureLimit = int | Literal["unlimited"]
 
 #: Result of :func:`check_feature_limit`.
 FeatureCheckResult = tuple[bool, int, FeatureLimit, int]
@@ -102,7 +102,7 @@ def update_usage_count(
 
 
 def enforce_limit(user: AbstractUser, feature_key: str) -> None:
-    """Raise :class:`PermissionDenied` if the user is not allowed to use ``feature_key``."""
+    """Raise :class:`PermissionDenied` if the user cannot use ``feature_key``."""
     if not user.is_authenticated:
         return
 

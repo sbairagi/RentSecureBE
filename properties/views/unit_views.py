@@ -17,15 +17,14 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.request import Request
 
 from rentsecure_be.services.leegality_service import send_agreement_for_signature
 
 from ..constants import UNITS_CACHE_TIMEOUT
 from ..feature_enforcer import FeatureEnforcer
 from ..models import (
-    Renter,
     RentAgreementDraft,
+    Renter,
     Unit,
     UnitDocument,
     UnitImage,
