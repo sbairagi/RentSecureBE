@@ -60,9 +60,7 @@ class Command(BaseCommand):
             send_whatsapp_message(renter.phone, message)
 
         self.stdout.write(
-            self.style.SUCCESS(
-                f"Late fees applied to {processed} rent records."
-            )
+            self.style.SUCCESS(f"Late fees applied to {processed} rent records.")
         )
 
 

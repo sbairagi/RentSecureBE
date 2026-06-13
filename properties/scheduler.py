@@ -66,13 +66,10 @@ def get_late_rent_records() -> QuerySet[RentRecord]:
         ).values_list("renter_id", flat=True)
     )
 
-    return (
-        RentRecord.objects.filter(
-            rent_due_date__lt=today,
-            payment_status="PENDING",
-        )
-        .exclude(renter_id__in=already_reminded_renter_ids)
-    )
+    return RentRecord.objects.filter(
+        rent_due_date__lt=today,
+        payment_status="PENDING",
+    ).exclude(renter_id__in=already_reminded_renter_ids)
 
 
 def process_late_rent_followups() -> int:

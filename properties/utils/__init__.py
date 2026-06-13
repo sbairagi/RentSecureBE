@@ -174,9 +174,7 @@ def _normalize_feature_limit_value(value: object) -> FeatureLimit:
     return 0
 
 
-def check_feature_limit(
-    user: AbstractUser, feature_key: str
-) -> FeatureCheckResult:
+def check_feature_limit(user: AbstractUser, feature_key: str) -> FeatureCheckResult:
     """Compute whether the user can perform one more action of ``feature_key``.
 
     Returns:
@@ -196,9 +194,9 @@ def check_feature_limit(
     except UserSubscription.DoesNotExist:
         subscription_limit = 0
 
-    addon_sum = AddOnPurchase.objects.filter(
-        user=user, name=feature_key
-    ).aggregate(total=Sum("amount"))["total"]
+    addon_sum = AddOnPurchase.objects.filter(user=user, name=feature_key).aggregate(
+        total=Sum("amount")
+    )["total"]
     add_on_limit = int(addon_sum) if addon_sum else 0
 
     usage: UsageLimit | None = UsageLimit.objects.filter(
@@ -258,7 +256,9 @@ def get_used_units(
     else:
         filters["addon_purchase"] = source
     used: int = (
-        UsageLimit.objects.filter(**filters).aggregate(total=Sum("usage_count"))["total"]
+        UsageLimit.objects.filter(**filters).aggregate(total=Sum("usage_count"))[
+            "total"
+        ]
         or 0
     )
     return int(used)
@@ -270,9 +270,7 @@ def deduct_feature_usage_with_priority(
     """Deduct ``units_to_deduct`` units from the user's quota."""
     enforcer = FeatureEnforcer(user)
     if not enforcer.can_create(feature_key):
-        raise ValidationError(
-            f"Not enough available units for feature: {feature_key}"
-        )
+        raise ValidationError(f"Not enough available units for feature: {feature_key}")
 
     for _ in range(units_to_deduct):
         if enforcer.can_create(feature_key):
@@ -290,9 +288,7 @@ def deduct_feature_usage_with_priority(
 
 def generate_rent_invoice_pdf(rent: RentRecord) -> str:
     """Render the rent invoice PDF to a temp file and return the path."""
-    html_string: str = render_to_string(
-        "invoices/rent_invoice.html", {"rent": rent}
-    )
+    html_string: str = render_to_string("invoices/rent_invoice.html", {"rent": rent})
     html = HTML(string=html_string)
     result = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     html.write_pdf(target=result.name)

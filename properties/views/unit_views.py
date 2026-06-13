@@ -169,9 +169,7 @@ class UnitDocumentViewSet(viewsets.ModelViewSet[UnitDocument]):
 
         enforcer = FeatureEnforcer(self.request.user)
         if not enforcer.can_create("unit_documents"):
-            raise PermissionDenied(
-                "You have reached your document upload limit."
-            )
+            raise PermissionDenied("You have reached your document upload limit.")
 
         serializer.save()
         enforcer.increment("unit_documents")
@@ -234,9 +232,7 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
             owner_email: str | None = self.request.user.email
             renter_email: str | None = agreement.renter.email
             if not owner_email:
-                raise PermissionDenied(
-                    "Owner email is required for digital signature."
-                )
+                raise PermissionDenied("Owner email is required for digital signature.")
             send_agreement_for_signature(
                 agreement,
                 owner_email=owner_email,
@@ -252,9 +248,7 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
             raise PermissionDenied("You do not own this draft.")
 
         unit: Unit | None = serializer.validated_data.get("unit", instance.unit)
-        renter: Renter | None = serializer.validated_data.get(
-            "renter", instance.renter
-        )
+        renter: Renter | None = serializer.validated_data.get("renter", instance.renter)
 
         if unit is None or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")

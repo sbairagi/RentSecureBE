@@ -57,16 +57,17 @@ def process_rent_reminders():
                 audio_path = generate_voice_note(msg, lang)
                 send_whatsapp_audio(phone, audio_path)
             except Exception as e:
-                logger.error(
-                    "Failed to send rent reminder for rent %s: %s", rent.id, e
-                )
+                logger.error("Failed to send rent reminder for rent %s: %s", rent.id, e)
 
 
 def process_tax_reminders():
     for tax in get_upcoming_tax_dues():
         owner = tax.property.owner
         phone = _safe_whatsapp(owner)
-        lang = getattr(getattr(owner, "profile", None), "language_preference", None) or "hi"
+        lang = (
+            getattr(getattr(owner, "profile", None), "language_preference", None)
+            or "hi"
+        )
         if phone:
             msg = generate_tax_reminder_msg(tax)
             try:

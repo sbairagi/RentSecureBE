@@ -90,9 +90,7 @@ def generate_tax_pdf(
             "fy": fy,
         },
     )
-    fd, pdf_file = tempfile.mkstemp(
-        suffix=".pdf", prefix=f"{user.username}_tax_{fy}_"
-    )
+    fd, pdf_file = tempfile.mkstemp(suffix=".pdf", prefix=f"{user.username}_tax_{fy}_")
     os.close(fd)
     HTML(string=html_string).write_pdf(pdf_file)
     return pdf_file
@@ -116,9 +114,7 @@ def create_tax_zip(
     Returns:
         Absolute path of the generated ``.zip`` file.
     """
-    fd, zip_path = tempfile.mkstemp(
-        suffix=".zip", prefix=f"{user.username}_tax_docs_"
-    )
+    fd, zip_path = tempfile.mkstemp(suffix=".zip", prefix=f"{user.username}_tax_docs_")
     os.close(fd)
     with zipfile.ZipFile(zip_path, "w") as zipf:
         zipf.write(excel_path, os.path.basename(excel_path))

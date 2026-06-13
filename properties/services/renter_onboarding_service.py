@@ -133,7 +133,9 @@ def notify_owner_renter_completed_kyc(renter: Renter) -> bool:
         return False
 
     profile = getattr(owner, "profile", None)
-    whatsapp_number: str | None = getattr(profile, "whatsapp_number", None) if profile else None
+    whatsapp_number: str | None = (
+        getattr(profile, "whatsapp_number", None) if profile else None
+    )
     if not whatsapp_number:
         logger.warning(
             "Owner %s has no WhatsApp number. Cannot send notification.", owner.id
@@ -154,7 +156,5 @@ def notify_owner_renter_completed_kyc(renter: Renter) -> bool:
         logger.info("KYC completion notification sent to owner %s", owner.id)
         return result
     except Exception as exc:
-        logger.exception(
-            "Error notifying owner %s about renter KYC: %s", owner.id, exc
-        )
+        logger.exception("Error notifying owner %s about renter KYC: %s", owner.id, exc)
         return False

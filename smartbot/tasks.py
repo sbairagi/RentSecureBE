@@ -10,6 +10,7 @@ fields live on :class:`properties.models.RentAgreementDraft` (see
 implementation).
 """
 
+
 # Keep the symbol below for backward-compatibility with any
 # ``from smartbot.tasks import poll_signature_status`` callers.
 # The function is a no-op because the underlying feature was retired

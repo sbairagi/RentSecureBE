@@ -33,14 +33,18 @@ class CAProfileViewSet(viewsets.ModelViewSet[CAProfile]):
 
     queryset: QuerySet[CAProfile] = CAProfile.objects.all()
     serializer_class = CAProfileSerializer
-    permission_classes: list[type[permissions.BasePermission]] = [permissions.IsAuthenticated]
+    permission_classes: list[type[permissions.BasePermission]] = [
+        permissions.IsAuthenticated
+    ]
 
 
 class TaxSubmissionToCAViewSet(viewsets.ModelViewSet[TaxSubmissionToCA]):
     """CRUD for tax submissions belonging to the authenticated user only."""
 
     serializer_class = TaxSubmissionToCASerializer
-    permission_classes: list[type[permissions.BasePermission]] = [permissions.IsAuthenticated]
+    permission_classes: list[type[permissions.BasePermission]] = [
+        permissions.IsAuthenticated
+    ]
     queryset: QuerySet[TaxSubmissionToCA] = TaxSubmissionToCA.objects.all()
 
     def get_queryset(self) -> QuerySet[TaxSubmissionToCA]:

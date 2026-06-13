@@ -108,9 +108,7 @@ def get_building_analytics(building: Building) -> BuildingAnalytics:
         status__in=[Unit.VacancyStatus.OCCUPIED, "OCCUPIED"]
     ).count()
     vacant: int = total - occupied
-    occupancy_rate: float = (
-        round((occupied / total * 100), 2) if total > 0 else 0.0
-    )
+    occupancy_rate: float = round((occupied / total * 100), 2) if total > 0 else 0.0
 
     return BuildingAnalytics(
         building_id=building.id,

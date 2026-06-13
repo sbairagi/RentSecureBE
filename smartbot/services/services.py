@@ -32,9 +32,7 @@ def generate_ai_alerts(owner) -> int:
         # Use the same slice window the original implementation used
         # (3 records) to preserve closest behavioural parity.
         recent = list(rents[:3])
-        if len(recent) >= 2 and all(
-            r.payment_status == "PENDING" for r in recent[:2]
-        ):
+        if len(recent) >= 2 and all(r.payment_status == "PENDING" for r in recent[:2]):
             _, created = AIAlert.objects.get_or_create(
                 owner=owner,
                 alert_type="Missed Rent",

@@ -118,9 +118,9 @@ class FeatureEnforcer:
 
     def _get_addon_limit(self, key: str) -> int:
         """Sum of all add-on purchases for the user/feature."""
-        addon_sum = AddOnPurchase.objects.filter(
-            user=self.user, name=key
-        ).aggregate(total=Sum("amount"))["total"]
+        addon_sum = AddOnPurchase.objects.filter(user=self.user, name=key).aggregate(
+            total=Sum("amount")
+        )["total"]
         return int(addon_sum) if addon_sum else 0
 
     def _get_free_plan_limit(self, key: str) -> FeatureLimit:

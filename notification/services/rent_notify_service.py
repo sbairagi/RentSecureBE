@@ -66,8 +66,12 @@ def notify_renter(renter, message: str):
 
 
 def notify_owner(owner, message: str):
-    lang = (getattr(getattr(owner, "profile", None), "language_preference", None) or "en")
-    phone = (getattr(getattr(owner, "profile", None), "whatsapp_number", None) or owner.phone or "")
+    lang = getattr(getattr(owner, "profile", None), "language_preference", None) or "en"
+    phone = (
+        getattr(getattr(owner, "profile", None), "whatsapp_number", None)
+        or owner.phone
+        or ""
+    )
 
     try:
         translated_text = translate_msg(message, lang)
@@ -119,8 +123,8 @@ def send_payout_notification(rent):
 def notify_owner_post_payout(rent):
     owner = rent.renter.unit.owner
     profile = getattr(owner, "profile", None)
-    phone = (getattr(profile, "whatsapp_number", None) or owner.phone or "")
-    lang = (getattr(profile, "language_preference", None) or "hi")
+    phone = getattr(profile, "whatsapp_number", None) or owner.phone or ""
+    lang = getattr(profile, "language_preference", None) or "hi"
 
     if rent.payout_status == "SUCCESS":
         msg = (

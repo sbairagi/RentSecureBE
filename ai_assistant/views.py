@@ -68,7 +68,8 @@ def ai_assistant_insights(request):
             "upcoming_tax_dues": [
                 {
                     "property": tax.unit.name if hasattr(tax, "unit") else "",
-                    "due": getattr(tax, "rent_due_date", None) or getattr(tax, "due_date", None),
+                    "due": getattr(tax, "rent_due_date", None)
+                    or getattr(tax, "due_date", None),
                     "amount": tax.amount,
                 }
                 for tax in upcoming_tax
@@ -99,9 +100,7 @@ def rent_analytics_data(request):
     start_date = today.replace(day=1) - timedelta(days=180)
 
     monthly_rent = (
-        RentRecord.objects.filter(
-            renter__unit__owner=owner, created_at__gte=start_date
-        )
+        RentRecord.objects.filter(renter__unit__owner=owner, created_at__gte=start_date)
         .annotate(month=TruncMonth("created_at"))
         .values("month")
         .annotate(total=Sum("amount_paid"))
@@ -131,7 +130,9 @@ def rent_analytics_data(request):
         or 0
     )
 
-    return Response({"monthly_rent": list(monthly_rent), "paid": paid, "unpaid": unpaid})
+    return Response(
+        {"monthly_rent": list(monthly_rent), "paid": paid, "unpaid": unpaid}
+    )
 
 
 # npx expo install react-native-svg

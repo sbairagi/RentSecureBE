@@ -79,10 +79,7 @@ def get_due_extra_charges(days: int = 3) -> QuerySet[ExtraCharge]:
         renter and unit pre-fetched for efficient iteration.
     """
     target_date: date = date.today() + timedelta(days=days)
-    return (
-        ExtraCharge.objects.filter(
-            status=ExtraCharge.Status.DUE,
-            due_date__lte=target_date,
-        )
-        .select_related("renter", "unit")
-    )
+    return ExtraCharge.objects.filter(
+        status=ExtraCharge.Status.DUE,
+        due_date__lte=target_date,
+    ).select_related("renter", "unit")

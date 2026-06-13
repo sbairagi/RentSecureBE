@@ -98,7 +98,9 @@ def pay_owner_after_rent(rent: RentRecord):
     # indirection and to make the relationship explicit.
     owner = rent.renter.unit.owner
     profile = getattr(owner, "profile", None)
-    phone = getattr(profile, "whatsapp_number", None)  # Make sure this is stored in +91 format
+    phone = getattr(
+        profile, "whatsapp_number", None
+    )  # Make sure this is stored in +91 format
 
     if phone:
         send_payout_notification(rent)
@@ -116,7 +118,9 @@ def register_cashfree_beneficiary(bank_details: OwnerBankDetails):
         # field is ``whatsapp_number``. Fall back to the User's phone
         # if the profile has none.
         "phone": (
-            getattr(getattr(bank_details.owner, "profile", None), "whatsapp_number", None)
+            getattr(
+                getattr(bank_details.owner, "profile", None), "whatsapp_number", None
+            )
             or bank_details.owner.phone
         ),
         "bankAccount": bank_details.bank_account_number,

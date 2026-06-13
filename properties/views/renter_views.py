@@ -49,9 +49,7 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
             cache.set(cache_key, renters, timeout=300)
         return renters
 
-    def create(
-        self, request: Request, *args: Any, **kwargs: Any
-    ) -> Response:
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new renter, enforcing the per-plan limit first."""
         allowed, current_usage, subscription_limit, add_on_limit = check_feature_limit(
             request.user, "max_renters"

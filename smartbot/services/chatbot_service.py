@@ -20,9 +20,7 @@ def handle_chat_message(user, message: str) -> str:
 
     if "rent due" in lowered:
         next_due = (
-            RentRecord.objects.filter(
-                renter__user=user, payment_status="PENDING"
-            )
+            RentRecord.objects.filter(renter__user=user, payment_status="PENDING")
             .order_by("rent_due_date")
             .first()
         )
