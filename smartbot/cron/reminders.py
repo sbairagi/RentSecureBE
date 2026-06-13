@@ -24,7 +24,9 @@ def send_signature_reminders():
             )
             continue
         try:
-            send_whatsapp_message(phone, "🖊️ Reminder: Please sign your rent agreement.")
+            send_whatsapp_message(
+                phone, "🖊️ Reminder: Please sign your rent agreement."
+            )
         except Exception as e:
             logger.error(
                 "Failed to send signature reminder to renter %s: %s",
