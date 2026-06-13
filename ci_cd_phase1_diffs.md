@@ -1,8 +1,8 @@
 # Phase 1 Implementation — Complete Diff Review Package
 
-**Generated:** 2026-06-05  
-**Scope:** 7 safe CI/CD & tooling changes as approved  
-**Files affected:** 7  
+**Generated:** 2026-06-05
+**Scope:** 7 safe CI/CD & tooling changes as approved
+**Files affected:** 7
 **Postponed to Phase 2:** detect-secrets, Ruff PTH/TRY
 
 ---
@@ -489,7 +489,7 @@ python -c "import yaml; yaml.safe_load(open('.github/workflows/security.yml')); 
 +++ b/pyproject.toml
 @@ -10,7 +10,7 @@ exclude = '''
  '''
- 
+
  [tool.ruff]
  line-length = 88
  target-version = "py312"
@@ -497,7 +497,7 @@ python -c "import yaml; yaml.safe_load(open('.github/workflows/security.yml')); 
 -extend-ignore = ["E203"]
 -select = ["E", "F", "W", "C", "N", "I", "S", "B"]
 +select = ["E", "F", "W", "C", "N", "I", "S", "B", "UP"]
- 
+
  [tool.ruff.per-file-ignores]
  "**/migrations/**" = ["ALL"]
 -"**/tests/**" = ["S101", "S105", "S106", "S108"]
@@ -569,7 +569,7 @@ python -m ruff check . --select UP --statistics
        - id: end-of-file-fixer
 @@ -8,7 +8,7 @@ repos:
        - id: check-added-large-files
- 
+
    - repo: https://github.com/psf/black
 -    rev: 24.10.0
 +    rev: 25.1.0
@@ -578,7 +578,7 @@ python -m ruff check . --select UP --statistics
          language_version: python3.12
 @@ -16,21 +16,27 @@ repos:
            - --config=pyproject.toml
- 
+
    - repo: https://github.com/astral-sh/ruff-pre-commit
 -    rev: v0.0.284
 +    rev: v0.11.0
@@ -588,7 +588,7 @@ python -m ruff check . --select UP --statistics
 -          - check
 +          - --fix
            - --config=pyproject.toml
- 
+
    - repo: https://github.com/pre-commit/mirrors-mypy
 -    rev: v1.10.1
 +    rev: v1.15.0
@@ -600,7 +600,7 @@ python -m ruff check . --select UP --statistics
 +        additional_dependencies:
 +          - django-stubs
 +          - djangorestframework-stubs
- 
+
 -  - repo: https://github.com/pre-commit/mirrors-isort
 -    rev: v5.9.3
 +  - repo: https://github.com/pycqa/isort

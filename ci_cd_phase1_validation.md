@@ -1,7 +1,7 @@
 # Phase 1 — Second-Pass Validation Report
 
-**Validation Date:** 2026-06-05  
-**Validator:** DevOps Architect  
+**Validation Date:** 2026-06-05
+**Validator:** DevOps Architect
 
 ---
 
@@ -171,7 +171,7 @@ Latest is v6.0.0. Using v5.0.0 is a reasonable conservative bump. **No change ne
 5. mirrors-isort → pycqa/isort: v5.9.3 → v5.11.3 (corrected from 5.13.2)
 6. Add mypy `additional_dependencies`
 
-**Corrections from original:** 
+**Corrections from original:**
 - ruff → v0.15.14 (latest stable, not v0.11.0)
 - isort → v5.11.3 (latest stable, 5.13.2 doesn't exist)
 
