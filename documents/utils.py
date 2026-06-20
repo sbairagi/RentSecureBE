@@ -1,5 +1,6 @@
 import os
 import tempfile
+from typing import Any
 
 from django.conf import settings
 from django.template.loader import render_to_string
@@ -9,26 +10,28 @@ from weasyprint import HTML
 from properties.models import RentAgreementDraft
 
 
-def _read_pdf_if_exists(path):
-    if not os.path.exists(path):
+def _read_pdf_if_exists(path: str | None) -> bytes:
+    if not path or not os.path.exists(path):
         return b""
     with open(path, "rb") as output:
         return output.read()
 
 
-def generate_unit_history_pdf(unit_obj):  # noqa: C901
-    tax_records = []
+def _get_tax_records(unit_obj: Any) -> Any:
     if hasattr(unit_obj, "unittaxrecord_set"):
-        tax_records = unit_obj.unittaxrecord_set.all()
-    elif hasattr(unit_obj, "tax_records"):
-        tax_records = unit_obj.tax_records
+        return unit_obj.unittaxrecord_set.all()
+    if hasattr(unit_obj, "tax_records"):
+        return unit_obj.tax_records
+    return []
 
+
+def generate_unit_history_pdf(unit_obj: Any) -> bytes:
     context = {
         "unit": unit_obj,
         "owner": unit_obj.owner,
         "caretakers": unit_obj.caretakers.all(),
         "renters": [],
-        "tax_records": tax_records,
+        "tax_records": _get_tax_records(unit_obj),
     }
 
     agreement_paths = []

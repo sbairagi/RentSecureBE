@@ -17,7 +17,7 @@ class CaretakerInline(admin.TabularInline):
     extra = 1
     readonly_fields = ("caretaker_image_thumbnail",)
 
-    def caretaker_image_thumbnail(self, obj):
+    def caretaker_image_thumbnail(self, obj) -> str:
         if obj.caretaker_image:
             return format_html(
                 '<img src="{}" style="height: 50px;"/>', obj.caretaker_image.url
@@ -32,7 +32,7 @@ class RenterInline(admin.TabularInline):
     extra = 1
     readonly_fields = ("renter_image_thumbnail",)
 
-    def renter_image_thumbnail(self, obj):
+    def renter_image_thumbnail(self, obj) -> str:
         if obj.renter_image:
             return format_html(
                 '<img src="{}" style="height: 50px;"/>', obj.renter_image.url
@@ -113,7 +113,7 @@ class UnitAdmin(SimpleHistoryAdmin):
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
-    def unit_image_thumbnail(self, obj):
+    def unit_image_thumbnail(self, obj) -> str:
         if obj.unit_image:
             return format_html(
                 '<img src="{}" style="height: 50px;"/>', obj.unit_image.url

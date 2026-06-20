@@ -5,12 +5,13 @@ Generates secure onboarding links and tokens for renter self-service KYC.
 """
 
 import secrets
+from typing import Any
 
 from django.conf import settings
 from django.utils import timezone
 
 
-def generate_onboarding_token(renter):
+def generate_onboarding_token(renter: Any) -> str:
     """
     Generate a unique, secure token for renter onboarding.
 
@@ -27,7 +28,7 @@ def generate_onboarding_token(renter):
     return token
 
 
-def generate_onboarding_link(renter):
+def generate_onboarding_link(renter: Any) -> str:
     """
     Generate a complete onboarding link for renter.
 
@@ -47,7 +48,7 @@ def generate_onboarding_link(renter):
     return f"{base_url}/onboard-renter/{token}/"
 
 
-def verify_onboarding_token(token):
+def verify_onboarding_token(token: str) -> Any:
     """
     Verify that an onboarding token is valid and belongs to an active renter.
 
@@ -73,7 +74,7 @@ def verify_onboarding_token(token):
         return None
 
 
-def mark_onboarding_completed(renter):
+def mark_onboarding_completed(renter: Any) -> None:
     """
     Mark renter's onboarding as completed.
 
@@ -86,7 +87,7 @@ def mark_onboarding_completed(renter):
     renter.save(update_fields=["onboarding_status"])
 
 
-def mark_kyc_verified(renter):
+def mark_kyc_verified(renter: Any) -> None:
     """
     Mark renter's KYC as verified.
 

@@ -18,7 +18,7 @@ from smartbot.services.chatbot_service import handle_chat_message
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def ai_assistant_insights(request):
+def ai_assistant_insights(request) -> Response:
     owner = request.user
     today = date.today()
 
@@ -92,7 +92,7 @@ def ai_assistant_insights(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def rent_analytics_data(request):
+def rent_analytics_data(request) -> Response:
     owner = request.user
 
     # Last 6 months
@@ -164,7 +164,7 @@ def rent_analytics_data(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def financial_health_report(request):
+def financial_health_report(request) -> Response:
     user = request.user
 
     rent_records = RentRecord.objects.filter(renter__user=user)
@@ -181,7 +181,7 @@ def financial_health_report(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def chat_with_assistant(request):
+def chat_with_assistant(request) -> Response:
     query = request.data.get("message")
     response = handle_chat_message(user=request.user, message=query)
     return Response({"reply": response})
@@ -204,7 +204,7 @@ def chat_with_assistant(request):
 
 
 @csrf_exempt
-def whatsapp_webhook(request):
+def whatsapp_webhook(request) -> JsonResponse:
     payload = json.loads(request.body)
     phone = payload.get("from")
     message = payload.get("text")

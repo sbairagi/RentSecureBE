@@ -1,3 +1,5 @@
+from typing import override
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -15,6 +17,7 @@ class User(AbstractUser):
     )
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
 
+    @override
     def __str__(self) -> str:
         return self.full_name
 
@@ -41,6 +44,7 @@ class NotificationPreference(models.Model):
     payout_alerts_whatsapp = models.BooleanField(default=True)
     payout_alerts_email = models.BooleanField(default=False)
 
+    @override
     def save(self, *args: object, **kwargs: object) -> None:
         if self.pk is None and self.owner_id:
             existing = NotificationPreference.objects.filter(
@@ -57,6 +61,7 @@ class NotificationPreference(models.Model):
                 return
         return super().save(*args, **kwargs)
 
+    @override
     def __str__(self) -> str:
         return f"Notification Preferences for {self.owner.email or self.owner.username}"
 
@@ -85,6 +90,7 @@ class OwnerBankDetails(models.Model):
     )
     bank_account_verified = models.BooleanField(default=False)
 
+    @override
     def __str__(self) -> str:
         return f"{self.owner.username} - {self.bank_account_number}"
 
@@ -106,6 +112,7 @@ class SubscriptionPlan(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @override
     def save(self, *args: object, **kwargs: object) -> None:
         if self.pk is None and self.name:
             existing = SubscriptionPlan.objects.filter(name=self.name).first()
@@ -120,6 +127,7 @@ class SubscriptionPlan(models.Model):
                 return
         return super().save(*args, **kwargs)
 
+    @override
     def __str__(self) -> str:
         return self.name.capitalize()
 
@@ -143,6 +151,7 @@ class UserSubscription(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @override
     def save(self, *args: object, **kwargs: object) -> None:
         if self.pk is None and self.user_id:
             existing = UserSubscription.objects.filter(user_id=self.user_id).first()
@@ -163,6 +172,7 @@ class UserSubscription(models.Model):
                 return
         return super().save(*args, **kwargs)
 
+    @override
     def __str__(self) -> str:
         return f"{self.user.username} - {self.plan.name if self.plan else 'no plan'}"
 
@@ -187,6 +197,7 @@ class AddOnPurchase(models.Model):
     is_recurring = models.BooleanField(default=False)
     purchase_date = models.DateTimeField(auto_now_add=True)
 
+    @override
     def __str__(self) -> str:
         return f"{self.name} - {self.user.username}"
 
@@ -202,6 +213,7 @@ class PlanFeatureLimit(models.Model):
     class Meta:
         unique_together = ("plan", "feature_key")
 
+    @override
     def save(self, *args: object, **kwargs: object) -> None:
         if self.pk is None and self.plan_id and self.feature_key:
             existing = PlanFeatureLimit.objects.filter(
@@ -216,6 +228,7 @@ class PlanFeatureLimit(models.Model):
                 return
         return super().save(*args, **kwargs)
 
+    @override
     def __str__(self) -> str:
         return f"{self.plan.name} - {self.feature_key}: {self.value}"
 
@@ -233,6 +246,7 @@ class UsageLimit(models.Model):
     class Meta:
         unique_together = ("user", "feature_key")
 
+    @override
     def save(self, *args: object, **kwargs: object) -> None:
         if self.pk is None and self.user_id and self.feature_key:
             existing = UsageLimit.objects.filter(
@@ -247,5 +261,6 @@ class UsageLimit(models.Model):
                 return
         return super().save(*args, **kwargs)
 
+    @override
     def __str__(self) -> str:
         return f"{self.user.username} - {self.feature_key}: {self.usage_count}"

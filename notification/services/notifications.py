@@ -2,7 +2,8 @@ import logging
 from typing import Any
 
 import requests
-from notifications.models import DeviceToken
+
+from notification.models import DeviceToken
 
 logger = logging.getLogger(__name__)
 

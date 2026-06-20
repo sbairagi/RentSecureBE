@@ -1,3 +1,5 @@
+from typing import Any, cast, override
+
 from rest_framework import serializers
 
 from ..models import RentAgreementDraft, Unit, UnitDocument, UnitImage
@@ -9,7 +11,8 @@ class UnitSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["owner"]
 
-    def validate(self, data):
+    @override
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         user = self.context["request"].user
         building = data.get("building") or getattr(self.instance, "building", None)
         if building and building.owner != user:
@@ -22,15 +25,17 @@ class UnitSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Longitude must be between -180 and 180.")
         return data
 
-    def create(self, validated_data):
+    @override
+    def create(self, validated_data: dict[str, Any]) -> Unit:
         validated_data["owner"] = self.context["request"].user
-        return super().create(validated_data)
+        return cast(Unit, super().create(validated_data))
 
-    def update(self, instance, validated_data):
+    @override
+    def update(self, instance: Unit, validated_data: dict[str, Any]) -> Unit:
         building = validated_data.get("building")
         if building and building.owner != self.context["request"].user:
             raise serializers.ValidationError("You do not own the selected building.")
-        return super().update(instance, validated_data)
+        return cast(Unit, super().update(instance, validated_data))
 
 
 class UnitImageSerializer(serializers.ModelSerializer):
@@ -38,18 +43,20 @@ class UnitImageSerializer(serializers.ModelSerializer):
         model = UnitImage
         fields = "__all__"
 
-    def validate(self, data):
+    @override
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         user = self.context["request"].user
         unit = data.get("unit") or getattr(self.instance, "unit", None)
         if unit and unit.owner != user:
             raise serializers.ValidationError("You do not own the selected unit.")
         return data
 
-    def update(self, instance, validated_data):
+    @override
+    def update(self, instance: UnitImage, validated_data: dict[str, Any]) -> UnitImage:
         unit = validated_data.get("unit")
         if unit and unit.owner != self.context["request"].user:
             raise serializers.ValidationError("You do not own the selected unit.")
-        return super().update(instance, validated_data)
+        return cast(UnitImage, super().update(instance, validated_data))
 
 
 class UnitDocumentSerializer(serializers.ModelSerializer):
@@ -57,18 +64,22 @@ class UnitDocumentSerializer(serializers.ModelSerializer):
         model = UnitDocument
         fields = "__all__"
 
-    def validate(self, data):
+    @override
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         user = self.context["request"].user
         unit = data.get("unit") or getattr(self.instance, "unit", None)
         if unit and unit.owner != user:
             raise serializers.ValidationError("You do not own the selected unit.")
         return data
 
-    def update(self, instance, validated_data):
+    @override
+    def update(
+        self, instance: UnitDocument, validated_data: dict[str, Any]
+    ) -> UnitDocument:
         unit = validated_data.get("unit")
         if unit and unit.owner != self.context["request"].user:
             raise serializers.ValidationError("You do not own the selected unit.")
-        return super().update(instance, validated_data)
+        return cast(UnitDocument, super().update(instance, validated_data))
 
 
 class RentAgreementDraftSerializer(serializers.ModelSerializer):
@@ -77,7 +88,8 @@ class RentAgreementDraftSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["user", "generated_at"]
 
-    def validate(self, data):
+    @override
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         request_user = self.context["request"].user
         renter = data.get("renter")
         unit = data.get("unit")

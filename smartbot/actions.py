@@ -15,7 +15,7 @@ from .services.leegality_service import initiate_signature
 from .whatsapp_service import send_agreement_via_whatsapp
 
 
-def send_rent_reminder(renter_name):
+def send_rent_reminder(renter_name: str) -> str:
     try:
         renter = Renter.objects.get(name__icontains=renter_name)
         msg = (
@@ -28,7 +28,7 @@ def send_rent_reminder(renter_name):
         return "❌ Renter not found."
 
 
-def retry_payout(renter_name):
+def retry_payout(renter_name: str) -> str:
     try:
         rent = RentRecord.objects.filter(renter__name__icontains=renter_name).latest(
             "created_at"
@@ -39,7 +39,7 @@ def retry_payout(renter_name):
         return "❌ Could not retry payout."
 
 
-def send_rent_agreement(renter_name):
+def send_rent_agreement(renter_name: str) -> str:
     try:
         renter = Renter.objects.get(name__icontains=renter_name)
         rent = RentRecord.objects.filter(renter=renter).latest("created_at")
@@ -58,7 +58,7 @@ def send_rent_agreement(renter_name):
         return f"❌ Failed to send agreement: {str(e)}"
 
 
-def send_agreement_for_signature(renter_name):
+def send_agreement_for_signature(renter_name: str) -> str:
     try:
         renter = Renter.objects.get(name__icontains=renter_name)
         rent = RentRecord.objects.filter(renter=renter).latest("created_at")

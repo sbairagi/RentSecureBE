@@ -1,3 +1,5 @@
+from typing import Any, cast, override
+
 from rest_framework import serializers
 
 from .models import (
@@ -29,7 +31,8 @@ class UserSubscriptionSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ("created_at", "updated_at", "user")
 
-    def create(self, validated_data):
+    @override
+    def create(self, validated_data: dict[str, Any]) -> UserSubscription:
         validated_data["user"] = self.context["request"].user
         user = validated_data.pop("user")
         subscription, _ = UserSubscription.objects.update_or_create(
@@ -45,9 +48,10 @@ class AddOnPurchaseSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ("user",)
 
-    def create(self, validated_data):
+    @override
+    def create(self, validated_data: dict[str, Any]) -> AddOnPurchase:
         validated_data["user"] = self.context["request"].user
-        return super().create(validated_data)
+        return cast(AddOnPurchase, super().create(validated_data))
 
 
 class PlanFeatureLimitSerializer(serializers.ModelSerializer):

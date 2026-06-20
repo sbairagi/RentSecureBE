@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from django.core.cache import cache
 from django.http import HttpRequest, JsonResponse
@@ -49,6 +49,7 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
     serializer_class = UnitSerializer
     permission_classes: list[type[IsAuthenticated]] = [IsAuthenticated]
 
+    @override
     def get_queryset(self) -> QuerySet[Unit]:
         """Return cached, owned units (graceful fallback to free plan)."""
         user = self.request.user
@@ -69,6 +70,7 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
 
         return units
 
+    @override
     def perform_create(self, serializer: UnitSerializer) -> None:
         """Persist a new unit and update the cached queryset."""
         enforcer = FeatureEnforcer(self.request.user)
@@ -79,6 +81,7 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
         enforcer.increment("max_units")
         cache.delete(f"units_user_{self.request.user.id}")
 
+    @override
     def perform_update(self, serializer: UnitSerializer) -> None:
         """Persist unit updates after ownership check."""
         if serializer.instance.owner != self.request.user:
@@ -86,6 +89,7 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
         serializer.save()
         cache.delete(f"units_user_{self.request.user.id}")
 
+    @override
     def perform_destroy(self, instance: Unit) -> None:
         """Delete a unit and decrement the owner's quota."""
         if instance.owner != self.request.user:
@@ -102,6 +106,7 @@ class UnitImageViewSet(viewsets.ModelViewSet[UnitImage]):
     permission_classes: list[type[IsAuthenticated]] = [IsAuthenticated]
     serializer_class = UnitImageSerializer
 
+    @override
     def get_queryset(self) -> QuerySet[UnitImage]:
         """Return cached, owned unit images."""
         cache_key: str = f"unit_images_user_{self.request.user.id}"
@@ -111,6 +116,7 @@ class UnitImageViewSet(viewsets.ModelViewSet[UnitImage]):
             cache.set(cache_key, images, timeout=300)
         return images
 
+    @override
     def perform_create(self, serializer: UnitImageSerializer) -> None:
         """Persist a new image after ownership + quota check."""
         unit: Unit | None = serializer.validated_data.get("unit")
@@ -125,16 +131,18 @@ class UnitImageViewSet(viewsets.ModelViewSet[UnitImage]):
         enforcer.increment("unit_images")
         cache.delete(f"unit_images_user_{self.request.user.id}")
 
+    @override
     def perform_update(self, serializer: UnitImageSerializer) -> None:
         """Persist image updates after ownership check."""
         unit: Unit | None = (
             serializer.validated_data.get("unit") or serializer.instance.unit
         )
-        if unit.owner != self.request.user:
+        if unit is None or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
         serializer.save()
         cache.delete(f"unit_images_user_{self.request.user.id}")
 
+    @override
     def perform_destroy(self, instance: UnitImage) -> None:
         """Delete an image and decrement the owner's quota."""
         if instance.unit.owner != self.request.user:
@@ -151,6 +159,7 @@ class UnitDocumentViewSet(viewsets.ModelViewSet[UnitDocument]):
     permission_classes: list[type[IsAuthenticated]] = [IsAuthenticated]
     serializer_class = UnitDocumentSerializer
 
+    @override
     def get_queryset(self) -> QuerySet[UnitDocument]:
         """Return cached, owned unit documents."""
         cache_key: str = f"unit_docs_user_{self.request.user.id}"
@@ -160,6 +169,7 @@ class UnitDocumentViewSet(viewsets.ModelViewSet[UnitDocument]):
             cache.set(cache_key, docs, timeout=300)
         return docs
 
+    @override
     def perform_create(self, serializer: UnitDocumentSerializer) -> None:
         """Persist a new document after ownership + quota check."""
         unit: Unit | None = serializer.validated_data.get("unit")
@@ -174,16 +184,18 @@ class UnitDocumentViewSet(viewsets.ModelViewSet[UnitDocument]):
         enforcer.increment("unit_documents")
         cache.delete(f"unit_docs_user_{self.request.user.id}")
 
+    @override
     def perform_update(self, serializer: UnitDocumentSerializer) -> None:
         """Persist document updates after ownership check."""
         unit: Unit | None = (
             serializer.validated_data.get("unit") or serializer.instance.unit
         )
-        if unit.owner != self.request.user:
+        if unit is None or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
         serializer.save()
         cache.delete(f"unit_docs_user_{self.request.user.id}")
 
+    @override
     def perform_destroy(self, instance: UnitDocument) -> None:
         """Delete a document and decrement the owner's quota."""
         if instance.unit.owner != self.request.user:
@@ -200,6 +212,7 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
     permission_classes: list[type[IsAuthenticated]] = [IsAuthenticated]
     serializer_class = RentAgreementDraftSerializer
 
+    @override
     def get_queryset(self) -> QuerySet[RentAgreementDraft]:
         """Return cached, owned agreement drafts."""
         cache_key: str = f"rent_drafts_user_{self.request.user.id}"
@@ -209,6 +222,7 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
             cache.set(cache_key, drafts, timeout=300)
         return drafts
 
+    @override
     def perform_create(self, serializer: RentAgreementDraftSerializer) -> None:
         """Persist a new draft and send it for digital signature."""
         enforcer = FeatureEnforcer(self.request.user)
@@ -240,6 +254,7 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
         except Exception as exc:
             logger.warning("Failed to send agreement for signature: %s", exc)
 
+    @override
     def perform_update(self, serializer: RentAgreementDraftSerializer) -> None:
         """Persist draft updates after ownership + integrity checks."""
         instance = serializer.instance
@@ -257,6 +272,7 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
         serializer.save()
         cache.delete(f"rent_drafts_user_{self.request.user.id}")
 
+    @override
     def perform_destroy(self, instance: RentAgreementDraft) -> None:
         """Delete a draft and free up plan quota."""
         if instance.user != self.request.user:

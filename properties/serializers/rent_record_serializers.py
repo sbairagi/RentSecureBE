@@ -1,3 +1,5 @@
+from typing import Any, cast, override
+
 from rest_framework import serializers
 
 from ..models import RentRecord
@@ -9,7 +11,8 @@ class RentRecordSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["id", "created_at", "updated_at", "owner"]
 
-    def validate(self, data):
+    @override
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         user = self.context["request"].user
         unit = data.get("unit") or getattr(self.instance, "unit", None)
         renter = data.get("renter") or getattr(self.instance, "renter", None)
@@ -35,22 +38,26 @@ class RentRecordSerializer(serializers.ModelSerializer):
             )
         return data
 
-    def update(self, instance, validated_data):
+    @override
+    def update(
+        self, instance: RentRecord, validated_data: dict[str, Any]
+    ) -> RentRecord:
         user = self.context["request"].user
-        if "unit" in validated_data and validated_data["unit"].owner != user:
+        unit_val = validated_data.get("unit", instance.unit)
+        renter_val = validated_data.get("renter", instance.renter)
+        if unit_val and unit_val.owner != user:
             raise serializers.ValidationError("You do not own the selected unit.")
-        if "renter" in validated_data and validated_data["renter"].unit.owner != user:
+        if renter_val and renter_val.unit.owner != user:
             raise serializers.ValidationError("You do not own the selected renter.")
 
-        unit = validated_data.get("unit", instance.unit)
-        renter = validated_data.get("renter", instance.renter)
-        if renter.unit.id != unit.id:
+        if unit_val and renter_val and renter_val.unit.id != unit_val.id:
             raise serializers.ValidationError(
                 "Renter must be part of the selected unit."
             )
-        return super().update(instance, validated_data)
+        return cast(RentRecord, super().update(instance, validated_data))
 
-    def get_invoice_url(self, obj):
+    def get_invoice_url(self, obj: RentRecord) -> str:
         if obj.payment_status == "PAID" and obj.invoice_pdf:
-            return obj.invoice_pdf.url
+            url = obj.invoice_pdf.url
+            return url if url else ""
         return ""

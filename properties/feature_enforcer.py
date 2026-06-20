@@ -10,6 +10,7 @@ import logging
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Literal
 
+from django.contrib.auth.models import AbstractUser
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -24,7 +25,7 @@ from core.models import (
 from .constants import GRACE_PERIOD_DAYS
 
 if TYPE_CHECKING:
-    from django.contrib.auth.models import AbstractUser
+    pass
 
 
 logger = logging.getLogger(__name__)

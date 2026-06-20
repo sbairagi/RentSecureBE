@@ -1,3 +1,5 @@
+from typing import Any, override
+
 from django.core.cache import cache
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
@@ -9,11 +11,12 @@ from ..models import Building
 from ..serializers import BuildingSerializer
 
 
-class BuildingViewSet(viewsets.ModelViewSet):
+class BuildingViewSet(viewsets.ModelViewSet[Building]):
     serializer_class = BuildingSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> Any:
         user = self.request.user
         cache_key = f"buildings_user_{user.id}"
         enforcer = FeatureEnforcer(user)
@@ -32,7 +35,8 @@ class BuildingViewSet(viewsets.ModelViewSet):
 
         return buildings
 
-    def perform_create(self, serializer):
+    @override
+    def perform_create(self, serializer: BuildingSerializer) -> None:
         user = self.request.user
         enforcer = FeatureEnforcer(user)
 
@@ -43,7 +47,8 @@ class BuildingViewSet(viewsets.ModelViewSet):
         enforcer.increment("max_buildings")
         cache.delete(f"buildings_user_{user.id}")
 
-    def perform_update(self, serializer):
+    @override
+    def perform_update(self, serializer: BuildingSerializer) -> None:
         if serializer.instance.owner != self.request.user:
             raise PermissionDenied(
                 "You do not have permission to update this building."
@@ -51,7 +56,8 @@ class BuildingViewSet(viewsets.ModelViewSet):
         serializer.save()
         cache.delete(f"buildings_user_{self.request.user.id}")
 
-    def perform_destroy(self, instance):
+    @override
+    def perform_destroy(self, instance: Building) -> None:
         if instance.owner != self.request.user:
             raise PermissionDenied(
                 "You do not have permission to delete this building."

@@ -1,10 +1,14 @@
+from typing import Any
+
 import requests
 from django.conf import settings
 
 LEEGALITY_URL = "https://sandbox.leegality.com/api/v3/document"
 
 
-def send_agreement_for_signature(agreement, owner_email, renter_email=None):
+def send_agreement_for_signature(
+    agreement, owner_email: str, renter_email: str | None = None
+) -> dict[str, Any]:
     headers = {
         "X-API-KEY": settings.LEEGALITY_API_KEY,
         "X-ORG-ID": settings.LEEGALITY_ORG_ID,
@@ -15,15 +19,17 @@ def send_agreement_for_signature(agreement, owner_email, renter_email=None):
     if not template_id:
         raise ValueError("Leegality template/workflow ID is not configured.")
 
+    owner_name = getattr(agreement.user, "get_full_name", None)
+    if callable(owner_name):
+        owner_display_name = owner_name()
+    else:
+        owner_display_name = agreement.user.username
+
     data = {
         "template_id": template_id,
         "participants": [
             {
-                "name": (
-                    getattr(agreement.user, "get_full_name", None)()
-                    if callable(getattr(agreement.user, "get_full_name", None))
-                    else agreement.user.username
-                ),
+                "name": owner_display_name,
                 "email": owner_email,
                 "signing_order": 1,
                 "identifier": "OWNER",
@@ -44,7 +50,7 @@ def send_agreement_for_signature(agreement, owner_email, renter_email=None):
 
     response = requests.post(LEEGALITY_URL, headers=headers, json=data, timeout=10)
     response.raise_for_status()
-    resp_json = response.json()
+    resp_json: dict[str, Any] = response.json()
 
     agreement.leegality_document_id = (
         resp_json.get("document_id")

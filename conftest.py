@@ -8,17 +8,17 @@ class _FakeMessage:
 
 
 class _FakeMessages:
-    def create(self, *args, **kwargs):
+    def create(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         return _FakeMessage()
 
 
 class _FakeTwilioClient:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         self.messages = _FakeMessages()
 
 
 @pytest.fixture(autouse=True)
-def rentsecure_test_defaults(db, monkeypatch):
+def rentsecure_test_defaults(db, monkeypatch):  # type: ignore[no-untyped-def]
     cache.clear()
     Group.objects.get_or_create(name="tenant")
     Group.objects.get_or_create(name="renter")

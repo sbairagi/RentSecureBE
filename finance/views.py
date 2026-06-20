@@ -8,7 +8,7 @@ shapes it produces.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any, override
 
 from django.http import FileResponse
 from rest_framework import permissions, viewsets
@@ -16,21 +16,18 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
+from core.models import User
 from properties.models import Unit
 
 from .models import CAProfile, TaxSubmissionToCA
 from .serializers import CAProfileSerializer, TaxSubmissionToCASerializer
 from .utils import create_tax_zip, generate_tax_excel, generate_tax_pdf
 
-if TYPE_CHECKING:
-    from django.contrib.auth.models import AbstractUser
-    from django.db.models import QuerySet
-
 
 class CAProfileViewSet(viewsets.ModelViewSet[CAProfile]):
     """CRUD for the ``CAProfile`` model — used by owners to onboard their CA."""
 
-    queryset: QuerySet[CAProfile] = CAProfile.objects.all()
+    queryset: Any = CAProfile.objects.all()
     serializer_class = CAProfileSerializer
     permission_classes: list[type[permissions.BasePermission]] = [
         permissions.IsAuthenticated
@@ -44,9 +41,10 @@ class TaxSubmissionToCAViewSet(viewsets.ModelViewSet[TaxSubmissionToCA]):
     permission_classes: list[type[permissions.BasePermission]] = [
         permissions.IsAuthenticated
     ]
-    queryset: QuerySet[TaxSubmissionToCA] = TaxSubmissionToCA.objects.all()
+    queryset: Any = TaxSubmissionToCA.objects.all()
 
-    def get_queryset(self) -> QuerySet[TaxSubmissionToCA]:
+    @override
+    def get_queryset(self) -> Any:
         """Return only the current user's tax submissions.
 
         ``TaxSubmissionToCA`` has a direct ``user`` FK (not a
@@ -54,6 +52,7 @@ class TaxSubmissionToCAViewSet(viewsets.ModelViewSet[TaxSubmissionToCA]):
         """
         return TaxSubmissionToCA.objects.filter(user=self.request.user)
 
+    @override
     def perform_create(self, serializer: TaxSubmissionToCASerializer) -> None:
         """Persist the submission; ownership is bound by the related tax summary."""
         serializer.save()
@@ -66,10 +65,10 @@ class DownloadTaxFilesView(APIView):
 
     def get(self, request: Request) -> FileResponse:
         """Generate and return a downloadable tax-document zip."""
-        user: AbstractUser = request.user
+        user: User = request.user
         fy: str = request.query_params.get("fy", "2024-25")
 
-        properties: QuerySet[Unit] = Unit.objects.filter(owner=user)
+        properties: Any = Unit.objects.filter(owner=user)
         excel: str = generate_tax_excel(user, properties, fy)
         pdf: str = generate_tax_pdf(user, properties, fy)
 

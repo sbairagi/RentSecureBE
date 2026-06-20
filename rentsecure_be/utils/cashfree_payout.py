@@ -1,9 +1,11 @@
 # utils/cashfree_payout.py
+from typing import Any
+
 import requests
 from django.conf import settings
 
 
-def get_auth_token():
+def get_auth_token() -> str | None:
     url = f"{settings.CASHFREE_PAYOUT_BASE_URL}/payout/v1/authorize"
     res = requests.post(
         url,
@@ -13,14 +15,16 @@ def get_auth_token():
     return res.json().get("data", {}).get("token")
 
 
-def add_beneficiary(data):
+def add_beneficiary(data: dict[str, Any]) -> dict[str, Any]:
     url = f"{settings.CASHFREE_PAYOUT_BASE_URL}/payout/v1/addBeneficiary"
     headers = {"Authorization": f"Bearer {get_auth_token()}"}
     res = requests.post(url, json=data, headers=headers, timeout=10)
     return res.json()
 
 
-def make_payout(transfer_id, amount, remarks, bene_id):
+def make_payout(
+    transfer_id: str, amount: float, remarks: str, bene_id: str
+) -> dict[str, Any]:
     url = f"{settings.CASHFREE_PAYOUT_BASE_URL}/payout/v1/requestTransfer"
     headers = {"Authorization": f"Bearer {get_auth_token()}"}
     payload = {

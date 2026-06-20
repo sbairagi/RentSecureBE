@@ -1,4 +1,5 @@
 import logging
+from typing import Any, override
 
 from django.core.cache import cache
 from django.http import FileResponse
@@ -15,18 +16,19 @@ from rentsecure_be.services.cashfree_service import process_rent_payout
 from rentsecure_be.services.razorpay_service import create_payment_link
 
 from ..feature_enforcer import FeatureEnforcer
-from ..models import Renter, RentRecord
+from ..models import Renter, RentRecord, Unit
 from ..serializers import RentRecordSerializer
 from ..utils import generate_rent_invoice_pdf
 
 logger = logging.getLogger(__name__)
 
 
-class RentRecordViewSet(viewsets.ModelViewSet):
+class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
     permission_classes = [IsAuthenticated]
     serializer_class = RentRecordSerializer
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> Any:
         user = self.request.user
         cache_key = f"rent_records_user_{user.id}"
         rent_records = cache.get(cache_key)
@@ -37,12 +39,13 @@ class RentRecordViewSet(viewsets.ModelViewSet):
             cache.set(cache_key, rent_records, timeout=300)
         return rent_records
 
-    def perform_create(self, serializer):
-        unit = serializer.validated_data.get("unit")
+    @override
+    def perform_create(self, serializer: RentRecordSerializer) -> None:
+        unit: Unit | None = serializer.validated_data.get("unit")
         renter = serializer.validated_data.get("renter")
         user = self.request.user
 
-        if unit.owner != user:
+        if unit is None or unit.owner != user:
             raise PermissionDenied("You do not own this unit.")
         if renter.unit != unit:
             raise ValidationError("Renter does not belong to the selected unit.")
@@ -68,25 +71,23 @@ class RentRecordViewSet(viewsets.ModelViewSet):
         enforcer.increment("rent_records")
         cache.delete(f"rent_records_user_{user.id}")
 
-    def perform_update(self, serializer):
+    @override
+    def perform_update(self, serializer: RentRecordSerializer) -> None:
         instance = serializer.instance
         user = self.request.user
 
         if instance.unit.owner != user:
             raise PermissionDenied("You do not own this unit.")
 
-        new_unit = serializer.validated_data.get("unit", instance.unit)
-        new_renter = serializer.validated_data.get("renter", instance.renter)
-
-        if new_unit.owner != user:
+        new_unit: Unit | None = serializer.validated_data.get("unit", instance.unit)
+        if new_unit is None or new_unit.owner != user:
             raise PermissionDenied("You do not own the selected unit.")
-        if new_renter.unit != new_unit:
-            raise ValidationError("Renter does not belong to the selected unit.")
 
         serializer.save()
         cache.delete(f"rent_records_user_{user.id}")
 
-    def perform_destroy(self, instance):
+    @override
+    def perform_destroy(self, instance: RentRecord) -> None:
         if instance.unit.owner != self.request.user:
             raise PermissionDenied("You do not own this rent record.")
         enforcer = FeatureEnforcer(self.request.user)
@@ -97,7 +98,7 @@ class RentRecordViewSet(viewsets.ModelViewSet):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def retry_payout_api(request, rent_id):
+def retry_payout_api(request, rent_id: int) -> Any:
     rent = get_object_or_404(RentRecord, id=rent_id, owner=request.user)
 
     if rent.payment_status != "PAID" or rent.payout_status != "FAILED":
@@ -117,7 +118,7 @@ def retry_payout_api(request, rent_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def owner_rent_records(request):
+def owner_rent_records(request) -> Any:
     owner = request.user
     rents = RentRecord.objects.filter(owner=owner).select_related("renter", "unit")
     serializer = RentRecordSerializer(rents, many=True)
@@ -126,7 +127,7 @@ def owner_rent_records(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def download_rent_invoice(request, rent_id):
+def download_rent_invoice(request, rent_id: int) -> Any:
     rent = get_object_or_404(RentRecord, id=rent_id, owner=request.user)
     pdf_path = generate_rent_invoice_pdf(rent)
     return FileResponse(open(pdf_path, "rb"), content_type="application/pdf")
@@ -134,7 +135,7 @@ def download_rent_invoice(request, rent_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def get_latest_due_rent(request):
+def get_latest_due_rent(request) -> Any:
     renter = Renter.objects.filter(
         user=request.user, status__in=["active", "notice_period"]
     ).first()
@@ -165,7 +166,7 @@ def get_latest_due_rent(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def rent_history(request):
+def rent_history(request) -> Any:
     renter = Renter.objects.filter(
         user=request.user, status__in=["active", "notice_period"]
     ).first()
@@ -189,7 +190,7 @@ def rent_history(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def owner_rent_overview(request):
+def owner_rent_overview(request) -> Any:
     owner = request.user
     rents = RentRecord.objects.filter(owner=owner).select_related("renter", "unit")
     data = []

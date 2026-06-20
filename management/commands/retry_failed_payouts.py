@@ -4,8 +4,9 @@
 
 
 from django.core.management.base import BaseCommand
-from rent.models import RentRecord
-from rent.services import process_rent_payout
+
+from properties.models import RentRecord
+from rentsecure_be.services.cashfree_service import process_rent_payout
 
 
 class Command(BaseCommand):

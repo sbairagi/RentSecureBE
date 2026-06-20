@@ -1,5 +1,6 @@
 # from rent.models import RentRecord
 from datetime import date
+from typing import Any
 
 # @api_view(["POST"])
 # def smart_bot_reply(request):
@@ -74,7 +75,7 @@ from .models import SmartBotChat
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def smart_bot_reply(request):
+def smart_bot_reply(request) -> Any:
     query = request.data.get("query")
     user = request.user
 
@@ -108,7 +109,7 @@ def smart_bot_reply(request):
     """
 
     # Step 2: Call GPT
-    answer = gpt_smart_reply(query, context_data)
+    answer = gpt_smart_reply(user, query, context_data)
 
     # Detect and run action
     action = extract_intent(query)

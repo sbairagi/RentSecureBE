@@ -1,3 +1,5 @@
+from typing import Any, cast, override
+
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
@@ -12,15 +14,17 @@ class CaretakerSerializer(serializers.ModelSerializer):
             "id_proof": {"required": False},
         }
 
-    def validate(self, data):
+    @override
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         user = self.context["request"].user
         unit = data.get("unit") or getattr(self.instance, "unit", None)
         if unit and unit.owner != user:
             raise PermissionDenied("You do not own the selected unit.")
         return data
 
-    def update(self, instance, validated_data):
+    @override
+    def update(self, instance: Caretaker, validated_data: dict[str, Any]) -> Caretaker:
         unit = validated_data.get("unit")
         if unit and unit.owner != self.context["request"].user:
             raise serializers.ValidationError("You do not own the selected unit.")
-        return super().update(instance, validated_data)
+        return cast(Caretaker, super().update(instance, validated_data))

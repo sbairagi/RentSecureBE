@@ -8,7 +8,7 @@ from .models import DeviceToken
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def get_notifications(request):
+def get_notifications(request) -> Response:
     data = request.user.notifications.order_by("-created_at").values(
         "id", "title", "message", "is_read", "created_at"
     )
@@ -29,7 +29,7 @@ def get_notifications(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def mark_notification_read(request, notification_id):
+def mark_notification_read(request, notification_id: int) -> Response:
     note = request.user.notifications.get(id=notification_id)
     note.is_read = True
     note.save()
@@ -39,7 +39,7 @@ def mark_notification_read(request, notification_id):
 # API to receive from frontend
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def save_device_token(request):
+def save_device_token(request) -> Response:
     token = request.data.get("token")
     if token:
         DeviceToken.objects.update_or_create(
@@ -75,7 +75,7 @@ def save_device_token(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def register_fcm_token(request):
+def register_fcm_token(request) -> Response:
     token = request.data.get("token")
     device_type = request.data.get("type", "android")  # or "ios", "web"
 

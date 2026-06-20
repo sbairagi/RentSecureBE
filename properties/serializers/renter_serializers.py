@@ -1,3 +1,5 @@
+from typing import Any, cast, override
+
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
@@ -13,18 +15,20 @@ class RenterSerializer(serializers.ModelSerializer):
             "rent_agreement": {"required": False},
         }
 
-    def validate(self, data):
+    @override
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         user = self.context["request"].user
         unit = data.get("unit") or getattr(self.instance, "unit", None)
         if unit and unit.owner != user:
             raise PermissionDenied("You do not own the selected unit.")
         return data
 
-    def update(self, instance, validated_data):
+    @override
+    def update(self, instance: Renter, validated_data: dict[str, Any]) -> Renter:
         unit = validated_data.get("unit")
         if unit and unit.owner != self.context["request"].user:
             raise serializers.ValidationError("You do not own the selected unit.")
-        return super().update(instance, validated_data)
+        return cast(Renter, super().update(instance, validated_data))
 
 
 class RenterRentRecordSerializer(serializers.ModelSerializer):
@@ -38,7 +42,7 @@ class RenterRentRecordSerializer(serializers.ModelSerializer):
         model = RentRecord
         fields = ["due_date", "amount", "late_fee", "payment_status", "invoice_url"]
 
-    def get_invoice_url(self, obj):
+    def get_invoice_url(self, obj: RentRecord) -> str:
         if obj.payment_status == "PAID":
             return obj.invoice_pdf.url or ""
         return ""

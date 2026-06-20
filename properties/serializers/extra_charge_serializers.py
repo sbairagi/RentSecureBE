@@ -1,3 +1,5 @@
+from typing import Any, cast, override
+
 from rest_framework import serializers
 
 from ..models import ExtraCharge
@@ -9,7 +11,8 @@ class ExtraChargeSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["id", "created_at", "updated_at"]
 
-    def validate(self, data):
+    @override
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         request = self.context["request"]
         user = request.user
         renter = data.get("renter") or getattr(self.instance, "renter", None)
@@ -31,10 +34,15 @@ class ExtraChargeSerializer(serializers.ModelSerializer):
 
         return data
 
-    def update(self, instance, validated_data):
+    @override
+    def update(
+        self, instance: ExtraCharge, validated_data: dict[str, Any]
+    ) -> ExtraCharge:
         user = self.context["request"].user
-        unit = validated_data.get("unit", instance.unit)
-        renter = validated_data.get("renter", instance.renter)
+        unit_val = validated_data.get("unit")
+        renter_val = validated_data.get("renter")
+        unit = unit_val if unit_val is not None else instance.unit
+        renter = renter_val if renter_val is not None else instance.renter
 
         if unit.owner != user:
             raise serializers.ValidationError("You do not own the selected unit.")
@@ -43,4 +51,4 @@ class ExtraChargeSerializer(serializers.ModelSerializer):
                 "Renter does not belong to the selected unit."
             )
 
-        return super().update(instance, validated_data)
+        return cast(ExtraCharge, super().update(instance, validated_data))

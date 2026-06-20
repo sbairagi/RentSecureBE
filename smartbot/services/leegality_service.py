@@ -1,4 +1,5 @@
 import json
+from typing import Any, TypedDict
 
 import requests
 from django.conf import settings
@@ -7,7 +8,13 @@ LEEGALITY_API_URL = "https://api.leegality.com/v3/document/upload"
 LEEGALITY_DOCUMENT_URL = "https://api.leegality.com/v3/document"
 
 
-def initiate_signature(renter, file_path):
+class _Renter(TypedDict):
+    name: str
+    email: str
+    phone: str
+
+
+def initiate_signature(renter: _Renter, file_path: str) -> dict[str, Any]:
     with open(file_path, "rb") as f:
         files = {"file": ("agreement.pdf", f, "application/pdf")}
         data = {
@@ -37,7 +44,7 @@ def initiate_signature(renter, file_path):
         return response.json()
 
 
-def check_signature_status(signature_request_id):
+def check_signature_status(signature_request_id: str) -> str | None:
     headers = {
         "X-API-KEY": settings.LEEGALITY_API_KEY,
         "X-ORG-ID": settings.LEEGALITY_ORG_ID,

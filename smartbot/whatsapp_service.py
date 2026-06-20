@@ -1,7 +1,10 @@
 # services/whatsapp_service.py
+from typing import Any
+
 from notification.utils import send_whatsapp_message
 
 
-def send_agreement_via_whatsapp(renter, pdf_url):
+def send_agreement_via_whatsapp(renter: Any, pdf_url: str) -> None:
     msg = f"📄 Your rent agreement is ready.\nDownload: {pdf_url}"
-    send_whatsapp_message(renter.phone, msg)
+    phone = getattr(renter, "phone", "")
+    send_whatsapp_message(phone, msg)

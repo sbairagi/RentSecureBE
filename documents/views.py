@@ -1,4 +1,5 @@
 from io import BytesIO
+from typing import Any
 
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -20,11 +21,11 @@ from .utils import generate_unit_history_pdf
 
 
 class GenerateRentAgreementPdfViewSet(viewsets.ViewSet):
-    queryset = Renter.objects.all()
-    permission_classes = [IsAuthenticated]
+    queryset: Any = Renter.objects.all()
+    permission_classes: list[type[IsAuthenticated]] = [IsAuthenticated]
 
     @action(detail=True, methods=["get"], url_path="generate-rent-agreement-pdf")
-    def generate_rent_agreement_pdf(self, request, pk=None):
+    def generate_rent_agreement_pdf(self, request, pk=None) -> HttpResponse:
         try:
             renter = Renter.objects.select_related("unit", "unit__owner").get(pk=pk)
         except Renter.DoesNotExist:
@@ -55,7 +56,7 @@ class GenerateUnitDossierPdfViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=["get"], url_path="generate-dossier-pdf")
-    def generate_dossier_pdf(self, request, pk=None):
+    def generate_dossier_pdf(self, request, pk=None) -> HttpResponse:
         # Get Unit or return 404
         unit_obj = get_object_or_404(Unit, pk=pk)
 
@@ -96,7 +97,7 @@ class GenerateRentReceiptPdfViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=["get"], url_path="pdf_receipt")
-    def pdf_receipt(self, request, pk=None):
+    def pdf_receipt(self, request, pk=None) -> HttpResponse:
         try:
             rent_record = self.get_object()
         except NotFound:
@@ -115,7 +116,7 @@ class GenerateRentReceiptPdfViewSet(viewsets.ModelViewSet):
         return response
 
 
-def download_unit_history(request, unit_id):
+def download_unit_history(request, unit_id: int) -> HttpResponse:
     unit_obj = Unit.objects.get(id=unit_id, owner=request.user)
     pdf_data = generate_unit_history_pdf(unit_obj)
 

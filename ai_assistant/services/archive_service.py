@@ -2,6 +2,7 @@
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
 from django.db.models.fields.files import FieldFile
 from django.forms import model_to_dict
@@ -9,7 +10,7 @@ from django.forms import model_to_dict
 from properties.models import ArchivedRenter, RentRecord, UnitImage
 
 
-def _serialize_value(value):
+def _serialize_value(value: Any) -> Any:
     if isinstance(value, (date, datetime)):
         return value.isoformat()
     if isinstance(value, Decimal):
@@ -23,7 +24,7 @@ def _serialize_value(value):
     return value
 
 
-def archive_renter_data(renter):
+def archive_renter_data(renter: Any) -> ArchivedRenter:
     rent_records = _serialize_value(
         list(RentRecord.objects.filter(renter=renter).values())
     )

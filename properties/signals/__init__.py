@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(post_save, sender=Renter)
-def update_last_vacated_date_on_renter_exit(sender, instance, **kwargs):
+def update_last_vacated_date_on_renter_exit(sender, instance, **kwargs) -> None:
     """Track the date the unit became vacant when the renter is exiting."""
     if instance.status in [
         Renter.RenterStatus.NOTICE_PERIOD,
@@ -45,14 +45,14 @@ def update_last_vacated_date_on_renter_exit(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=Renter)
-def generate_renter_onboarding_token(sender, instance, created, **kwargs):
+def generate_renter_onboarding_token(sender, instance, created, **kwargs) -> None:
     """Generate onboarding token for new renters."""
     if created and not instance.onboarding_token:
         generate_onboarding_token(instance)
 
 
 @receiver(post_save, sender=Renter)
-def update_unit_status_on_renter_save(sender, instance, **kwargs):
+def update_unit_status_on_renter_save(sender, instance, **kwargs) -> None:
     """
     Auto-update unit status whenever a renter is created or updated.
 
@@ -67,7 +67,7 @@ def update_unit_status_on_renter_save(sender, instance, **kwargs):
 
 
 @receiver(post_delete, sender=Renter)
-def update_unit_status_on_renter_delete(sender, instance, **kwargs):
+def update_unit_status_on_renter_delete(sender, instance, **kwargs) -> None:
     """
     Auto-update unit status when a renter is deleted.
 
@@ -80,42 +80,42 @@ def update_unit_status_on_renter_delete(sender, instance, **kwargs):
 
 @receiver(post_save, sender=Building)
 @receiver(post_delete, sender=Building)
-def update_building_usage(sender, instance, **kwargs):
+def update_building_usage(sender, instance, **kwargs) -> None:
     update_usage_count(instance.owner, "max_buildings", Building)
 
 
 @receiver(post_save, sender=Unit)
 @receiver(post_delete, sender=Unit)
-def update_unit_usage(sender, instance, **kwargs):
+def update_unit_usage(sender, instance, **kwargs) -> None:
     update_usage_count(instance.owner, "max_units", Unit)
 
 
 @receiver(post_save, sender=Caretaker)
 @receiver(post_delete, sender=Caretaker)
-def update_caretaker_usage(sender, instance, **kwargs):
+def update_caretaker_usage(sender, instance, **kwargs) -> None:
     update_usage_count(instance.unit.owner, "max_caretakers", Caretaker)
 
 
 @receiver(post_save, sender=Renter)
 @receiver(post_delete, sender=Renter)
-def update_renter_usage(sender, instance, **kwargs):
+def update_renter_usage(sender, instance, **kwargs) -> None:
     update_usage_count(instance.unit.owner, "max_renters", Renter)
 
 
 @receiver(post_save, sender=UnitImage)
 @receiver(post_delete, sender=UnitImage)
-def update_unit_images_usage(sender, instance, **kwargs):
+def update_unit_images_usage(sender, instance, **kwargs) -> None:
     update_usage_count(instance.unit.owner, "max_unit_images", UnitImage)
 
 
 @receiver(post_save, sender=UnitDocument)
 @receiver(post_delete, sender=UnitDocument)
-def update_unit_document_usage(sender, instance, **kwargs):
+def update_unit_document_usage(sender, instance, **kwargs) -> None:
     update_usage_count(instance.unit.owner, "max_unit_images", UnitDocument)
 
 
 @receiver(post_save, sender=RentRecord)
-def handle_rent_payment(sender, instance, **kwargs):
+def handle_rent_payment(sender, instance, **kwargs) -> None:
     if instance.payment_status == "PAID":
         cancel_reminder_job(f"rent_{instance.id}")
         send_thank_you_voice_note(instance)
@@ -138,7 +138,7 @@ def handle_rent_payment(sender, instance, **kwargs):
             )
 
 
-def update_renter_defaulter_status(rent: RentRecord):
+def update_renter_defaulter_status(rent: RentRecord) -> None:
     """Check if rent is overdue and flag renter as defaulter if needed.
 
     Fixed: Uses rent.payment_status (not rent.status).
@@ -162,7 +162,7 @@ def update_renter_defaulter_status(rent: RentRecord):
 
 
 @receiver(post_save, sender=Renter)
-def notify_owner_if_unit_vacant(sender, instance, **kwargs):
+def notify_owner_if_unit_vacant(sender, instance, **kwargs) -> None:
     if instance.status in ["deactivated", "revoked"]:
         owner = instance.unit.owner
         unit = instance.unit
@@ -187,7 +187,7 @@ def notify_owner_if_unit_vacant(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=Renter)
-def generate_final_invoice_on_exit(sender, instance, **kwargs):
+def generate_final_invoice_on_exit(sender, instance, **kwargs) -> None:
     update_fields = kwargs.get("update_fields")
     if update_fields and set(update_fields).issubset(
         {"onboarding_token", "onboarding_link_sent_at"}

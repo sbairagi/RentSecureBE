@@ -1,15 +1,17 @@
 from datetime import date, timedelta
+from typing import Any, override
 
 from django.core.management.base import BaseCommand
-from rent.models import Renter
 
 from notification.services.whatsapp_service import send_whatsapp_message
+from properties.models import Renter
 
 
 class Command(BaseCommand):
     help = "Send rent due reminders to tenants 3 days before due date"
 
-    def handle(self, *args, **kwargs):
+    @override
+    def handle(self, *args: Any, **kwargs: Any) -> None:
         today = date.today()
         target_date = today + timedelta(days=3)
 

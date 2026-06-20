@@ -14,6 +14,7 @@ logic or adding new model fields.
 """
 
 import logging
+from typing import Any
 
 from ai_assistant.services.i18n_service import translate_msg
 from notification.services.voice_service import generate_voice_note
@@ -25,7 +26,7 @@ from notification.services.whatsapp_service import (
 logger = logging.getLogger(__name__)
 
 
-def _renter_phone(renter) -> str:
+def _renter_phone(renter: Any) -> str:
     """Return the best-available phone number for a renter."""
     user_profile = getattr(getattr(renter, "user", None), "profile", None)
     if user_profile is not None and getattr(user_profile, "whatsapp_number", None):
@@ -33,7 +34,7 @@ def _renter_phone(renter) -> str:
     return renter.whatsapp_number or renter.phone or ""
 
 
-def _renter_lang(renter, default: str = "en") -> str:
+def _renter_lang(renter: Any, default: str = "en") -> str:
     """Return the best-available language preference for a renter."""
     user_profile = getattr(getattr(renter, "user", None), "profile", None)
     if user_profile is not None and getattr(user_profile, "language_preference", None):
@@ -41,7 +42,7 @@ def _renter_lang(renter, default: str = "en") -> str:
     return default
 
 
-def notify_renter(renter, message: str):
+def notify_renter(renter: Any, message: str) -> None:
     lang = _renter_lang(renter, default="en")
     phone = _renter_phone(renter)
 
@@ -65,7 +66,7 @@ def notify_renter(renter, message: str):
         logger.error(f"WhatsApp voice note failed for user {renter.id}: {e}")
 
 
-def notify_owner(owner, message: str):
+def notify_owner(owner: Any, message: str) -> None:
     lang = getattr(getattr(owner, "profile", None), "language_preference", None) or "en"
     phone = (
         getattr(getattr(owner, "profile", None), "whatsapp_number", None)
@@ -93,7 +94,7 @@ def notify_owner(owner, message: str):
         logger.error(f"WhatsApp voice note failed for user {owner.id}: {e}")
 
 
-def send_payout_notification(rent):
+def send_payout_notification(rent: Any) -> None:
     """
     Sends a WhatsApp message to renter based on payout status.
     """
@@ -120,7 +121,7 @@ def send_payout_notification(rent):
         logger.exception(f"Failed to notify renter for rent ID {rent.id}: {e}")
 
 
-def notify_owner_post_payout(rent):
+def notify_owner_post_payout(rent: Any) -> None:
     owner = rent.renter.unit.owner
     profile = getattr(owner, "profile", None)
     phone = getattr(profile, "whatsapp_number", None) or owner.phone or ""

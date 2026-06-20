@@ -1,3 +1,5 @@
+from typing import Any, cast, override
+
 from rest_framework import serializers
 
 from ..models import Building
@@ -12,14 +14,17 @@ class BuildingSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["owner"]
 
-    def validate(self, data):
+    @override
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         return data
 
-    def create(self, validated_data):
+    @override
+    def create(self, validated_data: dict[str, Any]) -> Building:
         validated_data["owner"] = self.context["request"].user
-        return super().create(validated_data)
+        return cast(Building, super().create(validated_data))
 
-    def update(self, instance, validated_data):
+    @override
+    def update(self, instance: Building, validated_data: dict[str, Any]) -> Building:
         if "owner" in validated_data:
             validated_data.pop("owner")
-        return super().update(instance, validated_data)
+        return cast(Building, super().update(instance, validated_data))

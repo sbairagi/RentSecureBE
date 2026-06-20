@@ -1,18 +1,21 @@
+from typing import Any, override
+
 from django.core.cache import cache
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 
 from ..feature_enforcer import FeatureEnforcer
-from ..models import Caretaker
+from ..models import Caretaker, Unit
 from ..serializers import CaretakerSerializer
 
 
-class CaretakerViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+class CaretakerViewSet(viewsets.ModelViewSet[Caretaker]):
+    permission_classes: list[type[IsAuthenticated]] = [IsAuthenticated]
     serializer_class = CaretakerSerializer
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> Any:
         cache_key = f"caretakers_user_{self.request.user.id}"
         caretakers = cache.get(cache_key)
         if caretakers is None:
@@ -20,8 +23,9 @@ class CaretakerViewSet(viewsets.ModelViewSet):
             cache.set(cache_key, caretakers, timeout=300)
         return caretakers
 
-    def perform_create(self, serializer):
-        unit = serializer.validated_data.get("unit")
+    @override
+    def perform_create(self, serializer: CaretakerSerializer) -> None:
+        unit: Unit | None = serializer.validated_data.get("unit")
         if not unit or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
 
@@ -33,14 +37,18 @@ class CaretakerViewSet(viewsets.ModelViewSet):
         enforcer.increment("max_caretakers")
         cache.delete(f"caretakers_user_{self.request.user.id}")
 
-    def perform_update(self, serializer):
-        unit = serializer.validated_data.get("unit") or serializer.instance.unit
-        if unit.owner != self.request.user:
+    @override
+    def perform_update(self, serializer: CaretakerSerializer) -> None:
+        unit: Unit | None = (
+            serializer.validated_data.get("unit") or serializer.instance.unit
+        )
+        if unit is None or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
         serializer.save()
         cache.delete(f"caretakers_user_{self.request.user.id}")
 
-    def perform_destroy(self, instance):
+    @override
+    def perform_destroy(self, instance: Caretaker) -> None:
         if instance.unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
         enforcer = FeatureEnforcer(self.request.user)

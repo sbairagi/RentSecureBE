@@ -1,14 +1,6 @@
-"""Renter ViewSet — strict-typed, thin, and consistent with service layer.
-
-Business logic lives in services; this module only:
-  * handles authentication & permission checks
-  * returns well-typed DRF responses
-  * busts the user-level cache after mutations
-"""
-
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from django.core.cache import cache
 from rest_framework import status, viewsets
@@ -37,6 +29,7 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
     permission_classes: list[type[IsAuthenticated]] = [IsAuthenticated]
     serializer_class = RenterSerializer
 
+    @override
     def get_queryset(self) -> QuerySet[Renter]:
         """Return the active/notice-period renters owned by the user."""
         cache_key: str = f"renters_user_{self.request.user.id}"
@@ -49,6 +42,7 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
             cache.set(cache_key, renters, timeout=300)
         return renters
 
+    @override
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new renter, enforcing the per-plan limit first."""
         allowed, current_usage, subscription_limit, add_on_limit = check_feature_limit(
@@ -56,7 +50,7 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         )
         if not allowed:
             payload: dict[str, Any] = {
-                "error": "You’ve reached your renter limit.",
+                "error": "You've reached your renter limit.",
                 "required_add_on": "max_renters",
                 "subscription_limit": subscription_limit,
                 "add_on_limit": add_on_limit,
@@ -65,6 +59,7 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
             return Response(payload, status=status.HTTP_403_FORBIDDEN)
         return super().create(request, *args, **kwargs)
 
+    @override
     def perform_create(self, serializer: RenterSerializer) -> None:
         """Persist a new renter, enforce ownership, and update unit state."""
         unit: Unit | None = serializer.validated_data.get("unit")
@@ -80,17 +75,19 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         update_unit_status(unit)
         cache.delete(f"renters_user_{self.request.user.id}")
 
+    @override
     def perform_update(self, serializer: RenterSerializer) -> None:
         """Persist updates and refresh unit state."""
         unit: Unit | None = (
             serializer.validated_data.get("unit") or serializer.instance.unit
         )
-        if unit.owner != self.request.user:
+        if unit is None or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
         serializer.save()
         update_unit_status(unit)
         cache.delete(f"renters_user_{self.request.user.id}")
 
+    @override
     def perform_destroy(self, instance: Renter) -> None:
         """Delete a renter and free up plan quota."""
         if instance.unit.owner != self.request.user:

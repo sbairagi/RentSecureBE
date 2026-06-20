@@ -6,13 +6,14 @@ on :class:`properties.models.RentRecord` and :class:`properties.models.Renter`.
 """
 
 from datetime import date, timedelta
+from typing import Any
 
 from properties.models import Renter, RentRecord
 
 from ..models import AIAlert
 
 
-def generate_ai_alerts(owner) -> int:
+def generate_ai_alerts(owner: Any) -> int:
     """Generate AI alerts for ``owner`` based on each renter's payment history.
 
     Returns the number of newly created alerts.

@@ -4,12 +4,14 @@ Rule-based + OpenAI assistant for the RentSecure chatbot. Only uses
 fields that actually exist on the canonical models.
 """
 
+from typing import Any
+
 import openai
 
 from properties.models import RentAgreementDraft, RentRecord
 
 
-def handle_chat_message(user, message: str) -> str:
+def handle_chat_message(user: Any, message: str) -> str:
     """Route a chat message to the right handler and return the response.
 
     Args:

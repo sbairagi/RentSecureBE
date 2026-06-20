@@ -1,3 +1,5 @@
+from typing import Any, TypedDict
+
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
@@ -13,7 +15,7 @@ from ..services.unit_service import get_owner_analytics, update_unit_status
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def my_rent_records(request):
+def my_rent_records(request) -> Response:
     renter = Renter.objects.filter(
         user=request.user, status__in=["active", "notice_period"]
     ).first()
@@ -23,7 +25,7 @@ def my_rent_records(request):
 
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
-def update_late_fee_policy(request, property_id):
+def update_late_fee_policy(request, property_id: int) -> Response:
     prop = RentRecord.objects.get(id=property_id, owner=request.user)
     prop.grace_days = request.data.get("grace_days", prop.grace_days)
     prop.late_fee = request.data.get("late_fee_amount", prop.late_fee)
@@ -33,7 +35,7 @@ def update_late_fee_policy(request, property_id):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def revoke_rent_agreement(request, renter_id):
+def revoke_rent_agreement(request, renter_id: int) -> Response:
     renter = get_object_or_404(Renter, id=renter_id, unit__owner=request.user)
     renter.is_agreement_revoked = True
     renter.revoked_by_owner = True
@@ -59,7 +61,7 @@ def revoke_rent_agreement(request, renter_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def unit_analytics(request):
+def unit_analytics(request) -> Any:
     """
     Get comprehensive unit occupancy analytics for all buildings.
 
@@ -86,5 +88,5 @@ def unit_analytics(request):
         return Response({"data": analytics})
 
     # Get analytics for all buildings
-    analytics = get_owner_analytics(user)
-    return Response(analytics)
+    data: TypedDict = get_owner_analytics(user)
+    return Response(data)

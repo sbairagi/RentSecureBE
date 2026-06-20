@@ -1,5 +1,6 @@
 # services/cashfree_service.py
 import logging
+from typing import Any
 
 import requests
 from django.conf import settings
@@ -16,10 +17,8 @@ from rentsecure_be.utils.cashfree_payout import add_beneficiary, make_payout
 
 logger = logging.getLogger(__name__)
 
-# from core.models import
 
-
-def register_owner_with_cashfree(owner: OwnerBankDetails):
+def register_owner_with_cashfree(owner: OwnerBankDetails) -> None:
     bene_id = f"owner_{owner.id}"
 
     data = {
@@ -41,7 +40,7 @@ def register_owner_with_cashfree(owner: OwnerBankDetails):
     return
 
 
-def pay_owner_after_rent(rent: RentRecord):
+def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
     if rent.payout_status == "SUCCESS":
         return {"status": "ALREADY_PAID", "message": "Payout already completed"}
 
@@ -107,7 +106,7 @@ def pay_owner_after_rent(rent: RentRecord):
     return response
 
 
-def register_cashfree_beneficiary(bank_details: OwnerBankDetails):
+def register_cashfree_beneficiary(bank_details: OwnerBankDetails) -> dict[str, Any]:
     bene_id = f"owner_{bank_details.owner.id}"
 
     payload = {
@@ -138,7 +137,7 @@ def register_cashfree_beneficiary(bank_details: OwnerBankDetails):
     return response
 
 
-def process_rent_payout(rent: RentRecord):
+def process_rent_payout(rent: RentRecord) -> dict[str, Any]:
     """Process payout to owner via Cashfree after rent is marked PAID."""
     try:
         bank_details = OwnerBankDetails.objects.get(owner=rent.owner)
@@ -202,7 +201,7 @@ BASE_URL = ""
 
 
 # cashfree_service.py
-def delete_beneficiary(beneficiary_id: str):
+def delete_beneficiary(beneficiary_id: str) -> dict[str, Any]:
     from .cashfree_service import get_auth_token
 
     url = f"{settings.CASHFREE_PAYOUT_BASE_TEST_URL}/payout/v1/deleteBeneficiary"

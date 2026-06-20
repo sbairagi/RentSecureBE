@@ -1,3 +1,5 @@
+from typing import Any, override
+
 from rest_framework import viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -6,11 +8,12 @@ from ..models import ExtraCharge
 from ..serializers import ExtraChargeSerializer
 
 
-class ExtraChargeViewSet(viewsets.ModelViewSet):
+class ExtraChargeViewSet(viewsets.ModelViewSet[ExtraCharge]):
     permission_classes = [IsAuthenticated]
     serializer_class = ExtraChargeSerializer
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> Any:
         user = self.request.user
         renter_profile = getattr(user, "renter_profile", None)
 
@@ -23,7 +26,8 @@ class ExtraChargeViewSet(viewsets.ModelViewSet):
             "renter", "unit"
         )
 
-    def perform_create(self, serializer):
+    @override
+    def perform_create(self, serializer: ExtraChargeSerializer) -> None:
         unit = serializer.validated_data["unit"]
         renter = serializer.validated_data["renter"]
 

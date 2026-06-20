@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Any
 
 import openai
 from django.conf import settings
@@ -6,7 +7,7 @@ from django.conf import settings
 openai.api_key = settings.OPENAI_API_KEY
 
 
-def gpt_smart_reply(user, user_query, context_data):
+def gpt_smart_reply(user: Any, user_query: str, context_data: str) -> str:
     # prompt = f"""
     # You are a smart assistant for a rent management system. Based on the
     # following data, answer the user's question smartly.

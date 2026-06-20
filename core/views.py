@@ -1,4 +1,3 @@
-# views.py
 import hashlib
 import hmac
 import json
@@ -6,18 +5,20 @@ import logging
 import secrets
 import uuid
 from datetime import timedelta
+from typing import Any, cast, override
 
 import razorpay
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.db.models import Sum
-from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, permissions, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -59,7 +60,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def send_otp(phone_number, code):
+def send_otp(phone_number: str, code: str) -> None:
     """Send OTP via Twilio in production; log locally during development."""
     if not settings.DEBUG:
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
@@ -72,7 +73,7 @@ def send_otp(phone_number, code):
 
 
 class SendOTP(APIView):
-    def post(self, request):
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         phone = request.data.get("phone")
         referral_code = request.data.get("referral_code", "").strip()
 
@@ -94,7 +95,7 @@ class SendOTP(APIView):
         return Response({"message": "OTP sent"}, status=200)
 
 
-def _process_referral(otp, user):
+def _process_referral(otp: OTP, user: User) -> Response | None:
     """Shared referral logic for owner/renter OTP verification."""
     if otp.referral_code:
         try:
@@ -112,7 +113,9 @@ def _process_referral(otp, user):
     return None
 
 
-def _verify_otp_and_login(phone, code, group_name):
+def _verify_otp_and_login(
+    phone: str | None, code: str | None, group_name: str
+) -> tuple[dict[str, object], int]:
     """Shared OTP verification logic for owner/renter login.
 
     Returns (response_dict, status_code) tuple.
@@ -142,21 +145,21 @@ def _verify_otp_and_login(phone, code, group_name):
     # Referral logic
     error_response = _process_referral(otp, user)
     if error_response is not None:
-        return error_response
+        return {"error": "Invalid referral code"}, 400
 
     # Delete old OTPs
-    OTP.objects.filter(phone_number=phone).exclude(id=otp.id).delete()
+    OTP.objects.filter(phone_number=phone).exclude(pk=otp.pk).delete()
 
     refresh = RefreshToken.for_user(user)
     return {
         "refresh": str(refresh),
         "access": str(refresh.access_token),
-        "user": {"id": user.id, "phone": user.phone},
+        "user": {"id": user.pk, "phone": user.phone},
     }, 200
 
 
 class OwnerVerifyOTP(APIView):
-    def post(self, request):
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         phone = request.data.get("phone")
         code = request.data.get("otp")
         data, status = _verify_otp_and_login(phone, code, "owner")
@@ -164,7 +167,7 @@ class OwnerVerifyOTP(APIView):
 
 
 class RenterVerifyOTP(APIView):
-    def post(self, request):
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         phone = request.data.get("phone")
         code = request.data.get("otp")
         data, status = _verify_otp_and_login(phone, code, "renter")
@@ -179,10 +182,11 @@ class RenterVerifyOTP(APIView):
 class ChangePasswordView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self.update(request, *args, **kwargs)
 
-    def update(self, request, *args, **kwargs):
+    @override
+    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = request.user
         old_password = request.data.get("old_password")
         new_password = request.data.get("new_password")
@@ -211,7 +215,7 @@ class ResetPasswordView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         new_password = request.data.get("new_password")
 
         if not new_password:
@@ -245,18 +249,22 @@ class UserSubscriptionViewSet(viewsets.ModelViewSet):
     serializer_class = UserSubscriptionSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> Any:
         return UserSubscription.objects.filter(user=self.request.user)
 
-    def perform_create(self, serializer):
+    @override
+    def perform_create(self, serializer: Any) -> None:
         serializer.save(user=self.request.user)
 
-    def perform_update(self, serializer):
+    @override
+    def perform_update(self, serializer: Any) -> None:
         if serializer.instance.user != self.request.user:
             raise PermissionDenied("You can't edit another user's subscription.")
         serializer.save()
 
-    def perform_destroy(self, instance):
+    @override
+    def perform_destroy(self, instance: UserSubscription) -> None:
         if instance.user != self.request.user:
             raise PermissionDenied("You can't delete another user's subscription.")
         instance.delete()
@@ -267,18 +275,22 @@ class AddOnPurchaseViewSet(viewsets.ModelViewSet):
     serializer_class = AddOnPurchaseSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> Any:
         return AddOnPurchase.objects.filter(user=self.request.user)
 
-    def perform_create(self, serializer):
+    @override
+    def perform_create(self, serializer: Any) -> None:
         serializer.save(user=self.request.user)
 
-    def perform_update(self, serializer):
+    @override
+    def perform_update(self, serializer: Any) -> None:
         if serializer.instance.user != self.request.user:
             raise PermissionDenied("You can't modify another user's purchase.")
         serializer.save()
 
-    def perform_destroy(self, instance):
+    @override
+    def perform_destroy(self, instance: AddOnPurchase) -> None:
         if instance.user != self.request.user:
             raise PermissionDenied("You can't delete another user's purchase.")
         instance.delete()
@@ -289,7 +301,8 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UsageLimitSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    @override
+    def get_queryset(self) -> Any:
         return UsageLimit.objects.filter(user=self.request.user)
 
 
@@ -299,7 +312,7 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 @csrf_exempt
-def cashfree_payout_webhook(request):
+def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     """Handle Cashfree payout status webhook.
 
     Fixed: rent.save() no longer overwrites `rent` with None.
@@ -333,7 +346,7 @@ def cashfree_payout_webhook(request):
 
 
 @csrf_exempt
-def create_rent_payment(request):
+def create_rent_payment(request: HttpRequest) -> JsonResponse:
     """Create a Razorpay order for rent payment."""
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
@@ -371,8 +384,27 @@ def create_rent_payment(request):
     )
 
 
+def check_signature_or_return_http_response(
+    webhook_secret: str | None,
+    signature: str | None,
+    body: bytes,
+) -> JsonResponse | None:
+    """Verify HMAC signature and return error response if invalid."""
+    if webhook_secret and signature:
+        if not hmac.compare_digest(
+            hmac.new(webhook_secret.encode("utf-8"), body, hashlib.sha256).hexdigest(),
+            signature,
+        ):
+            logger.warning("Razorpay webhook: invalid signature")
+            return JsonResponse({"error": "Invalid signature!"}, status=400)
+    elif webhook_secret and not signature:
+        logger.warning("Razorpay webhook: missing signature header")
+        return JsonResponse({"error": "Missing signature!"}, status=400)
+    return None
+
+
 @csrf_exempt
-def razorpay_webhook(request):  # noqa: C901
+def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901
     """Single Razorpay webhook handler with HMAC signature verification.
 
     Handles both payment.captured (order-based) and payment_link.paid events.
@@ -384,17 +416,12 @@ def razorpay_webhook(request):  # noqa: C901
     body = request.body
     signature = request.headers.get("X-Razorpay-Signature")
 
-    # Verify HMAC signature
     webhook_secret = getattr(settings, "RAZORPAY_WEBHOOK_SECRET", None)
-    if webhook_secret and signature:
-        webhook_secret.encode("utf-8")
-        expected_signature = hashlib.new("sha256", body, digestmod="hex").hexdigest()
-        if not hmac.compare_digest(expected_signature, signature):
-            logger.warning("Razorpay webhook: invalid signature")
-            return HttpResponseBadRequest("Invalid signature!")
-    elif webhook_secret and not signature:
-        logger.warning("Razorpay webhook: missing signature header")
-        return HttpResponseBadRequest("Missing signature!")
+    error_response = check_signature_or_return_http_response(
+        webhook_secret, signature, body
+    )
+    if error_response is not None:
+        return error_response
 
     try:
         data = json.loads(body)
@@ -471,7 +498,7 @@ def razorpay_webhook(request):  # noqa: C901
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def update_owner_bank_details(request):
+def update_owner_bank_details(request: Request, *args: Any, **kwargs: Any) -> Response:
     """Update owner bank details and register beneficiary with Cashfree.
 
     Fixed: Added missing uuid import.
@@ -479,7 +506,7 @@ def update_owner_bank_details(request):
     Fixed: Uses correct RentRecord field (owner) instead of renter__property__owner.
     """
     data = request.data
-    owner = request.user
+    owner: User = cast(User, request.user)
 
     required_fields = ["account_number", "ifsc_code", "account_holder_name"]
     if not all(data.get(field) for field in required_fields):
@@ -494,7 +521,7 @@ def update_owner_bank_details(request):
         bank = OwnerBankDetails(owner=owner)
 
     # Register new beneficiary
-    bene_id = f"owner_{owner.id}_{uuid.uuid4().hex[:8]}"
+    bene_id = f"owner_{owner.pk}_{uuid.uuid4().hex[:8]}"
     response = add_beneficiary(
         {
             "beneId": bene_id,
@@ -535,7 +562,7 @@ def update_owner_bank_details(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def rent_inflow_summary(request):
+def rent_inflow_summary(request: Request, *args: Any, **kwargs: Any) -> Response:
     """Owner rent inflow summary.
 
     Fixed: Uses correct RentRecord field (owner) and (amount_paid) and (PENDING).
@@ -567,7 +594,7 @@ def rent_inflow_summary(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def owner_rent_records(request):
+def owner_rent_records(request: Request, *args: Any, **kwargs: Any) -> Response:
     """Owner rent records list.
 
     Fixed: Uses correct FK path (unit.owner, renter.name, unit.unit).
@@ -596,7 +623,7 @@ def owner_rent_records(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def download_rent_excel(request):
+def download_rent_excel(request: Request, *args: Any, **kwargs: Any) -> HttpResponse:
     """Download owner rent report as Excel."""
     file = generate_owner_rent_report(request.user)
     response = HttpResponse(file, content_type="application/vnd.ms-excel")

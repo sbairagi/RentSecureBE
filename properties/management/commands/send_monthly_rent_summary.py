@@ -12,7 +12,7 @@ class Command(BaseCommand):
         "email and WhatsApp."
     )
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser) -> None:
         parser.add_argument(
             "--user-id",
             type=int,
@@ -24,7 +24,7 @@ class Command(BaseCommand):
             help="Skip WhatsApp notifications",
         )
 
-    def handle(self, *args, **options):
+    def handle(self, *args, **options) -> None:
         user_id = options.get("user_id")
         send_whatsapp = not options.get("no_whatsapp")
 
