@@ -53,7 +53,9 @@ jobs:
               ;;
             mypy)
               pip install -r requirements.txt
-              pip install 'mypy>=1.10,<2' 'django-stubs==4.2.7' 'django-stubs-ext==4.2.7'
+              pip install 'mypy==1.13.0'
+              pip uninstall -y django-stubs django-stubs-ext djangorestframework-stubs 2>/dev/null || true
+              pip install 'django-stubs==4.2.7' 'django-stubs-ext==4.2.7' --no-deps
               ;;
           esac
       - name: Run tool
