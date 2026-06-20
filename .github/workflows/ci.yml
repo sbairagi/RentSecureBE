@@ -53,7 +53,7 @@ jobs:
               ;;
             mypy)
               pip install -r requirements.txt
-              pip install mypy django-stubs
+              pip install 'mypy>=1.15,<2' 'django-stubs>=5.1,<6'
               ;;
           esac
       - name: Run tool
