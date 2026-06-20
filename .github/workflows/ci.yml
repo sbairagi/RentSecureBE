@@ -53,6 +53,7 @@ jobs:
               ;;
             mypy)
               pip install -r requirements.txt
+              pip install setuptools
               pip install 'mypy==1.13.0'
               pip uninstall -y django-stubs django-stubs-ext djangorestframework-stubs 2>/dev/null || true
               pip install 'django-stubs==4.2.7' 'django-stubs-ext==4.2.7' --no-deps
@@ -81,7 +82,6 @@ jobs:
   tests:
     name: Tests (${{ matrix.tool }})
     needs: lint
-    if: always()
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -159,7 +159,6 @@ jobs:
   security:
     name: Security (${{ matrix.tool }})
     needs: tests
-    if: always()
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -208,7 +207,6 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: p/ci
-          output: semgrep-report.sarif
       - name: Trivy action wrapper
         if: matrix.tool == 'trivy'
         uses: aquasecurity/trivy-action@v0.2.0
@@ -227,8 +225,6 @@ jobs:
       - name: CodeQL analyze
         if: matrix.tool == 'codeql'
         uses: github/codeql-action/analyze@v3
-        with:
-          output: codeql-results.sarif
       - name: Upload Semgrep SARIF
         if: matrix.tool == 'semgrep'
         uses: actions/upload-artifact@v4
@@ -272,7 +268,8 @@ jobs:
       - name: Run SonarCloud analysis
         uses: SonarSource/sonarcloud-github-action@v1
         with:
-          organization: sbairagi
-          projectKey: sbairagi_RentSecureBE
+          args: >
+            -Dsonar.organization=sbairagi
+            -Dsonar.projectKey=sbairagi_RentSecureBE
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
