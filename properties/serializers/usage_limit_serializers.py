@@ -3,4 +3,4 @@
 The shared usage limit models are currently maintained in the core app.
 """
 
-__all__ = []
+__all__: list[str] = []

@@ -55,6 +55,7 @@ jobs:
               pip install -r requirements.txt
               pip install setuptools
               pip install 'mypy==1.13.0'
+              pip install types-requests types-python-dateutil types-openpyxl
               pip uninstall -y django-stubs django-stubs-ext djangorestframework-stubs 2>/dev/null || true
               pip install 'django-stubs==4.2.7' 'django-stubs-ext==4.2.7' --no-deps
               ;;
@@ -212,7 +213,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.2.0
         with:
           scan-type: fs
-          scan-ref: .
+          image-ref: .
           format: table
       - name: CodeQL action wrapper
         if: matrix.tool == 'codeql'

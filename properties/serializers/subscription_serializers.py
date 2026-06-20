@@ -3,4 +3,4 @@
 The core app currently owns subscription models and serializers.
 """
 
-__all__ = []
+__all__: list[str] = []
