@@ -23,5 +23,5 @@ class Referral(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.referral_code:
-            self.referral_code = str(uuid.uuid4()).split("-")[0].upper()
+            self.referral_code = str(uuid.uuid4()).split("-", maxsplit=1)[0].upper()
         super().save(*args, **kwargs)

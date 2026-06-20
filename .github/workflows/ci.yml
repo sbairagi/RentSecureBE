@@ -49,7 +49,7 @@ jobs:
               ;;
             pylint)
               pip install -r requirements.txt
-              pip install pylint pylint-django
+              pip install setuptools pylint pylint-django
               ;;
             mypy)
               pip install -r requirements.txt
@@ -61,6 +61,9 @@ jobs:
               ;;
           esac
       - name: Run tool
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          SKIP_DJANGO_SIGNALS: ${{ matrix.tool == 'pylint' && '1' || '' }}
         run: |
           case "${{ matrix.tool }}" in
             pre-commit)
@@ -125,7 +128,7 @@ jobs:
               ;;
             pytest|coverage)
               pip install -r requirements.txt
-              pip install coverage psycopg2-binary
+              pip install setuptools coverage psycopg2-binary
               ;;
           esac
       - name: Run tool

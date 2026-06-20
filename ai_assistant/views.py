@@ -60,7 +60,7 @@ def ai_assistant_insights(request) -> Response:
 
     return Response(
         {
-            "total_rent_this_month": sum([r.amount for r in paid_rents]),
+            "total_rent_this_month": sum(r.amount for r in paid_rents),
             "late_rent_count": late_rents.count(),
             "payout_success_rate": f"{success} success / {failed} failed",
             "missing_agreements": no_agreement.count(),

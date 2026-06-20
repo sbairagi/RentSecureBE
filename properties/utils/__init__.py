@@ -290,9 +290,10 @@ def generate_rent_invoice_pdf(rent: RentRecord) -> str:
     """Render the rent invoice PDF to a temp file and return the path."""
     html_string: str = render_to_string("invoices/rent_invoice.html", {"rent": rent})
     html = HTML(string=html_string)
-    result = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    html.write_pdf(target=result.name)
-    return result.name
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as result:
+        result_path = result.name
+    html.write_pdf(target=result_path)
+    return result_path
 
 
 def apply_late_fee_if_needed(rent: RentRecord) -> None:

@@ -19,9 +19,9 @@ class UnitSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You do not own the selected building.")
         latitude = data.get("latitude", getattr(self.instance, "latitude", None))
         longitude = data.get("longitude", getattr(self.instance, "longitude", None))
-        if latitude is not None and not (-90 <= latitude <= 90):
+        if latitude is not None and not -90 <= latitude <= 90:
             raise serializers.ValidationError("Latitude must be between -90 and 90.")
-        if longitude is not None and not (-180 <= longitude <= 180):
+        if longitude is not None and not -180 <= longitude <= 180:
             raise serializers.ValidationError("Longitude must be between -180 and 180.")
         return data
 
