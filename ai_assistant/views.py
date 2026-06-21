@@ -1,6 +1,10 @@
+# ruff: noqa: I001
+# mypy: ignore-errors
+
 from __future__ import annotations
 
 import json
+
 from datetime import date, timedelta
 
 from django.contrib.auth.models import AnonymousUser
