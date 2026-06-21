@@ -56,8 +56,8 @@ jobs:
               pip install setuptools
               pip install 'mypy==1.13.0'
               pip install types-requests types-python-dateutil types-openpyxl
-              pip uninstall -y django-stubs django-stubs-ext djangorestframework-stubs 2>/dev/null || true
-              pip install 'django-stubs==4.2.7' 'django-stubs-ext==4.2.7' --no-deps
+              pip uninstall -y django-stubs django-stubs-ext 2>/dev/null || true
+              pip install 'django-stubs==4.2.7' 'django-stubs-ext==4.2.7' 'djangorestframework-stubs==3.16.9' --no-deps
               ;;
           esac
       - name: Run tool
