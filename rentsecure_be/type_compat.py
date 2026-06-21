@@ -12,10 +12,10 @@ from typing import Any, TypeVar
 __all__ = ["override"]
 
 try:
-    from typing import override as override
+    from typing import override
 except ImportError:
     try:
-        from typing import override as override
+        from typing_extensions import override  # noqa: UP035
     except ImportError:
         F = TypeVar("F", bound=Callable[..., Any])
 

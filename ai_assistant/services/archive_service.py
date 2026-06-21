@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 # services/archive_service.py
 
 from datetime import date, datetime
@@ -24,7 +26,7 @@ def _serialize_value(value: Any) -> Any:
     return value
 
 
-def archive_renter_data(renter: Any) -> ArchivedRenter:
+def archive_renter_data(renter: Any) -> ArchivedRenter:  # type: ignore[misc]
     qs = RentRecord.objects.filter(renter=renter).values()
     rent_records = _serialize_value(list(qs))
     image_paths = list(

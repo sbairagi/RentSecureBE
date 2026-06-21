@@ -227,7 +227,11 @@ class PlanFeatureLimit(models.Model):
 
     @override
     def save(self, *args: Any, **kwargs: Any) -> None:
-        if self.pk is None and self.plan_id is not None and self.feature_key:  # type: ignore[unreachable]
+        if (
+            self.pk is None  # type: ignore[unreachable]
+            and self.plan_id is not None
+            and self.feature_key
+        ):
             existing = PlanFeatureLimit.objects.filter(  # type: ignore[unreachable]
                 plan_id=self.plan_id,
                 feature_key=self.feature_key,
@@ -260,7 +264,11 @@ class UsageLimit(models.Model):
 
     @override
     def save(self, *args: Any, **kwargs: Any) -> None:
-        if self.pk is None and self.user_id is not None and self.feature_key:  # type: ignore[unreachable]
+        if (
+            self.pk is None  # type: ignore[unreachable]
+            and self.user_id is not None
+            and self.feature_key
+        ):
             existing = UsageLimit.objects.filter(  # type: ignore[unreachable]
                 user_id=self.user_id,
                 feature_key=self.feature_key,
