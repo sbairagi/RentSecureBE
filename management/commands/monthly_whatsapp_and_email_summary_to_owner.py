@@ -28,7 +28,7 @@ def generate_monthly_summary_for_owner(owner: User) -> dict[str, Any]:
     year = today.year if today.month > 1 else today.year - 1
 
     rents = RentRecord.objects.filter(
-        unit__owner=owner, month=month, year=year
+        unit__owner=owner, due_date__month=month, due_date__year=year
     ).select_related("renter", "unit")
 
     summary: dict[str, Any] = {
@@ -40,15 +40,15 @@ def generate_monthly_summary_for_owner(owner: User) -> dict[str, Any]:
     }
 
     for r in rents:
-        if r.payment_status == "PAID":
+        if r.status == "PAID":
             summary["received"] += r.amount_paid
             if r.payout_status != "SUCCESS":
                 summary["failed_payouts"].append(
-                    f"{r.renter.name} ({r.unit.unit}) - ₹{r.amount_paid}"
+                    f"{r.renter.name if r.renter else ''} ({r.unit.unit}) - ₹{r.amount_paid}"
                 )
         else:
             summary["pending_rents"].append(
-                f"{r.renter.name} ({r.unit.unit}) - ₹{r.amount_paid}"
+                f"{r.renter.name if r.renter else ''} ({r.unit.unit}) - ₹{r.amount_paid}"
             )
 
     return summary

@@ -1,4 +1,6 @@
 import logging
+from collections.abc import Iterable
+from typing import cast
 
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -213,7 +215,7 @@ def generate_final_invoice_on_exit(
     sender: type[Renter], instance: Renter, **kwargs: object
 ) -> None:
     update_fields = kwargs.get("update_fields")
-    if update_fields and set(update_fields).issubset(
+    if update_fields is not None and set(cast(Iterable[str], update_fields)).issubset(
         {"onboarding_token", "onboarding_link_sent_at"}
     ):
         return

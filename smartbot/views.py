@@ -33,13 +33,13 @@ def smart_bot_reply(request: DRFRequest) -> Any:
     # Step 1: Get context
     today = date.today()
     current_month_rents = RentRecord.objects.filter(
-        renter__property__owner=user,
-        rent_month__month=today.month,
-        rent_month__year=today.year,
+        renter__unit__owner=user,
+        due_date__month=today.month,
+        due_date__year=today.year,
     )
     context = "\n".join(
         [
-            f"{r.renter.name}: ₹{r.amount} - {r.payment_status}"
+            f"{r.renter.name if r.renter else ''}: ₹{r.amount} - {r.payment_status}"
             for r in current_month_rents
         ]
     )

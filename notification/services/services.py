@@ -14,4 +14,4 @@ def notify_owner_renter_flagged(renter: Any) -> None:
         f"🚨 Alert: Renter {renter.name} missed 3 rent payments. "
         "Their rent agreement has been revoked."
     )
-    send_whatsapp_message(owner.profile.whatsapp_number, msg)
+    send_whatsapp_message(owner.whatsapp_number, msg)

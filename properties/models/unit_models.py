@@ -1,17 +1,19 @@
-# Python Imports
+from __future__ import annotations
 
+# Python Imports
 # Django Imports
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, cast, override
+from typing import TYPE_CHECKING, Any, cast
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
-from simple_history.models import HistoricalRecords
+from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
 
 # Local Imports
 from core.models import User
+from rentsecure_be.type_compat import override
 
 if TYPE_CHECKING:
     from django.core.files.uploadedfile import UploadedFile
@@ -259,7 +261,7 @@ class Unit(models.Model):
         self._legacy_security_deposit = value
 
     @property
-    def current_renter(self) -> "Renter | None":
+    def current_renter(self) -> Renter | None:
         """Get the currently active renter (if any)."""
         return self.renters.filter(status="active").first()
 
@@ -267,6 +269,53 @@ class Unit(models.Model):
     def total_renters(self) -> int:
         """Return count of all renters who have rented this unit."""
         return self.renters.count()
+
+    def rent_income_for_fy(self, fy: str) -> Decimal:
+        from datetime import date
+
+        from django.db.models import Sum
+
+        from properties.models import RentRecord
+
+        start_str, end_str = fy.split("-")
+        start_year = int(start_str)
+        end_year = int(end_str)
+        if end_year < 100:
+            end_year += 2000
+        start_date = date(start_year, 4, 1)
+        end_date = date(end_year, 3, 31)
+        total = RentRecord.objects.filter(
+            renter__unit=self,
+            status="PAID",
+            paid_on__gte=start_date,
+            paid_on__lte=end_date,
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        return total
+
+    def tax_paid_for_fy(self, fy: str) -> Decimal:
+        from datetime import date
+
+        from django.db.models import Sum
+
+        from properties.models import PropertyTaxRecord
+
+        start_str, end_str = fy.split("-")
+        start_year = int(start_str)
+        end_year = int(end_str)
+        if end_year < 100:
+            end_year += 2000
+        start_date = date(start_year, 4, 1)
+        end_date = date(end_year, 3, 31)
+        total = PropertyTaxRecord.objects.filter(
+            property__units=self,
+            paid=True,
+            paid_date__gte=start_date,
+            paid_date__lte=end_date,
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        return total
+
+    def net_income_for_fy(self, fy: str) -> Decimal:
+        return self.rent_income_for_fy(fy) - self.tax_paid_for_fy(fy)
 
 
 class UnitVacancy(models.Model):
@@ -356,9 +405,7 @@ class UnitDocument(models.Model):
         if self.document:
             from properties.utils import generate_file_hash
 
-            hash_value = generate_file_hash(
-                cast("UploadedFile", self.document)  # type: ignore[arg-type]
-            )
+            hash_value = generate_file_hash(cast("UploadedFile", self.document))
             self.file_hash = hash_value
 
             existing = UnitDocument.objects.filter(
@@ -422,9 +469,7 @@ class UnitImage(models.Model):
         if self.image:
             from properties.utils import generate_file_hash
 
-            hash_value = generate_file_hash(
-                cast("UploadedFile", self.image)  # type: ignore[arg-type]
-            )
+            hash_value = generate_file_hash(cast("UploadedFile", self.image))
             self.image_hash = hash_value
 
             existing = UnitImage.objects.filter(

@@ -12,7 +12,11 @@ from notification.utils import send_whatsapp_message
 
 from ..models import Building, Renter, RentRecord
 from ..serializers import RenterRentRecordSerializer
-from ..services.unit_service import get_owner_analytics, update_unit_status
+from ..services.unit_service import (
+    OwnerAnalytics,
+    get_owner_analytics,
+    update_unit_status,
+)
 
 
 @api_view(["GET"])
@@ -33,10 +37,9 @@ def update_late_fee_policy(request: DRFRequest, property_id: int) -> Response:
     user = request.user
     if isinstance(user, AnonymousUser):
         return Response({"error": "Unauthorized"}, status=401)
-    prop = RentRecord.objects.get(id=property_id, owner=user)
-    prop.grace_days = request.data.get("grace_days", prop.grace_days)
+    prop = RentRecord.objects.get(id=property_id, renter__unit__owner=user)
     prop.late_fee = request.data.get("late_fee_amount", prop.late_fee)
-    prop.save(update_fields=["grace_days", "late_fee"])
+    prop.save(update_fields=["late_fee"])
     return Response({"msg": "Updated"})
 
 
@@ -97,5 +100,5 @@ def unit_analytics(request: DRFRequest) -> Any:
         analytics = get_building_analytics(building)
         return Response({"data": analytics})
 
-    data: dict[str, Any] = get_owner_analytics(user)
+    data: OwnerAnalytics = get_owner_analytics(user)
     return Response(data)

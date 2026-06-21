@@ -13,15 +13,16 @@ def send_smart_alert(
 ) -> dict[str, bool]:
     status: dict[str, bool] = {"whatsapp": False, "push": False, "sms": False}
 
-    if user.profile.whatsapp_opt_in and user.profile.whatsapp_number:
+    user_profile = getattr(user, "userprofile", None)
+    if user_profile and user_profile.whatsapp_opt_in and user_profile.whatsapp_number:
         status["whatsapp"] = send_whatsapp_message(
-            user.profile.whatsapp_number, message
+            user_profile.whatsapp_number, message
         )
 
     device_token: str | None = getattr(user, "device_token", None)
     if device_token:
-        status["push"] = send_push_notification(
-            user, title or "RentSecure Alert", message
+        status["push"] = (
+            send_push_notification(user, title or "RentSecure Alert", message) or False
         )
 
     if not any(status.values()) or urgent:

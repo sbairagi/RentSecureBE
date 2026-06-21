@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from simple_history.admin import SimpleHistoryAdmin
+from simple_history.admin import SimpleHistoryAdmin  # type: ignore[import-untyped]
 
 from ..models import Renter
 
@@ -63,6 +63,6 @@ class RenterAdmin(SimpleHistoryAdmin):  # type: ignore[misc]
             )
         return "-"
 
-    renter_image_thumbnail.short_description = (
-        "Renter Image Preview"  # type: ignore[attr-defined]
+    renter_image_thumbnail.short_description = (  # type: ignore[attr-defined]
+        "Renter Image Preview"
     )

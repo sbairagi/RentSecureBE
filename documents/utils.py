@@ -4,7 +4,7 @@ from typing import Any
 
 from django.conf import settings
 from django.template.loader import render_to_string
-from PyPDF2 import PdfMerger
+from PyPDF2 import PdfMerger  # type: ignore[import-not-found]
 from weasyprint import HTML
 
 from properties.models import RentAgreementDraft

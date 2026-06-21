@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from typing import Any
 
@@ -8,7 +10,7 @@ LEEGALITY_API_URL = "https://api.leegality.com/v3/document/upload"
 LEEGALITY_DOCUMENT_URL = "https://api.leegality.com/v3/document"
 
 
-def initiate_signature(renter: dict[str, Any], file_path: str) -> dict[str, Any]:
+def initiate_signature(renter: Any, file_path: str) -> dict[str, Any]:
     with open(file_path, "rb") as f:
         files = {"file": ("agreement.pdf", f, "application/pdf")}
         data = {

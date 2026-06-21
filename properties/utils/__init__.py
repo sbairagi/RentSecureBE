@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import tempfile
-from typing import Any, Literal
+from typing import Any, Literal, Union
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -30,7 +30,7 @@ from properties.models import RentRecord, Unit
 
 #: A normalized feature limit is either an integer count or the literal
 #: ``"unlimited"``.
-FeatureLimit = int | Literal["unlimited"]
+FeatureLimit = Union[int, Literal["unlimited"]]  # noqa: UP007
 
 #: Result of :func:`check_feature_limit`.
 FeatureCheckResult = tuple[bool, int, FeatureLimit, int]

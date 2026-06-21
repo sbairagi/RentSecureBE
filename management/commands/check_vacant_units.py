@@ -1,4 +1,6 @@
 import logging
+from datetime import date
+from typing import Any
 
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
@@ -15,7 +17,7 @@ class Command(BaseCommand):
     help = "Notify property owners when units remain vacant for 30 or more days."
 
     @override
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: Any) -> None:
         today = timezone.now().date()
         units = Unit.objects.filter(is_vacant=True, last_vacated_at__isnull=False)
 
@@ -26,7 +28,10 @@ class Command(BaseCommand):
             return
 
         for unit in units:
-            days_vacant = (today - unit.last_vacated_at).days
+            last_vacated: date | None = unit.last_vacated_at
+            if last_vacated is None:
+                continue
+            days_vacant = (today - last_vacated).days
             if days_vacant < 30:
                 continue
 
@@ -42,12 +47,8 @@ class Command(BaseCommand):
             whatsapp_sent = False
             email_sent = False
 
-            if hasattr(owner, "profile") and getattr(
-                owner.profile, "whatsapp_number", None
-            ):
-                whatsapp_sent = send_whatsapp_message(
-                    owner.profile.whatsapp_number, message
-                )
+            if owner.whatsapp_number:
+                whatsapp_sent = send_whatsapp_message(owner.whatsapp_number, message)
 
             if owner.email:
                 try:

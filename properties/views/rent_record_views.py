@@ -54,10 +54,10 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
 
         if unit is None or unit.owner != user:
             raise PermissionDenied("You do not own this unit.")
-        if renter.unit != unit:
+        if renter is None or renter.unit != unit:
             raise ValidationError("Renter does not belong to the selected unit.")
         if RentRecord.objects.filter(
-            renter=renter, rent_month=serializer.validated_data.get("rent_month")
+            renter=renter, due_date=serializer.validated_data.get("due_date")
         ).exists():
             raise ValidationError("Rent record for this month already exists.")
 
@@ -65,13 +65,15 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
         if not enforcer.can_create("rent_records"):
             raise PermissionDenied("You have reached your rent record creation limit.")
 
-        rent = serializer.save(owner=user)
+        rent = serializer.save()
 
         try:
             link = create_payment_link(rent)
             rent.payment_link = link
             rent.save(update_fields=["payment_link"])
-            send_whatsapp_message(rent.renter.phone, f"📩 Pay your rent: {link}")
+            send_whatsapp_message(
+                rent.renter.phone if rent.renter else "", f"📩 Pay your rent: {link}"
+            )
         except Exception as e:
             logger.warning(f"Failed to create payment link for rent {rent.id}: {e}")
 
@@ -82,11 +84,12 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         instance = serializer.instance
         user = self.request.user
+        if instance is None or instance.unit.owner != user:
+            raise PermissionDenied("You do not own this rent record.")
 
-        if instance.unit.owner != user:
-            raise PermissionDenied("You do not own this unit.")
-
-        new_unit: Unit | None = serializer.validated_data.get("unit", instance.unit)
+        new_unit: Unit | None = serializer.validated_data.get("unit") or (
+            instance.unit if instance else None
+        )
         if new_unit is None or new_unit.owner != user:
             raise PermissionDenied("You do not own the selected unit.")
 
@@ -106,7 +109,7 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def retry_payout_api(request: DRFRequest, rent_id: int) -> Any:
-    rent = get_object_or_404(RentRecord, id=rent_id, owner=request.user)
+    rent = get_object_or_404(RentRecord, id=rent_id, renter__unit__owner=request.user)
 
     if rent.payment_status != "PAID" or rent.payout_status != "FAILED":
         return Response({"error": "Payout not retryable"}, status=400)
@@ -127,7 +130,9 @@ def retry_payout_api(request: DRFRequest, rent_id: int) -> Any:
 @permission_classes([IsAuthenticated])
 def owner_rent_records(request: DRFRequest) -> Any:
     owner = cast(User, request.user)
-    rents = RentRecord.objects.filter(owner=owner).select_related("renter", "unit")
+    rents = RentRecord.objects.filter(unit__owner=owner).select_related(
+        "renter", "unit"
+    )
     serializer = RentRecordSerializer(rents, many=True)
     return Response(serializer.data)
 
@@ -161,8 +166,8 @@ def get_latest_due_rent(request: DRFRequest) -> Any:
     return Response(
         {
             "amount": float(rent.amount),
-            "month": rent.month,
-            "year": rent.year,
+            "month": rent.due_date.month,
+            "year": rent.due_date.year,
             "property": renter.unit.unit,
             "building": renter.unit.building.name if renter.unit.building else None,
             "payment_link": rent.payment_link,
@@ -183,8 +188,8 @@ def rent_history(request: DRFRequest) -> Any:
     rents = RentRecord.objects.filter(renter=renter).order_by("-due_date")
     data = [
         {
-            "month": r.month,
-            "year": r.year,
+            "month": r.due_date.month,
+            "year": r.due_date.year,
             "amount": r.amount,
             "status": r.payment_status,
             "invoice_url": r.invoice_pdf.url if r.invoice_pdf else None,
@@ -199,7 +204,9 @@ def rent_history(request: DRFRequest) -> Any:
 @permission_classes([IsAuthenticated])
 def owner_rent_overview(request: DRFRequest) -> Any:
     owner = cast(User, request.user)
-    rents = RentRecord.objects.filter(owner=owner).select_related("renter", "unit")
+    rents = RentRecord.objects.filter(unit__owner=owner).select_related(
+        "renter", "unit"
+    )
     data = []
     for r in rents:
         data.append(
@@ -208,8 +215,8 @@ def owner_rent_overview(request: DRFRequest) -> Any:
                 "unit": r.unit.unit,
                 "building": r.unit.building.name if r.unit.building else None,
                 "amount": float(r.amount),
-                "month": r.month,
-                "year": r.year,
+                "month": r.due_date.month,
+                "year": r.due_date.year,
                 "status": r.status,
                 "payout": r.payout_status,
                 "invoice_url": r.invoice_pdf.url if r.invoice_pdf else None,

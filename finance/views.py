@@ -8,13 +8,14 @@ shapes it produces.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from django.contrib.auth.models import AnonymousUser
 from django.http import FileResponse
 from rest_framework import permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
+from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
 
 from core.models import User
@@ -53,7 +54,7 @@ class TaxSubmissionToCAViewSet(viewsets.ModelViewSet[TaxSubmissionToCA]):
         return TaxSubmissionToCA.objects.filter(user=self.request.user)
 
     @override
-    def perform_create(self, serializer: TaxSubmissionToCASerializer) -> None:
+    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         """Persist the submission; ownership is bound by the related tax summary."""
         serializer.save()
 
@@ -65,7 +66,7 @@ class DownloadTaxFilesView(APIView):
 
     def get(self, request: Request) -> FileResponse:
         """Generate and return a downloadable tax-document zip."""
-        user: User = request.user
+        user: User = cast(User, request.user)
         fy: str = request.query_params.get("fy", "2024-25")
 
         properties: Any = Unit.objects.filter(owner=user)

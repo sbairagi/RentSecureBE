@@ -15,7 +15,7 @@
 from typing import Any
 
 from django.conf import settings
-from fcm_django.models import FCMDevice
+from fcm_django.models import FCMDevice  # type: ignore[import-untyped]
 from twilio.rest import Client
 
 

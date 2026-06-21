@@ -1,6 +1,7 @@
 # tasks.py or management/commands/auto_deactivate_renters.py
 
 from datetime import date, timedelta
+from typing import Any
 
 from django.core.management.base import BaseCommand
 
@@ -15,7 +16,7 @@ class Command(BaseCommand):
     help = "Auto-deactivate renters whose notice period has expired."
 
     @override
-    def handle(self, *args, **options) -> None:
+    def handle(self, *args: Any, **options: Any) -> None:
         auto_deactivate_notice_period_renters()
 
 

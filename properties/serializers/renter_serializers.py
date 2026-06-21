@@ -45,6 +45,6 @@ class RenterRentRecordSerializer(serializers.ModelSerializer):
         fields = ["due_date", "amount", "late_fee", "payment_status", "invoice_url"]
 
     def get_invoice_url(self, obj: RentRecord) -> str:
-        if obj.payment_status == "PAID":
+        if obj.status == "PAID":
             return obj.invoice_pdf.url or ""
         return ""

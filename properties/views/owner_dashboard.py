@@ -21,7 +21,7 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
     current_month = today.replace(day=1)
     previous_six_months = (current_month - timedelta(days=180)).replace(day=1)
 
-    rents = RentRecord.objects.filter(owner=owner)
+    rents = RentRecord.objects.filter(unit__owner=owner)
 
     total_rent_collected = (
         rents.filter(status=RentRecord.Status.PAID).aggregate(total=Sum("amount"))[
@@ -32,7 +32,7 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
 
     rent_collected_this_month = (
         rents.filter(
-            status=RentRecord.Status.PAID, rent_month__gte=current_month
+            status=RentRecord.Status.PAID, due_date__gte=current_month
         ).aggregate(total=Sum("amount"))["total"]
         or 0
     )
@@ -46,9 +46,9 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
     rent_payment_trends = (
         rents.filter(
             status=RentRecord.Status.PAID,
-            rent_month__gte=previous_six_months,
+            due_date__gte=previous_six_months,
         )
-        .annotate(month=TruncMonth("rent_month"))
+        .annotate(month=TruncMonth("due_date"))
         .values("month")
         .annotate(total=Sum("amount"))
         .order_by("month")

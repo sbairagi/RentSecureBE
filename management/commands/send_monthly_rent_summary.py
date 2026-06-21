@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
@@ -18,7 +19,7 @@ class Command(BaseCommand):
     )
 
     @override
-    def add_arguments(self, parser) -> None:
+    def add_arguments(self, parser: Any) -> None:
         parser.add_argument(
             "--user-id",
             type=int,
@@ -31,7 +32,7 @@ class Command(BaseCommand):
         )
 
     @override
-    def handle(self, *args, **options) -> None:
+    def handle(self, *args: Any, **options: Any) -> None:
         user_id = options.get("user_id")
         send_whatsapp = not options.get("no_whatsapp")
 

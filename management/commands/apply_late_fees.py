@@ -7,13 +7,14 @@ canonical :class:`properties.models.RentRecord` model are used.
 
 from datetime import timedelta
 from decimal import Decimal
-from typing import Any, override
+from typing import Any
 
 from django.core.management.base import BaseCommand
 from django.utils.timezone import now
 
 from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import RentRecord
+from rentsecure_be.type_compat import override
 
 DEFAULT_GRACE_DAYS = 3
 
@@ -28,7 +29,7 @@ class Command(BaseCommand):
 
         overdue_rents = RentRecord.objects.filter(
             status="PENDING",
-            late_fee=0,
+            late_fee=Decimal("0"),
             due_date__lt=today - timedelta(days=grace_days),
         )
 
@@ -48,9 +49,9 @@ class Command(BaseCommand):
             if not renter:
                 continue
             message = (
-                f"⚠️ Your rent of ₹{rent.amount_paid} for {renter.unit.unit} "
+                f"⚠️ Your rent of ₹{rent.amount} for {renter.unit.unit} "
                 f"is overdue.\nA late fee of ₹{rent.late_fee} has been applied.\n"
-                f"Pay ASAP: {rent.payment_link or 'App'}"
+                "Pay ASAP via the app."
             )
             send_whatsapp_message(renter.phone, message)
 

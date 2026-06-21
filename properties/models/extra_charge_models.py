@@ -2,7 +2,9 @@ from typing import Any
 
 from django.conf import settings
 from django.db import models
-from simple_history.models import HistoricalRecords
+from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
+
+from rentsecure_be.type_compat import override
 
 from .renter_models import Renter
 from .unit_models import Unit
@@ -55,6 +57,7 @@ class ExtraCharge(models.Model):
             models.Index(fields=["due_date"]),
         ]
 
+    @override
     def __str__(self) -> str:
         return f"{self.name} for {self.renter.name} due {self.due_date}"
 

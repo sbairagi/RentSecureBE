@@ -21,7 +21,7 @@ class Command(BaseCommand):
         )
 
         for renter in renters:
-            if not renter.whatsapp_number:
+            if not renter.whatsapp_number or renter.rent_due_date is None:
                 continue
 
             msg = f"""📢 *Rent Due Reminder*

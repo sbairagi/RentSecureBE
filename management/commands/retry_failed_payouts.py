@@ -3,6 +3,8 @@
 ######################################################################################################################
 
 
+from typing import Any
+
 from django.core.management.base import BaseCommand
 
 from properties.models import RentRecord
@@ -14,7 +16,7 @@ class Command(BaseCommand):
     help = "Retry failed payouts for paid rent records"
 
     @override
-    def handle(self, *args, **kwargs):
+    def handle(self, *args: Any, **kwargs: Any) -> None:
         failed_rents = RentRecord.objects.filter(
             status="PAID",
             payout_status="FAILED",

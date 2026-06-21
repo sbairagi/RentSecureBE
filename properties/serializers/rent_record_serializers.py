@@ -59,7 +59,7 @@ class RentRecordSerializer(serializers.ModelSerializer):
         return cast(RentRecord, super().update(instance, validated_data))
 
     def get_invoice_url(self, obj: RentRecord) -> str:
-        if obj.payment_status == "PAID" and obj.invoice_pdf:
+        if obj.status == "PAID" and obj.invoice_pdf:
             url = obj.invoice_pdf.url
             return url if url else ""
         return ""

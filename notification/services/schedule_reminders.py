@@ -27,7 +27,7 @@ def generate_rent_reminder_msg(rent: RentRecord, lang: str = "hi") -> str:
         return ""
     name = rent.renter.full_name
     amount = rent.amount
-    due = rent.rent_due_date.strftime("%d %B")
+    due = rent.due_date.strftime("%d %B")
     return (
         f"Namaste {name}! Aapka ₹{amount} rent {due} ko due hai. "
         "Kripya samay par jama karein."

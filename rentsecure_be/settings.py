@@ -14,7 +14,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from decouple import Csv, config
+from decouple import Csv, config  # type: ignore[import-untyped]
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

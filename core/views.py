@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import hmac
 import json
@@ -7,7 +9,7 @@ import uuid
 from datetime import timedelta
 from typing import Any, cast
 
-import razorpay
+import razorpay  # type: ignore[import-untyped]
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, Group
 from django.db.models import Sum
@@ -457,7 +459,7 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901
 
         rent.payment_status = RentRecord.Status.PAID
         rent.date_paid = timezone.now().date()
-        rent.save(update_fields=["payment_status", "date_paid", "updated_at"])
+        rent.save(update_fields=["status", "paid_on", "updated_at"])
 
         try:
             process_rent_payout(rent)
@@ -488,7 +490,7 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901
 
         rent.payment_status = RentRecord.Status.PAID
         rent.date_paid = timezone.now().date()
-        rent.save(update_fields=["payment_status", "date_paid", "updated_at"])
+        rent.save(update_fields=["status", "paid_on", "updated_at"])
 
         try:
             process_rent_payout(rent)
@@ -553,7 +555,7 @@ def update_owner_bank_details(request: Request, *args: Any, **kwargs: Any) -> Re
     bank.save()
 
     # Retry all failed payouts for this owner (using correct field: owner)
-    RentRecord.objects.filter(owner=owner, payout_status="FAILED").update(
+    RentRecord.objects.filter(unit__owner=owner, payout_status="FAILED").update(
         payout_status="PENDING"
     )
 
@@ -576,16 +578,18 @@ def rent_inflow_summary(request: Request, *args: Any, **kwargs: Any) -> Response
     """
     owner: User = cast(User, request.user)
     total_received = (
-        RentRecord.objects.filter(owner=owner, status="PAID").aggregate(
+        RentRecord.objects.filter(unit__owner=owner, status="PAID").aggregate(
             total=Sum("amount")
         )["total"]
         or 0
     )
 
-    pending_count = RentRecord.objects.filter(owner=owner, status="PENDING").count()
+    pending_count = RentRecord.objects.filter(
+        unit__owner=owner, status="PENDING"
+    ).count()
 
     failed_payouts = RentRecord.objects.filter(
-        owner=owner, payout_status="FAILED"
+        unit__owner=owner, payout_status="FAILED"
     ).count()
 
     return Response(
@@ -606,7 +610,7 @@ def owner_rent_records(request: Request, *args: Any, **kwargs: Any) -> Response:
     """
     owner: User = cast(User, request.user)
     rents = (
-        RentRecord.objects.filter(owner=owner)
+        RentRecord.objects.filter(unit__owner=owner)
         .select_related("renter", "unit")
         .order_by("-due_date")
     )

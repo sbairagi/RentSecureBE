@@ -1,9 +1,9 @@
-from typing import override
-
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
-from simple_history.models import HistoricalRecords
+from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
+
+from rentsecure_be.type_compat import override
 
 # Reuse the shared phone regex if available; otherwise define a local one.
 phone_regex = RegexValidator(

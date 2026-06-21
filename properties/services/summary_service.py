@@ -48,8 +48,11 @@ def get_monthly_rent_summary(
 
     from properties.models import RentRecord
 
+    first_day_dt = first_day
+    last_day_dt = last_day
+
     rents = RentRecord.objects.filter(
-        owner=owner, rent_month__gte=first_day, rent_month__lt=last_day
+        unit__owner=owner, due_date__gte=first_day_dt, due_date__lt=last_day_dt
     ).select_related("renter", "unit")
 
     collected: float = float(

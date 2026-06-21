@@ -1,7 +1,9 @@
-from typing import override
+from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.db import models
+
+from rentsecure_be.type_compat import override
 
 from .unit_models import Unit
 
@@ -71,6 +73,36 @@ class RentRecord(models.Model):
     transaction_id = models.CharField(
         max_length=100, blank=True, null=True, help_text="Payment gateway / bank ref"
     )
+    payout_status = models.CharField(
+        max_length=20, default="PENDING", help_text="Payout transfer status"
+    )
+    payout_reference = models.CharField(
+        max_length=100, blank=True, null=True, help_text="Payout gateway reference"
+    )
+    payment_link = models.CharField(
+        max_length=500, blank=True, null=True, help_text="Payment gateway link"
+    )
+    invoice_pdf = models.FileField(
+        upload_to="invoices/",
+        blank=True,
+        null=True,
+        help_text="Generated rent receipt PDF",
+    )
+    razorpay_order_id = models.CharField(
+        max_length=100, blank=True, null=True, help_text="Razorpay order reference"
+    )
+    payout_retries = models.PositiveIntegerField(
+        default=0, help_text="Number of payout retry attempts"
+    )
+    last_payout_retry = models.DateTimeField(
+        blank=True, null=True, help_text="Timestamp of last payout retry"
+    )
+    payout_retry_count = models.PositiveIntegerField(
+        default=0, help_text="Cumulative payout retry count"
+    )
+    adjustment_reason = models.TextField(
+        blank=True, null=True, help_text="Reason for late fee or adjustment"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -79,6 +111,38 @@ class RentRecord(models.Model):
         ordering = ["-due_date"]
         verbose_name = "Rent Record"
         verbose_name_plural = "Rent Records"
+
+    @property
+    def payment_status(self) -> str:
+        return self.status
+
+    @payment_status.setter
+    def payment_status(self, value: str) -> None:
+        self.status = value
+
+    @property
+    def date_paid(self) -> Any:
+        return self.paid_on
+
+    @date_paid.setter
+    def date_paid(self, value: Any) -> None:
+        self.paid_on = value
+
+    @property
+    def rent_due_date(self) -> Any:
+        return self.due_date
+
+    @rent_due_date.setter
+    def rent_due_date(self, value: Any) -> None:
+        self.due_date = value
+
+    @property
+    def amount_paid(self) -> Any:
+        return self.amount
+
+    @amount_paid.setter
+    def amount_paid(self, value: Any) -> None:
+        self.amount = value
 
     @override
     def clean(self) -> None:

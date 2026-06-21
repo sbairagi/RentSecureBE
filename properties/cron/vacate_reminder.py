@@ -11,7 +11,7 @@ from properties.models import Renter
 # from services.whatsapp_service import send_whatsapp_message
 
 
-def send_vacate_reminders():
+def send_vacate_reminders() -> None:
     cutoff_date = timezone.now() - timedelta(days=3)
 
     renters_to_remind = Renter.objects.filter(
@@ -22,10 +22,12 @@ def send_vacate_reminders():
     )
 
     for renter in renters_to_remind:
+        if renter.revoked_on is None:
+            continue
         owner = renter.property.owner
         message = (
             f"⏰ Reminder: Renter {renter.full_name}'s agreement was revoked on "
             f"{renter.revoked_on.date()}, but the tenant is still marked active.\n"
-            f"Please update their status if they’ve vacated."
+            f"Please update their status if they've vacated."
         )
-        send_whatsapp_message(owner.profile.whatsapp_number, message)
+        send_whatsapp_message(owner.whatsapp_number, message)

@@ -1,3 +1,4 @@
+# mypy: disable-error-code="import-untyped"
 from typing import Any
 
 from django.conf import settings
@@ -226,19 +227,17 @@ class PlanFeatureLimit(models.Model):
 
     @override
     def save(self, *args: Any, **kwargs: Any) -> None:
-        # Handle upsert for PlanFeatureLimit
-        if self.pk is None:
-            if self.plan_id is not None and self.feature_key:
-                existing = PlanFeatureLimit.objects.filter(
-                    plan_id=self.plan_id,
-                    feature_key=self.feature_key,
-                ).first()
-                if existing:
-                    existing.value = self.value
-                    existing.save()
-                    self.pk = existing.pk
-                    self.__dict__.update(existing.__dict__)
-                    return
+        if self.pk is None and self.plan_id is not None and self.feature_key:  # type: ignore[unreachable]
+            existing = PlanFeatureLimit.objects.filter(  # type: ignore[unreachable]
+                plan_id=self.plan_id,
+                feature_key=self.feature_key,
+            ).first()
+            if existing:
+                existing.value = self.value
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
         return super().save(*args, **kwargs)
 
     @override
@@ -261,19 +260,17 @@ class UsageLimit(models.Model):
 
     @override
     def save(self, *args: Any, **kwargs: Any) -> None:
-        # Handle upsert for UsageLimit
-        if self.pk is None:
-            if self.user_id is not None and self.feature_key:
-                existing = UsageLimit.objects.filter(
-                    user_id=self.user_id,
-                    feature_key=self.feature_key,
-                ).first()
-                if existing:
-                    existing.usage_count = self.usage_count
-                    existing.save()
-                    self.pk = existing.pk
-                    self.__dict__.update(existing.__dict__)
-                    return
+        if self.pk is None and self.user_id is not None and self.feature_key:  # type: ignore[unreachable]
+            existing = UsageLimit.objects.filter(  # type: ignore[unreachable]
+                user_id=self.user_id,
+                feature_key=self.feature_key,
+            ).first()
+            if existing:
+                existing.usage_count = self.usage_count
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
         return super().save(*args, **kwargs)
 
     @override

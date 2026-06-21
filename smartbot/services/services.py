@@ -33,7 +33,7 @@ def generate_ai_alerts(owner: Any) -> int:
         # Use the same slice window the original implementation used
         # (3 records) to preserve closest behavioural parity.
         recent = list(rents[:3])
-        if len(recent) >= 2 and all(r.payment_status == "PENDING" for r in recent[:2]):
+        if len(recent) >= 2 and all(r.status == "PENDING" for r in recent[:2]):
             _, created = AIAlert.objects.get_or_create(
                 owner=owner,
                 alert_type="Missed Rent",
@@ -45,13 +45,10 @@ def generate_ai_alerts(owner: Any) -> int:
         # 2. Irregular rent pattern — use canonical field names
         #    (RentRecord has no ``paid_date``; it is ``date_paid``)
         past_six = rents.filter(paid_on__gte=six_months_ago)
-        delayed_count = sum(
-            1
-            for r in past_six
-            if r.payment_status == "PAID"
-            and r.date_paid is not None
-            and r.date_paid > r.due_date
-        )
+        delayed_count = 0
+        for r in past_six:
+            if r.status == "PAID" and r.paid_on is not None and r.paid_on > r.due_date:
+                delayed_count += 1
         if delayed_count >= 3:
             _, created = AIAlert.objects.get_or_create(
                 owner=owner,

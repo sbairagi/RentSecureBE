@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from datetime import date, timedelta
 
@@ -28,9 +30,9 @@ def ai_assistant_insights(request: DRFRequest) -> Response:
 
     paid_rents = RentRecord.objects.filter(
         renter__unit__owner=owner,
-        payout_status="PAID",
-        rent_month__month=today.month,
-        rent_month__year=today.year,
+        status=RentRecord.Status.PAID,
+        due_date__month=today.month,
+        due_date__year=today.year,
     )
 
     late_rents = RentRecord.objects.filter(
@@ -107,7 +109,7 @@ def rent_analytics_data(request: DRFRequest) -> Response:
         RentRecord.objects.filter(renter__unit__owner=owner, created_at__gte=start_date)
         .annotate(month=TruncMonth("created_at"))
         .values("month")
-        .annotate(total=Sum("amount_paid"))
+        .annotate(total=Sum("amount"))
         .order_by("month")
     )
 
@@ -117,20 +119,20 @@ def rent_analytics_data(request: DRFRequest) -> Response:
     paid = (
         RentRecord.objects.filter(
             renter__unit__owner=owner,
-            rent_month__month=this_month,
-            rent_month__year=this_year,
-            payment_status="PAID",
-        ).aggregate(total=Sum("amount_paid"))["total"]
+            due_date__month=this_month,
+            due_date__year=this_year,
+            status=RentRecord.Status.PAID,
+        ).aggregate(total=Sum("amount"))["total"]
         or 0
     )
 
     unpaid = (
         RentRecord.objects.filter(
             renter__unit__owner=owner,
-            rent_month__month=this_month,
-            rent_month__year=this_year,
-            payment_status="PENDING",
-        ).aggregate(total=Sum("amount_paid"))["total"]
+            due_date__month=this_month,
+            due_date__year=this_year,
+            status=RentRecord.Status.PENDING,
+        ).aggregate(total=Sum("amount"))["total"]
         or 0
     )
 
@@ -174,11 +176,9 @@ def financial_health_report(request: DRFRequest) -> Response:
     user = request.user
 
     rent_records = RentRecord.objects.filter(renter__user=user)
-    # PropertyTaxRecord has no ``property`` FK; it is bound directly
-    # to a Unit. Use the canonical relation.
-    tax_records = PropertyTaxRecord.objects.filter(unit__owner=user)
+    tax_records = PropertyTaxRecord.objects.filter(property__owner=user)
 
-    analysis = analyze_financial_health(rent_records, tax_records)
+    analysis = analyze_financial_health(list(rent_records), list(tax_records))
     return Response(analysis)
 
 
@@ -188,7 +188,7 @@ def financial_health_report(request: DRFRequest) -> Response:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def chat_with_assistant(request: DRFRequest) -> Response:
-    query = request.data.get("message")
+    query = request.data.get("message", "")
     response = handle_chat_message(user=request.user, message=query)
     return Response({"reply": response})
 
@@ -219,8 +219,6 @@ def whatsapp_webhook(request: HttpRequest) -> JsonResponse:
     try:
         user = UserProfile.objects.get(whatsapp_number=phone)
     except UserProfile.DoesNotExist:
-        return JsonResponse({"message": "User not found"}, status=404)
-    if not user:
         return JsonResponse({"message": "User not found"}, status=404)
 
     reply = handle_chat_message(user, message)

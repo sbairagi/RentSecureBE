@@ -5,16 +5,16 @@ from properties.models import Renter, RentRecord
 from rentsecure_be.services.razorpay_service import create_payment_link
 
 
-def auto_generate_rent_records():
+def auto_generate_rent_records() -> None:
     today = date.today()
     renters = Renter.objects.all()
 
     for renter in renters:
         rent, created = RentRecord.objects.get_or_create(
             renter=renter,
-            rent_month__month=today.month,
-            rent_month__year=today.year,
-            defaults={"amount": renter.monthly_rent},
+            due_date__month=today.month,
+            due_date__year=today.year,
+            defaults={"amount": renter.rent_amount},
         )
 
         if created:

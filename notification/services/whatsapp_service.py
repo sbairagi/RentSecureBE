@@ -1,11 +1,12 @@
-# services/whatsapp_service.py
+from __future__ import annotations
 
+# services/whatsapp_service.py
 import logging
 import os
 from typing import Any
 
 try:
-    import boto3
+    import boto3  # type: ignore[import-untyped]
 except ImportError:
     boto3 = None
 from django.conf import settings

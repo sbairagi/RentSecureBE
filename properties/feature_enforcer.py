@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime, timedelta
-from typing import Any, Literal
+from typing import Any, Literal, Union
 
 from django.db.models import Sum
 from django.utils import timezone
@@ -25,7 +25,7 @@ from .constants import GRACE_PERIOD_DAYS
 
 logger = logging.getLogger(__name__)
 
-FeatureLimit = int | Literal["unlimited"]
+FeatureLimit = Union[int, Literal["unlimited"]]  # noqa: UP007
 
 
 class FeatureEnforcer:

@@ -88,7 +88,8 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
     @override
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         """Persist unit updates after ownership check."""
-        if serializer.instance.owner != self.request.user:
+        instance = serializer.instance
+        if instance is None or instance.owner != self.request.user:
             raise PermissionDenied("You do not have permission to update this unit.")
         serializer.save()
         cache.delete(f"units_user_{self.request.user.id}")
@@ -139,8 +140,9 @@ class UnitImageViewSet(viewsets.ModelViewSet[UnitImage]):
     @override
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         """Persist image updates after ownership check."""
-        unit: Unit | None = (
-            serializer.validated_data.get("unit") or serializer.instance.unit
+        instance = serializer.instance
+        unit: Unit | None = serializer.validated_data.get("unit") or (
+            instance.unit if instance else None
         )
         if unit is None or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
@@ -195,8 +197,9 @@ class UnitDocumentViewSet(viewsets.ModelViewSet[UnitDocument]):
     @override
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         """Persist document updates after ownership check."""
-        unit: Unit | None = (
-            serializer.validated_data.get("unit") or serializer.instance.unit
+        instance = serializer.instance
+        unit: Unit | None = serializer.validated_data.get("unit") or (
+            instance.unit if instance else None
         )
         if unit is None or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
@@ -253,7 +256,8 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
         cache.delete(f"rent_drafts_user_{self.request.user.id}")
 
         try:
-            owner_email: str | None = self.request.user.email
+            user_obj = cast(User, self.request.user)
+            owner_email: str | None = getattr(user_obj, "email", None)
             renter_email: str | None = agreement.renter.email
             if not owner_email:
                 raise PermissionDenied("Owner email is required for digital signature.")
@@ -269,11 +273,15 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         """Persist draft updates after ownership + integrity checks."""
         instance = serializer.instance
-        if instance.user != self.request.user:
+        if instance is None or instance.user != self.request.user:
             raise PermissionDenied("You do not own this draft.")
 
-        unit: Unit | None = serializer.validated_data.get("unit", instance.unit)
-        renter: Renter | None = serializer.validated_data.get("renter", instance.renter)
+        unit: Unit | None = serializer.validated_data.get("unit") or (
+            instance.unit if instance else None
+        )
+        renter: Renter | None = serializer.validated_data.get("renter") or (
+            instance.renter if instance else None
+        )
 
         if unit is None or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")

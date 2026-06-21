@@ -1,7 +1,10 @@
+from typing import Any
+
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from properties.services.summary_service import send_monthly_rent_summary_email
+from rentsecure_be.type_compat import override
 
 User = get_user_model()
 
@@ -12,7 +15,8 @@ class Command(BaseCommand):
         "email and WhatsApp."
     )
 
-    def add_arguments(self, parser) -> None:
+    @override
+    def add_arguments(self, parser: Any) -> None:
         parser.add_argument(
             "--user-id",
             type=int,
@@ -24,7 +28,8 @@ class Command(BaseCommand):
             help="Skip WhatsApp notifications",
         )
 
-    def handle(self, *args, **options) -> None:
+    @override
+    def handle(self, *args: Any, **options: Any) -> None:
         user_id = options.get("user_id")
         send_whatsapp = not options.get("no_whatsapp")
 

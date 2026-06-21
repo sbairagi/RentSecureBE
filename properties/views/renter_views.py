@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
@@ -11,6 +11,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 
+from core.models import User
 from rentsecure_be.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
@@ -52,8 +53,9 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
     @override
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new renter, enforcing the per-plan limit first."""
+        user = cast(User, request.user)
         allowed, current_usage, subscription_limit, add_on_limit = check_feature_limit(
-            request.user, "max_renters"
+            user, "max_renters"
         )
         if not allowed:
             payload: dict[str, Any] = {
@@ -85,8 +87,9 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
     @override
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         """Persist updates and refresh unit state."""
-        unit: Unit | None = (
-            serializer.validated_data.get("unit") or serializer.instance.unit
+        instance = serializer.instance
+        unit: Unit | None = serializer.validated_data.get("unit") or (
+            instance.unit if instance else None
         )
         if unit is None or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")

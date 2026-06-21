@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.core.management.base import BaseCommand
 
 from properties.services.extra_charge_service import generate_monthly_extra_charges
@@ -11,7 +13,7 @@ class Command(BaseCommand):
     )
 
     @override
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: Any) -> None:
         created = generate_monthly_extra_charges()
         if created:
             self.stdout.write(

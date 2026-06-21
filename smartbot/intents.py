@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 def extract_intent(user_query: str) -> str | None:
     if "reminder" in user_query and "rent" in user_query:
         return "send_rent_reminder"

@@ -27,13 +27,12 @@ def register_owner_with_cashfree(owner: OwnerBankDetails) -> None:
 
     data = {
         "beneId": bene_id,
-        "name": owner.user.get_full_name(),
-        "email": owner.user.email,
-        # ``User`` has a single ``phone`` field (no ``phone_number``).
-        "phone": owner.user.phone,
+        "name": owner.owner.get_full_name(),
+        "email": owner.owner.email,
+        "phone": owner.owner.phone,
         "bankAccount": owner.bank_account_number,
         "ifsc": owner.ifsc_code,
-        "address1": "India",  # optional
+        "address1": "India",
     }
     response = add_beneficiary(data)
 
@@ -48,17 +47,24 @@ def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
     if rent.payout_status == "SUCCESS":
         return {"status": "ALREADY_PAID", "message": "Payout already completed"}
 
-    if not rent.owner.beneficiary_id:
+    owner = rent.renter.unit.owner if rent.renter else None
+    if owner is None:
+        raise Exception("Owner not found for rent")
+
+    try:
+        bank_details = OwnerBankDetails.objects.get(owner=owner)
+    except OwnerBankDetails.DoesNotExist:
+        raise Exception("Owner not registered with Cashfree") from None
+
+    if not bank_details.beneficiary_id:
         raise Exception("Owner not registered with Cashfree")
 
     transfer_id = f"rent_{rent.id}"
     response = make_payout(
         transfer_id=transfer_id,
         amount=rent.amount_paid,
-        # ``RentRecord`` has no ``property`` field; the unit is
-        # accessed via ``rent.unit``.
         remarks=f"Rent for property {rent.unit.id}",
-        bene_id=rent.owner.beneficiary_id,
+        bene_id=bank_details.beneficiary_id,
     )
 
     # Save result
@@ -84,7 +90,7 @@ def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
             f"🎉 ₹{rent.amount_paid} rent {rent.updated_at.date()} "
             "ko aapke account mein transfer ho gaya hai."
         )
-        notify_owner(rent.owner, msg_owner)
+        notify_owner(owner, msg_owner)
 
     elif rent.payout_status == "FAILED":
         msg = (
@@ -144,18 +150,22 @@ def register_cashfree_beneficiary(bank_details: OwnerBankDetails) -> dict[str, A
 
 def process_rent_payout(rent: RentRecord) -> dict[str, Any]:
     """Process payout to owner via Cashfree after rent is marked PAID."""
+    owner = rent.renter.unit.owner if rent.renter else None
+    if owner is None:
+        rent.payout_status = "FAILED"
+        rent.save(update_fields=["payout_status"])
+        return {"status": "FAILED", "message": "Owner not found for rent"}
+
     try:
-        bank_details = OwnerBankDetails.objects.get(owner=rent.owner)
+        bank_details = OwnerBankDetails.objects.get(owner=owner)
     except OwnerBankDetails.DoesNotExist:
-        logger.warning(
-            f"No bank details found for owner {rent.owner.id} (rent {rent.id})"
-        )
+        logger.warning(f"No bank details found for owner {owner.id} (rent {rent.id})")
         rent.payout_status = "FAILED"
         rent.save(update_fields=["payout_status"])
         return {"status": "FAILED", "message": "Owner bank details not found"}
 
     if not bank_details.beneficiary_id:
-        logger.warning(f"No beneficiary_id for owner {rent.owner.id} (rent {rent.id})")
+        logger.warning(f"No beneficiary_id for owner {owner.id} (rent {rent.id})")
         rent.payout_status = "FAILED"
         rent.save(update_fields=["payout_status"])
         return {

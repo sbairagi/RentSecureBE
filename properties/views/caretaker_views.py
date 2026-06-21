@@ -46,8 +46,9 @@ class CaretakerViewSet(viewsets.ModelViewSet[Caretaker]):
 
     @override
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
-        unit: Unit | None = (
-            serializer.validated_data.get("unit") or serializer.instance.unit
+        instance = serializer.instance
+        unit: Unit | None = serializer.validated_data.get("unit") or (
+            instance.unit if instance else None
         )
         if unit is None or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")

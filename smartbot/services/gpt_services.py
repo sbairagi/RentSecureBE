@@ -35,7 +35,7 @@ def gpt_smart_reply(user: Any, user_query: str, context_data: str) -> str:
     Use memory from chat history when possible.
     """
 
-    response = openai.ChatCompletion.create(
+    response = openai.ChatCompletion.create(  # type: ignore[attr-defined]
         model="gpt-4",
         messages=[
             {

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from simple_history.admin import SimpleHistoryAdmin
+from simple_history.admin import SimpleHistoryAdmin  # type: ignore[import-untyped]
 
 from ..models import Building
 

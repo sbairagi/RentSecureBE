@@ -27,15 +27,15 @@ def send_thank_you_voice_note(rent: RentRecord) -> None:
     if rent.renter is None:
         return
     name: str = rent.renter.full_name
-    amount = rent.amount_paid
-    date_str: str = rent.date_paid.strftime("%d %B")
+    amount = rent.amount
+    date_str: str = rent.paid_on.strftime("%d %B") if rent.paid_on else ""
     msg: str = (
         f"Shukriya {name}! Aapne ₹{amount} rent {date_str} ko time se pehle "
         "jama kiya. Aapki samay par payment ki hum sarahna karte hain."
     )
 
     audio_path: str | None = generate_voice_note(msg, lang="hi")
-    if audio_path is not None:
+    if audio_path is not None and rent.renter.whatsapp_number:
         send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)
 
 
@@ -48,8 +48,8 @@ def send_late_rent_reminder(rent: RentRecord) -> None:
     if rent.renter is None:
         return
     name: str = rent.renter.full_name
-    amount = rent.amount_paid
-    due_date_str: str = rent.rent_due_date.strftime("%d %B")
+    amount = rent.amount
+    due_date_str: str = rent.due_date.strftime("%d %B")
 
     msg: str = (
         f"Namaste {name}, aapka ₹{amount} rent {due_date_str} ko due tha. "
@@ -57,7 +57,7 @@ def send_late_rent_reminder(rent: RentRecord) -> None:
     )
 
     audio_path: str | None = generate_voice_note(msg, lang="hi")
-    if audio_path is not None:
+    if audio_path is not None and rent.renter.whatsapp_number:
         send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)
 
     RentReminderLog.objects.create(
@@ -68,16 +68,12 @@ def send_late_rent_reminder(rent: RentRecord) -> None:
 
 def alert_owner_about_delay(rent: RentRecord) -> None:
     """Send a WhatsApp text alert to the owner about a delayed rent."""
-    if (
-        rent.renter is None
-        or rent.renter.unit is None
-        or rent.renter.unit.owner is None
-    ):
+    if rent.renter is None:
         return
     owner = rent.renter.unit.owner
     msg: str = (
         f"⚠️ Alert: Your renter {rent.renter.full_name} "
-        f"has not paid rent ₹{rent.amount_paid} due on {rent.rent_due_date}."
+        f"has not paid rent ₹{rent.amount} due on {rent.due_date}."
     )
-    if getattr(owner, "caprofile", None) is not None:
-        send_whatsapp_message(owner.caprofile.whatsapp_number, msg)
+    if owner.whatsapp_number:
+        send_whatsapp_message(owner.whatsapp_number, msg)
