@@ -229,6 +229,12 @@ def generate_final_invoice_on_exit(
 
         if instance.status in ["revoked", "deactivated"]:
             if not ArchivedRenter.objects.filter(renter=instance).exists():
-                from properties.archive_service import archive_renter_data
+                try:
+                    from ai_assistant.services.archive_service import (
+                        archive_renter_data,
+                    )
+                except ImportError:
+                    archive_renter_data = None  # type: ignore[assignment]
 
-                archive_renter_data(instance)
+                if archive_renter_data is not None:
+                    archive_renter_data(instance)

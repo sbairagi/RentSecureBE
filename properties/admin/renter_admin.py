@@ -63,4 +63,6 @@ class RenterAdmin(SimpleHistoryAdmin):  # type: ignore[misc]
             )
         return "-"
 
-    renter_image_thumbnail.short_description = "Renter Image Preview"  # type: ignore[attr-defined]
+    renter_image_thumbnail.short_description = (
+        "Renter Image Preview"  # type: ignore[attr-defined]
+    )

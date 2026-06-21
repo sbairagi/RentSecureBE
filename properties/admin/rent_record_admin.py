@@ -53,4 +53,6 @@ class RentRecordAdmin(SimpleHistoryAdmin):  # type: ignore[misc]
         updated_count = queryset.update(status=RentRecord.Status.PAID)
         self.message_user(request, f"{updated_count} rent record(s) marked as Paid.")
 
-    mark_as_paid.short_description = "Mark selected rent records as Paid"  # type: ignore[attr-defined]
+    mark_as_paid.short_description = (
+        "Mark selected rent records as Paid"  # type: ignore[attr-defined]
+    )
