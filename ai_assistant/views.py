@@ -1,12 +1,14 @@
 import json
 from datetime import date, timedelta
 
+from django.contrib.auth.models import AnonymousUser
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response
 
 from ai_assistant.services.finance_ai import analyze_financial_health
@@ -18,21 +20,23 @@ from smartbot.services.chatbot_service import handle_chat_message
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def ai_assistant_insights(request) -> Response:
+def ai_assistant_insights(request: DRFRequest) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
     owner = request.user
     today = date.today()
 
     paid_rents = RentRecord.objects.filter(
         renter__unit__owner=owner,
-        payment_status="PAID",
+        payout_status="PAID",
         rent_month__month=today.month,
         rent_month__year=today.year,
     )
 
     late_rents = RentRecord.objects.filter(
         renter__unit__owner=owner,
-        rent_due_date__lt=today,
-        payment_status="PENDING",
+        due_date__lt=today,
+        payout_status="PENDING",
     )
 
     payouts = RentRecord.objects.filter(renter__unit__owner=owner)
@@ -51,12 +55,10 @@ def ai_assistant_insights(request) -> Response:
         status__in=["active", "notice_period"],
     )
 
-    # PropertyTaxRecord has ``paid_date`` (nullable); use the absence
-    # of a payment date as the "not yet paid" signal.
     upcoming_tax = PropertyTaxRecord.objects.filter(
-        unit__owner=owner,
+        property__owner=owner,
         paid_date__isnull=True,
-    ).order_by("rent_due_date")[:5]
+    ).order_by("due_date")[:5]
 
     return Response(
         {
@@ -92,7 +94,9 @@ def ai_assistant_insights(request) -> Response:
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def rent_analytics_data(request) -> Response:
+def rent_analytics_data(request: DRFRequest) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
     owner = request.user
 
     # Last 6 months
@@ -164,7 +168,9 @@ def rent_analytics_data(request) -> Response:
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def financial_health_report(request) -> Response:
+def financial_health_report(request: DRFRequest) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
     user = request.user
 
     rent_records = RentRecord.objects.filter(renter__user=user)
@@ -181,7 +187,7 @@ def financial_health_report(request) -> Response:
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def chat_with_assistant(request) -> Response:
+def chat_with_assistant(request: DRFRequest) -> Response:
     query = request.data.get("message")
     response = handle_chat_message(user=request.user, message=query)
     return Response({"reply": response})
@@ -204,7 +210,7 @@ def chat_with_assistant(request) -> Response:
 
 
 @csrf_exempt
-def whatsapp_webhook(request) -> JsonResponse:
+def whatsapp_webhook(request: HttpRequest) -> JsonResponse:
     payload = json.loads(request.body)
     phone = payload.get("from")
     message = payload.get("text")

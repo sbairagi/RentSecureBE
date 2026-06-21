@@ -1,4 +1,6 @@
 # core/signals.py
+from typing import Any
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -8,7 +10,12 @@ from .models import PlanFeatureLimit, SubscriptionPlan, UserSubscription
 
 
 @receiver(post_save, sender=User)
-def assign_default_plan(sender, instance, created, **kwargs):
+def assign_default_plan(
+    sender: type[Any],
+    instance: User,
+    created: bool,
+    **kwargs: Any,
+) -> None:
     if created:
         if not hasattr(instance, "userprofile"):
             UserProfile.objects.create(user=instance)

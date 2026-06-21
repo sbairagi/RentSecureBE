@@ -1,9 +1,11 @@
 from datetime import date, timedelta
 
+from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncMonth
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response
 
 from ..models import RentRecord
@@ -11,7 +13,9 @@ from ..models import RentRecord
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def owner_dashboard_summary(request):
+def owner_dashboard_summary(request: DRFRequest) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
     owner = request.user
     today = date.today()
     current_month = today.replace(day=1)
@@ -20,16 +24,16 @@ def owner_dashboard_summary(request):
     rents = RentRecord.objects.filter(owner=owner)
 
     total_rent_collected = (
-        rents.filter(payment_status=RentRecord.PaymentStatus.PAID).aggregate(
-            total=Sum("amount_paid")
-        )["total"]
+        rents.filter(status=RentRecord.Status.PAID).aggregate(total=Sum("amount"))[
+            "total"
+        ]
         or 0
     )
 
     rent_collected_this_month = (
         rents.filter(
-            payment_status=RentRecord.PaymentStatus.PAID, rent_month__gte=current_month
-        ).aggregate(total=Sum("amount_paid"))["total"]
+            status=RentRecord.Status.PAID, rent_month__gte=current_month
+        ).aggregate(total=Sum("amount"))["total"]
         or 0
     )
 
@@ -41,12 +45,12 @@ def owner_dashboard_summary(request):
 
     rent_payment_trends = (
         rents.filter(
-            payment_status=RentRecord.PaymentStatus.PAID,
+            status=RentRecord.Status.PAID,
             rent_month__gte=previous_six_months,
         )
         .annotate(month=TruncMonth("rent_month"))
         .values("month")
-        .annotate(total=Sum("amount_paid"))
+        .annotate(total=Sum("amount"))
         .order_by("month")
     )
 
@@ -59,17 +63,17 @@ def owner_dashboard_summary(request):
     ]
 
     rent_defaulters = rents.filter(
-        Q(payment_status=RentRecord.PaymentStatus.PENDING),
-        rent_due_date__lt=today,
+        Q(status=RentRecord.Status.PENDING),
+        due_date__lt=today,
     ).select_related("renter", "unit")
 
     defaulters_data = [
         {
-            "renter_name": rent.renter.name,
+            "renter_name": rent.renter.name if rent.renter else "",
             "unit_name": getattr(rent.unit, "unit", None),
-            "amount": float(rent.amount_paid),
+            "amount": float(rent.amount),
             "due_date": rent.due_date,
-            "status": rent.payment_status,
+            "status": rent.status,
         }
         for rent in rent_defaulters
     ]

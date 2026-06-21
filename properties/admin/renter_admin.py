@@ -6,7 +6,7 @@ from ..models import Renter
 
 
 @admin.register(Renter)
-class RenterAdmin(SimpleHistoryAdmin):
+class RenterAdmin(SimpleHistoryAdmin):  # type: ignore[misc]
     list_display = (
         "id",
         "unit",
@@ -56,11 +56,11 @@ class RenterAdmin(SimpleHistoryAdmin):
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
-    def renter_image_thumbnail(self, obj):
+    def renter_image_thumbnail(self, obj: Renter) -> str:
         if obj.renter_image:
             return format_html(
                 '<img src="{}" style="height: 50px;"/>', obj.renter_image.url
             )
         return "-"
 
-    renter_image_thumbnail.short_description = "Renter Image Preview"
+    renter_image_thumbnail.short_description = "Renter Image Preview"  # type: ignore[attr-defined]

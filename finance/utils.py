@@ -40,6 +40,8 @@ def generate_tax_excel(
     """
     wb = Workbook()
     ws = wb.active
+    if ws is None:
+        raise RuntimeError("Failed to create active worksheet")
     ws.title = f"FY {fy}"
 
     headers: list[str] = [
@@ -53,10 +55,8 @@ def generate_tax_excel(
     ws.append(headers)
 
     for p in properties:
-        # ``p`` is statically typed as ``Unit``; ``getattr`` keeps the
-        # helper resilient against partial schemas during refactors.
         renter_name: str = (
-            p.renter.name  # type: ignore[attr-defined]
+            p.renter.name
             if hasattr(p, "renter") and getattr(p, "renter", None) is not None
             else "—"
         )
@@ -124,7 +124,7 @@ def create_tax_zip(
             if not doc:
                 continue
             doc_path: str = getattr(doc, "path", doc)  # type: ignore[arg-type]
-            if isinstance(doc_path, str) and os.path.exists(doc_path):
+            if os.path.exists(doc_path):
                 zipf.write(doc_path, os.path.basename(doc_path))
 
     return zip_path

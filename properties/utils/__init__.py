@@ -2,24 +2,27 @@ from __future__ import annotations
 
 import hashlib
 import tempfile
-from typing import TYPE_CHECKING, Literal
+from typing import Any, Literal
 
+from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.uploadedfile import UploadedFile
-from django.db.models import Model, Sum
+from django.db.models import Sum
 from django.template.loader import render_to_string
 
-from core.models import AddOnPurchase, PlanFeatureLimit, UsageLimit, UserSubscription
+from core.models import (
+    AddOnPurchase,
+    PlanFeatureLimit,
+    UsageLimit,
+    User,
+    UserSubscription,
+)
 from notification.services.late_fees_notify_service import (
     notify_owner_about_late_fee,
     notify_renter_about_late_fee,
 )
 from properties.feature_enforcer import FeatureEnforcer
 from properties.models import RentRecord, Unit
-
-if TYPE_CHECKING:
-    from django.contrib.auth.models import AbstractUser
-
 
 # ---------------------------------------------------------------------------
 # Type aliases
@@ -38,10 +41,10 @@ FeatureCheckResult = tuple[bool, int, FeatureLimit, int]
 # ---------------------------------------------------------------------------
 
 
-def get_plan_limit(
-    user: AbstractUser, feature_key: str
-) -> str | None:  # type: ignore[override]
+def get_plan_limit(user: User | AnonymousUser, feature_key: str) -> str | None:
     """Return the raw ``value`` for the user's plan/feature, or ``None``."""
+    if not user.is_authenticated:
+        return None
     try:
         plan = user.usersubscription.plan
         limit: PlanFeatureLimit = PlanFeatureLimit.objects.get(
@@ -53,15 +56,17 @@ def get_plan_limit(
         UserSubscription.DoesNotExist,
     ):
         return None
-    return limit.value  # type: ignore[attr-defined]
+    return limit.value
 
 
-def has_remaining_usage(user: AbstractUser, feature_key: str) -> bool:
+def has_remaining_usage(user: User | AnonymousUser, feature_key: str) -> bool:
     """Return ``True`` if the user can perform one more action of ``feature_key``."""
-    # Resolve to runtime User type for ORM lookups.
+    if not user.is_authenticated:
+        return False
+
     from django.contrib.auth import get_user_model
 
-    runtime_user = get_user_model().objects.get(pk=user.pk)
+    runtime_user = get_user_model().objects.get(pk=int(user.pk))
     plan_limit: str | None = get_plan_limit(runtime_user, feature_key)
     if plan_limit in ("unlimited", "yes"):
         return True
@@ -76,7 +81,7 @@ def has_remaining_usage(user: AbstractUser, feature_key: str) -> bool:
 
 
 def update_usage_count(
-    user: AbstractUser, feature_key: str, model_class: type[Model]
+    user: User | AnonymousUser, feature_key: str, model_class: type[Any]
 ) -> None:
     """Recompute and persist the user's usage count for ``feature_key``."""
     if not user.is_authenticated:
@@ -84,7 +89,7 @@ def update_usage_count(
 
     from django.contrib.auth import get_user_model
 
-    runtime_user = get_user_model().objects.get(pk=user.pk)
+    runtime_user = get_user_model().objects.get(pk=int(user.pk))
 
     if model_class is Unit:
         count: int = model_class.objects.filter(owner=runtime_user).count()
@@ -101,14 +106,14 @@ def update_usage_count(
     usage_limit.save()
 
 
-def enforce_limit(user: AbstractUser, feature_key: str) -> None:
+def enforce_limit(user: User | AnonymousUser, feature_key: str) -> None:
     """Raise :class:`PermissionDenied` if the user cannot use ``feature_key``."""
     if not user.is_authenticated:
         return
 
     from django.contrib.auth import get_user_model
 
-    runtime_user = get_user_model().objects.get(pk=user.pk)
+    runtime_user = get_user_model().objects.get(pk=int(user.pk))
 
     subscription: UserSubscription | None = UserSubscription.objects.filter(
         user=runtime_user, is_active=True
@@ -195,7 +200,7 @@ def _normalize_feature_limit_value(value: str) -> FeatureLimit:
     return int(value)
 
 
-def check_feature_limit(user: AbstractUser, feature_key: str) -> FeatureCheckResult:
+def check_feature_limit(user: User, feature_key: str) -> FeatureCheckResult:
     """Compute whether the user can perform one more action of ``feature_key``.
 
     Returns:
@@ -203,7 +208,7 @@ def check_feature_limit(user: AbstractUser, feature_key: str) -> FeatureCheckRes
     """
     from django.contrib.auth import get_user_model
 
-    runtime_user = get_user_model().objects.get(pk=user.pk)
+    runtime_user = get_user_model().objects.get(pk=int(user.pk))
 
     subscription_limit: FeatureLimit = 0
     add_on_limit: int = 0
@@ -237,7 +242,7 @@ def check_feature_limit(user: AbstractUser, feature_key: str) -> FeatureCheckRes
     return allowed, current_usage, subscription_limit, add_on_limit
 
 
-def get_feature_limit(user: AbstractUser, feature_key: str) -> int | float:
+def get_feature_limit(user: User | AnonymousUser, feature_key: str) -> int | float:
     """Return the effective plan limit for ``feature_key`` as a number.
 
     ``float('inf')`` is returned for unlimited plans so callers can compare
@@ -245,6 +250,8 @@ def get_feature_limit(user: AbstractUser, feature_key: str) -> int | float:
     """
     from django.contrib.auth import get_user_model
 
+    if user.pk is None:
+        return 0
     runtime_user = get_user_model().objects.get(pk=user.pk)
 
     addon: UsageLimit | None = UsageLimit.objects.filter(
@@ -267,20 +274,29 @@ def get_limit_for_source(
 ) -> int | str:
     """Return the limit value from a given subscription or add-on source."""
     if isinstance(source, UserSubscription):
-        return PlanFeatureLimit.objects.get(
+        limit_value: str = PlanFeatureLimit.objects.get(
             plan=source.plan, feature_key=feature_key
         ).value
-    if isinstance(source, AddOnPurchase):
-        return source.features.get(feature_key, 0)  # type: ignore[attr-defined]
+        return limit_value
+
+    features: dict[str, int | str] | None = getattr(source, "features", None)
+    if features is not None:
+        addon_value = features.get(feature_key, 0)
+        if isinstance(addon_value, (int, str)):
+            return addon_value
     return 0
 
 
 def get_used_units(
-    user: AbstractUser, feature_key: str, source: UserSubscription | AddOnPurchase
+    user: User | AnonymousUser,
+    feature_key: str,
+    source: UserSubscription | AddOnPurchase,
 ) -> int:
     """Return the units used for ``feature_key`` under the given ``source``."""
     from django.contrib.auth import get_user_model
 
+    if user.pk is None:
+        return 0
     runtime_user = get_user_model().objects.get(pk=user.pk)
 
     filters: dict[str, object] = {"user": runtime_user, "feature_key": feature_key}
@@ -298,7 +314,7 @@ def get_used_units(
 
 
 def deduct_feature_usage_with_priority(
-    user: AbstractUser, feature_key: str, units_to_deduct: int = 1
+    user: User | AnonymousUser, feature_key: str, units_to_deduct: int = 1
 ) -> None:
     """Deduct ``units_to_deduct`` units from the user's quota."""
     enforcer = FeatureEnforcer(user)

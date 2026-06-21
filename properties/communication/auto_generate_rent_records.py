@@ -1,6 +1,6 @@
 from datetime import date
 
-from notification.services.communication import send_whatsapp_message
+from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import Renter, RentRecord
 from rentsecure_be.services.razorpay_service import create_payment_link
 
@@ -12,8 +12,8 @@ def auto_generate_rent_records():
     for renter in renters:
         rent, created = RentRecord.objects.get_or_create(
             renter=renter,
-            month=today.month,
-            year=today.year,
+            rent_month__month=today.month,
+            rent_month__year=today.year,
             defaults={"amount": renter.monthly_rent},
         )
 

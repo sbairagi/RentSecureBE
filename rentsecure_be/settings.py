@@ -23,7 +23,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Environment configuration
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-placeholder-key")
-DEBUG = config("DEBUG", default=True, cast=bool)
+try:
+    DEBUG: bool = config("DEBUG", default=True, cast=bool)
+except ValueError:
+    _raw_debug = config("DEBUG", default="True")
+    DEBUG = str(_raw_debug).lower() not in ("false", "0", "no", "off", "release")
 ENVIRONMENT = config("DJANGO_ENV", default="development")
 
 if not DEBUG and SECRET_KEY == "django-insecure-placeholder-key":

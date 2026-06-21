@@ -24,6 +24,8 @@ if TYPE_CHECKING:
 
 def send_thank_you_voice_note(rent: RentRecord) -> None:
     """Send a thank-you voice note to a renter after a successful payment."""
+    if rent.renter is None:
+        return
     name: str = rent.renter.full_name
     amount = rent.amount_paid
     date_str: str = rent.date_paid.strftime("%d %B")
@@ -43,6 +45,8 @@ def send_late_rent_reminder(rent: RentRecord) -> None:
     Records the reminder in :class:`RentReminderLog` so we never spam
     the same renter with the same reminder type on the same day.
     """
+    if rent.renter is None:
+        return
     name: str = rent.renter.full_name
     amount = rent.amount_paid
     due_date_str: str = rent.rent_due_date.strftime("%d %B")
@@ -56,8 +60,6 @@ def send_late_rent_reminder(rent: RentRecord) -> None:
     if audio_path is not None:
         send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)
 
-    # Record that we sent the reminder. RentReminderLog is the
-    # canonical record; RentRecord has no reminder_sent field.
     RentReminderLog.objects.create(
         renter=rent.renter,
         message_type="LATE",
@@ -66,10 +68,16 @@ def send_late_rent_reminder(rent: RentRecord) -> None:
 
 def alert_owner_about_delay(rent: RentRecord) -> None:
     """Send a WhatsApp text alert to the owner about a delayed rent."""
+    if (
+        rent.renter is None
+        or rent.renter.unit is None
+        or rent.renter.unit.owner is None
+    ):
+        return
     owner = rent.renter.unit.owner
     msg: str = (
         f"⚠️ Alert: Your renter {rent.renter.full_name} "
         f"has not paid rent ₹{rent.amount_paid} due on {rent.rent_due_date}."
     )
-    if getattr(owner, "profile", None) is not None:
-        send_whatsapp_message(owner.profile.whatsapp_number, msg)
+    if getattr(owner, "caprofile", None) is not None:
+        send_whatsapp_message(owner.caprofile.whatsapp_number, msg)

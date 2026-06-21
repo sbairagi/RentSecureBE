@@ -8,8 +8,9 @@ shapes it produces.
 
 from __future__ import annotations
 
-from typing import Any, override
+from typing import Any
 
+from django.contrib.auth.models import AnonymousUser
 from django.http import FileResponse
 from rest_framework import permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -18,6 +19,7 @@ from rest_framework.views import APIView
 
 from core.models import User
 from properties.models import Unit
+from rentsecure_be.type_compat import override
 
 from .models import CAProfile, TaxSubmissionToCA
 from .serializers import CAProfileSerializer, TaxSubmissionToCASerializer
@@ -45,11 +47,9 @@ class TaxSubmissionToCAViewSet(viewsets.ModelViewSet[TaxSubmissionToCA]):
 
     @override
     def get_queryset(self) -> Any:
-        """Return only the current user's tax submissions.
-
-        ``TaxSubmissionToCA`` has a direct ``user`` FK (not a
-        ``tax_summary`` reverse), so we filter on that.
-        """
+        """Return only the current user's tax submissions."""
+        if isinstance(self.request.user, AnonymousUser):
+            return self.queryset.none()
         return TaxSubmissionToCA.objects.filter(user=self.request.user)
 
     @override

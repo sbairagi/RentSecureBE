@@ -13,7 +13,11 @@ from notification.services.rent_notify_service import (
     send_payout_notification,
 )
 from properties.models import RentRecord
-from rentsecure_be.utils.cashfree_payout import add_beneficiary, make_payout
+from rentsecure_be.utils.cashfree_payout import (
+    add_beneficiary,
+    get_auth_token,
+    make_payout,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -95,14 +99,15 @@ def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
     # ``Renter.property`` is a @property returning self.unit. We
     # chain to the unit's owner directly to avoid the deprecated
     # indirection and to make the relationship explicit.
-    owner = rent.renter.unit.owner
-    profile = getattr(owner, "profile", None)
-    phone = getattr(
-        profile, "whatsapp_number", None
-    )  # Make sure this is stored in +91 format
+    if rent.renter is not None:
+        owner = rent.renter.unit.owner
+        profile = getattr(owner, "profile", None)
+        phone = getattr(
+            profile, "whatsapp_number", None
+        )  # Make sure this is stored in +91 format
 
-    if phone:
-        send_payout_notification(rent)
+        if phone:
+            send_payout_notification(rent)
     return response
 
 
@@ -202,8 +207,6 @@ BASE_URL = ""
 
 # cashfree_service.py
 def delete_beneficiary(beneficiary_id: str) -> dict[str, Any]:
-    from .cashfree_service import get_auth_token
-
     url = f"{settings.CASHFREE_PAYOUT_BASE_TEST_URL}/payout/v1/deleteBeneficiary"
     payload = {"beneId": beneficiary_id}
     headers = {
@@ -211,4 +214,5 @@ def delete_beneficiary(beneficiary_id: str) -> dict[str, Any]:
         "Content-Type": "application/json",
     }
     response = requests.post(url, headers=headers, json=payload, timeout=10)
-    return response.json()
+    data: dict[str, Any] = response.json()
+    return data

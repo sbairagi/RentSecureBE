@@ -1,11 +1,13 @@
 from django.contrib import admin
+from django.db.models import QuerySet
+from django.http import HttpRequest
 from simple_history.admin import SimpleHistoryAdmin
 
 from ..models import RentRecord
 
 
 @admin.register(RentRecord)
-class RentRecordAdmin(SimpleHistoryAdmin):
+class RentRecordAdmin(SimpleHistoryAdmin):  # type: ignore[misc]
     list_display = (
         "id",
         "renter",
@@ -45,8 +47,10 @@ class RentRecordAdmin(SimpleHistoryAdmin):
     )
     actions = ["mark_as_paid"]
 
-    def mark_as_paid(self, request, queryset):
+    def mark_as_paid(
+        self, request: HttpRequest, queryset: QuerySet[RentRecord]
+    ) -> None:
         updated_count = queryset.update(status=RentRecord.Status.PAID)
         self.message_user(request, f"{updated_count} rent record(s) marked as Paid.")
 
-    mark_as_paid.short_description = "Mark selected rent records as Paid"
+    mark_as_paid.short_description = "Mark selected rent records as Paid"  # type: ignore[attr-defined]

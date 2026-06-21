@@ -1,8 +1,9 @@
 # tasks/schedule_reminders.py
 import logging
+from datetime import timedelta
 from typing import Any
 
-from django.utils.timezone import now, timedelta
+from django.utils.timezone import now
 
 from notification.services.voice_service import generate_voice_note
 from notification.services.whatsapp_service import send_whatsapp_audio
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def get_upcoming_rent_dues() -> Any:
     target_date = now().date() + timedelta(days=3)
-    return RentRecord.objects.filter(rent_due_date=target_date)
+    return RentRecord.objects.filter(due_date=target_date)
 
 
 def get_upcoming_tax_dues() -> Any:
@@ -22,6 +23,8 @@ def get_upcoming_tax_dues() -> Any:
 
 
 def generate_rent_reminder_msg(rent: RentRecord, lang: str = "hi") -> str:
+    if rent.renter is None:
+        return ""
     name = rent.renter.full_name
     amount = rent.amount
     due = rent.rent_due_date.strftime("%d %B")

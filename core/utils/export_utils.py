@@ -20,8 +20,12 @@ def generate_owner_rent_report(owner: Any) -> BytesIO:
         sheet.write(0, col, header)
 
     for row, rent in enumerate(rents, start=1):
-        sheet.write(row, 0, rent.renter.property.title)
-        sheet.write(row, 1, rent.renter.full_name)
+        if rent.renter is not None:
+            sheet.write(row, 0, rent.renter.property.title)
+            sheet.write(row, 1, rent.renter.full_name)
+        else:
+            sheet.write(row, 0, "")
+            sheet.write(row, 1, "")
         sheet.write(row, 2, rent.due_date.strftime("%Y-%m-%d"))
         sheet.write(row, 3, rent.amount)
         sheet.write(row, 4, rent.payment_status)

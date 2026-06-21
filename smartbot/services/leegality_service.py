@@ -1,5 +1,5 @@
 import json
-from typing import Any, TypedDict
+from typing import Any
 
 import requests
 from django.conf import settings
@@ -8,13 +8,7 @@ LEEGALITY_API_URL = "https://api.leegality.com/v3/document/upload"
 LEEGALITY_DOCUMENT_URL = "https://api.leegality.com/v3/document"
 
 
-class _Renter(TypedDict):
-    name: str
-    email: str
-    phone: str
-
-
-def initiate_signature(renter: _Renter, file_path: str) -> dict[str, Any]:
+def initiate_signature(renter: dict[str, Any], file_path: str) -> dict[str, Any]:
     with open(file_path, "rb") as f:
         files = {"file": ("agreement.pdf", f, "application/pdf")}
         data = {
@@ -41,7 +35,8 @@ def initiate_signature(renter: _Renter, file_path: str) -> dict[str, Any]:
             headers=headers,
             timeout=10,
         )
-        return response.json()
+        data: dict[str, Any] = response.json()
+    return data
 
 
 def check_signature_status(signature_request_id: str) -> str | None:
@@ -56,4 +51,5 @@ def check_signature_status(signature_request_id: str) -> str | None:
     )
     response.raise_for_status()
     data = response.json()
-    return data.get("status") or data.get("documentStatus")
+    raw_status = data.get("status") or data.get("documentStatus")
+    return str(raw_status) if raw_status is not None else None

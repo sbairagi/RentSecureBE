@@ -46,4 +46,4 @@ def gpt_smart_reply(user: Any, user_query: str, context_data: str) -> str:
         ],
     )
 
-    return response["choices"][0]["message"]["content"]
+    return str(response["choices"][0]["message"]["content"])

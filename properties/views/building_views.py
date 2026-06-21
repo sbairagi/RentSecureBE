@@ -1,9 +1,12 @@
-from typing import Any, override
+from typing import Any
 
 from django.core.cache import cache
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.serializers import BaseSerializer
+
+from rentsecure_be.type_compat import override
 
 from ..constants import BUILDINGS_CACHE_TIMEOUT
 from ..feature_enforcer import FeatureEnforcer
@@ -36,7 +39,7 @@ class BuildingViewSet(viewsets.ModelViewSet[Building]):
         return buildings
 
     @override
-    def perform_create(self, serializer: BuildingSerializer) -> None:
+    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         user = self.request.user
         enforcer = FeatureEnforcer(user)
 
@@ -48,7 +51,7 @@ class BuildingViewSet(viewsets.ModelViewSet[Building]):
         cache.delete(f"buildings_user_{user.id}")
 
     @override
-    def perform_update(self, serializer: BuildingSerializer) -> None:
+    def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         if serializer.instance.owner != self.request.user:
             raise PermissionDenied(
                 "You do not have permission to update this building."

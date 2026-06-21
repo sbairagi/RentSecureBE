@@ -1,9 +1,13 @@
-from typing import Any, override
+from typing import Any
 
+from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.serializers import BaseSerializer
+
+from rentsecure_be.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
 from ..models import Caretaker, Unit
@@ -16,15 +20,18 @@ class CaretakerViewSet(viewsets.ModelViewSet[Caretaker]):
 
     @override
     def get_queryset(self) -> Any:
-        cache_key = f"caretakers_user_{self.request.user.id}"
+        if isinstance(self.request.user, AnonymousUser):
+            return Caretaker.objects.none()
+        user = self.request.user
+        cache_key = f"caretakers_user_{user.id}"
         caretakers = cache.get(cache_key)
         if caretakers is None:
-            caretakers = Caretaker.objects.filter(unit__owner=self.request.user)
+            caretakers = Caretaker.objects.filter(unit__owner=user)
             cache.set(cache_key, caretakers, timeout=300)
         return caretakers
 
     @override
-    def perform_create(self, serializer: CaretakerSerializer) -> None:
+    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         unit: Unit | None = serializer.validated_data.get("unit")
         if not unit or unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
@@ -38,7 +45,7 @@ class CaretakerViewSet(viewsets.ModelViewSet[Caretaker]):
         cache.delete(f"caretakers_user_{self.request.user.id}")
 
     @override
-    def perform_update(self, serializer: CaretakerSerializer) -> None:
+    def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         unit: Unit | None = (
             serializer.validated_data.get("unit") or serializer.instance.unit
         )

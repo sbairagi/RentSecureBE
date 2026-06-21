@@ -1,7 +1,9 @@
-from typing import Any, cast, override
+from typing import Any, cast
 
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
+
+from rentsecure_be.type_compat import override
 
 from ..models import Renter, RentRecord
 

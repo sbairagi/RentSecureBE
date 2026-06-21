@@ -2,6 +2,8 @@
 # from rent.services import process_rent_payout
 # from rent.models import RentRecord, Renter
 # from services.whatsapp_service import send_whatsapp_message
+from typing import Any
+
 from django.core.files.storage import default_storage
 
 from notification.utils import send_whatsapp_message
@@ -64,7 +66,12 @@ def send_agreement_for_signature(renter_name: str) -> str:
         rent = RentRecord.objects.filter(renter=renter).latest("created_at")
         pdf_path = generate_agreement_pdf(rent)
 
-        result = initiate_signature(renter, pdf_path)
+        renter_data: dict[str, Any] = {
+            "name": renter.name,
+            "email": renter.email,
+            "phone": renter.phone,
+        }
+        result = initiate_signature(renter_data, pdf_path)
 
         if result.get("status") == "success":
             # The Leegality document id lives on the RentAgreementDraft

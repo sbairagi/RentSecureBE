@@ -44,14 +44,13 @@ def generate_ai_alerts(owner: Any) -> int:
 
         # 2. Irregular rent pattern — use canonical field names
         #    (RentRecord has no ``paid_date``; it is ``date_paid``)
-        past_six = rents.filter(date_paid__gte=six_months_ago)
+        past_six = rents.filter(paid_on__gte=six_months_ago)
         delayed_count = sum(
             1
             for r in past_six
             if r.payment_status == "PAID"
             and r.date_paid is not None
-            and r.rent_due_date is not None
-            and r.date_paid > r.rent_due_date
+            and r.date_paid > r.due_date
         )
         if delayed_count >= 3:
             _, created = AIAlert.objects.get_or_create(

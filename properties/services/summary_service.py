@@ -11,23 +11,18 @@ from __future__ import annotations
 
 import logging
 from datetime import date
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 from django.core.mail import send_mail
 from django.db.models import Sum
 from django.utils import timezone
 
-if TYPE_CHECKING:
-    from django.contrib.auth.models import AbstractUser
-
-    from core.models import NotificationPreference
+from core.models import NotificationPreference, User
 
 logger = logging.getLogger(__name__)
 
 
 class MonthlySummary(TypedDict):
-    """Typed shape for the result of :func:`get_monthly_rent_summary`."""
-
     month: int
     year: int
     month_name: str
@@ -39,17 +34,9 @@ class MonthlySummary(TypedDict):
 
 
 def get_monthly_rent_summary(
-    owner: AbstractUser, target_date: date | None = None
+    owner: User, target_date: date | None = None
 ) -> MonthlySummary:
-    """Build the monthly rent summary for the given owner.
-
-    Args:
-        owner: The owning user.
-        target_date: Date within the target month. Defaults to today.
-
-    Returns:
-        A :class:`MonthlySummary` payload aggregating the month's rent.
-    """
+    """Build the monthly rent summary for the given owner."""
     if target_date is None:
         target_date = timezone.now().date()
 
@@ -66,28 +53,26 @@ def get_monthly_rent_summary(
     ).select_related("renter", "unit")
 
     collected: float = float(
-        rents.filter(payment_status=RentRecord.PaymentStatus.PAID).aggregate(
-            total=Sum("amount_paid")
-        )["total"]
+        rents.filter(status=RentRecord.Status.PAID).aggregate(total=Sum("amount"))[
+            "total"
+        ]
         or 0
     )
 
     pending: float = float(
-        rents.filter(payment_status=RentRecord.PaymentStatus.PENDING).aggregate(
-            total=Sum("amount_paid")
-        )["total"]
+        rents.filter(status=RentRecord.Status.PENDING).aggregate(total=Sum("amount"))[
+            "total"
+        ]
         or 0
     )
 
     failed: float = float(
-        rents.filter(payment_status=RentRecord.PaymentStatus.FAILED).aggregate(
-            total=Sum("amount_paid")
-        )["total"]
+        rents.filter(payout_status="FAILED").aggregate(total=Sum("amount"))["total"]
         or 0
     )
 
     defaulters: int = (
-        rents.filter(payment_status=RentRecord.PaymentStatus.PENDING)
+        rents.filter(status=RentRecord.Status.PENDING)
         .values("renter")
         .distinct()
         .count()
@@ -106,21 +91,11 @@ def get_monthly_rent_summary(
 
 
 def send_monthly_rent_summary_email(
-    owner: AbstractUser,
+    owner: User,
     target_date: date | None = None,
     send_whatsapp: bool = True,
 ) -> bool:
-    """Send the owner's monthly rent summary by email and/or WhatsApp.
-
-    Args:
-        owner: The owning user.
-        target_date: Optional date within the target month.
-        send_whatsapp: When ``True``, also send via WhatsApp if the owner
-            has opted-in.
-
-    Returns:
-        ``True`` if at least one channel succeeded, otherwise ``False``.
-    """
+    """Send the owner's monthly rent summary by email and/or WhatsApp."""
     summary: MonthlySummary = get_monthly_rent_summary(owner, target_date)
     message_text: str = _build_summary_message(summary)
 
@@ -142,6 +117,24 @@ def send_monthly_rent_summary_email(
             sent_any = True
         except Exception as exc:
             logger.exception("Failed to send email to %s: %s", owner.email, exc)
+
+    if (
+        send_whatsapp
+        and prefs.monthly_summary_whatsapp
+        and getattr(owner, "whatsapp_number", None)
+    ):
+        try:
+            from notification.services.whatsapp_service import (
+                send_whatsapp_message,
+            )
+
+            result = send_whatsapp_message(owner.whatsapp_number, message_text)
+            sent_any = sent_any or bool(result)
+        except Exception as exc:
+            logger.exception(
+                "Failed to send WhatsApp to %s: %s", owner.whatsapp_number, exc
+            )
+            sent_any = True
 
     if send_whatsapp and prefs.monthly_summary_whatsapp and hasattr(owner, "profile"):
         whatsapp_number = getattr(owner.profile, "whatsapp_number", None)

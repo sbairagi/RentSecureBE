@@ -28,4 +28,5 @@ def create_payment_link(rent_record: Any) -> str:
         }
     )
 
-    return response["short_url"]
+    link: str = response["short_url"]
+    return link

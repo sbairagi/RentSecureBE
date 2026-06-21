@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any
 
+from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from rest_framework import status, viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.serializers import BaseSerializer
+
+from rentsecure_be.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
 from ..models import Renter, Unit
@@ -32,11 +36,14 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
     @override
     def get_queryset(self) -> QuerySet[Renter]:
         """Return the active/notice-period renters owned by the user."""
-        cache_key: str = f"renters_user_{self.request.user.id}"
+        if isinstance(self.request.user, AnonymousUser):
+            return Renter.objects.none()
+        user = self.request.user
+        cache_key: str = f"renters_user_{user.id}"
         renters: QuerySet[Renter] | None = cache.get(cache_key)
         if renters is None:
             renters = Renter.objects.filter(
-                unit__owner=self.request.user,
+                unit__owner=user,
                 status__in=["active", "notice_period"],
             )
             cache.set(cache_key, renters, timeout=300)
@@ -60,7 +67,7 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         return super().create(request, *args, **kwargs)
 
     @override
-    def perform_create(self, serializer: RenterSerializer) -> None:
+    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         """Persist a new renter, enforce ownership, and update unit state."""
         unit: Unit | None = serializer.validated_data.get("unit")
         if unit is None or unit.owner != self.request.user:
@@ -76,7 +83,7 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         cache.delete(f"renters_user_{self.request.user.id}")
 
     @override
-    def perform_update(self, serializer: RenterSerializer) -> None:
+    def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         """Persist updates and refresh unit state."""
         unit: Unit | None = (
             serializer.validated_data.get("unit") or serializer.instance.unit

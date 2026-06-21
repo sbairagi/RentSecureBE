@@ -3,11 +3,13 @@ from datetime import date
 from django.core.management.base import BaseCommand
 
 from properties.models import Renter, RentRecord
+from rentsecure_be.type_compat import override
 
 
 class Command(BaseCommand):
     help = "Generate RentRecords for all active renters monthly"
 
+    @override
     def handle(self, *args, **kwargs):
         today = date.today()
         month = today.month

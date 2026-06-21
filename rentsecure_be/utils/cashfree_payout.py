@@ -12,14 +12,17 @@ def get_auth_token() -> str | None:
         auth=(settings.CASHFREE_CLIENT_ID, settings.CASHFREE_CLIENT_SECRET),
         timeout=10,
     )
-    return res.json().get("data", {}).get("token")
+    data: dict[str, Any] = res.json()
+    token: str | None = data.get("data", {}).get("token") or None
+    return token
 
 
 def add_beneficiary(data: dict[str, Any]) -> dict[str, Any]:
     url = f"{settings.CASHFREE_PAYOUT_BASE_URL}/payout/v1/addBeneficiary"
     headers = {"Authorization": f"Bearer {get_auth_token()}"}
     res = requests.post(url, json=data, headers=headers, timeout=10)
-    return res.json()
+    data: dict[str, Any] = res.json()
+    return data
 
 
 def make_payout(
@@ -35,4 +38,5 @@ def make_payout(
         "remarks": remarks,
     }
     res = requests.post(url, json=payload, headers=headers, timeout=10)
-    return res.json()
+    data: dict[str, Any] = res.json()
+    return data

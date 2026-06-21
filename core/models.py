@@ -1,9 +1,11 @@
-from typing import Any, override
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from simple_history.models import HistoricalRecords
+
+from rentsecure_be.type_compat import override
 
 
 # User Models

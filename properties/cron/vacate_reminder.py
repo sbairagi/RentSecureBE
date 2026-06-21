@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from notification.services.communication import send_whatsapp_message
+from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import Renter
 
 # from renters.models import Renter

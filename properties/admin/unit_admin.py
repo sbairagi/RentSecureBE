@@ -1,6 +1,4 @@
 from django.contrib import admin
-from django.utils.html import format_html
-from simple_history.admin import SimpleHistoryAdmin
 
 from ..models import (
     Caretaker,
@@ -15,35 +13,15 @@ from ..models import (
 class CaretakerInline(admin.TabularInline):
     model = Caretaker
     extra = 1
-    readonly_fields = ("caretaker_image_thumbnail",)
-
-    def caretaker_image_thumbnail(self, obj) -> str:
-        if obj.caretaker_image:
-            return format_html(
-                '<img src="{}" style="height: 50px;"/>', obj.caretaker_image.url
-            )
-        return "-"
-
-    caretaker_image_thumbnail.short_description = "Caretaker Image"
 
 
 class RenterInline(admin.TabularInline):
     model = Renter
     extra = 1
-    readonly_fields = ("renter_image_thumbnail",)
-
-    def renter_image_thumbnail(self, obj) -> str:
-        if obj.renter_image:
-            return format_html(
-                '<img src="{}" style="height: 50px;"/>', obj.renter_image.url
-            )
-        return "-"
-
-    renter_image_thumbnail.short_description = "Renter Image"
 
 
 @admin.register(Unit)
-class UnitAdmin(SimpleHistoryAdmin):
+class UnitAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "building_name",
@@ -56,7 +34,6 @@ class UnitAdmin(SimpleHistoryAdmin):
         "country",
         "postal_code",
         "unit_type",
-        "unit_image_thumbnail",
         "is_vacant",
         "is_verified",
         "maintenance_notes",
@@ -76,7 +53,7 @@ class UnitAdmin(SimpleHistoryAdmin):
         "owner__username",
     )
     list_filter = ("unit_type", "is_vacant", "is_verified")
-    readonly_fields = ("created_at", "updated_at", "unit_image_thumbnail")
+    readonly_fields = ("created_at", "updated_at")
     inlines = [CaretakerInline, RenterInline]
     fieldsets = (
         ("Basic Info", {"fields": ("owner", "building_name", "unit", "unit_type")}),
@@ -95,7 +72,7 @@ class UnitAdmin(SimpleHistoryAdmin):
         ),
         (
             "Documents & Images",
-            {"fields": ("unit_image", "unit_image_thumbnail", "id_proof")},
+            {"fields": ("id_proof",)},
         ),
         (
             "Status & Reminders",
@@ -112,15 +89,6 @@ class UnitAdmin(SimpleHistoryAdmin):
         ("Additional Notes", {"fields": ("maintenance_notes", "notes")}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
-
-    def unit_image_thumbnail(self, obj) -> str:
-        if obj.unit_image:
-            return format_html(
-                '<img src="{}" style="height: 50px;"/>', obj.unit_image.url
-            )
-        return "-"
-
-    unit_image_thumbnail.short_description = "Unit Image Preview"
 
 
 @admin.register(UnitImage)

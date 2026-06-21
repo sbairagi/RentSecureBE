@@ -5,6 +5,8 @@ from properties.models import RentRecord
 
 
 def notify_renter_about_late_fee(rent: RentRecord, late_fee: int | float) -> None:
+    if rent.renter is None:
+        return
     msg = (
         f"⚠️ You've paid rent late by ₹{late_fee}.\n"
         f"This has been added to next month's rent.\n\nReason: {rent.adjustment_reason}"
@@ -14,8 +16,15 @@ def notify_renter_about_late_fee(rent: RentRecord, late_fee: int | float) -> Non
 
 # Notify Owner
 def notify_owner_about_late_fee(rent: RentRecord, late_fee: int | float) -> None:
+    if (
+        rent.renter is None
+        or rent.renter.unit is None
+        or rent.renter.unit.owner is None
+    ):
+        return
     msg = (
         f"ℹ️ Your renter paid rent late by ₹{late_fee} "
         f"({rent.adjustment_reason}). We've added this to their next month's rent."
     )
-    send_whatsapp_message(rent.renter.unit.owner.whatsapp_number, msg)
+    owner_number = rent.renter.unit.owner.profile.whatsapp_number  # type: ignore[attr-defined]
+    send_whatsapp_message(owner_number, msg)

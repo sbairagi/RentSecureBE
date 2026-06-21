@@ -67,8 +67,8 @@ def get_late_rent_records() -> QuerySet[RentRecord]:
     )
 
     return RentRecord.objects.filter(
-        rent_due_date__lt=today,
-        payment_status="PENDING",
+        due_date__lt=today,
+        status="PENDING",
     ).exclude(renter_id__in=already_reminded_renter_ids)
 
 
@@ -81,7 +81,8 @@ def process_late_rent_followups() -> int:
     for rent in get_late_rent_records():
         send_late_rent_reminder(rent)
         alert_owner_about_delay(rent)
-        rent.renter.late_payment_count += 1
-        rent.renter.save()
+        if rent.renter is not None:
+            rent.renter.late_payment_count += 1
+            rent.renter.save()
         processed += 1
     return processed

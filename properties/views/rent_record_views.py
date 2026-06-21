@@ -1,6 +1,7 @@
 import logging
-from typing import Any, override
+from typing import Any, cast
 
+from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
@@ -8,12 +9,16 @@ from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response
+from rest_framework.serializers import BaseSerializer
 
+from core.models import User
 from notification.services.rent_notify_service import send_payout_notification
 from notification.utils import send_whatsapp_message
 from rentsecure_be.services.cashfree_service import process_rent_payout
 from rentsecure_be.services.razorpay_service import create_payment_link
+from rentsecure_be.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
 from ..models import Renter, RentRecord, Unit
@@ -30,6 +35,8 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
     @override
     def get_queryset(self) -> Any:
         user = self.request.user
+        if isinstance(user, AnonymousUser):
+            return RentRecord.objects.none()
         cache_key = f"rent_records_user_{user.id}"
         rent_records = cache.get(cache_key)
         if rent_records is None:
@@ -40,7 +47,7 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
         return rent_records
 
     @override
-    def perform_create(self, serializer: RentRecordSerializer) -> None:
+    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         unit: Unit | None = serializer.validated_data.get("unit")
         renter = serializer.validated_data.get("renter")
         user = self.request.user
@@ -72,7 +79,7 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
         cache.delete(f"rent_records_user_{user.id}")
 
     @override
-    def perform_update(self, serializer: RentRecordSerializer) -> None:
+    def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         instance = serializer.instance
         user = self.request.user
 
@@ -98,7 +105,7 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def retry_payout_api(request, rent_id: int) -> Any:
+def retry_payout_api(request: DRFRequest, rent_id: int) -> Any:
     rent = get_object_or_404(RentRecord, id=rent_id, owner=request.user)
 
     if rent.payment_status != "PAID" or rent.payout_status != "FAILED":
@@ -118,8 +125,8 @@ def retry_payout_api(request, rent_id: int) -> Any:
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def owner_rent_records(request) -> Any:
-    owner = request.user
+def owner_rent_records(request: DRFRequest) -> Any:
+    owner = cast(User, request.user)
     rents = RentRecord.objects.filter(owner=owner).select_related("renter", "unit")
     serializer = RentRecordSerializer(rents, many=True)
     return Response(serializer.data)
@@ -127,25 +134,25 @@ def owner_rent_records(request) -> Any:
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def download_rent_invoice(request, rent_id: int) -> Any:
-    rent = get_object_or_404(RentRecord, id=rent_id, owner=request.user)
+def download_rent_invoice(request: DRFRequest, rent_id: int) -> Any:
+    rent = get_object_or_404(RentRecord, id=rent_id, owner=cast(User, request.user))
     pdf_path = generate_rent_invoice_pdf(rent)
     return FileResponse(open(pdf_path, "rb"), content_type="application/pdf")
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def get_latest_due_rent(request) -> Any:
+def get_latest_due_rent(request: DRFRequest) -> Any:
     renter = Renter.objects.filter(
-        user=request.user, status__in=["active", "notice_period"]
+        user=cast(User, request.user), status__in=["active", "notice_period"]
     ).first()
 
     if not renter:
         return Response({"error": "Not a renter"}, status=403)
 
     rent = (
-        RentRecord.objects.filter(renter=renter, payment_status="PENDING")
-        .order_by("-rent_due_date")
+        RentRecord.objects.filter(renter=renter, status="PENDING")
+        .order_by("-due_date")
         .first()
     )
     if not rent:
@@ -166,14 +173,14 @@ def get_latest_due_rent(request) -> Any:
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def rent_history(request) -> Any:
+def rent_history(request: DRFRequest) -> Any:
     renter = Renter.objects.filter(
-        user=request.user, status__in=["active", "notice_period"]
+        user=cast(User, request.user), status__in=["active", "notice_period"]
     ).first()
     if not renter:
         return Response({"error": "Not a renter"}, status=403)
 
-    rents = RentRecord.objects.filter(renter=renter).order_by("-rent_due_date")
+    rents = RentRecord.objects.filter(renter=renter).order_by("-due_date")
     data = [
         {
             "month": r.month,
@@ -190,20 +197,20 @@ def rent_history(request) -> Any:
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def owner_rent_overview(request) -> Any:
-    owner = request.user
+def owner_rent_overview(request: DRFRequest) -> Any:
+    owner = cast(User, request.user)
     rents = RentRecord.objects.filter(owner=owner).select_related("renter", "unit")
     data = []
     for r in rents:
         data.append(
             {
-                "tenant": r.renter.name,
+                "tenant": r.renter.name if r.renter else "",
                 "unit": r.unit.unit,
                 "building": r.unit.building.name if r.unit.building else None,
                 "amount": float(r.amount),
                 "month": r.month,
                 "year": r.year,
-                "status": r.payment_status,
+                "status": r.status,
                 "payout": r.payout_status,
                 "invoice_url": r.invoice_pdf.url if r.invoice_pdf else None,
             }

@@ -1,8 +1,8 @@
 # from core.models import User
-from typing import override
-
 from django.conf import settings
 from django.db import models
+
+from rentsecure_be.type_compat import override
 
 
 class CAProfile(models.Model):

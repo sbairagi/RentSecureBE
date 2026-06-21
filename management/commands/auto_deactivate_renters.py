@@ -2,13 +2,24 @@
 
 from datetime import date, timedelta
 
+from django.core.management.base import BaseCommand
+
 from notification.utils import send_whatsapp_message
 from properties.models import Renter
+from rentsecure_be.type_compat import override
 
 # from yourapp.models import Renter
 
 
-def auto_deactivate_notice_period_renters():
+class Command(BaseCommand):
+    help = "Auto-deactivate renters whose notice period has expired."
+
+    @override
+    def handle(self, *args, **options) -> None:
+        auto_deactivate_notice_period_renters()
+
+
+def auto_deactivate_notice_period_renters() -> None:
     today = date.today()
     one_month_ago = today - timedelta(days=30)
 

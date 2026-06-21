@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from properties.services.summary_service import send_monthly_rent_summary_email
+from rentsecure_be.type_compat import override
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,7 @@ class Command(BaseCommand):
         "via email and WhatsApp."
     )
 
+    @override
     def add_arguments(self, parser) -> None:
         parser.add_argument(
             "--user-id",
@@ -28,6 +30,7 @@ class Command(BaseCommand):
             help="Skip WhatsApp notifications",
         )
 
+    @override
     def handle(self, *args, **options) -> None:
         user_id = options.get("user_id")
         send_whatsapp = not options.get("no_whatsapp")

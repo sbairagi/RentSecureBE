@@ -1,3 +1,4 @@
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 
@@ -5,14 +6,15 @@ from properties.models import RentRecord
 from smartbot.actions import send_agreement_for_signature
 
 
-def agreement_status_view(request):
+def agreement_status_view(request: HttpRequest) -> HttpResponse:
     records = RentRecord.objects.select_related("renter").all().order_by("-created_at")
     return render(request, "dashboard/agreement_status.html", {"records": records})
 
 
 @csrf_exempt
-def retry_signature(request, rent_id):
+def retry_signature(request: HttpRequest, rent_id: int) -> HttpResponse:
     if request.method == "POST":
         rent = RentRecord.objects.get(id=rent_id)
-        send_agreement_for_signature(rent.renter.name)
-        return redirect("agreement_status")
+        if rent.renter is not None:
+            send_agreement_for_signature(rent.renter.name)
+    return redirect("agreement_status")

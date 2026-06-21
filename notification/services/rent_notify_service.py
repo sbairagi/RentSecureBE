@@ -29,16 +29,20 @@ logger = logging.getLogger(__name__)
 def _renter_phone(renter: Any) -> str:
     """Return the best-available phone number for a renter."""
     user_profile = getattr(getattr(renter, "user", None), "profile", None)
-    if user_profile is not None and getattr(user_profile, "whatsapp_number", None):
-        return user_profile.whatsapp_number
+    if user_profile is not None:
+        whatsapp: str | None = getattr(user_profile, "whatsapp_number", None)
+        if whatsapp is not None:
+            return whatsapp
     return renter.whatsapp_number or renter.phone or ""
 
 
 def _renter_lang(renter: Any, default: str = "en") -> str:
     """Return the best-available language preference for a renter."""
     user_profile = getattr(getattr(renter, "user", None), "profile", None)
-    if user_profile is not None and getattr(user_profile, "language_preference", None):
-        return user_profile.language_preference
+    if user_profile is not None:
+        lang: str | None = getattr(user_profile, "language_preference", None)
+        if lang is not None:
+            return lang
     return default
 
 

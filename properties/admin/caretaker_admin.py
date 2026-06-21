@@ -1,12 +1,10 @@
 from django.contrib import admin
-from django.utils.html import format_html
-from simple_history.admin import SimpleHistoryAdmin
 
 from ..models import Caretaker
 
 
 @admin.register(Caretaker)
-class CaretakerAdmin(SimpleHistoryAdmin):
+class CaretakerAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "unit",
@@ -24,7 +22,7 @@ class CaretakerAdmin(SimpleHistoryAdmin):
     )
     search_fields = ("name", "phone")
     list_filter = ("joining_date", "leaving_date", "is_active")
-    readonly_fields = ("created_at", "updated_at", "caretaker_image_thumbnail")
+    readonly_fields = ("created_at", "updated_at")
     fieldsets = (
         (
             "Basic Info",
@@ -38,12 +36,3 @@ class CaretakerAdmin(SimpleHistoryAdmin):
         ("Notes", {"fields": ("notes",)}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
-
-    def caretaker_image_thumbnail(self, obj):
-        if obj.caretaker_image:
-            return format_html(
-                '<img src="{}" style="height: 50px;"/>', obj.caretaker_image.url
-            )
-        return "-"
-
-    caretaker_image_thumbnail.short_description = "Caretaker Image Preview"

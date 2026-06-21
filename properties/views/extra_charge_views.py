@@ -1,8 +1,12 @@
-from typing import Any, override
+from typing import Any
 
+from django.contrib.auth.models import AnonymousUser
 from rest_framework import viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.serializers import BaseSerializer
+
+from rentsecure_be.type_compat import override
 
 from ..models import ExtraCharge
 from ..serializers import ExtraChargeSerializer
@@ -15,6 +19,8 @@ class ExtraChargeViewSet(viewsets.ModelViewSet[ExtraCharge]):
     @override
     def get_queryset(self) -> Any:
         user = self.request.user
+        if isinstance(user, AnonymousUser):
+            return ExtraCharge.objects.none()
         renter_profile = getattr(user, "renter_profile", None)
 
         if renter_profile:
@@ -27,7 +33,7 @@ class ExtraChargeViewSet(viewsets.ModelViewSet[ExtraCharge]):
         )
 
     @override
-    def perform_create(self, serializer: ExtraChargeSerializer) -> None:
+    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         unit = serializer.validated_data["unit"]
         renter = serializer.validated_data["renter"]
 

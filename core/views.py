@@ -5,11 +5,11 @@ import logging
 import secrets
 import uuid
 from datetime import timedelta
-from typing import Any, cast, override
+from typing import Any, cast
 
 import razorpay
 from django.conf import settings
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import AnonymousUser, Group
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone
@@ -32,6 +32,7 @@ from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
     process_rent_payout,
 )
+from rentsecure_be.type_compat import override
 from rentsecure_be.utils.cashfree_payout import add_beneficiary
 
 from .models import (
@@ -251,6 +252,8 @@ class UserSubscriptionViewSet(viewsets.ModelViewSet):
 
     @override
     def get_queryset(self) -> Any:
+        if isinstance(self.request.user, AnonymousUser):
+            return self.queryset.none()
         return UserSubscription.objects.filter(user=self.request.user)
 
     @override
@@ -277,6 +280,8 @@ class AddOnPurchaseViewSet(viewsets.ModelViewSet):
 
     @override
     def get_queryset(self) -> Any:
+        if isinstance(self.request.user, AnonymousUser):
+            return self.queryset.none()
         return AddOnPurchase.objects.filter(user=self.request.user)
 
     @override
@@ -303,6 +308,8 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 
     @override
     def get_queryset(self) -> Any:
+        if isinstance(self.request.user, AnonymousUser):
+            return self.queryset.none()
         return UsageLimit.objects.filter(user=self.request.user)
 
 
@@ -445,10 +452,10 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901
             return JsonResponse({"error": "RentRecord not found"}, status=404)
 
         # Idempotent: only process if not already PAID
-        if rent.payment_status == RentRecord.PaymentStatus.PAID:
+        if rent.payment_status == RentRecord.Status.PAID:
             return JsonResponse({"status": "ok", "message": "Already processed"})
 
-        rent.payment_status = RentRecord.PaymentStatus.PAID
+        rent.payment_status = RentRecord.Status.PAID
         rent.date_paid = timezone.now().date()
         rent.save(update_fields=["payment_status", "date_paid", "updated_at"])
 
@@ -476,10 +483,10 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901
             return JsonResponse({"error": "RentRecord not found"}, status=404)
 
         # Idempotent: only process if not already PAID
-        if rent.payment_status == RentRecord.PaymentStatus.PAID:
+        if rent.payment_status == RentRecord.Status.PAID:
             return JsonResponse({"status": "ok", "message": "Already processed"})
 
-        rent.payment_status = RentRecord.PaymentStatus.PAID
+        rent.payment_status = RentRecord.Status.PAID
         rent.date_paid = timezone.now().date()
         rent.save(update_fields=["payment_status", "date_paid", "updated_at"])
 
@@ -565,21 +572,19 @@ def update_owner_bank_details(request: Request, *args: Any, **kwargs: Any) -> Re
 def rent_inflow_summary(request: Request, *args: Any, **kwargs: Any) -> Response:
     """Owner rent inflow summary.
 
-    Fixed: Uses correct RentRecord field (owner) and (amount_paid) and (PENDING).
+    Fixed: Uses correct RentRecord field (owner) and (amount) and (PENDING).
     """
-    owner = request.user
+    owner: User = cast(User, request.user)
     total_received = (
-        RentRecord.objects.filter(  # type: ignore[attr-defined]
-            owner=owner, payment_status="PAID"
-        ).aggregate(total=Sum("amount_paid"))["total"]
+        RentRecord.objects.filter(owner=owner, status="PAID").aggregate(
+            total=Sum("amount")
+        )["total"]
         or 0
     )
 
-    pending_count = RentRecord.objects.filter(  # type: ignore[attr-defined]
-        owner=owner, payment_status="PENDING"
-    ).count()
+    pending_count = RentRecord.objects.filter(owner=owner, status="PENDING").count()
 
-    failed_payouts = RentRecord.objects.filter(  # type: ignore[attr-defined]
+    failed_payouts = RentRecord.objects.filter(
         owner=owner, payout_status="FAILED"
     ).count()
 
@@ -594,18 +599,16 @@ def rent_inflow_summary(request: Request, *args: Any, **kwargs: Any) -> Response
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def owner_rent_records(  # type: ignore[misc,arg-type]
-    request: Request, *args: Any, **kwargs: Any
-) -> Response:
+def owner_rent_records(request: Request, *args: Any, **kwargs: Any) -> Response:
     """Owner rent records list.
 
     Fixed: Uses correct FK path (unit.owner, renter.name, unit.unit).
     """
-    owner = request.user
+    owner: User = cast(User, request.user)
     rents = (
-        RentRecord.objects.filter(owner=owner)  # type: ignore[attr-defined]
+        RentRecord.objects.filter(owner=owner)
         .select_related("renter", "unit")
-        .order_by("-due_date")  # type: ignore[attr-defined]
+        .order_by("-due_date")
     )
 
     return Response(

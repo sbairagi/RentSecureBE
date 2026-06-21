@@ -1,6 +1,4 @@
-import builtins
-from datetime import date
-from typing import Any, override
+from typing import override
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -81,31 +79,6 @@ class RentRecord(models.Model):
         ordering = ["-due_date"]
         verbose_name = "Rent Record"
         verbose_name_plural = "Rent Records"
-
-    @builtins.property
-    def owner(self) -> Any:
-        """Backward-compatible alias for ``self.unit.owner``."""
-        return self.unit.owner
-
-    @builtins.property
-    def payment_status(self) -> str:
-        """Backward-compatible alias for ``self.status``."""
-        return self.status
-
-    @builtins.property
-    def rent_due_date(self) -> date:
-        """Backward-compatible alias for ``self.due_date``."""
-        return self.due_date
-
-    @builtins.property
-    def amount_paid(self) -> Any:
-        """Backward-compatible alias for ``self.amount``."""
-        return self.amount
-
-    @builtins.property
-    def payout_status(self) -> str:
-        """Derived payout status used by legacy views."""
-        return "PENDING"
 
     @override
     def clean(self) -> None:

@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import Unit
+from rentsecure_be.type_compat import override
 
 logger = logging.getLogger(__name__)
 
@@ -13,11 +14,10 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = "Notify property owners when units remain vacant for 30 or more days."
 
+    @override
     def handle(self, *args, **options):
         today = timezone.now().date()
-        units = Unit.objects.filter(
-            current_renter__isnull=True, last_vacated_at__isnull=False
-        )
+        units = Unit.objects.filter(is_vacant=True, last_vacated_at__isnull=False)
 
         if not units.exists():
             self.stdout.write(

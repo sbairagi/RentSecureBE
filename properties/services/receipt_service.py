@@ -67,6 +67,12 @@ def send_rent_receipt_email(rent_record: RentRecord) -> bool:
     """
     renter = rent_record.renter
 
+    if renter is None:
+        logger.warning(
+            "Renter is None for rent %s. Cannot send receipt.", rent_record.id
+        )
+        return False
+
     if not getattr(renter, "email", None):
         logger.warning(
             "Renter %s has no email. Cannot send receipt.", getattr(renter, "id", None)
@@ -85,7 +91,7 @@ def send_rent_receipt_email(rent_record: RentRecord) -> bool:
             f"Property: {rent_record.unit.unit}\n"
             f"Amount: ₹{rent_record.amount_paid}\n"
             f"Date Paid: {rent_record.date_paid}\n"
-            f"Payment Status: {rent_record.get_payment_status_display()}\n\n"
+            f"Payment Status: {rent_record.get_status_display()}\n\n"
             f"Thank you for your timely payment!\n\n"
             f"Best regards,\n"
             f"RentSecure Team"
@@ -124,7 +130,7 @@ def send_rent_receipt_on_payment(rent_record: RentRecord) -> bool:
     Returns:
         ``True`` if the email was sent, ``False`` otherwise.
     """
-    if rent_record.payment_status != RentRecord.PaymentStatus.PAID:
+    if rent_record.payment_status != RentRecord.Status.PAID:
         logger.debug(
             "Rent %s not marked as PAID. Skipping receipt email.", rent_record.id
         )

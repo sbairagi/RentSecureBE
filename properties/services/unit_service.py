@@ -14,14 +14,12 @@ shape without having to read the implementation.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
+
+from core.models import User
 
 from ..models import Renter, Unit
 from ..models.building_models import Building
-
-if TYPE_CHECKING:
-    from django.contrib.auth.models import AbstractUser
-
 
 # ---------------------------------------------------------------------------
 # Typed payloads — keep the public contract stable & mypy-friendly.
@@ -120,7 +118,7 @@ def get_building_analytics(building: Building) -> BuildingAnalytics:
     )
 
 
-def get_owner_analytics(user: AbstractUser) -> OwnerAnalytics:
+def get_owner_analytics(user: User) -> OwnerAnalytics:
     """
     Get comprehensive analytics for all buildings owned by a user.
 

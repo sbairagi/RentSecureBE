@@ -2,14 +2,13 @@ from datetime import timedelta
 
 from django.utils.timezone import now
 
-from notification.services.communication import send_whatsapp_message
+from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import RentRecord
 from rentsecure_be.services.cashfree_service import process_rent_payout
 
 
 def retry_failed_payouts():
     failed_rents = RentRecord.objects.filter(
-        payment_status="PAID",
         payout_status="FAILED",
         payout_retries__lt=3,  # Limit retry attempts
     )

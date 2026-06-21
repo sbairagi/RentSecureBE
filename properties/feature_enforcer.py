@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime, timedelta
-from typing import TYPE_CHECKING, Literal
+from typing import Any, Literal
 
-from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -24,28 +23,17 @@ from core.models import (
 
 from .constants import GRACE_PERIOD_DAYS
 
-if TYPE_CHECKING:
-    from django.contrib.auth.models import AbstractUser
-
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Type aliases
-# ---------------------------------------------------------------------------
-
-#: A limit value is either a concrete non-negative ``int`` or the literal
-#: string ``"unlimited"`` (which is never consumed numerically).
 FeatureLimit = int | Literal["unlimited"]
-
-User = get_user_model()
 
 
 class FeatureEnforcer:
     """Enforce plan + add-on limits for a given user."""
 
-    def __init__(self, user: AbstractUser) -> None:
+    def __init__(self, user: Any) -> None:
         """Store the target user; no DB I/O happens here."""
-        self.user: AbstractUser = user
+        self.user: Any = user
 
     # ------------------------------------------------------------------
     # Subscription helpers
@@ -54,8 +42,13 @@ class FeatureEnforcer:
     def get_plan_name(self) -> str:
         """Return the lower-cased plan name, or ``"free"`` if unsubscribed."""
         try:
-            return self.user.usersubscription.plan.name.lower()
+            plan = self.user.usersubscription.plan
+            if plan is None:
+                return "free"
+            return str(plan.name).lower()
         except UserSubscription.DoesNotExist:
+            return "free"
+        except AttributeError:
             return "free"
 
     def _coerce_date(self, value: date | datetime | None) -> date | None:
@@ -99,6 +92,8 @@ class FeatureEnforcer:
         """Return the plan's hard limit for ``key`` (or ``"unlimited"``)."""
         try:
             sub: UserSubscription = self.user.usersubscription
+            if sub.plan is None:
+                return 0
             limit_value: str = PlanFeatureLimit.objects.get(
                 plan=sub.plan, feature_key=key
             ).value
