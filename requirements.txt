@@ -16,6 +16,9 @@
 Django==4.2.30
 asgiref==3.8.1
 
+# --- Build / packaging (razorpay 1.4.2 requires pkg_resources) ---
+setuptools<70                       # pin below 70 to keep pkg_resources importable
+
 # --- REST API + JWT Auth ---
 djangorestframework==3.16.0
 djangorestframework_simplejwt==5.5.0

@@ -11,54 +11,31 @@ class CaretakerAdmin(SimpleHistoryAdmin):
         "id",
         "unit",
         "name",
+        "email",
         "phone",
         "alternate_phone",
-        "whatsapp_number",
-        "emergency_contact_name",
-        "emergency_contact_number",
-        "caretaker_image_thumbnail",
-        "address_line",
-        "landmark",
-        "city",
-        "state",
-        "country",
-        "postal_code",
-        "start_date",
-        "end_date",
+        "address",
+        "joining_date",
+        "leaving_date",
+        "is_active",
         "notes",
         "created_at",
         "updated_at",
     )
     search_fields = ("name", "phone")
-    list_filter = ("start_date", "end_date")
+    list_filter = ("joining_date", "leaving_date", "is_active")
     readonly_fields = ("created_at", "updated_at", "caretaker_image_thumbnail")
     fieldsets = (
         (
             "Basic Info",
-            {"fields": ("unit", "name", "phone", "alternate_phone", "whatsapp_number")},
-        ),
-        (
-            "Emergency Contact",
-            {"fields": ("emergency_contact_name", "emergency_contact_number")},
-        ),
-        (
-            "Documents",
-            {"fields": ("caretaker_image", "caretaker_image_thumbnail", "id_proof")},
+            {"fields": ("unit", "name", "email", "phone", "alternate_phone")},
         ),
         (
             "Address",
-            {
-                "fields": (
-                    "address_line",
-                    "landmark",
-                    "city",
-                    "state",
-                    "country",
-                    "postal_code",
-                )
-            },
+            {"fields": ("address",)},
         ),
-        ("Dates & Notes", {"fields": ("start_date", "end_date", "notes")}),
+        ("Dates", {"fields": ("joining_date", "leaving_date", "is_active")}),
+        ("Notes", {"fields": ("notes",)}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
