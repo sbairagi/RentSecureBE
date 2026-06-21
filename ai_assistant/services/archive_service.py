@@ -25,9 +25,8 @@ def _serialize_value(value: Any) -> Any:
 
 
 def archive_renter_data(renter: Any) -> ArchivedRenter:
-    qs = RentRecord.objects.filter(renter=renter)
-    values_qs = qs.values()
-    rent_records = _serialize_value(list(values_qs))
+    qs = RentRecord.objects.filter(renter=renter).values()
+    rent_records = _serialize_value(list(qs))
     image_paths = list(
         UnitImage.objects.filter(renter=renter).values_list("image", flat=True)
     )
