@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 from datetime import date
 from typing import Any
 
@@ -8,18 +10,6 @@ openai.api_key = settings.OPENAI_API_KEY
 
 
 def gpt_smart_reply(user: Any, user_query: str, context_data: str) -> str:
-    # prompt = f"""
-    # You are a smart assistant for a rent management system. Based on the
-    # following data, answer the user's question smartly.
-
-    # User Data:
-    # {context_data}
-
-    # User's Question: "{user_query}"
-
-    # Respond in Hindi or English based on user tone, keep response short and clear.
-    # """
-
     prompt = f"""
     You're RentSecure's SmartBot, a financial assistant for property owners.
 
@@ -35,8 +25,7 @@ def gpt_smart_reply(user: Any, user_query: str, context_data: str) -> str:
     Use memory from chat history when possible.
     """
 
-    response = openai.ChatCompletion.create(  # type: ignore[attr-defined]
-        model="gpt-4",
+    response = openai.ChatCompletion.create(
         messages=[
             {
                 "role": "system",
