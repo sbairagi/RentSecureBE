@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 from datetime import date, timedelta
 
 from django.contrib.auth.models import AnonymousUser

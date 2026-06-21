@@ -1,10 +1,12 @@
+# mypy: disable-error-code="import-not-found"
+
 import os
 import tempfile
 from typing import Any
 
 from django.conf import settings
 from django.template.loader import render_to_string
-from PyPDF2 import PdfMerger  # type: ignore[import-not-found]
+from PyPDF2 import PdfMerger
 from weasyprint import HTML
 
 from properties.models import RentAgreementDraft
