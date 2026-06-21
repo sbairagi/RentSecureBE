@@ -1,3 +1,5 @@
+# mypy: disable-error-code="import-not-found"
+
 import pytest
 from django.contrib.auth.models import Group
 from django.core.cache import cache
