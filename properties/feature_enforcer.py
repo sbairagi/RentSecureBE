@@ -7,10 +7,10 @@ feature gating across the application. All methods are fully typed.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, Literal
 
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -25,8 +25,7 @@ from core.models import (
 from .constants import GRACE_PERIOD_DAYS
 
 if TYPE_CHECKING:
-    pass
-
+    from django.contrib.auth.models import AbstractUser
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +36,8 @@ logger = logging.getLogger(__name__)
 #: A limit value is either a concrete non-negative ``int`` or the literal
 #: string ``"unlimited"`` (which is never consumed numerically).
 FeatureLimit = int | Literal["unlimited"]
+
+User = get_user_model()
 
 
 class FeatureEnforcer:
@@ -87,7 +88,7 @@ class FeatureEnforcer:
         end_date: date | None = self._coerce_date(sub.end_date)
         if not end_date:
             return False
-        expired_since: date = timezone.localdate() - end_date
+        expired_since: timedelta = timezone.localdate() - end_date
         return expired_since.days > grace_days
 
     # ------------------------------------------------------------------

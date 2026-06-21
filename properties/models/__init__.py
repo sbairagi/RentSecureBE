@@ -1,5 +1,5 @@
 from .building_models import Building
-from .caretaker_models import Caretaker
+from .caretaker_models import CareTaker as Caretaker
 from .extra_charge_models import ExtraCharge
 
 # Optional placeholders for future modules

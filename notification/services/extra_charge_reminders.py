@@ -14,7 +14,7 @@ from properties.models import ExtraCharge
 logger = logging.getLogger(__name__)
 
 
-def send_due_extra_charge_reminders(days_ahead=0):
+def send_due_extra_charge_reminders(days_ahead: int = 0) -> int:
     target_date = timezone.now().date() + timedelta(days=days_ahead)
     charges = ExtraCharge.objects.filter(
         status=ExtraCharge.Status.DUE,

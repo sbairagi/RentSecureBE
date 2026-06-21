@@ -2,9 +2,9 @@
 
 from datetime import timedelta
 
-from communication.utils import send_whatsapp_message
 from django.utils import timezone
 
+from notification.services.communication import send_whatsapp_message
 from properties.models import Renter
 
 # from renters.models import Renter

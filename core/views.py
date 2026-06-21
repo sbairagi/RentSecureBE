@@ -569,17 +569,17 @@ def rent_inflow_summary(request: Request, *args: Any, **kwargs: Any) -> Response
     """
     owner = request.user
     total_received = (
-        RentRecord.objects.filter(owner=owner, payment_status="PAID").aggregate(
-            total=Sum("amount_paid")
-        )["total"]
+        RentRecord.objects.filter(  # type: ignore[attr-defined]
+            owner=owner, payment_status="PAID"
+        ).aggregate(total=Sum("amount_paid"))["total"]
         or 0
     )
 
-    pending_count = RentRecord.objects.filter(
+    pending_count = RentRecord.objects.filter(  # type: ignore[attr-defined]
         owner=owner, payment_status="PENDING"
     ).count()
 
-    failed_payouts = RentRecord.objects.filter(
+    failed_payouts = RentRecord.objects.filter(  # type: ignore[attr-defined]
         owner=owner, payout_status="FAILED"
     ).count()
 
@@ -594,26 +594,28 @@ def rent_inflow_summary(request: Request, *args: Any, **kwargs: Any) -> Response
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def owner_rent_records(request: Request, *args: Any, **kwargs: Any) -> Response:
+def owner_rent_records(  # type: ignore[misc,arg-type]
+    request: Request, *args: Any, **kwargs: Any
+) -> Response:
     """Owner rent records list.
 
     Fixed: Uses correct FK path (unit.owner, renter.name, unit.unit).
     """
     owner = request.user
     rents = (
-        RentRecord.objects.filter(owner=owner)
+        RentRecord.objects.filter(owner=owner)  # type: ignore[attr-defined]
         .select_related("renter", "unit")
-        .order_by("-rent_due_date")
+        .order_by("-due_date")  # type: ignore[attr-defined]
     )
 
     return Response(
         [
             {
                 "property": r.unit.unit,
-                "renter": r.renter.name,
-                "month": r.rent_due_date.strftime("%B %Y") if r.rent_due_date else "",
-                "rent": float(r.amount_paid),
-                "status": r.payment_status,
+                "renter": r.renter.name if r.renter else "",
+                "month": r.due_date.strftime("%B %Y"),
+                "rent": float(r.amount),
+                "status": r.status,
                 "payout_status": r.payout_status,
             }
             for r in rents

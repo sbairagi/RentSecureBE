@@ -6,7 +6,7 @@ from properties.models import RentAgreementDraft
 logger = logging.getLogger(__name__)
 
 
-def send_signature_reminders():
+def send_signature_reminders() -> None:
     """Send reminders for rent agreements where the renter has not yet signed.
 
     ``RentRecord`` has no ``signature_status`` column — signature tracking

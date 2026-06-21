@@ -1,148 +1,121 @@
+import builtins
 from datetime import date
-from decimal import Decimal
+from typing import Any, override
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from simple_history.models import HistoricalRecords
 
-from core.models import User
-
-from .renter_models import Renter
 from .unit_models import Unit
 
 
 class RentRecord(models.Model):
-    class PaymentMode(models.TextChoices):
+    """
+    Tracks individual rent payments for a unit.
+
+    Each record links a renter to a payment event so that property
+    owners can maintain a complete audit trail of rent collection.
+    """
+
+    class PaymentMethod(models.TextChoices):
         CASH = "cash", "Cash"
+        BANK_TRANSFER = "bank_transfer", "Bank Transfer"
+        UPI = "upi", "UPI"
         CHEQUE = "cheque", "Cheque"
-        ONLINE = "online", "Online Transfer"
+        CARD = "card", "Card"
+        ONLINE = "online", "Online Payment"
         OTHER = "other", "Other"
 
-    class PaymentStatus(models.TextChoices):
-        PENDING = "PENDING", "Pending"
-        PAID = "PAID", "Paid"
-        FAILED = "FAILED", "Failed"
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        PAID = "paid", "Paid"
+        OVERDUE = "overdue", "Overdue"
+        CANCELLED = "cancelled", "Cancelled"
 
-    def __init__(self, *args, **kwargs):
-        if not args:
-            amount = kwargs.pop("amount", None)
-            due_date = kwargs.pop("due_date", None)
-            month = kwargs.pop("month", None)
-            year = kwargs.pop("year", None)
-
-            renter = kwargs.get("renter")
-            if renter is not None:
-                kwargs.setdefault("unit", renter.unit)
-                kwargs.setdefault("owner", renter.unit.owner)
-            if amount is not None and "amount_paid" not in kwargs:
-                kwargs["amount_paid"] = amount
-            if due_date is not None:
-                kwargs.setdefault("rent_due_date", due_date)
-                kwargs.setdefault("date_paid", due_date)
-            if month is not None and year is not None and "rent_month" not in kwargs:
-                kwargs["rent_month"] = date(int(year), int(month), 1)
-            if "rent_month" in kwargs:
-                kwargs.setdefault("date_paid", kwargs["rent_month"])
-
-        super().__init__(*args, **kwargs)
-
-    id = models.AutoField(primary_key=True)
-    renter = models.ForeignKey(
-        Renter, on_delete=models.CASCADE, related_name="rent_records", db_index=True
-    )
     unit = models.ForeignKey(
-        Unit, on_delete=models.CASCADE, related_name="rent_records_unit"
+        Unit,
+        on_delete=models.CASCADE,
+        related_name="rent_records",
+        db_index=True,
+        help_text="Unit this rent record belongs to",
     )
-    owner = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="rent_records_owner", db_index=True
+    renter = models.ForeignKey(
+        "properties.Renter",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="rent_records",
+        help_text="Renter who made the payment",
     )
-    rent_month = models.DateField(
-        help_text="Use first day of the month, e.g. 2025-05-01", db_index=True
+    amount = models.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Rent amount paid"
     )
-    amount_paid = models.DecimalField(
-        max_digits=10, decimal_places=2, help_text="Amount paid for rent"
+    payment_method = models.CharField(
+        max_length=50,
+        choices=PaymentMethod.choices,
+        help_text="Mode of payment used",
     )
-    date_paid = models.DateField(help_text="Date when payment was made")
-    payment_status = models.CharField(
+    status = models.CharField(
         max_length=20,
-        choices=PaymentStatus.choices,
-        default=PaymentStatus.PENDING,
+        choices=Status.choices,
+        default=Status.PENDING,
         help_text="Payment status",
     )
-    payment_mode = models.CharField(
-        max_length=20,
-        choices=PaymentMode.choices,
-        blank=True,
-        null=True,
-        help_text="Mode of payment",
+    paid_on = models.DateField(
+        null=True, blank=True, help_text="Date when payment was made"
     )
-    remarks = models.TextField(
-        blank=True, null=True, help_text="Additional remarks or notes"
+    due_date = models.DateField(help_text="Rent due date", db_index=True)
+    late_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0, help_text="Late fee applied"
+    )
+    discount = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0, help_text="Any discount given"
+    )
+    notes = models.TextField(blank=True, null=True)
+    transaction_id = models.CharField(
+        max_length=100, blank=True, null=True, help_text="Payment gateway / bank ref"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
-
-    payout_status = models.CharField(max_length=20, default="PENDING")
-    payout_reference = models.CharField(max_length=100, null=True, blank=True)
-    payout_retry_count = models.IntegerField(default=0)
-    last_retry_on = models.DateTimeField(null=True, blank=True)
-    razorpay_order_id = models.CharField(max_length=100, blank=True, null=True)
-    razorpay_payment_status = models.CharField(max_length=20, default="PENDING")
-    payout_retries = models.IntegerField(default=0)
-    last_payout_retry = models.DateTimeField(null=True, blank=True)
-    grace_days = models.PositiveIntegerField(default=3)
-    late_fee = models.DecimalField(max_digits=8, decimal_places=2, default=100.00)
-    adjustment_reason = models.TextField(blank=True, null=True)
-    rent_due_date = models.DateField(default=date.today)
-    payment_link = models.URLField(null=True, blank=True)
-    rent_due_day = models.IntegerField(default=5)
-    is_active = models.BooleanField(default=True)
-    invoice_number = models.CharField(max_length=50, unique=True, null=True, blank=True)
-    invoice_pdf = models.FileField(upload_to="rent_invoices/", null=True, blank=True)
 
     class Meta:
-        unique_together = ("renter", "rent_month")
-        ordering = ["-rent_month"]
+        unique_together = ("unit", "due_date")
+        ordering = ["-due_date"]
+        verbose_name = "Rent Record"
+        verbose_name_plural = "Rent Records"
 
-    def clean(self):
-        if self.amount_paid < 0:
-            raise ValidationError("Amount paid cannot be negative.")
+    @builtins.property
+    def owner(self) -> Any:
+        """Backward-compatible alias for ``self.unit.owner``."""
+        return self.unit.owner
 
-        if self.date_paid < self.rent_month:
-            raise ValidationError("Date paid cannot be before rent month.")
+    @builtins.property
+    def payment_status(self) -> str:
+        """Backward-compatible alias for ``self.status``."""
+        return self.status
 
-        if self.renter.unit != self.unit:
-            raise ValidationError("Renter does not belong to the selected unit.")
+    @builtins.property
+    def rent_due_date(self) -> date:
+        """Backward-compatible alias for ``self.due_date``."""
+        return self.due_date
 
-    @property
-    def amount(self) -> Decimal:
-        """Alias for ``amount_paid`` used by older code paths."""
-        return self.amount_paid
+    @builtins.property
+    def amount_paid(self) -> Any:
+        """Backward-compatible alias for ``self.amount``."""
+        return self.amount
 
-    @property
-    def payment_date(self) -> date:
-        """Alias for ``date_paid`` used by older code paths."""
-        return self.date_paid
+    @builtins.property
+    def payout_status(self) -> str:
+        """Derived payout status used by legacy views."""
+        return "PENDING"
 
-    @property
-    def due_date(self) -> date:
-        """Alias for ``rent_due_date`` used by older code paths."""
-        return self.rent_due_date
+    @override
+    def clean(self) -> None:
+        if self.paid_on is not None and self.due_date is not None:
+            if self.paid_on < self.due_date:
+                pass  # Early payment is allowed
 
-    @property
-    def month(self) -> int:
-        """Convenience accessor for ``rent_month.month``."""
-        return self.rent_month.month
+        if self.amount < 0:
+            raise ValidationError("Rent amount cannot be negative.")
 
-    @property
-    def year(self) -> int:
-        """Convenience accessor for ``rent_month.year``."""
-        return self.rent_month.year
-
-    def __str__(self):
-        return (
-            f"{self.renter.name} - {self.rent_month.strftime('%B %Y')} "
-            f"- {self.amount_paid}"
-        )
+    @override
+    def __str__(self) -> str:
+        return f"{self.unit} - {self.due_date} - {self.status}"

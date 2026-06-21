@@ -1,4 +1,4 @@
-from typing import override
+from typing import Any, override
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -45,20 +45,23 @@ class NotificationPreference(models.Model):
     payout_alerts_email = models.BooleanField(default=False)
 
     @override
-    def save(self, *args: object, **kwargs: object) -> None:
-        if self.pk is None and self.owner_id:
-            existing = NotificationPreference.objects.filter(
-                owner_id=self.owner_id
-            ).first()
-            if existing:
-                for field in self._meta.fields:
-                    if field.name in {"id", "owner"}:
-                        continue
-                    setattr(existing, field.attname, getattr(self, field.attname))
-                existing.save()
-                self.pk = existing.pk
-                self.__dict__.update(existing.__dict__)
-                return
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Handle upsert for NotificationPreference
+        is_new = self.pk is None
+        if is_new:
+            if self.owner_id is not None:
+                existing = NotificationPreference.objects.filter(
+                    owner_id=self.owner_id
+                ).first()
+                if existing:
+                    for field in self._meta.fields:
+                        if field.name in {"id", "owner"}:
+                            continue
+                        setattr(existing, field.attname, getattr(self, field.attname))
+                    existing.save()
+                    self.pk = existing.pk
+                    self.__dict__.update(existing.__dict__)
+                    return
         return super().save(*args, **kwargs)
 
     @override
@@ -113,18 +116,21 @@ class SubscriptionPlan(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     @override
-    def save(self, *args: object, **kwargs: object) -> None:
-        if self.pk is None and self.name:
-            existing = SubscriptionPlan.objects.filter(name=self.name).first()
-            if existing:
-                for field in self._meta.fields:
-                    if field.name in {"id", "name", "created_at", "updated_at"}:
-                        continue
-                    setattr(existing, field.attname, getattr(self, field.attname))
-                existing.save()
-                self.pk = existing.pk
-                self.__dict__.update(existing.__dict__)
-                return
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Handle upsert for SubscriptionPlan
+        is_new = self.pk is None
+        if is_new:
+            if self.name:
+                existing = SubscriptionPlan.objects.filter(name=self.name).first()
+                if existing:
+                    for field in self._meta.fields:
+                        if field.name in {"id", "name", "created_at", "updated_at"}:
+                            continue
+                        setattr(existing, field.attname, getattr(self, field.attname))
+                    existing.save()
+                    self.pk = existing.pk
+                    self.__dict__.update(existing.__dict__)
+                    return
         return super().save(*args, **kwargs)
 
     @override
@@ -152,24 +158,27 @@ class UserSubscription(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     @override
-    def save(self, *args: object, **kwargs: object) -> None:
-        if self.pk is None and self.user_id:
-            existing = UserSubscription.objects.filter(user_id=self.user_id).first()
-            if existing:
-                for field in self._meta.fields:
-                    if field.name in {
-                        "id",
-                        "user",
-                        "start_date",
-                        "created_at",
-                        "updated_at",
-                    }:
-                        continue
-                    setattr(existing, field.attname, getattr(self, field.attname))
-                existing.save()
-                self.pk = existing.pk
-                self.__dict__.update(existing.__dict__)
-                return
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Handle upsert for UserSubscription
+        is_new = self.pk is None
+        if is_new:
+            if self.user_id is not None:
+                existing = UserSubscription.objects.filter(user_id=self.user_id).first()
+                if existing:
+                    for field in self._meta.fields:
+                        if field.name in {
+                            "id",
+                            "user",
+                            "start_date",
+                            "created_at",
+                            "updated_at",
+                        }:
+                            continue
+                        setattr(existing, field.attname, getattr(self, field.attname))
+                    existing.save()
+                    self.pk = existing.pk
+                    self.__dict__.update(existing.__dict__)
+                    return
         return super().save(*args, **kwargs)
 
     @override
@@ -214,18 +223,20 @@ class PlanFeatureLimit(models.Model):
         unique_together = ("plan", "feature_key")
 
     @override
-    def save(self, *args: object, **kwargs: object) -> None:
-        if self.pk is None and self.plan_id and self.feature_key:
-            existing = PlanFeatureLimit.objects.filter(
-                plan_id=self.plan_id,
-                feature_key=self.feature_key,
-            ).first()
-            if existing:
-                existing.value = self.value
-                existing.save()
-                self.pk = existing.pk
-                self.__dict__.update(existing.__dict__)
-                return
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Handle upsert for PlanFeatureLimit
+        if self.pk is None:
+            if self.plan_id is not None and self.feature_key:
+                existing = PlanFeatureLimit.objects.filter(
+                    plan_id=self.plan_id,
+                    feature_key=self.feature_key,
+                ).first()
+                if existing:
+                    existing.value = self.value
+                    existing.save()
+                    self.pk = existing.pk
+                    self.__dict__.update(existing.__dict__)
+                    return
         return super().save(*args, **kwargs)
 
     @override
@@ -247,18 +258,20 @@ class UsageLimit(models.Model):
         unique_together = ("user", "feature_key")
 
     @override
-    def save(self, *args: object, **kwargs: object) -> None:
-        if self.pk is None and self.user_id and self.feature_key:
-            existing = UsageLimit.objects.filter(
-                user_id=self.user_id,
-                feature_key=self.feature_key,
-            ).first()
-            if existing:
-                existing.usage_count = self.usage_count
-                existing.save()
-                self.pk = existing.pk
-                self.__dict__.update(existing.__dict__)
-                return
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Handle upsert for UsageLimit
+        if self.pk is None:
+            if self.user_id is not None and self.feature_key:
+                existing = UsageLimit.objects.filter(
+                    user_id=self.user_id,
+                    feature_key=self.feature_key,
+                ).first()
+                if existing:
+                    existing.usage_count = self.usage_count
+                    existing.save()
+                    self.pk = existing.pk
+                    self.__dict__.update(existing.__dict__)
+                    return
         return super().save(*args, **kwargs)
 
     @override

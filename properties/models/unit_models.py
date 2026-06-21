@@ -2,6 +2,7 @@
 
 # Django Imports
 from decimal import Decimal
+from typing import TYPE_CHECKING, Any, cast, override
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -11,6 +12,12 @@ from simple_history.models import HistoricalRecords
 
 # Local Imports
 from core.models import User
+
+if TYPE_CHECKING:
+    from django.core.files.uploadedfile import UploadedFile
+
+    from properties.models.renter_models import Renter
+
 
 # Phone number validator for consistent format
 phone_regex = RegexValidator(
@@ -56,7 +63,8 @@ class Unit(models.Model):
         VACANT = "vacant", "Vacant"
         OCCUPIED = "occupied", "Occupied"
 
-    def __init__(self, *args, **kwargs):
+    @override
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         legacy_rent_amount = None
         legacy_security_deposit = None
         if not args:
@@ -195,37 +203,39 @@ class Unit(models.Model):
         verbose_name_plural = "Units"
         ordering = ["-created_at"]
 
-    def clean(self):
+    @override
+    def clean(self) -> None:
         """Validate geographic coordinates if provided."""
         if self.latitude and not -90 <= self.latitude <= 90:
             raise ValidationError("Latitude must be between -90 and 90.")
         if self.longitude and not -180 <= self.longitude <= 180:
             raise ValidationError("Longitude must be between -180 and 180.")
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         """Return unit identifier with location."""
         return f"{self.unit} - {self.city}, {self.state}"
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Return unit display name."""
         return self.building_name or self.unit
 
     @property
-    def unit_number(self):
+    def unit_number(self) -> str:
         """Backward-compatible alias used by older tests and integrations."""
         return self.unit
 
     @unit_number.setter
-    def unit_number(self, value):
+    def unit_number(self, value: str) -> None:
         self.unit = value
 
     @property
-    def title(self):
+    def title(self) -> str:
         return self.name
 
     @property
-    def rent_amount(self):
+    def rent_amount(self) -> Decimal:
         return (
             self._legacy_rent_amount
             if self._legacy_rent_amount is not None
@@ -233,11 +243,11 @@ class Unit(models.Model):
         )
 
     @rent_amount.setter
-    def rent_amount(self, value):
+    def rent_amount(self, value: Decimal) -> None:
         self._legacy_rent_amount = value
 
     @property
-    def security_deposit(self):
+    def security_deposit(self) -> Decimal:
         return (
             self._legacy_security_deposit
             if self._legacy_security_deposit is not None
@@ -245,16 +255,16 @@ class Unit(models.Model):
         )
 
     @security_deposit.setter
-    def security_deposit(self, value):
+    def security_deposit(self, value: Decimal) -> None:
         self._legacy_security_deposit = value
 
     @property
-    def current_renter(self):
+    def current_renter(self) -> "Renter | None":
         """Get the currently active renter (if any)."""
         return self.renters.filter(status="active").first()
 
     @property
-    def total_renters(self):
+    def total_renters(self) -> int:
         """Return count of all renters who have rented this unit."""
         return self.renters.count()
 
@@ -291,7 +301,8 @@ class UnitVacancy(models.Model):
         verbose_name_plural = "Unit Vacancies"
         ordering = ["-noted_on"]
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f"{self.unit} - {self.get_reason_display()}"
 
 
@@ -339,12 +350,15 @@ class UnitDocument(models.Model):
             models.Index(fields=["unit", "uploaded_at"]),
         ]
 
-    def clean(self):
+    @override
+    def clean(self) -> None:
         """Validate and hash document to prevent duplicates."""
         if self.document:
             from properties.utils import generate_file_hash
 
-            hash_value = generate_file_hash(self.document)
+            hash_value = generate_file_hash(
+                cast("UploadedFile", self.document)  # type: ignore[arg-type]
+            )
             self.file_hash = hash_value
 
             existing = UnitDocument.objects.filter(
@@ -354,7 +368,8 @@ class UnitDocument(models.Model):
             if existing.exists():
                 raise ValidationError("This document already exists for this unit.")
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f"{self.unit} - {self.document.name}"
 
 
@@ -401,12 +416,15 @@ class UnitImage(models.Model):
             models.Index(fields=["unit", "uploaded_at"]),
         ]
 
-    def clean(self):
+    @override
+    def clean(self) -> None:
         """Validate and hash image to prevent duplicate uploads."""
         if self.image:
             from properties.utils import generate_file_hash
 
-            hash_value = generate_file_hash(self.image)
+            hash_value = generate_file_hash(
+                cast("UploadedFile", self.image)  # type: ignore[arg-type]
+            )
             self.image_hash = hash_value
 
             existing = UnitImage.objects.filter(
@@ -416,5 +434,6 @@ class UnitImage(models.Model):
             if existing.exists():
                 raise ValidationError("This image already exists for this unit.")
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f"{self.unit} - Image"

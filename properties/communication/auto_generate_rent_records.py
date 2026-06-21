@@ -1,7 +1,6 @@
 from datetime import date
 
-from communication.utils import send_whatsapp_message
-
+from notification.services.communication import send_whatsapp_message
 from properties.models import Renter, RentRecord
 from rentsecure_be.services.razorpay_service import create_payment_link
 

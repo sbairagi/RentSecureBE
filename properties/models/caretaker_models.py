@@ -1,21 +1,11 @@
-"""
-Caretaker Management Models
+from typing import override
 
-Handles caretaker/facility manager information for properties.
-Caretakers are responsible for day-to-day maintenance and management.
-"""
-
-# Django Imports
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 from simple_history.models import HistoricalRecords
 
-# Local Imports
-from .unit_models import Unit
-
-# Phone number validator for consistent format
+# Reuse the shared phone regex if available; otherwise define a local one.
 phone_regex = RegexValidator(
     regex=r"^\+?1?\d{9,15}$",
     message=(
@@ -25,158 +15,68 @@ phone_regex = RegexValidator(
 )
 
 
-class Caretaker(models.Model):
+class CareTaker(models.Model):
     """
-    Represents a caretaker/facility manager assigned to a unit.
-
-    Caretakers handle day-to-day operations, maintenance coordination,
-    and communication between owners and renters.
-
-    Attributes:
-        unit (Unit): Unit managed by this caretaker
-        name (str): Full name
-        phone (str): Primary contact number
-        whatsapp_number (str): WhatsApp contact (for quick messaging)
-        emergency_contact_*: Emergency contact information
-        id_proof: Government ID document
-        start_date: When caretaker started
+    Caretaker/manager assigned to a unit/property.
     """
 
-    def __init__(self, *args, **kwargs):
-        if not args:
-            kwargs.pop("email", None)
-            building = kwargs.pop("unit__building", None)
-            if building is not None and "unit" not in kwargs:
-                kwargs["unit"] = Unit.objects.create(
-                    owner=building.owner,
-                    building=building,
-                    unit=f"caretaker-{building.id}",
-                    unit_type=Unit.UnitType.FLAT,
-                    address_line=building.address_line,
-                    city=building.city,
-                    state=building.state,
-                    country=building.country,
-                    postal_code=building.postal_code,
-                )
-
-            unit = kwargs.get("unit")
-            kwargs.setdefault("id_proof", "caretaker_id.pdf")
-            if unit is not None:
-                kwargs.setdefault("address_line", unit.address_line)
-                kwargs.setdefault("city", unit.city)
-                kwargs.setdefault("state", unit.state)
-                kwargs.setdefault("country", unit.country)
-                kwargs.setdefault("postal_code", unit.postal_code)
-        super().__init__(*args, **kwargs)
-
-    id = models.AutoField(primary_key=True)
     unit = models.ForeignKey(
-        Unit,
+        "properties.Unit",
         on_delete=models.CASCADE,
         related_name="caretakers",
         db_index=True,
-        help_text="Unit managed by this caretaker",
     )
-
-    # Personal Information
-    name = models.CharField(max_length=100, help_text="Caretaker's full name")
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="caretaker_profile",
+    )
+    name = models.CharField(max_length=100, help_text="Caretaker full name")
+    email = models.EmailField(null=True, blank=True)
     phone = models.CharField(
-        validators=[phone_regex],
-        max_length=15,
-        db_index=True,
-        help_text="Primary phone number (+country_code format)",
+        validators=[phone_regex], max_length=15, help_text="Primary phone"
     )
     alternate_phone = models.CharField(
         validators=[phone_regex],
         max_length=15,
         blank=True,
         null=True,
-        help_text="Alternate phone number (optional)",
+        help_text="Alternate phone",
     )
-    whatsapp_number = models.CharField(
-        max_length=15,
-        blank=True,
-        null=True,
-        help_text="WhatsApp number for quick communication",
-    )
-    caretaker_image = models.ImageField(
-        upload_to="caretaker_image/",
-        blank=True,
-        null=True,
-        help_text="Photo of caretaker for identification",
-    )
-
-    # Emergency Contact
-    emergency_contact_name = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text="Name of emergency contact person",
-    )
-    emergency_contact_number = models.CharField(
-        validators=[phone_regex],
-        max_length=15,
-        blank=True,
-        null=True,
-        help_text="Emergency contact phone number",
-    )
-
-    # Documents
-    id_proof = models.FileField(
-        upload_to="id_proof/caretaker/",
-        help_text="Government ID proof (Aadhaar, PAN, etc.)",
-    )
-
-    # Address Information
-    address_line = models.CharField(max_length=255, help_text="Residential address")
-    landmark = models.CharField(
-        max_length=255, blank=True, null=True, help_text="Nearby landmark"
-    )
-    city = models.CharField(max_length=100, help_text="City", db_index=True)
-    state = models.CharField(max_length=100, help_text="State/Province")
-    country = models.CharField(max_length=100, help_text="Country")
-    postal_code = models.CharField(max_length=20, help_text="ZIP or postal code")
-
-    # Employment Details
-    start_date = models.DateField(
-        blank=True, null=True, db_index=True, help_text="When caretaker started"
-    )
-    end_date = models.DateField(
-        blank=True, null=True, help_text="When caretaker ended (null if active)"
-    )
-
-    # Additional Information
-    notes = models.TextField(
-        blank=True, null=True, help_text="Additional notes about caretaker"
-    )
-
-    # Tracking
+    address = models.TextField(blank=True, null=True)
+    joining_date = models.DateField(help_text="Date of joining", db_index=True)
+    leaving_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, help_text="Currently active?")
+    notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
 
     class Meta:
         unique_together = ("unit", "phone")
+        ordering = ["-joining_date"]
         verbose_name = "Caretaker"
         verbose_name_plural = "Caretakers"
-        ordering = ["-start_date"]
-        indexes = [
-            models.Index(fields=["unit", "start_date"]),
-        ]
 
-    def clean(self):
-        """Validate date range: end_date cannot be before start_date."""
-        if self.end_date and self.start_date and self.end_date < self.start_date:
-            raise ValidationError("End date cannot be earlier than start date.")
+    @override
+    def clean(self) -> None:
+        from django.core.exceptions import ValidationError
 
-    def __str__(self):
-        """Return caretaker name with unit."""
-        return f"{self.name} - {self.unit}"
+        if self.leaving_date and self.leaving_date < self.joining_date:
+            raise ValidationError("Leaving date cannot be earlier than joining date.")
 
-    @property
-    def is_active(self):
-        """Check if caretaker is currently active."""
-        return (
-            self.end_date is None
-            or self.end_date >= __import__("datetime").date.today()
-        )
+    @override
+    def __str__(self) -> str:
+        return f"{self.name} ({self.unit})"
+
+
+class CareTakerAssignmentLog(models.Model):
+    caretaker = models.ForeignKey(CareTaker, on_delete=models.CASCADE, db_index=True)
+    action = models.CharField(max_length=20, help_text="assigned / unassigned")
+    action_date = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["-action_date"]

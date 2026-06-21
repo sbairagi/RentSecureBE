@@ -1,5 +1,6 @@
 import builtins
 from datetime import date
+from typing import Any, override
 
 from django.conf import settings
 from django.core.validators import RegexValidator
@@ -27,7 +28,7 @@ class Renter(models.Model):
         REVOKED = "revoked", "Revoked"
         DEACTIVATED = "deactivated", "Deactivated"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         if not args:
             full_name = kwargs.pop("full_name", None)
             if full_name is not None and "name" not in kwargs:
@@ -161,7 +162,8 @@ class Renter(models.Model):
         unique_together = ("unit", "phone")
         ordering = ["-start_date"]
 
-    def clean(self):
+    @override
+    def clean(self) -> None:
         from django.core.exceptions import ValidationError
 
         if self.end_date and self.end_date < self.start_date:
@@ -182,7 +184,7 @@ class Renter(models.Model):
                 )
 
     @property
-    def property(self) -> "Unit":
+    def property(self) -> Unit:
         """Backward-compatible alias for ``self.unit``."""
         return self.unit
 
@@ -196,16 +198,17 @@ class Renter(models.Model):
         self.name = value
 
     @builtins.property
-    def rent_agreement_pdf(self):
+    def rent_agreement_pdf(self) -> Any | None:
         return self.rent_agreement
 
     @builtins.property
-    def police_verification_pdf(self):
-        if hasattr(self, "policeverification") and self.policeverification:
+    def police_verification_pdf(self) -> Any | None:
+        if hasattr(self, "policeverification") and self.policeverification is not None:
             return self.policeverification.file
         return None
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return self.name
 
 
@@ -249,7 +252,8 @@ class RentAgreementDraft(models.Model):
     class Meta:
         unique_together = ("renter", "unit")
 
-    def clean(self):
+    @override
+    def clean(self) -> None:
         from django.core.exceptions import ValidationError
 
         if self.renter.unit != self.unit:
@@ -270,7 +274,8 @@ class PoliceVerification(models.Model):
     class Meta:
         unique_together = ("renter", "unit")
 
-    def clean(self):
+    @override
+    def clean(self) -> None:
         from django.core.exceptions import ValidationError
 
         if self.renter.unit != self.unit:

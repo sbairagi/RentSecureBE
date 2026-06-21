@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.conf import settings
 from django.db import models
 from simple_history.models import HistoricalRecords
@@ -12,7 +14,7 @@ class ExtraCharge(models.Model):
         PAID = "PAID", "Paid"
         MISSED = "MISSED", "Missed"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         if not args:
             renter = kwargs.get("renter")
             if renter is not None:
@@ -53,9 +55,9 @@ class ExtraCharge(models.Model):
             models.Index(fields=["due_date"]),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} for {self.renter.name} due {self.due_date}"
 
     @property
-    def is_paid(self):
+    def is_paid(self) -> bool:
         return self.status == self.Status.PAID

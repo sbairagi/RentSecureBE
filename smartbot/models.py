@@ -3,28 +3,22 @@ from django.db import models
 
 
 class SmartBotChat(models.Model):
-    user: models.ForeignKey = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE
-    )
-    message: str = models.TextField()
-    reply: str = models.TextField()
-    timestamp: "models.DateTimeField" = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    message = models.TextField()
+    reply = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
 
 
 class SmartBotMessage(models.Model):
-    user: models.ForeignKey = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE
-    )
-    query: str = models.TextField()
-    response: str = models.TextField()
-    created_at: "models.DateTimeField" = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    query = models.TextField()
+    response = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class AIAlert(models.Model):
-    owner: models.ForeignKey = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE
-    )
-    alert_type: str = models.CharField(max_length=100)
-    message: str = models.TextField()
-    created_at: "models.DateTimeField" = models.DateTimeField(auto_now_add=True)
-    resolved: bool = models.BooleanField(default=False)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    alert_type = models.CharField(max_length=100)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved = models.BooleanField(default=False)

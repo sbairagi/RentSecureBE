@@ -7,7 +7,7 @@ LEEGALITY_URL = "https://sandbox.leegality.com/api/v3/document"
 
 
 def send_agreement_for_signature(
-    agreement, owner_email: str, renter_email: str | None = None
+    agreement: Any, owner_email: str, renter_email: str | None = None
 ) -> dict[str, Any]:
     headers = {
         "X-API-KEY": settings.LEEGALITY_API_KEY,

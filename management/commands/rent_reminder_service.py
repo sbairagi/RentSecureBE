@@ -1,9 +1,10 @@
 from datetime import date
+from typing import Any
 
 from notification.services.whatsapp_service import send_whatsapp_message
 
 
-def send_rent_reminder(renter, days_left):
+def send_rent_reminder(renter: Any, days_left: int) -> None:
     rent_due_date = date.today().replace(day=renter.rent_due_day)
 
     if days_left > 0:
