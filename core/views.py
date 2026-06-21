@@ -507,7 +507,9 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def update_owner_bank_details(request: Request, *args: Any, **kwargs: Any) -> Response:
+def update_owner_bank_details(
+    request: Request, /, *args: Any, **kwargs: Any
+) -> Response:
     """Update owner bank details and register beneficiary with Cashfree.
 
     Fixed: Added missing uuid import.
@@ -571,7 +573,7 @@ def update_owner_bank_details(request: Request, *args: Any, **kwargs: Any) -> Re
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def rent_inflow_summary(request: Request, *args: Any, **kwargs: Any) -> Response:
+def rent_inflow_summary(request: Request, /, *args: Any, **kwargs: Any) -> Response:
     """Owner rent inflow summary.
 
     Fixed: Uses correct RentRecord field (owner) and (amount) and (PENDING).
@@ -603,7 +605,7 @@ def rent_inflow_summary(request: Request, *args: Any, **kwargs: Any) -> Response
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def owner_rent_records(request: Request, *args: Any, **kwargs: Any) -> Response:
+def owner_rent_records(request: Request, /, *args: Any, **kwargs: Any) -> Response:
     """Owner rent records list.
 
     Fixed: Uses correct FK path (unit.owner, renter.name, unit.unit).
@@ -632,7 +634,7 @@ def owner_rent_records(request: Request, *args: Any, **kwargs: Any) -> Response:
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def download_rent_excel(request: Request, *args: Any, **kwargs: Any) -> HttpResponse:
+def download_rent_excel(request: Request, /, *args: Any, **kwargs: Any) -> HttpResponse:
     """Download owner rent report as Excel."""
     file = generate_owner_rent_report(request.user)
     response = HttpResponse(file, content_type="application/vnd.ms-excel")
