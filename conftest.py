@@ -388,56 +388,56 @@ def _rentsecure_test_defaults(db, monkeypatch):  # type: ignore[no-untyped-def]
     yield
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def user(db: Any) -> User:  # type: ignore[valid-type]
     return UserFactory()
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def owner(db: Any) -> User:  # type: ignore[valid-type]
     return UserFactory(username=fake.user_name(), full_name=fake.name())
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def plan_free(db: Any) -> SubscriptionPlan:
     return SubscriptionPlanFactory(name="free", monthly_price=Decimal("0"))
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def plan_pro(db: Any) -> SubscriptionPlan:
     return SubscriptionPlanFactory(name="pro", monthly_price=Decimal("29.99"))
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def subscription(owner: User, plan_pro: SubscriptionPlan) -> UserSubscription:  # type: ignore[valid-type]
     return UserSubscriptionFactory(user=owner, plan=plan_pro, is_active=True)
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def building(owner: User) -> Building:  # type: ignore[valid-type]
     return BuildingFactory(owner=owner)
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def unit(building: Building) -> Unit:
     return UnitFactory(owner=building.owner, building=building)
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def renter(unit: Unit) -> Renter:
     return RenterFactory(unit=unit, owner=unit.owner)
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def rent_record(unit: Unit, renter: Renter) -> RentRecord:
     return RentRecordFactory(unit=unit, renter=renter)
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def caretaker(unit: Unit) -> Caretaker:
     return CaretakerFactory(unit=unit, owner=unit.owner)
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def addon_purchase(user: User) -> AddOnPurchase:  # type: ignore[valid-type]
     return AddOnPurchaseFactory(user=user)
