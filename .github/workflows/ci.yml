@@ -20,9 +20,29 @@ jobs:
     needs: lint
     uses: ./.github/workflows/test.yml
 
+  django-check:
+    name: Django Check
+    needs: test
+    uses: ./.github/workflows/django-check.yml
+
+  hypothesis:
+    name: Property Tests
+    needs: django-check
+    uses: ./.github/workflows/hypothesis.yml
+
+  architecture:
+    name: Architecture
+    needs: hypothesis
+    uses: ./.github/workflows/architecture.yml
+
+  contract-tests:
+    name: Contract Tests
+    needs: architecture
+    uses: ./.github/workflows/contract-tests.yml
+
   security:
     name: Security
-    needs: test
+    needs: contract-tests
     uses: ./.github/workflows/security.yml
 
   quality:

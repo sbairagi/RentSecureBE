@@ -1,25 +1,51 @@
 name: Quality
 
 on:
-  workflow_call: {}
+  workflow_call:
 
 jobs:
   sonarcloud:
-    name: SonarCloud
+    name: SonarCloud Analysis
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            sonarcloud.io:443
+            sonarqube-server.pages.dev:443
+
       - name: Download coverage artifact
         uses: actions/download-artifact@v4
         with:
           name: coverage-artifact
+
+      - name: Validate coverage.xml exists
+        run: |
+          if [ ! -f coverage.xml ]; then
+            echo "ERROR: coverage.xml not found. Pytest job must generate it."
+            ls -la
+            exit 1
+          fi
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
+
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -27,17 +53,34 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install coverage
+
       - name: Run SonarCloud analysis
         uses: SonarSource/sonarcloud-github-action@v1
-        with:
-          args: >
-            -Dsonar.organization=sbairagi
-            -Dsonar.projectKey=sbairagi_RentSecureBE
-            -Dsonar.coverageReportPaths=coverage.xml
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORGANIZATION: sbairagi
+          SONAR_PROJECT_KEY: sbairagi_RentSecureBE
+        with:
+          args: >
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+            -Dsonar.coverageReportPaths=coverage.xml
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.sources=.
+            -Dsonar.exclusions=**/migrations/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/*.pyc,**/db.sqlite3,**/.github/**,**/htmlcov/**,**/coverage.xml,**/*.md,**/requirements*.txt,**/.env.example
+            -Dsonar.tests=.
+            -Dsonar.test.inclusions=**/test_*.py,**/tests.py,**/*_tests.py,**/tests/**/*.py
+            -Dsonar.python.unitTest.source=.
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
+            -Dsonar.pullrequest.branch=${{ github.head_ref }}
+            -Dsonar.pullrequest.base=${{ github.base_ref }}
+            -Dsonar.verbose=true

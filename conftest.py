@@ -1,29 +1,384 @@
 # mypy: disable-error-code="import-not-found"
 
+import os
+from decimal import Decimal
+from typing import Any
+
+import django
+import factory
 import pytest
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.cache import cache
+from django.utils import timezone
+from faker import Faker
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rentsecure_be.settings")
+django.setup()
+
+from core.models import (  # noqa: E402
+    AddOnPurchase,
+    NotificationPreference,
+    OwnerBankDetails,
+    PlanFeatureLimit,
+    SubscriptionPlan,
+    UsageLimit,
+    UserSubscription,
+)
+from properties.models import (  # noqa: E402
+    Building,
+    Caretaker,
+    ExtraCharge,
+    PropertyTaxRecord,
+    Renter,
+    RentRecord,
+    Unit,
+)
+
+fake = Faker()
+User = get_user_model()
 
 
-class _FakeMessage:
-    sid = "SM_TEST"
+# ---------------------------------------------------------------------------
+# Factory Boy Factories
+# ---------------------------------------------------------------------------
 
 
-class _FakeMessages:
-    def create(self, *args, **kwargs):  # type: ignore[no-untyped-def]
-        return _FakeMessage()
+class UserFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = User
+        django_get_or_create = ("username",)
+
+    username = factory.LazyAttribute(lambda _: fake.user_name())
+    email = factory.LazyAttribute(lambda _: fake.email())
+    password = factory.PostGenerationMethodCall("set_password", "testpass123")
+    full_name = factory.LazyAttribute(lambda _: fake.name())
+    phone = factory.LazyAttribute(lambda _: f"+91{fake.random_number(digits=10)}")
+    is_investor = False
+    is_phone_verified = True
+    whatsapp_number = factory.LazyAttribute(lambda obj: obj.phone)
+    is_active = True
+    is_staff = False
+    is_superuser = False
 
 
-class _FakeTwilioClient:
-    def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
-        self.messages = _FakeMessages()
+class UserProfileFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = "core.UserProfile"
+
+    user = factory.SubFactory(UserFactory)
+    whatsapp_number = factory.LazyAttribute(lambda obj: obj.user.phone)
+    whatsapp_opt_in = True
+    language_preference = "en"
+
+
+class SubscriptionPlanFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = SubscriptionPlan
+        django_get_or_create = ("name",)
+
+    name = factory.Iterator(["free", "pro", "elite"])
+    monthly_price = factory.Iterator([Decimal("0"), Decimal("29.99"), Decimal("99.99")])
+    yearly_price = factory.Iterator(
+        [Decimal("0"), Decimal("299.99"), Decimal("999.99")]
+    )
+    features = "Full feature access"
+    is_active = True
+
+
+class UserSubscriptionFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = UserSubscription
+
+    user = factory.SubFactory(UserFactory)
+    plan = factory.SubFactory(SubscriptionPlanFactory)
+    start_date = factory.LazyFunction(lambda: timezone.now().date())
+    end_date = factory.LazyFunction(
+        lambda: timezone.now().date() + timezone.timedelta(days=30)
+    )
+    is_active = True
+    is_yearly = False
+    tax_reminder_days_before = 7
+    rent_reminder_days_before = 7
+
+
+class PlanFeatureLimitFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = PlanFeatureLimit
+
+    plan = factory.SubFactory(SubscriptionPlanFactory)
+    feature_key = factory.Iterator(
+        [
+            "max_buildings",
+            "max_units",
+            "max_renters",
+            "max_caretakers",
+            "max_unit_images",
+            "max_document_uploads",
+            "tax_notifications",
+            "whatsapp_alerts",
+            "rent_agreement_drafting",
+            "export_pdf_dossier",
+        ]
+    )
+    value = factory.Iterator(["10", "50", "100", "unlimited", "yes", "no"])
+
+
+class UsageLimitFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = UsageLimit
+
+    user = factory.SubFactory(UserFactory)
+    feature_key = factory.Iterator(
+        ["max_buildings", "max_units", "max_renters", "max_caretakers"]
+    )
+    usage_count = 0
+    updated_at = factory.LazyFunction(timezone.now)
+
+
+class BuildingFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Building
+
+    owner = factory.SubFactory(UserFactory)
+    name = factory.LazyAttribute(lambda _: f"{fake.street_address()} Building")
+    address_line = factory.LazyAttribute(lambda _: fake.street_address())
+    city = factory.LazyAttribute(lambda _: fake.city())
+    state = factory.LazyAttribute(lambda _: fake.state_abbr())
+    country = factory.LazyAttribute(lambda _: fake.country_code())
+    postal_code = factory.LazyAttribute(lambda _: fake.postcode())
+    is_archived = False
+
+
+class UnitFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Unit
+
+    owner = factory.SubFactory(UserFactory)
+    building = factory.SubFactory(BuildingFactory)
+    building_name = factory.SelfAttribute("building.name")
+    unit = factory.LazyAttribute(lambda _: str(fake.random_int(min=101, max=999)))
+    address_line = factory.LazyAttribute(lambda _: fake.street_address())
+    city = factory.LazyAttribute(lambda _: fake.city())
+    state = factory.LazyAttribute(lambda _: fake.state_abbr())
+    country = factory.LazyAttribute(lambda _: fake.country_code())
+    postal_code = factory.LazyAttribute(lambda _: fake.postcode())
+    unit_type = factory.Iterator([choice[0] for choice in Unit.UnitType.choices])
+    status = factory.Iterator(["vacant", "occupied", "maintenance"])
+    is_vacant = factory.SelfAttribute("status == vacant")
+    rent_amount = factory.LazyAttribute(lambda _: Decimal(fake.random_int(5000, 50000)))
+    amenities = factory.LazyAttribute(lambda _: fake.sentence())
+    description = factory.LazyAttribute(lambda _: fake.text(max_nb_chars=200))
+    is_archived = False
+
+
+class RenterFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Renter
+
+    unit = factory.SubFactory(UnitFactory)
+    owner = factory.SelfAttribute("unit.owner")
+    name = factory.LazyAttribute(lambda _: fake.name())
+    phone = factory.LazyAttribute(lambda _: f"+91{fake.random_number(digits=10)}")
+    email = factory.LazyAttribute(lambda _: fake.email())
+    address_line = factory.LazyAttribute(lambda _: fake.street_address())
+    city = factory.LazyAttribute(lambda _: fake.city())
+    state = factory.LazyAttribute(lambda _: fake.state_abbr())
+    country = factory.LazyAttribute(lambda _: fake.country_code())
+    postal_code = factory.LazyAttribute(lambda _: fake.postcode())
+    id_proof_type = factory.Iterator(["aadhaar", "pan", "passport", "dl", "voter"])
+    id_proof_number = factory.LazyAttribute(lambda _: fake.ssn())
+    start_date = factory.LazyFunction(
+        lambda: timezone.now().date() - timezone.timedelta(days=30)
+    )
+    end_date = factory.LazyFunction(
+        lambda: timezone.now().date() + timezone.timedelta(days=335)
+    )
+    rent_amount = factory.LazyAttribute(lambda _: Decimal(fake.random_int(5000, 50000)))
+    security_deposit = factory.LazyAttribute(
+        lambda _: Decimal(fake.random_int(10000, 100000))
+    )
+    is_active = True
+    status = Renter.RenterStatus.ACTIVE
+    is_agreement_revoked = False
+    revoked_on = None
+    revoked_by_owner = False
+    revocation_reason = ""
+    is_flagged = False
+    flagged_reason = ""
+    missed_rents = 0
+    agreement_document = None
+
+
+class RentRecordFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = RentRecord
+
+    unit = factory.SubFactory(UnitFactory)
+    renter = factory.SubFactory(RenterFactory, unit=factory.SelfAttribute("..unit"))
+    owner = factory.SelfAttribute("unit.owner")
+    rent_month = factory.LazyFunction(lambda: timezone.now().date().replace(day=1))
+    amount = factory.LazyAttribute(lambda _: Decimal(fake.random_int(5000, 50000)))
+    payment_method = factory.Iterator(
+        [choice[0] for choice in RentRecord.PaymentMethod.choices]
+    )
+    status = factory.Iterator(["pending", "paid", "overdue", "cancelled"])
+    paid_on = factory.Maybe(
+        "is_paid",
+        yes_declaration=factory.LazyFunction(
+            lambda: timezone.now().date() - timezone.timedelta(days=5)
+        ),
+        no_declaration=None,
+    )
+    is_paid = False
+    due_date = factory.LazyFunction(lambda: timezone.now().date().replace(day=5))
+    late_fee = Decimal("0")
+    discount = Decimal("0")
+    notes = ""
+    transaction_id = factory.LazyAttribute(lambda _: fake.uuid4()[:32])
+    payout_status = "PENDING"
+    payout_reference = None
+    payment_link = None
+    razorpay_order_id = None
+    payout_retries = 0
+    last_payout_retry = None
+    payout_retry_count = 0
+    adjustment_reason = ""
+
+
+class RentRecordPaidFactory(RentRecordFactory):
+    is_paid = True
+    status = "paid"
+    paid_on = factory.LazyFunction(
+        lambda: timezone.now().date() - timezone.timedelta(days=5)
+    )
+
+
+class CaretakerFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Caretaker
+
+    unit = factory.SubFactory(UnitFactory)
+    owner = factory.SelfAttribute("unit.owner")
+    name = factory.LazyAttribute(lambda _: fake.name())
+    phone = factory.LazyAttribute(lambda _: f"+91{fake.random_number(digits=10)}")
+    email = factory.LazyAttribute(lambda _: fake.email())
+    address_line = factory.LazyAttribute(lambda _: fake.street_address())
+    city = factory.LazyAttribute(lambda _: fake.city())
+    state = factory.LazyAttribute(lambda _: fake.state_abbr())
+    country = factory.LazyAttribute(lambda _: fake.country_code())
+    postal_code = factory.LazyAttribute(lambda _: fake.postcode())
+    start_date = factory.LazyFunction(
+        lambda: timezone.now().date() - timezone.timedelta(days=60)
+    )
+    end_date = factory.LazyFunction(
+        lambda: timezone.now().date() + timezone.timedelta(days=180)
+    )
+    id_proof_type = factory.Iterator(["aadhaar", "pan", "passport", "dl", "voter"])
+    id_proof_number = factory.LazyAttribute(lambda _: fake.ssn())
+    emergency_contact = factory.LazyAttribute(
+        lambda _: f"+91{fake.random_number(digits=10)}"
+    )
+    notes = ""
+
+
+class ExtraChargeFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ExtraCharge
+
+    unit = factory.SubFactory(UnitFactory)
+    owner = factory.SelfAttribute("unit.owner")
+    name = factory.Iterator(["Maintenance", "Water", "Parking", "Society Dues"])
+    amount = factory.LazyAttribute(lambda _: Decimal(fake.random_int(100, 5000)))
+    charge_type = factory.Iterator(["fixed", "variable"])
+    is_recurring = False
+    due_date = factory.LazyFunction(lambda: timezone.now().date().replace(day=10))
+    is_paid = False
+
+
+class PropertyTaxRecordFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = PropertyTaxRecord
+
+    unit = factory.SubFactory(UnitFactory)
+    owner = factory.SelfAttribute("unit.owner")
+    financial_year = factory.LazyAttribute(
+        lambda _: f"{timezone.now().year}-{str(timezone.now().year + 1)[2:]}"
+    )
+    amount = factory.LazyAttribute(lambda _: Decimal(fake.random_int(5000, 50000)))
+    due_date = factory.LazyFunction(
+        lambda: timezone.now().date().replace(month=3, day=31)
+    )
+    is_paid = False
+    payment_reference = factory.LazyAttribute(lambda _: fake.uuid4()[:32])
+
+
+class NotificationPreferenceFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = NotificationPreference
+
+    owner = factory.SubFactory(UserFactory)
+    rent_alerts_whatsapp = True
+    rent_alerts_email = True
+    monthly_summary_email = True
+    monthly_summary_whatsapp = False
+    payout_alerts_whatsapp = True
+    payout_alerts_email = False
+
+
+class OwnerBankDetailsFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = OwnerBankDetails
+
+    owner = factory.SubFactory(UserFactory)
+    bank_account_number = factory.LazyAttribute(lambda _: fake.bban())
+    ifsc_code = factory.LazyAttribute(lambda _: fake.swift11()[:11])
+    account_holder_name = factory.LazyAttribute(lambda obj: obj.owner.full_name)
+    beneficiary_id = None
+    bank_account_verified = False
+
+
+class AddOnPurchaseFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = AddOnPurchase
+
+    user = factory.SubFactory(UserFactory)
+    name = factory.Iterator(
+        [
+            "max_buildings",
+            "max_units",
+            "max_renters",
+            "whatsapp_alerts",
+            "rent_agreement_drafting",
+        ]
+    )
+    amount = factory.LazyAttribute(lambda _: Decimal(fake.random_int(99, 9999)))
+    is_recurring = False
+    purchase_date = factory.LazyFunction(timezone.now)
+
+
+# ---------------------------------------------------------------------------
+# Pytest fixtures
+# ---------------------------------------------------------------------------
 
 
 @pytest.fixture(autouse=True)
-def rentsecure_test_defaults(db, monkeypatch):  # type: ignore[no-untyped-def]
+def _rentsecure_test_defaults(db, monkeypatch):  # type: ignore[no-untyped-def]
+    """Autouse fixture: clear caches and patch external services."""
     cache.clear()
     Group.objects.get_or_create(name="tenant")
     Group.objects.get_or_create(name="renter")
+
+    class _FakeMessage:
+        sid = "SM_TEST"
+
+    class _FakeMessages:
+        def create(self, *args: Any, **kwargs: Any) -> Any:
+            return _FakeMessage()
+
+    class _FakeTwilioClient:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            self.messages = _FakeMessages()
 
     monkeypatch.setattr("core.views.Client", _FakeTwilioClient)
     monkeypatch.setattr("notification.utils.Client", _FakeTwilioClient)
@@ -38,3 +393,58 @@ def rentsecure_test_defaults(db, monkeypatch):  # type: ignore[no-untyped-def]
         "properties.signals.send_thank_you_voice_note", lambda rent: None
     )
     yield
+
+
+@pytest.fixture
+def user(db: Any) -> User:
+    return UserFactory()
+
+
+@pytest.fixture
+def owner(db: Any) -> User:
+    return UserFactory(username=fake.user_name(), full_name=fake.name())
+
+
+@pytest.fixture
+def plan_free(db: Any) -> SubscriptionPlan:
+    return SubscriptionPlanFactory(name="free", monthly_price=Decimal("0"))
+
+
+@pytest.fixture
+def plan_pro(db: Any) -> SubscriptionPlan:
+    return SubscriptionPlanFactory(name="pro", monthly_price=Decimal("29.99"))
+
+
+@pytest.fixture
+def subscription(owner: User, plan_pro: SubscriptionPlan) -> UserSubscription:
+    return UserSubscriptionFactory(user=owner, plan=plan_pro, is_active=True)
+
+
+@pytest.fixture
+def building(owner: User) -> Building:
+    return BuildingFactory(owner=owner)
+
+
+@pytest.fixture
+def unit(building: Building) -> Unit:
+    return UnitFactory(owner=building.owner, building=building)
+
+
+@pytest.fixture
+def renter(unit: Unit) -> Renter:
+    return RenterFactory(unit=unit, owner=unit.owner)
+
+
+@pytest.fixture
+def rent_record(unit: Unit, renter: Renter) -> RentRecord:
+    return RentRecordFactory(unit=unit, renter=renter)
+
+
+@pytest.fixture
+def caretaker(unit: Unit) -> Caretaker:
+    return CaretakerFactory(unit=unit, owner=unit.owner)
+
+
+@pytest.fixture
+def addon_purchase(user: User) -> AddOnPurchase:
+    return AddOnPurchaseFactory(user=user)

@@ -1,0 +1,69 @@
+name: Architecture & Maintainability
+
+on:
+  workflow_call:
+
+jobs:
+  vulture:
+    name: Vulture (Dead Code)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Vulture
+        run: |
+          python -m pip install --upgrade pip
+          pip install vulture
+
+      - name: Run Vulture (dead code detection)
+        run: |
+          python -m vulture \
+            --exclude .venv,venv,build,dist,migrations,__pycache__,.pytest_cache,.github,.kilo \
+            --exclude properties/_legacy,properties/refactored_models_combined.py,properties/original_models.py \
+            --min-confidence 80 \
+            rentsecure_be core properties finance notification documents smartbot referral_and_earn ai_assistant dashboard
+
+  import-linter:
+    name: Import Linter (Architecture)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install import-linter
+        run: |
+          python -m pip install --upgrade pip
+          pip install import-linter
+
+      - name: Verify import-linter configuration
+        run: python -m lint_imports --verify
+
+      - name: Run import-linter
+        run: python -m lint_imports

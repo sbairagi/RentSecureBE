@@ -1,0 +1,200 @@
+rules:
+  - id: django-sql-injection-string-formatting
+    patterns:
+      - pattern-either:
+          - pattern: cursor.execute("..." % ...)
+          - pattern: cursor.execute(f"...")
+          - pattern: Model.objects.raw("..." % ...)
+          - pattern: Model.objects.raw(f"...")
+    message: >-
+      SQL query constructed using Python string interpolation (f-string or %).
+      This is a classic SQL injection vector. Use parameterized queries:
+        cursor.execute("SELECT * FROM table WHERE id = %s", [user_input])
+      Or use the Django ORM.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "cwe-89"
+      owasp: "a03:2021-injection"
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+
+  - id: django-sql-injection-concat
+    patterns:
+      - pattern-either:
+          - pattern: cursor.execute("..." + ...)
+          - pattern: Model.objects.raw("..." + ...)
+    message: >-
+      SQL query constructed via string concatenation. This is a SQL injection
+      risk. Use parameterized queries or the Django ORM.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "cwe-89"
+      confidence: HIGH
+
+  - id: django-debug-enabled
+    patterns:
+      - pattern-either:
+          - pattern: DEBUG = True
+          - pattern: DEBUG=True
+    message: >-
+      Django DEBUG mode set to True. This exposes sensitive error data
+      (settings, SQL queries, environment variables) to clients and must
+      never be True in production.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "cwe-489"
+      confidence: HIGH
+
+  - id: hardcoded-secret-key
+    patterns:
+      - pattern-either:
+          - pattern: SECRET_KEY = "..."
+          - pattern: SECRET_KEY="..."
+      - metavariable-regex:
+          metavariable: SECRET_KEY_VALUE
+          language: python
+          regex: '"django-insecure.*"'
+    message: >-
+      Hardcoded Django SECRET_KEY with 'django-insecure' prefix detected.
+      Move secrets to environment variables or a secrets manager.
+      Use `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` to generate a key.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "cwe-798"
+      confidence: HIGH
+
+  - id: hardcoded-api-key
+    patterns:
+      - pattern-either:
+          - pattern: API_KEY = "..."
+          - pattern: API_KEY="..."
+          - pattern: OPENAI_API_KEY = "..."
+          - pattern: OPENAI_API_KEY="..."
+          - pattern: TWILIO_AUTH_TOKEN = "..."
+          - pattern: TWILIO_AUTH_TOKEN="..."
+      - metavariable-regex:
+          metavariable: KEY_VALUE
+          language: python
+          regex: '".{8,}"'
+    message: >-
+      Hardcoded API key or token detected in source code.
+      Use environment variables, dotenv, or a secrets manager.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "cwe-798"
+      confidence: MEDIUM
+
+  - id: eval-usage
+    patterns:
+      - pattern: eval(...)
+    message: >-
+      `eval()` detected. This executes arbitrary Python code and is a critical
+      code injection risk. Remove this call; use `ast.literal_eval()` for
+      safe literal parsing if needed.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "cwe-95"
+      confidence: HIGH
+
+  - id: exec-usage
+    patterns:
+      - pattern: exec(...)
+    message: >-
+      `exec()` detected. This executes arbitrary Python code and is a critical
+      code injection risk. Remove this call.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "cwe-95"
+      confidence: HIGH
+
+  - id: pickle-usage
+    patterns:
+      - pattern: pickle.loads(...)
+    message: >-
+      `pickle.loads()` on untrusted input can execute arbitrary code.
+      Use `json.loads()` or a safe serialization format instead.
+    languages: [python]
+    severity: WARNING
+    metadata:
+      cwe: "cwe-502"
+      confidence: HIGH
+
+  - id: yaml-load-unsafe
+    patterns:
+      - pattern: yaml.load(...)
+    message: >-
+      `yaml.load()` without a Loader argument is unsafe. Use
+      `yaml.safe_load()` to prevent arbitrary code execution.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "cwe-502"
+      confidence: HIGH
+
+  - id: print-statement-in-production
+    patterns:
+      - pattern: print(...)
+    message: >-
+      `print()` detected. Application logging should use the Python
+      `logging` module, not `print()`.
+    languages: [python]
+    severity: WARNING
+    metadata:
+      cwe: "cwe-778"
+      confidence: MEDIUM
+
+  - id: subprocess-shell-true
+    patterns:
+      - pattern: subprocess.run(..., shell=True)
+      - pattern: subprocess.call(..., shell=True)
+      - pattern: subprocess.Popen(..., shell=True)
+    message: >-
+      `subprocess` call with `shell=True` detected. This is a shell injection
+      risk. Pass a list of arguments instead: `subprocess.run(["ls", "-la"])`.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: "cwe-78"
+      confidence: HIGH
+
+  - id: django-csrf-exempt
+    patterns:
+      - pattern: "@csrf_exempt"
+    message: >-
+      `@csrf_exempt` disables Django's CSRF protection. This should only be
+      used on webhook endpoints with their own authentication mechanism.
+    languages: [python]
+    severity: WARNING
+    metadata:
+      confidence: MEDIUM
+
+  - id: django-allowed-hosts-empty
+    patterns:
+      - pattern: ALLOWED_HOSTS = []
+    message: >-
+      ALLOWED_HOSTS is empty. In production, this causes Django to reject
+      all HTTP_HOST values. Set explicit hostnames: `ALLOWED_HOSTS = ["example.com"]`.
+    languages: [python]
+    severity: WARNING
+    metadata:
+      cwe: "cwe-346"
+      confidence: MEDIUM
+
+exclude:
+  - "**/migrations/**"
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+  - "**/.venv/**"
+  - "**/venv/**"
+  - ".github/**"
+  - "properties/_legacy/**"
+  - "properties/test_*.py"
+  - "tests/**"

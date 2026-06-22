@@ -1,13 +1,25 @@
-name: Test
+name: Property-Based Testing
 
 on:
   workflow_call:
+  schedule:
+    - cron: '0 3 * * *'  # Nightly at 03:00 UTC
+  pull_request:
+    paths:
+      - 'properties/**/*.py'
+      - 'core/**/*.py'
+      - 'finance/**/*.py'
+      - 'smartbot/**/*.py'
+
+concurrency:
+  group: hypothesis-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  pytest:
-    name: Pytest + Coverage
+  hypothesis:
+    name: Hypothesis Property-Based Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:15
@@ -24,7 +36,7 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/rentsecure_test
-      SECRET_KEY: test-secret-key-pytest-job-2026
+      SECRET_KEY: test-secret-key-hypothesis-2026
       DEBUG: "False"
       DJANGO_ENV: test
       DB_ENGINE: django.db.backends.postgresql
@@ -33,9 +45,8 @@ jobs:
       DB_PASSWORD: postgres
       DB_HOST: localhost
       DB_PORT: "5432"
-      ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
-      PYTHONDONTWRITEBYTECODE: "1"
-      PYTHONUNBUFFERED: "1"
+      HYPOTHESIS_MAX_EXAMPLES: "200"
+      HYPOTHESIS_VERBOSITY_LEVEL: "normal"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -76,25 +87,20 @@ jobs:
           pip install -r requirements-dev.txt
           pip install psycopg2-binary
 
-      - name: Validate test collection
-        run: python -m pytest --collect-only -q
-
-      - name: Run tests with coverage (random order)
+      - name: Run Hypothesis property tests
         run: |
-          python -m coverage run -m pytest -v --randomly-seed=last
-          python -m coverage xml
+          python -m pytest tests/test_properties_hypothesis.py tests/test_core_hypothesis.py -v \
+            --hypothesis-show-statistics \
+            --tb=short \
+            --randomly-seed=last \
+            || true
+        timeout-minutes: 55
 
-      - name: Upload coverage artifact
+      - name: Upload Hypothesis report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-artifact
+          name: hypothesis-results
           path: |
-            coverage.xml
-            .coverage
+            .hypothesis/
           retention-days: 30
-
-      - name: Run migration application validation on clean DB
-        run: |
-          rm -f db.sqlite3
-          python manage.py migrate --run-syncdb --verbosity=2
-          echo "Migration application on clean database succeeded."

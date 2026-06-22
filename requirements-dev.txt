@@ -1,0 +1,58 @@
+# =============================================================================
+# RentSecureBE — Development & CI Dependencies
+# =============================================================================
+# Install with: pip install -r requirements-dev.txt
+# =============================================================================
+
+# --- Linting & Formatting ---
+black==25.1.0
+ruff==0.15.14
+pylint==4.0.0
+pylint-django==2.6.1
+mypy==1.13.0
+
+# --- Type Stubs ---
+types-requests==2.32.0
+types-python-dateutil==2.9.0.20250516
+types-openpyxl==3.1.5
+
+# --- Django Stubs ---
+django-stubs==4.2.7
+django-stubs-ext==4.2.7
+djangorestframework-stubs==3.16.9
+
+# --- Security ---
+bandit==1.8.3
+semgrep==1.88.0
+pip-audit==2.7.3
+gitleaks==8.21.2
+
+# --- Testing ---
+pytest==9.0.0
+pytest-django==4.11.1
+pytest-cov==7.0.0
+pytest-randomly==3.15.0
+pytest-benchmark==4.0.0
+coverage[toml]==7.9.0
+hypothesis==6.136.0
+factory_boy==3.3.0
+Faker==30.8.0
+
+# --- Maintainability ---
+vulture==2.14
+import-linter==1.6.6
+
+# --- Mutation Testing ---
+mutmut==4.2.0
+
+# --- Schema Testing ---
+schemathesis==3.39.8
+
+# --- Load Testing ---
+locust==2.32.0
+
+# --- Pre-commit ---
+pre-commit==4.2.0
+
+# --- Utilities ---
+dj-database-url==2.3.0

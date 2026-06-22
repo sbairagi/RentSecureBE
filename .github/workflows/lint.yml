@@ -1,12 +1,13 @@
 name: Lint
 
 on:
-  workflow_call: {}
+  workflow_call:
 
 jobs:
   pre-commit:
     name: Pre-commit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,6 +25,18 @@ jobs:
         with:
           path: ~/.cache/pre-commit
           key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -34,6 +47,7 @@ jobs:
   black:
     name: Black
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -46,6 +60,18 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -56,6 +82,7 @@ jobs:
   ruff:
     name: Ruff
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -68,6 +95,18 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -78,6 +117,7 @@ jobs:
   pylint:
     name: Pylint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -90,6 +130,18 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -99,11 +151,12 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
           SKIP_DJANGO_SIGNALS: "1"
-        run: python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot
+        run: python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot management
 
   mypy:
-    name: Mypy
+    name: Mypy (Strict)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -116,6 +169,18 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -123,7 +188,49 @@ jobs:
           pip install setuptools
           pip install 'mypy==1.13.0'
           pip install types-requests types-python-dateutil types-openpyxl
-          pip uninstall -y django-stubs django-stubs-ext 2>/dev/null || true
           pip install 'django-stubs==4.2.7' 'django-stubs-ext==4.2.7' 'djangorestframework-stubs==3.16.9' --no-deps
+      - name: Verify mypy configuration
+        run: python -m mypy --show-error-codes --pretty --show-column-numbers --show-error-context .
       - name: Run Mypy
-        run: python -m mypy .
+        run: python -m mypy --config-file=mypy.ini .
+
+  vulture:
+    name: Vulture (Dead Code Detection)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - name: Install Vulture
+        run: |
+          python -m pip install --upgrade pip
+          pip install vulture
+      - name: Run Vulture (dead code detection) — advisory report, non-blocking
+        run: |
+          python -m vulture \
+            --exclude .venv,venv,build,dist,migrations,__pycache__,.pytest_cache,.github,.kilo \
+            --exclude properties/_legacy,properties/refactored_models_combined.py,properties/original_models.py \
+            --min-confidence 80 \
+            rentsecure_be core properties finance notification documents smartbot referral_and_earn ai_assistant dashboard \
+            2>&1 | tee vulture-report.txt || true

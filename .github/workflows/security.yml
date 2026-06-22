@@ -1,17 +1,22 @@
 name: Security
 
 on:
-  workflow_call: {}
+  workflow_call:
 
 jobs:
-  semgrep:
-    name: Semgrep
+  bandit:
+    name: Bandit (SAST)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: 3.12
+
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -19,40 +24,289 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - name: Install Semgrep
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+
+      - name: Install Bandit
         run: |
           python -m pip install --upgrade pip
-          pip install semgrep
-      - name: Run Semgrep
-        uses: returntocorp/semgrep-action@v1
+          pip install bandit
+
+      - name: Run Bandit on all app source directories
+        run: |
+          python -m bandit -r rentsecure_be -x .venv,venv,migrations,.kilo,tests
+          python -m bandit -r core -x .venv,venv,migrations,.kilo,tests
+          python -m bandit -r properties -x .venv,venv,migrations,.kilo,tests,test_*
+          python -m bandit -r ai_assistant -x .venv,venv,migrations,.kilo
+          python -m bandit -r notification -x .venv,venv,migrations,.kilo,tests,test_*
+          python -m bandit -r finance -x .venv,venv,migrations,.kilo,tests,test_*
+          python -m bandit -r smartbot -x .venv,venv,migrations,.kilo,tests
+          python -m bandit -r referral_and_earn -x .venv,venv,migrations,.kilo
+          python -m bandit -r dashboard -x .venv,venv,migrations,.kilo
+          python -m bandit -r documents -x .venv,venv,migrations,.kilo,tests
+          python -m bandit -r management -x .venv,venv,migrations,.kilo
+
+  pip-audit:
+    name: Pip-audit (Dependency Scanner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          config: p/ci
-          output: semgrep-report.sarif
+          python-version: 3.12
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+            pypi.org
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+
+      - name: Run Pip-audit on production requirements
+        run: python -m pip-audit --requirement=requirements.txt --vulnerability-service=pypi
+
+      - name: Run Pip-audit on full requirements
+        run: |
+          if [ -f requirements_proposed_final.txt ]; then
+            python -m pip-audit --requirement=requirements_proposed_final.txt --vulnerability-service=pypi
+          fi
+
+  semgrep:
+    name: Semgrep (SAST)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            semgrep.dev:443
+            semgrep.net:443
+
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/owasp-top-ten
+            p/django
+          generateSarif: true
+
+      - name: Upload Semgrep SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
 
   trivy:
-    name: Trivy
+    name: Trivy (FS Vulnerability Scanner)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            aquasecurity.github.io:443
+            ghcr.io:443
+            registry-1.docker.io:443
+
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@v0.2.0
+        uses: aquasecurity/trivy-action@0.55.0
         with:
           scan-type: fs
           scan-ref: .
-          format: table
+          format: 'sarif'
+          output: trivy-results.sarif
+          severity: 'CRITICAL,HIGH'
+          skip-dirs: .venv,venv,build,dist,node_modules,.kilo,htmlcov
+          vuln-type: 'os,library'
+          ignore-unfixed: true
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
+
+      - name: Upload Trivy SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+  gitleaks:
+    name: Gitleaks (Secret Scanning)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: detect --source=. --redact --log-level=warning
+
+      - name: Upload Gitleaks SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks-report.sarif
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0
 
   codeql:
-    name: CodeQL
-    runs-on: ubuntu-latest
+    name: CodeQL (Security + Quality)
+    runs-on: ubuntu-latest-4-cores
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            codeql.githubusercontent.com:443
+            github-releases.githubusercontent.com:443
+            codeload.github.com:443
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: python
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+          queries: security-extended,security-and-quality,python-deprecated-functions
+
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
         with:
-          output: codeql-results.sarif
+          category: "/language:python"
+          upload: true
+
+  osrf-scorecard:
+    name: OpenSSF Scorecard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            scorecard.dev:443
+            api.scorecard.dev:443
+
+      - name: Run OpenSSF Scorecard
+        uses: ossf/scorecard-action@v2
+        with:
+          results_file: scorecard-results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload Scorecard SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: scorecard-results.sarif

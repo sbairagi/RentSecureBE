@@ -1,0 +1,230 @@
+name: Load & Performance Regression Testing
+
+on:
+  workflow_call:
+  schedule:
+    - cron: '0 4 * * 1,3,5'  # Mon/Wed/Fri at 04:00 UTC (off-peak CI)
+  pull_request:
+    paths:
+      - 'properties/**/*.py'
+      - 'core/**/*.py'
+      - 'finance/**/*.py'
+      - 'rentsecure_be/urls.py'
+      - 'properties/urls.py'
+
+concurrency:
+  group: load-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  load-test:
+    name: Locust Load Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rentsecure_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rentsecure_test
+      SECRET_KEY: test-secret-key-loadtest-2026
+      DEBUG: "False"
+      DJANGO_ENV: test
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: rentsecure_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
+      CELERY_TASK_ALWAYS_EAGER: "True"
+      CELERY_TASK_EAGER_PROPOGATES: "True"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+            docker.io:443
+            registry-1.docker.io:443
+            production.cloudflare.docker.com:443
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install psycopg2-binary locust==2.32.0
+
+      - name: Run migrations
+        run: python manage.py migrate --run-syncdb --verbosity=1
+
+      - name: Seed test data
+        run: python3 scripts/seed_load_test_data.py
+
+      - name: Start Django dev server
+        run: |
+          python manage.py runserver 0.0.0.0:8000 --noreload &
+          for i in $(seq 1 30); do
+            if python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/')" 2>/dev/null; then
+              echo "Server ready"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+        timeout-minutes: 10
+
+      - name: Run Locust load test
+        run: |
+          locust -f tests/load/locustfile.py \
+            --headless \
+            --host=http://127.0.0.1:8000 \
+            --users 20 \
+            --spawn-rate 2 \
+            --run-time 2m \
+            --headless \
+            --html locust-report.html \
+            --csv locust-report \
+            --csv-full-history \
+            --exit-code-on-error 1 \
+            2>&1 | tee locust-output.txt
+        timeout-minutes: 10
+
+      - name: Check Locust performance thresholds
+        run: python3 scripts/check_perf_thresholds.py
+
+      - name: Upload Locust report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: locust-report
+          path: |
+            locust-report.html
+            locust-report_*.csv
+            locust-output.txt
+          retention-days: 30
+
+  perf-regression:
+    name: Pytest Benchmark Regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rentsecure_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rentsecure_test
+      SECRET_KEY: test-secret-key-perf-bench-2026
+      DEBUG: "False"
+      DJANGO_ENV: test
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: rentsecure_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+            docker.io:443
+            registry-1.docker.io:443
+            production.cloudflare.docker.com:443
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install psycopg2-binary pytest-benchmark==4.0.0
+
+      - name: Run migrations
+        run: python manage.py migrate --run-syncdb --verbosity=1
+
+      - name: Run benchmark tests
+        run: |
+          python -m pytest tests/test_performance_benchmarks.py -v \
+            --benchmark-only \
+            --benchmark-json=benchmark-results.json \
+            --benchmark-sort=mean \
+            --benchmark-columns=min,max,mean,stddev,median,rounds \
+            --tb=short || true
+        timeout-minutes: 25
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark-results.json
+          retention-days: 90

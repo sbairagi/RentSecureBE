@@ -1,0 +1,227 @@
+name: Django Check
+
+on:
+  workflow_call:
+
+jobs:
+  django-check:
+    name: Django Management Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rentsecure_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rentsecure_test
+      SECRET_KEY: test-secret-key-django-check-prod-grade-2026
+      DEBUG: "False"
+      DJANGO_ENV: test
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: rentsecure_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+            docker.io:443
+            registry-1.docker.io:443
+            production.cloudflare.docker.com:443
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install psycopg2-binary
+
+      - name: Django system check
+        run: python manage.py check --verbosity=2 --fail-level ERROR
+
+      - name: Django deploy check
+        run: python manage.py check --deploy --verbosity=2 --fail-level WARNING
+
+      - name: Check for missing migrations
+        run: python manage.py makemigrations --check --dry-run --verbosity=2
+
+      - name: Validate migrations apply on clean database
+        run: |
+          rm -f db.sqlite3
+          python manage.py migrate --run-syncdb --verbosity=2
+          echo "All migrations applied successfully on clean database."
+
+  migration-rollback:
+    name: Migration Rollback Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: django-check
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rentsecure_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rentsecure_test
+      SECRET_KEY: test-secret-key-migration-rollback-2026
+      DEBUG: "False"
+      DJANGO_ENV: test
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: rentsecure_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+            docker.io:443
+            registry-1.docker.io:443
+            production.cloudflare.docker.com:443
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install psycopg2-binary
+
+      - name: Discover app migrations
+        id: discover
+        run: |
+          echo "=== properties ==="
+          ls -1 properties/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          echo "=== core ==="
+          ls -1 core/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          echo "=== finance ==="
+          ls -1 finance/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          echo "=== smartbot ==="
+          ls -1 smartbot/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          echo "=== documents ==="
+          ls -1 documents/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          echo "=== notification ==="
+          ls -1 notification/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          echo "=== referral_and_earn ==="
+          ls -1 referral_and_earn/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+
+      - name: Run all migrations forward
+        run: python manage.py migrate --run-syncdb --verbosity=2
+
+      - name: Identify last migration per app and test rollback
+        run: |
+          python - <<'EOF'
+          import subprocess, sys, os
+
+          apps = ["properties", "core", "finance", "smartbot", "documents", "notification", "referral_and_earn"]
+          env = {**os.environ, "DJANGO_SETTINGS_MODULE": "rentsecure_be.settings"}
+
+          # Django setup
+          import django
+          django.setup()
+          from django.core.management import call_command
+
+          for app in apps:
+              migrations_dir = os.path.join(app, "migrations")
+              if not os.path.isdir(migrations_dir):
+                  print(f"[SKIP] {app}: no migrations dir")
+                  continue
+
+              migrations = sorted([
+                  f.replace(".py", "")
+                  for f in os.listdir(migrations_dir)
+                  if f.endswith(".py") and f != "__init__.py" and not f.startswith("__pycache__")
+              ])
+              if not migrations:
+                  print(f"[SKIP] {app}: no migration files")
+                  continue
+
+              last_migration = migrations[-1]
+              if len(migrations) == 1:
+                  print(f"[SKIP] {app}: only one migration ({last_migration}), rollback would be to zero")
+                  continue
+
+              # Test rollback to previous migration (one step back)
+              target = migrations[-2]
+              print(f"[TEST] {app}: rolling back from {last_migration} → {target}")
+              try:
+                  call_command("migrate", app, target, verbosity=1)
+                  print(f"[PASS] {app}: rollback to {target} succeeded")
+                  # Re-apply forward to restore DB state
+                  call_command("migrate", app, verbosity=0)
+                  print(f"[RESTORE] {app}: re-applied forward migrations")
+              except Exception as e:
+                  print(f"[FAIL] {app}: rollback FAILED — {e}")
+                  sys.exit(1)
+
+          print("\nAll rollback validations passed.")
+          EOF
