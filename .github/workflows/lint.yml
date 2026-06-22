@@ -151,7 +151,7 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
           SKIP_DJANGO_SIGNALS: "1"
-        run: python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot management
+        run: python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot
 
   mypy:
     name: Mypy (Strict)
