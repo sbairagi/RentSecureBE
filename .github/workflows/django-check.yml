@@ -8,31 +8,11 @@ jobs:
     name: Django Management Checks
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: rentsecure_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rentsecure_test
+      USE_SQLITE: "True"
       SECRET_KEY: test-secret-key-django-check-prod-grade-2026
       DEBUG: "False"
       DJANGO_ENV: test
-      DB_ENGINE: django.db.backends.postgresql
-      DB_NAME: rentsecure_test
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_HOST: localhost
-      DB_PORT: "5432"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -92,31 +72,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: django-check
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: rentsecure_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/rentsecure_test
+      USE_SQLITE: "True"
       SECRET_KEY: test-secret-key-migration-rollback-2026
       DEBUG: "False"
       DJANGO_ENV: test
-      DB_ENGINE: django.db.backends.postgresql
-      DB_NAME: rentsecure_test
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_HOST: localhost
-      DB_PORT: "5432"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

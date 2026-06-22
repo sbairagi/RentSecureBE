@@ -167,6 +167,21 @@ DATABASES = {
     }
 }
 
+# Environment-based database selection:
+#   USE_SQLITE=True   → force SQLite (CI, local dev, tests)
+#   USE_SQLITE unset  → use DB_ENGINE / DATABASE_URL (production PostgreSQL)
+if config("USE_SQLITE", default="False", cast=bool):
+    DATABASES["default"].update(
+        {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": config("DB_NAME", default=str(BASE_DIR / "db.sqlite3")),
+            "USER": "",
+            "PASSWORD": "",
+            "HOST": "",
+            "PORT": "",
+        }
+    )
+
 AUTH_USER_MODEL = "core.User"
 
 
