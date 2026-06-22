@@ -37,12 +37,12 @@ jobs:
 
   contract-tests:
     name: Contract Tests
-    needs: architecture
+    needs: hypothesis
     uses: ./.github/workflows/contract-tests.yml
 
   security:
     name: Security
-    needs: contract-tests
+    needs: [architecture, contract-tests]
     uses: ./.github/workflows/security.yml
 
   quality:
