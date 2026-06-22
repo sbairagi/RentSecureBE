@@ -7,8 +7,8 @@ from properties.models import RentRecord
 
 
 def generate_owner_rent_report(owner: Any) -> BytesIO:
-    rents = RentRecord.objects.filter(renter__property__owner=owner).select_related(
-        "renter", "renter__property"
+    rents = RentRecord.objects.filter(renter__unit__owner=owner).select_related(
+        "renter", "renter__unit"
     )
 
     output = BytesIO()

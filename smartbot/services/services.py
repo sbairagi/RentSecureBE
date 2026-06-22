@@ -27,7 +27,7 @@ def generate_ai_alerts(owner: Any) -> int:
 
     alerts_created = 0
     for renter in renters:
-        rents = RentRecord.objects.filter(renter=renter).order_by("-rent_month")
+        rents = RentRecord.objects.filter(renter=renter).order_by("-due_date")
 
         # 1. Missed 2+ consecutive months
         # Use the same slice window the original implementation used

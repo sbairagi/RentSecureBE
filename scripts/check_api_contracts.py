@@ -52,7 +52,8 @@ contracts = {
 failures = []
 
 for name, spec in contracts.items():
-    resp = getattr(client, spec["method"].lower())(spec["path"])
+    method = str(spec["method"])
+    resp = getattr(client, method.lower())(spec["path"])
 
     if resp.status_code not in spec["expect_status"]:
         failures.append(

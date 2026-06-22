@@ -1,6 +1,7 @@
 # mypy: disable-error-code="import-not-found"
 
 import os
+from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -44,7 +45,7 @@ User = get_user_model()
 # ---------------------------------------------------------------------------
 
 
-class UserFactory(factory.django.DjangoModelFactory):
+class UserFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = User
         django_get_or_create = ("username",)
@@ -62,7 +63,7 @@ class UserFactory(factory.django.DjangoModelFactory):
     is_superuser = False
 
 
-class UserProfileFactory(factory.django.DjangoModelFactory):
+class UserProfileFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = "core.UserProfile"
 
@@ -72,7 +73,7 @@ class UserProfileFactory(factory.django.DjangoModelFactory):
     language_preference = "en"
 
 
-class SubscriptionPlanFactory(factory.django.DjangoModelFactory):
+class SubscriptionPlanFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = SubscriptionPlan
         django_get_or_create = ("name",)
@@ -86,23 +87,21 @@ class SubscriptionPlanFactory(factory.django.DjangoModelFactory):
     is_active = True
 
 
-class UserSubscriptionFactory(factory.django.DjangoModelFactory):
+class UserSubscriptionFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = UserSubscription
 
     user = factory.SubFactory(UserFactory)
     plan = factory.SubFactory(SubscriptionPlanFactory)
     start_date = factory.LazyFunction(lambda: timezone.now().date())
-    end_date = factory.LazyFunction(
-        lambda: timezone.now().date() + timezone.timedelta(days=30)
-    )
+    end_date = factory.LazyFunction(lambda: timezone.now().date() + timedelta(days=30))
     is_active = True
     is_yearly = False
     tax_reminder_days_before = 7
     rent_reminder_days_before = 7
 
 
-class PlanFeatureLimitFactory(factory.django.DjangoModelFactory):
+class PlanFeatureLimitFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = PlanFeatureLimit
 
@@ -124,7 +123,7 @@ class PlanFeatureLimitFactory(factory.django.DjangoModelFactory):
     value = factory.Iterator(["10", "50", "100", "unlimited", "yes", "no"])
 
 
-class UsageLimitFactory(factory.django.DjangoModelFactory):
+class UsageLimitFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = UsageLimit
 
@@ -136,7 +135,7 @@ class UsageLimitFactory(factory.django.DjangoModelFactory):
     updated_at = factory.LazyFunction(timezone.now)
 
 
-class BuildingFactory(factory.django.DjangoModelFactory):
+class BuildingFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = Building
 
@@ -150,7 +149,7 @@ class BuildingFactory(factory.django.DjangoModelFactory):
     is_archived = False
 
 
-class UnitFactory(factory.django.DjangoModelFactory):
+class UnitFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = Unit
 
@@ -172,7 +171,7 @@ class UnitFactory(factory.django.DjangoModelFactory):
     is_archived = False
 
 
-class RenterFactory(factory.django.DjangoModelFactory):
+class RenterFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = Renter
 
@@ -189,11 +188,9 @@ class RenterFactory(factory.django.DjangoModelFactory):
     id_proof_type = factory.Iterator(["aadhaar", "pan", "passport", "dl", "voter"])
     id_proof_number = factory.LazyAttribute(lambda _: fake.ssn())
     start_date = factory.LazyFunction(
-        lambda: timezone.now().date() - timezone.timedelta(days=30)
+        lambda: timezone.now().date() - timedelta(days=30)
     )
-    end_date = factory.LazyFunction(
-        lambda: timezone.now().date() + timezone.timedelta(days=335)
-    )
+    end_date = factory.LazyFunction(lambda: timezone.now().date() + timedelta(days=335))
     rent_amount = factory.LazyAttribute(lambda _: Decimal(fake.random_int(5000, 50000)))
     security_deposit = factory.LazyAttribute(
         lambda _: Decimal(fake.random_int(10000, 100000))
@@ -210,7 +207,7 @@ class RenterFactory(factory.django.DjangoModelFactory):
     agreement_document = None
 
 
-class RentRecordFactory(factory.django.DjangoModelFactory):
+class RentRecordFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = RentRecord
 
@@ -226,7 +223,7 @@ class RentRecordFactory(factory.django.DjangoModelFactory):
     paid_on = factory.Maybe(
         "is_paid",
         yes_declaration=factory.LazyFunction(
-            lambda: timezone.now().date() - timezone.timedelta(days=5)
+            lambda: timezone.now().date() - timedelta(days=5)
         ),
         no_declaration=None,
     )
@@ -249,12 +246,10 @@ class RentRecordFactory(factory.django.DjangoModelFactory):
 class RentRecordPaidFactory(RentRecordFactory):
     is_paid = True
     status = "paid"
-    paid_on = factory.LazyFunction(
-        lambda: timezone.now().date() - timezone.timedelta(days=5)
-    )
+    paid_on = factory.LazyFunction(lambda: timezone.now().date() - timedelta(days=5))
 
 
-class CaretakerFactory(factory.django.DjangoModelFactory):
+class CaretakerFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = Caretaker
 
@@ -269,11 +264,9 @@ class CaretakerFactory(factory.django.DjangoModelFactory):
     country = factory.LazyAttribute(lambda _: fake.country_code())
     postal_code = factory.LazyAttribute(lambda _: fake.postcode())
     start_date = factory.LazyFunction(
-        lambda: timezone.now().date() - timezone.timedelta(days=60)
+        lambda: timezone.now().date() - timedelta(days=60)
     )
-    end_date = factory.LazyFunction(
-        lambda: timezone.now().date() + timezone.timedelta(days=180)
-    )
+    end_date = factory.LazyFunction(lambda: timezone.now().date() + timedelta(days=180))
     id_proof_type = factory.Iterator(["aadhaar", "pan", "passport", "dl", "voter"])
     id_proof_number = factory.LazyAttribute(lambda _: fake.ssn())
     emergency_contact = factory.LazyAttribute(
@@ -282,7 +275,7 @@ class CaretakerFactory(factory.django.DjangoModelFactory):
     notes = ""
 
 
-class ExtraChargeFactory(factory.django.DjangoModelFactory):
+class ExtraChargeFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = ExtraCharge
 
@@ -296,7 +289,7 @@ class ExtraChargeFactory(factory.django.DjangoModelFactory):
     is_paid = False
 
 
-class PropertyTaxRecordFactory(factory.django.DjangoModelFactory):
+class PropertyTaxRecordFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = PropertyTaxRecord
 
@@ -313,7 +306,7 @@ class PropertyTaxRecordFactory(factory.django.DjangoModelFactory):
     payment_reference = factory.LazyAttribute(lambda _: fake.uuid4()[:32])
 
 
-class NotificationPreferenceFactory(factory.django.DjangoModelFactory):
+class NotificationPreferenceFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = NotificationPreference
 
@@ -326,7 +319,7 @@ class NotificationPreferenceFactory(factory.django.DjangoModelFactory):
     payout_alerts_email = False
 
 
-class OwnerBankDetailsFactory(factory.django.DjangoModelFactory):
+class OwnerBankDetailsFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = OwnerBankDetails
 
@@ -338,7 +331,7 @@ class OwnerBankDetailsFactory(factory.django.DjangoModelFactory):
     bank_account_verified = False
 
 
-class AddOnPurchaseFactory(factory.django.DjangoModelFactory):
+class AddOnPurchaseFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     class Meta:
         model = AddOnPurchase
 
@@ -396,12 +389,12 @@ def _rentsecure_test_defaults(db, monkeypatch):  # type: ignore[no-untyped-def]
 
 
 @pytest.fixture
-def user(db: Any) -> User:
+def user(db: Any) -> User:  # type: ignore[valid-type]
     return UserFactory()
 
 
 @pytest.fixture
-def owner(db: Any) -> User:
+def owner(db: Any) -> User:  # type: ignore[valid-type]
     return UserFactory(username=fake.user_name(), full_name=fake.name())
 
 
@@ -416,12 +409,12 @@ def plan_pro(db: Any) -> SubscriptionPlan:
 
 
 @pytest.fixture
-def subscription(owner: User, plan_pro: SubscriptionPlan) -> UserSubscription:
+def subscription(owner: User, plan_pro: SubscriptionPlan) -> UserSubscription:  # type: ignore[valid-type]
     return UserSubscriptionFactory(user=owner, plan=plan_pro, is_active=True)
 
 
 @pytest.fixture
-def building(owner: User) -> Building:
+def building(owner: User) -> Building:  # type: ignore[valid-type]
     return BuildingFactory(owner=owner)
 
 
@@ -446,5 +439,5 @@ def caretaker(unit: Unit) -> Caretaker:
 
 
 @pytest.fixture
-def addon_purchase(user: User) -> AddOnPurchase:
+def addon_purchase(user: User) -> AddOnPurchase:  # type: ignore[valid-type]
     return AddOnPurchaseFactory(user=user)
