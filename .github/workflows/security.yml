@@ -31,7 +31,6 @@ jobs:
 
   trivy:
     name: Trivy
-    needs: semgrep
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +43,6 @@ jobs:
 
   codeql:
     name: CodeQL
-    needs: trivy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

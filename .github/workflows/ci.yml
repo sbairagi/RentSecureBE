@@ -1,4 +1,4 @@
-name: CI Pipeline (inline)
+name: CI Pipeline
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -6,274 +6,26 @@ concurrency:
 
 on:
   push:
-    branches: [master]
+    branches: [main, master]
   pull_request:
-    branches: [main, dev]
+    branches: [main, master, dev]
 
 jobs:
   lint:
-    name: Lint (${{ matrix.tool }})
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        tool: [pre-commit, black, ruff, pylint, mypy]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Cache pre-commit
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pre-commit
-          key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
-      - name: Install per-tool deps
-        run: |
-          python -m pip install --upgrade pip
-          case "${{ matrix.tool }}" in
-            pre-commit)
-              pip install pre-commit
-              ;;
-            black)
-              pip install black
-              ;;
-            ruff)
-              pip install ruff
-              ;;
-            pylint)
-              pip install -r requirements.txt
-              pip install setuptools pylint pylint-django
-              ;;
-            mypy)
-              pip install -r requirements.txt
-              pip install setuptools
-              pip install 'mypy==1.13.0'
-              pip install types-requests types-python-dateutil types-openpyxl
-              pip uninstall -y django-stubs django-stubs-ext 2>/dev/null || true
-              pip install 'django-stubs==4.2.7' 'django-stubs-ext==4.2.7' 'djangorestframework-stubs==3.16.9' --no-deps
-              ;;
-          esac
-      - name: Run tool
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-          SKIP_DJANGO_SIGNALS: ${{ matrix.tool == 'pylint' && '1' || '' }}
-        run: |
-          case "${{ matrix.tool }}" in
-            pre-commit)
-              pre-commit run --all-files
-              ;;
-            black)
-              python -m black --check .
-              ;;
-            ruff)
-              python -m ruff check .
-              ;;
-            pylint)
-              python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot
-              ;;
-            mypy)
-              python -m mypy .
-              ;;
-          esac
+    name: Lint
+    uses: ./.github/workflows/lint.yml
 
-  tests:
-    name: Tests (${{ matrix.tool }})
+  test:
+    name: Test
     needs: lint
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        tool: [bandit, pytest, coverage, pip-audit]
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: rentsecure_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          case "${{ matrix.tool }}" in
-            pip-audit)
-              pip install pip-audit
-              ;;
-            bandit)
-              pip install bandit
-              ;;
-            pytest|coverage)
-              pip install -r requirements.txt
-              pip install setuptools coverage psycopg2-binary
-              ;;
-          esac
-      - name: Run tool
-        run: |
-          case "${{ matrix.tool }}" in
-            bandit)
-              python -m bandit -r . -x .venv,venv,migrations,.kilo,core/tests,properties/tests,ai_assistant/tests,notification/tests,finance/tests,tests,properties/test_*,notification/test_*,smartbot/tests.py,documents/tests.py,finance/tests.py,ai_assistant/tests.py,referral_and_earn/tests.py,tests/test_*
-              ;;
-            pytest)
-              python -m coverage run -m pytest
-              python -m coverage xml
-              ;;
-            pip-audit)
-              python -m pip-audit --requirement=requirements.txt || true
-              ;;
-            coverage)
-              python -m coverage run -m pytest
-              python -m coverage xml
-              python -m coverage report --fail-under=90
-              ;;
-          esac
-      - name: Upload coverage artifact
-        if: matrix.tool == 'coverage' || matrix.tool == 'pytest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-artifact
-          path: |
-            coverage.xml
-            .coverage
-          retention-days: 14
+    uses: ./.github/workflows/test.yml
 
   security:
-    name: Security (${{ matrix.tool }})
-    needs: tests
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        tool: [semgrep, trivy, codeql]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install per-tool deps
-        run: |
-          python -m pip install --upgrade pip
-          case "${{ matrix.tool }}" in
-            semgrep)
-              pip install semgrep
-              ;;
-            trivy)
-              echo "trivy action will be used"
-              ;;
-            codeql)
-              echo "codeql will initialize via action"
-              ;;
-          esac
-      - name: Run tool
-        run: |
-          case "${{ matrix.tool }}" in
-            semgrep)
-              python -m semgrep --config p/ci --json --output semgrep-report.json || true
-              ;;
-            trivy)
-              echo "Trivy scan via action"
-              ;;
-            codeql)
-              echo "CodeQL will run via dedicated action step"
-              ;;
-          esac
-      - name: Semgrep action wrapper
-        if: matrix.tool == 'semgrep'
-        uses: returntocorp/semgrep-action@v1
-        with:
-          config: p/ci
-      - name: Trivy action wrapper
-        if: matrix.tool == 'trivy'
-        uses: aquasecurity/trivy-action@v0.2.0
-        with:
-          scan-type: fs
-          image-ref: .
-          format: table
-      - name: CodeQL action wrapper
-        if: matrix.tool == 'codeql'
-        uses: github/codeql-action/init@v3
-        with:
-          languages: python
-      - name: CodeQL autobuild
-        if: matrix.tool == 'codeql'
-        uses: github/codeql-action/autobuild@v3
-      - name: CodeQL analyze
-        if: matrix.tool == 'codeql'
-        uses: github/codeql-action/analyze@v3
-      - name: Upload Semgrep SARIF
-        if: matrix.tool == 'semgrep'
-        uses: actions/upload-artifact@v4
-        with:
-          name: semgrep-results
-          path: semgrep-report.sarif
-          retention-days: 30
-      - name: Upload CodeQL SARIF
-        if: matrix.tool == 'codeql'
-        uses: actions/upload-artifact@v4
-        with:
-          name: codeql-results
-          path: codeql-results.sarif
-          retention-days: 30
+    name: Security
+    needs: test
+    uses: ./.github/workflows/security.yml
 
-  sonarcloud:
-    name: SonarCloud
+  quality:
+    name: Quality
     needs: security
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install coverage
-      - name: Run SonarCloud analysis
-        uses: SonarSource/sonarcloud-github-action@v1
-        with:
-          args: >
-            -Dsonar.organization=sbairagi
-            -Dsonar.projectKey=sbairagi_RentSecureBE
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    uses: ./.github/workflows/quality.yml
