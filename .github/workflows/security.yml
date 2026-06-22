@@ -241,7 +241,7 @@ jobs:
 
   codeql:
     name: CodeQL (Security + Quality)
-    runs-on: ubuntu-latest-4-cores
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       security-events: write
