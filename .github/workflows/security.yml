@@ -101,10 +101,7 @@ jobs:
         run: python -m pip-audit --requirement=requirements.txt --vulnerability-service=pypi
 
       - name: Run Pip-audit on full requirements
-        run: |
-          if [ -f requirements_proposed_final.txt ]; then
-            python -m pip-audit --requirement=requirements_proposed_final.txt --vulnerability-service=pypi
-          fi
+        run: python -m pip-audit --requirement=requirements.txt --vulnerability-service=pypi
 
   semgrep:
     name: Semgrep (SAST)
