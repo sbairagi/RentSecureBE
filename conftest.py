@@ -232,7 +232,7 @@ class RentRecordFactory(factory.django.DjangoModelFactory):  # type: ignore[misc
     late_fee = Decimal("0")
     discount = Decimal("0")
     notes = ""
-    transaction_id = factory.LazyAttribute(lambda _: fake.uuid4()[:32])
+    transaction_id = factory.LazyAttribute(lambda _: str(fake.uuid4())[:32])
     payout_status = "PENDING"
     payout_reference = None
     payment_link = None
@@ -303,7 +303,7 @@ class PropertyTaxRecordFactory(factory.django.DjangoModelFactory):  # type: igno
         lambda: timezone.now().date().replace(month=3, day=31)
     )
     is_paid = False
-    payment_reference = factory.LazyAttribute(lambda _: fake.uuid4()[:32])
+    payment_reference = factory.LazyAttribute(lambda _: str(fake.uuid4())[:32])
 
 
 class NotificationPreferenceFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]

@@ -81,6 +81,10 @@ incremental = true
 exclude = '(?x)(\\.venv|venv|build|dist|\\.mypy_cache|\\.pytest_cache|__pycache__|migrations|tests/|tests\\.py$|test_[^/]*\\.py$|properties/_legacy/|properties/refactored_models_combined\\.py|properties/original_models\\.py)'
 
 [[tool.mypy.overrides]]
+module = "factory.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "instaloader.*"
 ignore_missing_imports = true
 
