@@ -2,6 +2,7 @@
 
 import sys
 import types
+from typing import Any
 
 # WeasyPrint requires GTK/gobject system libraries (libgobject-2.0-0)
 # that are not available on macOS. Inject a stub so test collection
@@ -13,19 +14,18 @@ except Exception:
     _weasyprint_stub = types.ModuleType("weasyprint")
 
     class _StubHTML:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
-        def write_pdf(self, *args, **kwargs):
+        def write_pdf(self, *args: Any, **kwargs: Any) -> None:
             pass
 
-    _weasyprint_stub.HTML = _StubHTML
+    _weasyprint_stub.HTML = _StubHTML  # type: ignore[attr-defined]
     sys.modules["weasyprint"] = _weasyprint_stub
 
 import os
 from datetime import timedelta
 from decimal import Decimal
-from typing import Any
 
 import django
 import factory
