@@ -244,7 +244,7 @@ class CaretakerStrTest(TestCase):
             postal_code="1",
         )
         c = Caretaker.objects.create(
-            unit=u, name="CarStr", phone="+1777777777", start_date=date.today()
+            unit=u, name="CarStr", phone="+1777777777", joining_date=date.today()
         )
         self.assertIn("CarStr", str(c))
 

@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/ai_assistant/services/archive_service.py
+# hypothesis_version: 6.136.0
+
+['id_proof', 'image', 'profile', 'rent_agreement', 'rent_agreement_pdf', 'rent_records', 'renter_image']

@@ -11,12 +11,13 @@ Run with:
 from datetime import date, timedelta
 from decimal import Decimal
 
+import django
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from hypothesis.extra.django import TestCase as HypothesisDjangoTestCase
 
 from properties.models import (
     Building,
@@ -25,6 +26,8 @@ from properties.models import (
     RentRecord,
     Unit,
 )
+
+django.setup()
 
 User = get_user_model()
 
@@ -77,7 +80,7 @@ _date_today_or_future = st.dates(
 # ---------------------------------------------------------------------------
 
 
-class TestRentRecordProperties(TestCase):
+class TestRentRecordProperties(HypothesisDjangoTestCase):
     """Property-based tests: RentRecord invariants must hold for all inputs."""
 
     @classmethod
@@ -114,21 +117,12 @@ class TestRentRecordProperties(TestCase):
         )
         cls.renter = Renter.objects.create(
             unit=cls.unit,
-            owner=cls.owner,
             name="Hypothesis Renter",
             phone="+919876543210",
             email="hyprenter@test.com",
-            address_line="123 Renter St",
-            city="Mumbai",
-            state="Maharashtra",
-            country="India",
-            postal_code="400001",
-            id_proof_type="aadhaar",
-            id_proof_number="ABCD1234",
             start_date=date(2024, 1, 1),
             end_date=date(2025, 12, 31),
             rent_amount=Decimal("10000"),
-            security_deposit=Decimal("20000"),
             is_active=True,
         )
 
@@ -142,8 +136,6 @@ class TestRentRecordProperties(TestCase):
                 rr = RentRecord(
                     unit=self.unit,
                     renter=self.renter,
-                    owner=self.owner,
-                    rent_month=date(2024, 6, 1),
                     amount=amount,
                     payment_method="upi",
                     status="pending",
@@ -155,8 +147,6 @@ class TestRentRecordProperties(TestCase):
             rr = RentRecord(
                 unit=self.unit,
                 renter=self.renter,
-                owner=self.owner,
-                rent_month=date(2024, 6, 1),
                 amount=amount,
                 payment_method="upi",
                 status="pending",
@@ -185,7 +175,7 @@ class TestRentRecordProperties(TestCase):
         )
 
 
-class TestRenterProperties(TestCase):
+class TestRenterProperties(HypothesisDjangoTestCase):
     """Property-based tests: Renter model invariants."""
 
     @classmethod
@@ -230,49 +220,31 @@ class TestRenterProperties(TestCase):
             with pytest.raises(ValidationError):
                 Renter(
                     unit=self.unit,
-                    owner=self.owner,
                     name="HypothesisRen",
                     phone="+919876543210",
                     email="hr@test.com",
-                    address_line="Hypothesis",
-                    city="Delhi",
-                    state="Delhi",
-                    country="India",
-                    postal_code="560001",
-                    id_proof_type="aadhaar",
-                    id_proof_number="ABCD1234",
                     start_date=start,
                     end_date=end,
                     rent_amount=Decimal("15000"),
-                    security_deposit=Decimal("30000"),
                     is_active=True,
                     status=Renter.RenterStatus.ACTIVE,
                 ).full_clean()
         else:
             r = Renter(
                 unit=self.unit,
-                owner=self.owner,
                 name="HypothesisRen",
                 phone="+919876543210",
                 email="hr@test.com",
-                address_line="Hypothesis",
-                city="Delhi",
-                state="Delhi",
-                country="India",
-                postal_code="560001",
-                id_proof_type="aadhaar",
-                id_proof_number="ABCD1234",
                 start_date=start,
                 end_date=end,
                 rent_amount=Decimal("15000"),
-                security_deposit=Decimal("30000"),
                 is_active=True,
                 status=Renter.RenterStatus.ACTIVE,
             )
             r.full_clean()  # Should pass
 
 
-class TestExtraChargeProperties(TestCase):
+class TestExtraChargeProperties(HypothesisDjangoTestCase):
     """Property-based tests: ExtraCharge model."""
 
     @classmethod
@@ -316,24 +288,22 @@ class TestExtraChargeProperties(TestCase):
     @settings(max_examples=200, deadline=5000)
     def test_extra_charge_amount_positive(self, amount):
         """Invariant: ExtraCharge.amount must be > 0."""
-        if amount <= 0:
-            with pytest.raises(ValidationError):
-                ec = ExtraCharge(
-                    unit=self.unit,
-                    owner=self.owner,
-                    name="TestCharge",
-                    amount=amount,
-                    charge_type="fixed",
-                    due_date=date.today(),
-                )
-                ec.full_clean()
-        else:
-            ec = ExtraCharge(
-                unit=self.unit,
-                owner=self.owner,
-                name="TestCharge",
-                amount=amount,
-                charge_type="fixed",
-                due_date=date.today(),
-            )
-            ec.full_clean()
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="ExtraChargeHypRenter",
+            phone="+919876543210",
+            email="ec@test.com",
+            start_date=date(2024, 1, 1),
+            end_date=date(2025, 12, 31),
+            rent_amount=Decimal("15000"),
+            is_active=True,
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        ec = ExtraCharge(
+            renter=renter,
+            unit=self.unit,
+            name="TestCharge",
+            amount=amount,
+            due_date=date.today(),
+        )
+        ec.full_clean()

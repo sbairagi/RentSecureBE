@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/admin/caretaker_admin.py
+# hypothesis_version: 6.136.0
+
+['Address', 'Basic Info', 'Dates', 'Notes', 'Timestamps', 'address', 'alternate_phone', 'created_at', 'email', 'fields', 'id', 'is_active', 'joining_date', 'leaving_date', 'name', 'notes', 'phone', 'unit', 'updated_at']

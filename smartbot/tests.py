@@ -79,12 +79,13 @@ class SmartBotActionsTest(TestCase):
         result = send_rent_agreement("Test")
         self.assertIn("❌", result)
 
+    @patch("properties.models.RentAgreementDraft")
     @patch("smartbot.actions.Renter")
     @patch("smartbot.actions.RentRecord")
     @patch("smartbot.actions.generate_agreement_pdf")
     @patch("smartbot.actions.initiate_signature")
     def test_send_agreement_for_signature_success(
-        self, mock_initiate, mock_gen_pdf, mock_rent_record, mock_renter
+        self, mock_initiate, mock_gen_pdf, mock_rent_record, mock_renter, mock_draft
     ):
         mock_renter_instance = MagicMock()
         mock_renter_instance.name = "Test Renter"
@@ -94,6 +95,7 @@ class SmartBotActionsTest(TestCase):
         mock_rent_record.objects.filter.return_value.latest.return_value = mock_rent
         mock_gen_pdf.return_value = "/tmp/agreement.pdf"
         mock_initiate.return_value = {"status": "success", "documentId": "doc123"}
+        mock_draft.objects.filter.return_value.first.return_value = None
         result = send_agreement_for_signature("Test")
         self.assertIn("📨", result)
 
@@ -115,7 +117,7 @@ class SmartBotWhatsAppServiceTest(TestCase):
 
 class SmartBotAgreementServiceTest(TestCase):
     @patch("smartbot.services.agreement_service.render_to_string")
-    @patch("smartbot.services.agreement_service.HTML")
+    @patch("weasyprint.HTML")
     def test_generate_agreement_pdf(self, mock_html, mock_render):
         mock_render.return_value = "<html></html>"
         mock_html_instance = MagicMock()
@@ -123,7 +125,8 @@ class SmartBotAgreementServiceTest(TestCase):
         rent_record = MagicMock()
         rent_record.id = 1
         result = generate_agreement_pdf(rent_record)
-        self.assertIn("rent_agreement_1.pdf", result)
+        self.assertIn(f"rent_agreement_{rent_record.id}_", result)
+        self.assertTrue(result.endswith(".pdf"))
 
 
 class SmartBotLeegalityServiceTest(TestCase):

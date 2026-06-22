@@ -76,6 +76,7 @@ class CaretakerModelEdgeCasesTest(TestCase):
             name="Test Caretaker",
             phone="+919999999902",
             email="ct@test.com",
+            joining_date=date.today(),
         )
         self.assertIsNotNone(ct.id)
         self.assertIn("Test Caretaker", str(ct))
@@ -86,6 +87,7 @@ class CaretakerModelEdgeCasesTest(TestCase):
             name="Active CT",
             phone="+919999999903",
             email="act@test.com",
+            joining_date=date.today(),
         )
         self.assertTrue(ct.is_active)
 
@@ -95,7 +97,8 @@ class CaretakerModelEdgeCasesTest(TestCase):
             name="Past CT",
             phone="+919999999904",
             email="pct@test.com",
-            end_date=date.today(),
+            joining_date=date.today(),
+            leaving_date=date.today(),
         )
         self.assertTrue(ct.is_active)
 

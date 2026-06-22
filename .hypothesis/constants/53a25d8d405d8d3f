@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/serializers/unit_serializers.py
+# hypothesis_version: 6.136.0
+
+[-180, 180, '__all__', 'building', 'generated_at', 'latitude', 'longitude', 'owner', 'renter', 'request', 'unit', 'user']

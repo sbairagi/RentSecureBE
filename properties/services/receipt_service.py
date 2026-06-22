@@ -83,14 +83,14 @@ def send_rent_receipt_email(rent_record: RentRecord) -> bool:
         pdf_bytes: bytes = generate_rent_receipt_pdf(rent_record)
 
         month_year: str = rent_record.due_date.strftime("%B %Y")
-        subject: str = f"Rent Receipt - {month_year} | ₹{rent_record.amount_paid}"
+        subject: str = f"Rent Receipt - {month_year} | ₹{rent_record.amount}"
 
         body: str = (
             f"Dear {renter.name},\n\n"
             f"Please find attached your rent receipt for {month_year}.\n\n"
             f"Property: {rent_record.unit.unit}\n"
-            f"Amount: ₹{rent_record.amount_paid}\n"
-            f"Date Paid: {rent_record.date_paid}\n"
+            f"Amount: ₹{rent_record.amount}\n"
+            f"Date Paid: {rent_record.paid_on}\n"
             f"Payment Status: {rent_record.get_status_display()}\n\n"
             f"Thank you for your timely payment!\n\n"
             f"Best regards,\n"
@@ -131,7 +131,7 @@ def send_rent_receipt_on_payment(rent_record: RentRecord) -> bool:
     Returns:
         ``True`` if the email was sent, ``False`` otherwise.
     """
-    if rent_record.payment_status != RentRecord.Status.PAID:
+    if rent_record.payment_status != "paid":
         logger.debug(
             "Rent %s not marked as PAID. Skipping receipt email.", rent_record.id
         )

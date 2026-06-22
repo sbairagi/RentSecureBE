@@ -1,5 +1,6 @@
 """Tests for properties/signals/ package signals"""
 
+from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -62,11 +63,18 @@ class SignalUsageUpdateTest(TestCase):
         self.assertIsNotNone(ul)
 
     def test_caretaker_creation_updates_usage(self):
+        unit = Unit.objects.create(
+            building=self.building,
+            unit_number="CTU1",
+            rent_amount=Decimal("10000"),
+            security_deposit=Decimal("20000"),
+        )
         Caretaker.objects.create(
-            unit__building=self.building,
+            unit=unit,
             name="Test CT",
             phone="+919999999999",
             email="ct@test.com",
+            joining_date=date.today(),
         )
 
     def test_renter_onboarding_token_generated(self):

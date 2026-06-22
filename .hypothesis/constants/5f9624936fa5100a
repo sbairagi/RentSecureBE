@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/admin/renter_admin.py
+# hypothesis_version: 6.136.0
+
+['-', 'Additional Info', 'Basic Info', 'Documents', 'Emergency Contact', 'Rental Details', 'Renter Image Preview', 'Timestamps', 'alternate_phone', 'created_at', 'end_date', 'fields', 'id', 'id_proof', 'is_active', 'name', 'notes', 'phone', 'rent_agreement', 'rent_amount', 'renter_image', 'start_date', 'unit', 'updated_at', 'whatsapp_number']

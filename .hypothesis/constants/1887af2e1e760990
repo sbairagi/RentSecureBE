@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/serializers/extra_charge_serializers.py
+# hypothesis_version: 6.136.0
+
+['__all__', 'amount', 'created_at', 'id', 'renter', 'request', 'unit', 'updated_at']

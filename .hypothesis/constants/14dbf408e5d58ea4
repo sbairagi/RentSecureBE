@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/models/caretaker_models.py
+# hypothesis_version: 6.136.0
+
+[100, '-action_date', '-joining_date', 'Alternate phone', 'Caretaker', 'Caretaker full name', 'Caretakers', 'Currently active?', 'Date of joining', 'Primary phone', '^\\+?1?\\d{9,15}$', 'caretaker_profile', 'caretakers', 'phone', 'properties.Unit', 'unit']

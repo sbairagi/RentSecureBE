@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/core/urls.py
+# hypothesis_version: 6.136.0
+
+['addon-purchases', 'api/token/refresh/', 'auth/send-otp/', 'change-password', 'change-password/', 'reset-password', 'reset-password/', 'subscription-plans', 'token_refresh', 'usage-limits', 'user-subscriptions']

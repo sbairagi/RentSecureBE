@@ -403,11 +403,8 @@ class CaretakerModelTests(TestCase):
             unit=self.unit,
             name="John Doe",
             phone="+919876543210",
-            address_line="123 Main St",
-            city="New York",
-            state="NY",
-            country="USA",
-            postal_code="10001",
+            address="123 Main St, New York, NY, USA, 10001",
+            joining_date=date(2025, 1, 1),
         )
         self.assertEqual(caretaker.name, "John Doe")
         self.assertEqual(caretaker.phone, "+919876543210")
@@ -419,11 +416,8 @@ class CaretakerModelTests(TestCase):
                 unit=self.unit,
                 name="John Doe",
                 phone="invalid",
-                address_line="123 Main St",
-                city="New York",
-                state="NY",
-                country="USA",
-                postal_code="10001",
+                address="123 Main St, New York, NY, USA, 10001",
+                joining_date=date(2025, 1, 1),
             )
             caretaker.full_clean()
 
@@ -433,22 +427,16 @@ class CaretakerModelTests(TestCase):
             unit=self.unit,
             name="John Doe",
             phone="+919876543210",
-            address_line="123 Main St",
-            city="New York",
-            state="NY",
-            country="USA",
-            postal_code="10001",
+            address="123 Main St, New York, NY, USA, 10001",
+            joining_date=date(2025, 1, 1),
         )
         with self.assertRaises(Exception):
             Caretaker.objects.create(
                 unit=self.unit,
                 name="Jane Doe",
                 phone="+919876543210",
-                address_line="123 Main St",
-                city="New York",
-                state="NY",
-                country="USA",
-                postal_code="10001",
+                address="123 Main St, New York, NY, USA, 10001",
+                joining_date=date(2025, 1, 1),
             )
 
     def test_end_date_before_start_date(self):
@@ -457,13 +445,9 @@ class CaretakerModelTests(TestCase):
             unit=self.unit,
             name="John Doe",
             phone="+919876543210",
-            address_line="123 Main St",
-            city="New York",
-            state="NY",
-            country="USA",
-            postal_code="10001",
-            start_date=date(2025, 1, 15),
-            end_date=date(2025, 1, 10),
+            address="123 Main St, New York, NY, USA, 10001",
+            joining_date=date(2025, 1, 15),
+            leaving_date=date(2025, 1, 10),
         )
         with self.assertRaises(ValidationError):
             caretaker.full_clean()
@@ -474,16 +458,12 @@ class CaretakerModelTests(TestCase):
             unit=self.unit,
             name="John Doe",
             phone="+919876543210",
-            address_line="123 Main St",
-            city="New York",
-            state="NY",
-            country="USA",
-            postal_code="10001",
-            start_date=date(2025, 1, 1),
-            end_date=date(2025, 12, 31),
+            address="123 Main St, New York, NY, USA, 10001",
+            joining_date=date(2025, 1, 1),
+            leaving_date=date(2025, 12, 31),
         )
-        self.assertEqual(caretaker.start_date, date(2025, 1, 1))
-        self.assertEqual(caretaker.end_date, date(2025, 12, 31))
+        self.assertEqual(caretaker.joining_date, date(2025, 1, 1))
+        self.assertEqual(caretaker.leaving_date, date(2025, 12, 31))
 
 
 class RenterModelTests(TestCase):
@@ -691,54 +671,50 @@ class RentRecordModelTests(TestCase):
         rent_record = RentRecord.objects.create(
             renter=self.renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=10000,
-            date_paid=date(2025, 1, 5),
-            payment_status=RentRecord.PaymentStatus.PAID,
-            payment_mode=RentRecord.PaymentMode.CASH,
+            due_date=date(2025, 1, 1),
+            amount=10000,
+            paid_on=date(2025, 1, 5),
+            status=RentRecord.Status.PAID,
+            payment_method=RentRecord.PaymentMethod.CASH,
         )
-        self.assertEqual(rent_record.amount_paid, Decimal("10000"))
-        self.assertEqual(rent_record.payment_status, RentRecord.PaymentStatus.PAID)
+        self.assertEqual(rent_record.amount, Decimal("10000"))
+        self.assertEqual(rent_record.status, RentRecord.Status.PAID)
 
     def test_negative_amount_validation(self):
-        """Test amount_paid cannot be negative"""
+        """Test amount cannot be negative"""
         rent_record = RentRecord(
             renter=self.renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=-1000,
-            date_paid=date(2025, 1, 5),
+            due_date=date(2025, 1, 1),
+            amount=-1000,
+            paid_on=date(2025, 1, 5),
         )
         with self.assertRaises(ValidationError):
             rent_record.full_clean()
 
     def test_date_paid_before_rent_month(self):
-        """Test date_paid cannot be before rent_month"""
+        """Test paid_on cannot be before due_date"""
         rent_record = RentRecord(
             renter=self.renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=10000,
-            date_paid=date(2024, 12, 1),
+            due_date=date(2025, 1, 1),
+            amount=10000,
+            paid_on=date(2024, 12, 1),
         )
         with self.assertRaises(ValidationError):
             rent_record.full_clean()
 
     def test_valid_date_range(self):
-        """Test date_paid >= rent_month is valid"""
+        """Test paid_on >= due_date is valid"""
         rent_record = RentRecord.objects.create(
             renter=self.renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=10000,
-            date_paid=date(2025, 1, 1),
+            due_date=date(2025, 1, 1),
+            amount=10000,
+            paid_on=date(2025, 1, 1),
         )
-        self.assertEqual(rent_record.rent_month, date(2025, 1, 1))
-        self.assertEqual(rent_record.date_paid, date(2025, 1, 1))
+        self.assertEqual(rent_record.due_date, date(2025, 1, 1))
+        self.assertEqual(rent_record.paid_on, date(2025, 1, 1))
 
     def test_renter_unit_mismatch(self):
         """Test renter must belong to unit"""
@@ -756,71 +732,66 @@ class RentRecordModelTests(TestCase):
         rent_record = RentRecord(
             renter=self.renter,
             unit=other_unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=10000,
-            date_paid=date(2025, 1, 5),
+            amount=10000,
+            paid_on=date(2025, 1, 5),
         )
         with self.assertRaises(ValidationError):
             rent_record.full_clean()
 
     def test_unique_renter_rent_month(self):
-        """Test unique_together constraint (renter, rent_month)"""
+        """Test unique_together constraint (renter, due_date)"""
         RentRecord.objects.create(
             renter=self.renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=10000,
-            date_paid=date(2025, 1, 5),
+            due_date=date(2025, 1, 1),
+            amount=10000,
+            paid_on=date(2025, 1, 5),
+            payment_method=RentRecord.PaymentMethod.CASH,
         )
         with self.assertRaises(Exception):
             RentRecord.objects.create(
                 renter=self.renter,
                 unit=self.unit,
-                owner=self.user,
-                rent_month=date(2025, 1, 1),
-                amount_paid=10000,
-                date_paid=date(2025, 1, 5),
+                due_date=date(2025, 1, 1),
+                amount=10000,
+                paid_on=date(2025, 1, 5),
+                payment_method=RentRecord.PaymentMethod.CASH,
             )
 
     def test_payment_mode_choices(self):
-        """Test all payment mode choices"""
-        for index, (mode, _) in enumerate(RentRecord.PaymentMode.choices, start=2):
+        """Test all payment method choices"""
+        for index, (mode, _) in enumerate(RentRecord.PaymentMethod.choices, start=2):
             rent_record = RentRecord.objects.create(
                 renter=self.renter,
                 unit=self.unit,
-                owner=self.user,
-                rent_month=date(2025, index, 1),
-                amount_paid=10000,
-                date_paid=date(2025, 2, 5),
-                payment_mode=mode,
+                due_date=date(2025, index, 1),
+                amount=10000,
+                paid_on=date(2025, 2, 5),
+                payment_method=mode,
             )
-            self.assertEqual(rent_record.payment_mode, mode)
+            self.assertEqual(rent_record.payment_method, mode)
 
     def test_payment_status_choices(self):
         """Test all payment status choices"""
-        for index, (status, _) in enumerate(RentRecord.PaymentStatus.choices, start=6):
+        for index, (status, _) in enumerate(RentRecord.Status.choices, start=6):
             rent_record = RentRecord.objects.create(
                 renter=self.renter,
                 unit=self.unit,
-                owner=self.user,
-                rent_month=date(2025, index, 1),
-                amount_paid=10000,
-                date_paid=date(2025, 3, 5),
-                payment_status=status,
+                due_date=date(2025, index, 1),
+                amount=10000,
+                paid_on=date(2025, 3, 5),
+                status=status,
             )
-            self.assertEqual(rent_record.payment_status, status)
+            self.assertEqual(rent_record.status, status)
 
     def test_payout_tracking(self):
         """Test payout status and retry tracking"""
         rent_record = RentRecord.objects.create(
             renter=self.renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=10000,
-            date_paid=date(2025, 1, 5),
+            due_date=date(2025, 1, 1),
+            amount=10000,
+            paid_on=date(2025, 1, 5),
             payout_status="PENDING",
             payout_reference="PAY123456",
             payout_retry_count=2,
@@ -834,30 +805,24 @@ class RentRecordModelTests(TestCase):
         rent_record = RentRecord.objects.create(
             renter=self.renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=10000,
-            date_paid=date(2025, 1, 5),
+            due_date=date(2025, 1, 1),
+            amount=10000,
+            paid_on=date(2025, 1, 5),
             razorpay_order_id="order_12345",
-            razorpay_payment_status="PAID",
         )
         self.assertEqual(rent_record.razorpay_order_id, "order_12345")
-        self.assertEqual(rent_record.razorpay_payment_status, "PAID")
 
     def test_late_fee_tracking(self):
         """Test late fee calculation fields"""
         rent_record = RentRecord.objects.create(
             renter=self.renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=10000,
-            date_paid=date(2025, 1, 5),
-            grace_days=5,
+            due_date=date(2025, 1, 1),
+            amount=10000,
+            paid_on=date(2025, 1, 5),
             late_fee=Decimal("100.00"),
             adjustment_reason="Applied grace period",
         )
-        self.assertEqual(rent_record.grace_days, 5)
         self.assertEqual(rent_record.late_fee, Decimal("100.00"))
 
 
@@ -1170,12 +1135,11 @@ class EdgeCasesTests(TestCase):
         rent_record = RentRecord.objects.create(
             renter=renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=5000,  # Only half
-            date_paid=date(2025, 1, 5),
+            due_date=date(2025, 1, 1),
+            amount=5000,
+            paid_on=date(2025, 1, 5),
         )
-        self.assertEqual(rent_record.amount_paid, Decimal("5000"))
+        self.assertEqual(rent_record.amount, Decimal("5000"))
 
     def test_overpayment(self):
         """Test rent record with overpayment"""
@@ -1189,12 +1153,11 @@ class EdgeCasesTests(TestCase):
         rent_record = RentRecord.objects.create(
             renter=renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=15000,  # Overpayment
-            date_paid=date(2025, 1, 5),
+            due_date=date(2025, 1, 1),
+            amount=15000,
+            paid_on=date(2025, 1, 5),
         )
-        self.assertEqual(rent_record.amount_paid, Decimal("15000"))
+        self.assertEqual(rent_record.amount, Decimal("15000"))
 
     def test_unit_with_null_coordinates(self):
         """Test unit with null coordinates"""
@@ -1220,26 +1183,16 @@ class EdgeCasesTests(TestCase):
             unit=self.unit,
             name="John",
             phone="+919876543210",
-            address_line="123 Main St",
-            city="New York",
-            state="NY",
-            country="USA",
-            postal_code="10001",
-            start_date=date(2025, 1, 1),
-            end_date=date(2025, 6, 30),
+            joining_date=date(2025, 1, 1),
+            leaving_date=date(2025, 6, 30),
         )
         # Different phone, so this is allowed
         caretaker2 = Caretaker.objects.create(
             unit=self.unit,
             name="Jane",
             phone="+919876543211",
-            address_line="123 Main St",
-            city="New York",
-            state="NY",
-            country="USA",
-            postal_code="10001",
-            start_date=date(2025, 3, 1),  # Overlaps with caretaker1
-            end_date=date(2025, 12, 31),
+            joining_date=date(2025, 3, 1),  # Overlaps with caretaker1
+            leaving_date=date(2025, 12, 31),
         )
         self.assertEqual(caretaker1.unit, caretaker2.unit)
 

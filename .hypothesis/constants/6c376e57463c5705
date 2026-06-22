@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/core/serializers.py
+# hypothesis_version: 6.136.0
+
+['__all__', 'created_at', 'email', 'full_name', 'id', 'phone', 'request', 'updated_at', 'user', 'username']

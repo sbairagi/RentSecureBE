@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/notification/migrations/0001_initial.py
+# hypothesis_version: 6.136.0
+
+[200, 255, 'DeviceToken', 'ID', 'Notification', 'created_at', 'expo', 'id', 'is_read', 'message', 'notifications', 'platform', 'title', 'token', 'user']

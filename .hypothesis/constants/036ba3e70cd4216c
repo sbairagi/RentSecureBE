@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/smartbot/migrations/0001_initial.py
+# hypothesis_version: 6.136.0
+
+[100, 'AIAlert', 'ID', 'SmartBotChat', 'SmartBotMessage', 'alert_type', 'created_at', 'id', 'message', 'owner', 'query', 'reply', 'resolved', 'response', 'timestamp', 'user']

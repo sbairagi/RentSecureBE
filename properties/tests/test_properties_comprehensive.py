@@ -192,10 +192,10 @@ class RentRecordModelTest(TestCase):
         )
         self.rent_record = RentRecord.objects.create(
             renter=self.renter,
+            unit=self.unit,
             amount=Decimal("25000"),
             due_date=date.today(),
-            month=date.today().month,
-            year=date.today().year,
+            payment_method="upi",
             payment_status="PENDING",
         )
 
@@ -204,7 +204,8 @@ class RentRecordModelTest(TestCase):
         self.assertEqual(self.rent_record.payment_status, "PENDING")
 
     def test_rent_record_str(self):
-        self.assertIn("25000", str(self.rent_record))
+        self.assertIn("301", str(self.rent_record))
+        self.assertIn("PENDING", str(self.rent_record))
 
 
 class ExtraChargeModelTest(TestCase):

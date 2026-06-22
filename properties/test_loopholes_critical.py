@@ -69,10 +69,10 @@ class PaymentProcessingLoopholes(TestCase):
         rent_record = RentRecord(
             renter=renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=Decimal("-100"),  # LOOPHOLE: Should fail
-            date_paid=date(2025, 1, 5),
+            due_date=date(2025, 1, 1),
+            amount=Decimal("-100"),  # LOOPHOLE: Should fail
+            payment_method=RentRecord.PaymentMethod.CASH,
+            paid_on=date(2025, 1, 5),
         )
         with self.assertRaises(ValidationError):
             rent_record.full_clean()
@@ -101,13 +101,13 @@ class PaymentProcessingLoopholes(TestCase):
         rent_record = RentRecord.objects.create(
             renter=renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=Decimal("999999"),  # Excessive overpayment
-            date_paid=date(2025, 1, 5),
+            due_date=date(2025, 1, 1),
+            amount=Decimal("999999"),  # Excessive overpayment
+            payment_method=RentRecord.PaymentMethod.CASH,
+            paid_on=date(2025, 1, 5),
         )
         # No validation prevents this
-        self.assertEqual(rent_record.amount_paid, Decimal("999999"))
+        self.assertEqual(rent_record.amount, Decimal("999999"))
 
     def test_loophole_date_paid_same_as_rent_month(self):
         """LOOPHOLE: Payment on rent month is allowed (should it be?)"""
@@ -121,13 +121,13 @@ class PaymentProcessingLoopholes(TestCase):
         rent_record = RentRecord.objects.create(
             renter=renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=10000,
-            date_paid=date(2025, 1, 1),  # Same date - early payment
+            due_date=date(2025, 1, 1),
+            amount=10000,
+            payment_method=RentRecord.PaymentMethod.CASH,
+            paid_on=date(2025, 1, 1),  # Same date - early payment
         )
         # This is technically allowed
-        self.assertEqual(rent_record.date_paid, date(2025, 1, 1))
+        self.assertEqual(rent_record.paid_on, date(2025, 1, 1))
 
     def test_loophole_payment_before_renter_start_date(self):
         """LOOPHOLE: Payment recorded before renter start date"""
@@ -142,13 +142,13 @@ class PaymentProcessingLoopholes(TestCase):
         rent_record = RentRecord.objects.create(
             renter=renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=10000,
-            date_paid=date(2025, 1, 10),  # Before renter start date!
+            due_date=date(2025, 1, 1),
+            amount=10000,
+            payment_method=RentRecord.PaymentMethod.CASH,
+            paid_on=date(2025, 1, 10),  # Before renter start date!
         )
         # This might be unintended
-        self.assertLess(rent_record.date_paid, renter.start_date)
+        self.assertLess(rent_record.paid_on, renter.start_date)
 
     def test_loophole_multiple_payments_same_month(self):
         """CRITICAL LOOPHOLE: Multiple payments for same month are prevented"""
@@ -162,20 +162,20 @@ class PaymentProcessingLoopholes(TestCase):
         RentRecord.objects.create(
             renter=renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=date(2025, 1, 1),
-            amount_paid=5000,
-            date_paid=date(2025, 1, 5),
+            due_date=date(2025, 1, 1),
+            amount=5000,
+            payment_method=RentRecord.PaymentMethod.CASH,
+            paid_on=date(2025, 1, 5),
         )
         # Try to create another for same month
         with self.assertRaises(Exception):  # Should be unique constraint
             RentRecord.objects.create(
                 renter=renter,
                 unit=self.unit,
-                owner=self.user,
-                rent_month=date(2025, 1, 1),
-                amount_paid=5000,
-                date_paid=date(2025, 1, 10),
+                due_date=date(2025, 1, 1),
+                amount=5000,
+                payment_method=RentRecord.PaymentMethod.CASH,
+                paid_on=date(2025, 1, 10),
             )
 
 
@@ -387,25 +387,13 @@ class DataConsistencyLoopholes(TestCase):
             unit=unit,
             name="John",
             phone="+919876543210",
-            address_line="123 Main St",
-            city="New York",
-            state="NY",
-            country="USA",
-            postal_code="10001",
-            start_date=date(2025, 1, 1),
-            end_date=date(2025, 6, 30),
+            joining_date=date(2025, 1, 1),
         )
         caretaker2 = Caretaker.objects.create(
             unit=unit,
             name="Jane",
             phone="+919876543211",
-            address_line="123 Main St",
-            city="New York",
-            state="NY",
-            country="USA",
-            postal_code="10001",
-            start_date=date(2025, 3, 1),  # Overlaps!
-            end_date=date(2025, 12, 31),
+            joining_date=date(2025, 3, 1),
         )
         # No validation prevents overlapping caretaker dates
         self.assertEqual(caretaker1.unit, caretaker2.unit)
@@ -470,11 +458,7 @@ class UnitArchivingLoopholes(TestCase):
             unit=unit,
             name="John",
             phone="+919876543210",
-            address_line="123 Main St",
-            city="New York",
-            state="NY",
-            country="USA",
-            postal_code="10001",
+            joining_date=date(2025, 1, 1),
         )
         # Can create caretaker on archived unit
         self.assertTrue(unit.is_archived)
@@ -578,10 +562,10 @@ class ConcurrencyLoopholes(TransactionTestCase):
         RentRecord.objects.create(
             renter=self.renter,
             unit=self.unit,
-            owner=self.user,
-            rent_month=month,
-            amount_paid=10000,
-            date_paid=date(2025, 1, 5),
+            due_date=month,
+            amount=10000,
+            payment_method=RentRecord.PaymentMethod.CASH,
+            paid_on=date(2025, 1, 5),
         )
 
         # Second concurrent request should fail
@@ -589,10 +573,10 @@ class ConcurrencyLoopholes(TransactionTestCase):
             RentRecord.objects.create(
                 renter=self.renter,
                 unit=self.unit,
-                owner=self.user,
-                rent_month=month,
-                amount_paid=10000,
-                date_paid=date(2025, 1, 5),
+                due_date=month,
+                amount=10000,
+                payment_method=RentRecord.PaymentMethod.CASH,
+                paid_on=date(2025, 1, 5),
             )
 
 

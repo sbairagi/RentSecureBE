@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/finance/admin.py
+# hypothesis_version: 6.136.0
+
+['contact_email', 'firm_name', 'phone', 'sent_at', 'sent_to_email', 'verified']

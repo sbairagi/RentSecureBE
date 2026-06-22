@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/admin/unit_admin.py
+# hypothesis_version: 6.136.0
+
+['Additional Notes', 'Address', 'Basic Info', 'Documents & Images', 'Location', 'Status & Reminders', 'Timestamps', 'address_line', 'building__name', 'building_name', 'city', 'country', 'created_at', 'document', 'fields', 'generated_at', 'id', 'id_proof', 'image', 'is_vacant', 'is_verified', 'landmark', 'latitude', 'longitude', 'maintenance_notes', 'notes', 'owner', 'owner__username', 'postal_code', 'rent_due_reminder', 'renter', 'renter__name', 'state', 'unit', 'unit__unit', 'unit_type', 'updated_at', 'uploaded_at', 'user', 'user__username']

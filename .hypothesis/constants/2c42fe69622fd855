@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/finance/migrations/0001_initial.py
+# hypothesis_version: 6.136.0
+
+[254, 255, 'CAProfile', 'ID', 'TaxSubmissionToCA', 'ca', 'contact_email', 'e.g., 2024-25', 'finance.caprofile', 'financial_year', 'firm_name', 'id', 'message', 'phone', 'sent_at', 'sent_to_email', 'user', 'verified']

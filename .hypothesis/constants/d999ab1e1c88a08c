@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/views/owner_dashboard.py
+# hypothesis_version: 6.136.0
+
+[180, 401, '%Y-%m', 'FAILED', 'GET', 'PENDING', 'SUCCESS', 'Unauthorized', 'amount', 'due_date', 'error', 'failed', 'month', 'payouts', 'pending', 'rent_defaulters', 'rent_payment_trends', 'renter', 'renter_name', 'status', 'success', 'total', 'total_rent_collected', 'unit', 'unit_name', 'upcoming_tax_dues']

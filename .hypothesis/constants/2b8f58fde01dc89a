@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/utils/onboarding_utils.py
+# hypothesis_version: 6.136.0
+
+['kyc_status', 'onboarding_status', 'onboarding_token']

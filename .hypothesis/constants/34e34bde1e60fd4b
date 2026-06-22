@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/views/renter_views.py
+# hypothesis_version: 6.136.0
+
+[300, 'active', 'add_on_limit', 'current_usage', 'error', 'max_renters', 'notice_period', 'required_add_on', 'subscription_limit', 'unit']

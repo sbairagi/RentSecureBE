@@ -97,7 +97,7 @@ class CaretakerViewSetTest(TestCase):
 
     def test_retrieve(self):
         c = Caretaker.objects.create(
-            unit=self.u, name="TC", phone="+1333333333", start_date=date.today()
+            unit=self.u, name="TC", phone="+1333333333", joining_date=date.today()
         )
         self.assertEqual(
             self._auth().get(f"/properties/caretakers/{c.id}/").status_code, 200
@@ -105,7 +105,7 @@ class CaretakerViewSetTest(TestCase):
 
     def test_delete(self):
         c = Caretaker.objects.create(
-            unit=self.u, name="TC2", phone="+1444444444", start_date=date.today()
+            unit=self.u, name="TC2", phone="+1444444444", joining_date=date.today()
         )
         self.assertEqual(
             self._auth().delete(f"/properties/caretakers/{c.id}/").status_code, 204

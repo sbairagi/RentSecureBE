@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/views/property_views.py
+# hypothesis_version: 6.136.0
+
+[401, 'GET', 'PATCH', 'POST', 'Unauthorized', 'Updated', 'active_agreement', 'building_id', 'data', 'error', 'late_fee', 'late_fee_amount', 'message', 'msg', 'reason', 'renter', 'success', 'unit']

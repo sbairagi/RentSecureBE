@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/conftest.py
+# hypothesis_version: 6.136.0
+
+[100, 101, 180, 335, 999, 5000, 9999, 10000, 50000, 100000, '..unit', '0', '10', '100', '29.99', '299.99', '50', '99.99', '999.99', 'Full feature access', 'Maintenance', 'PENDING', 'Parking', 'SM_TEST', 'Society Dues', 'Water', 'aadhaar', 'building.name', 'cancelled', 'core.UserProfile', 'core.views.Client', 'dl', 'elite', 'en', 'export_pdf_dossier', 'fixed', 'free', 'is_paid', 'maintenance', 'max_buildings', 'max_caretakers', 'max_document_uploads', 'max_renters', 'max_unit_images', 'max_units', 'name', 'no', 'occupied', 'overdue', 'paid', 'pan', 'passport', 'pending', 'pro', 'renter', 'set_password', 'tax_notifications', 'tenant', 'testpass123', 'unit.owner', 'unlimited', 'username', 'vacant', 'variable', 'voter', 'weasyprint', 'whatsapp_alerts', 'yes']

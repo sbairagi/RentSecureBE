@@ -1,5 +1,27 @@
 # mypy: disable-error-code="import-not-found"
 
+import sys
+import types
+
+# WeasyPrint requires GTK/gobject system libraries (libgobject-2.0-0)
+# that are not available on macOS. Inject a stub so test collection
+# does not fail on environments without those C libraries.
+# On Linux CI weasyprint imports normally and this block is skipped.
+try:
+    import weasyprint  # noqa: F401
+except Exception:
+    _weasyprint_stub = types.ModuleType("weasyprint")
+
+    class _StubHTML:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def write_pdf(self, *args, **kwargs):
+            pass
+
+    _weasyprint_stub.HTML = _StubHTML
+    sys.modules["weasyprint"] = _weasyprint_stub
+
 import os
 from datetime import timedelta
 from decimal import Decimal
@@ -164,10 +186,8 @@ class UnitFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     postal_code = factory.LazyAttribute(lambda _: fake.postcode())
     unit_type = factory.Iterator([choice[0] for choice in Unit.UnitType.choices])
     status = factory.Iterator(["vacant", "occupied", "maintenance"])
-    is_vacant = factory.SelfAttribute("status == vacant")
+    is_vacant = factory.LazyAttribute(lambda obj: obj.status == "vacant")
     rent_amount = factory.LazyAttribute(lambda _: Decimal(fake.random_int(5000, 50000)))
-    amenities = factory.LazyAttribute(lambda _: fake.sentence())
-    description = factory.LazyAttribute(lambda _: fake.text(max_nb_chars=200))
     is_archived = False
 
 
@@ -176,35 +196,19 @@ class RenterFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
         model = Renter
 
     unit = factory.SubFactory(UnitFactory)
-    owner = factory.SelfAttribute("unit.owner")
     name = factory.LazyAttribute(lambda _: fake.name())
     phone = factory.LazyAttribute(lambda _: f"+91{fake.random_number(digits=10)}")
     email = factory.LazyAttribute(lambda _: fake.email())
-    address_line = factory.LazyAttribute(lambda _: fake.street_address())
-    city = factory.LazyAttribute(lambda _: fake.city())
-    state = factory.LazyAttribute(lambda _: fake.state_abbr())
-    country = factory.LazyAttribute(lambda _: fake.country_code())
-    postal_code = factory.LazyAttribute(lambda _: fake.postcode())
-    id_proof_type = factory.Iterator(["aadhaar", "pan", "passport", "dl", "voter"])
-    id_proof_number = factory.LazyAttribute(lambda _: fake.ssn())
     start_date = factory.LazyFunction(
         lambda: timezone.now().date() - timedelta(days=30)
     )
     end_date = factory.LazyFunction(lambda: timezone.now().date() + timedelta(days=335))
     rent_amount = factory.LazyAttribute(lambda _: Decimal(fake.random_int(5000, 50000)))
-    security_deposit = factory.LazyAttribute(
-        lambda _: Decimal(fake.random_int(10000, 100000))
-    )
     is_active = True
     status = Renter.RenterStatus.ACTIVE
-    is_agreement_revoked = False
-    revoked_on = None
-    revoked_by_owner = False
-    revocation_reason = ""
     is_flagged = False
     flagged_reason = ""
     missed_rents = 0
-    agreement_document = None
 
 
 class RentRecordFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
@@ -213,22 +217,15 @@ class RentRecordFactory(factory.django.DjangoModelFactory):  # type: ignore[misc
 
     unit = factory.SubFactory(UnitFactory)
     renter = factory.SubFactory(RenterFactory, unit=factory.SelfAttribute("..unit"))
-    owner = factory.SelfAttribute("unit.owner")
-    rent_month = factory.LazyFunction(lambda: timezone.now().date().replace(day=1))
     amount = factory.LazyAttribute(lambda _: Decimal(fake.random_int(5000, 50000)))
     payment_method = factory.Iterator(
         [choice[0] for choice in RentRecord.PaymentMethod.choices]
     )
     status = factory.Iterator(["pending", "paid", "overdue", "cancelled"])
-    paid_on = factory.Maybe(
-        "is_paid",
-        yes_declaration=factory.LazyFunction(
-            lambda: timezone.now().date() - timedelta(days=5)
-        ),
-        no_declaration=None,
+    paid_on = factory.LazyFunction(lambda: timezone.now().date() - timedelta(days=5))
+    due_date = factory.Sequence(
+        lambda n: (timezone.now().date().replace(day=5) - timedelta(days=30 * n))
     )
-    is_paid = False
-    due_date = factory.LazyFunction(lambda: timezone.now().date().replace(day=5))
     late_fee = Decimal("0")
     discount = Decimal("0")
     notes = ""
@@ -244,7 +241,6 @@ class RentRecordFactory(factory.django.DjangoModelFactory):  # type: ignore[misc
 
 
 class RentRecordPaidFactory(RentRecordFactory):
-    is_paid = True
     status = "paid"
     paid_on = factory.LazyFunction(lambda: timezone.now().date() - timedelta(days=5))
 
@@ -258,20 +254,14 @@ class CaretakerFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
     name = factory.LazyAttribute(lambda _: fake.name())
     phone = factory.LazyAttribute(lambda _: f"+91{fake.random_number(digits=10)}")
     email = factory.LazyAttribute(lambda _: fake.email())
-    address_line = factory.LazyAttribute(lambda _: fake.street_address())
-    city = factory.LazyAttribute(lambda _: fake.city())
-    state = factory.LazyAttribute(lambda _: fake.state_abbr())
-    country = factory.LazyAttribute(lambda _: fake.country_code())
-    postal_code = factory.LazyAttribute(lambda _: fake.postcode())
-    start_date = factory.LazyFunction(
+    address = factory.LazyAttribute(lambda _: fake.address())
+    joining_date = factory.LazyFunction(
         lambda: timezone.now().date() - timedelta(days=60)
     )
-    end_date = factory.LazyFunction(lambda: timezone.now().date() + timedelta(days=180))
-    id_proof_type = factory.Iterator(["aadhaar", "pan", "passport", "dl", "voter"])
-    id_proof_number = factory.LazyAttribute(lambda _: fake.ssn())
-    emergency_contact = factory.LazyAttribute(
-        lambda _: f"+91{fake.random_number(digits=10)}"
+    leaving_date = factory.LazyFunction(
+        lambda: timezone.now().date() + timedelta(days=180)
     )
+    is_active = True
     notes = ""
 
 
@@ -383,7 +373,8 @@ def _rentsecure_test_defaults(db, monkeypatch):  # type: ignore[no-untyped-def]
         lambda rent: f"https://payments.test/rent/{rent.id}",
     )
     monkeypatch.setattr(
-        "properties.signals.send_thank_you_voice_note", lambda rent: None
+        "notification.services.voice_note_service.send_thank_you_voice_note",
+        lambda rent: None,
     )
     yield
 

@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/admin/rent_record_admin.py
+# hypothesis_version: 6.136.0
+
+['Additional Info', 'Rent Info', 'Timestamps', 'amount', 'amount_paid', 'created_at', 'discount', 'due_date', 'fields', 'id', 'late_fee', 'mark_as_paid', 'notes', 'paid_on', 'payment_method', 'renter', 'renter__name', 'status', 'transaction_id', 'unit', 'updated_at']

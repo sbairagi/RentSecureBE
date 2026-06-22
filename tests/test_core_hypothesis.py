@@ -9,9 +9,9 @@ from decimal import Decimal
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from hypothesis.extra.django import TestCase as HypothesisDjangoTestCase
 
 from core.models import (
     PlanFeatureLimit,
@@ -44,7 +44,7 @@ _valid_amounts = st.decimals(
 )
 
 
-class TestSubscriptionInvariants(TestCase):
+class TestSubscriptionInvariants(HypothesisDjangoTestCase):
     """Property-based tests: subscription model invariants."""
 
     @classmethod
@@ -71,7 +71,7 @@ class TestSubscriptionInvariants(TestCase):
         assert yearly_price >= monthly_price or True  # Document intentionality
 
 
-class TestFeatureLimitProperties(TestCase):
+class TestFeatureLimitProperties(HypothesisDjangoTestCase):
     """Property-based tests: PlanFeatureLimit invariants."""
 
     @classmethod

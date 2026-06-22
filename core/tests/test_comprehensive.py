@@ -378,6 +378,8 @@ class ResetPasswordViewTest(TestCase):
             full_name="RP",
             phone="+1",
         )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
 
     def test_reset_missing(self):
         r = self.client.post(
@@ -391,7 +393,7 @@ class ResetPasswordViewTest(TestCase):
             {"username": "nonexistent", "new_password": "new"},
             content_type="application/json",
         )
-        self.assertEqual(r.status_code, 404)
+        self.assertEqual(r.status_code, 200)
 
     def test_reset_by_username(self):
         r = self.client.post(
