@@ -1,3 +1,5 @@
+import logging
+
 from django.core.cache import cache
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -257,7 +259,11 @@ class RentRecordViewSet(viewsets.ModelViewSet):
             rent.save(update_fields=["payment_link"])
             send_whatsapp_message(rent.renter.phone, f"📩 Pay your rent: {link}")
         except Exception:
-            # Keep the rent record if payment link generation fails, but do not block the resource creation.
+            logger = logging.getLogger(__name__)
+            logger.exception(
+                "Payment link generation failed for rent %s; continuing anyway.",
+                rent.id,
+            )
             pass
 
         enforcer.increment("rent_records")

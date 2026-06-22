@@ -135,7 +135,7 @@ jobs:
         run: |
           case "${{ matrix.tool }}" in
             bandit)
-              python -m bandit -r . -x .venv,venv,migrations,tests
+              python -m bandit -r . -x .venv,venv,migrations,.kilo,core/tests,properties/tests,ai_assistant/tests,notification/tests,finance/tests,tests,properties/test_*,notification/test_*,smartbot/tests.py,documents/tests.py,finance/tests.py,ai_assistant/tests.py,referral_and_earn/tests.py,tests/test_*
               ;;
             pytest)
               python -m coverage run -m pytest

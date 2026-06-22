@@ -30,8 +30,10 @@ except ValueError:
     DEBUG = str(_raw_debug).lower() not in ("false", "0", "no", "off", "release")
 ENVIRONMENT = config("DJANGO_ENV", default="development")
 
-if not DEBUG and SECRET_KEY == "django-insecure-placeholder-key":
-    raise ImproperlyConfigured("A secure SECRET_KEY must be set in production.")
+if not DEBUG:
+    parts = SECRET_KEY.split("-", 2)
+    if len(parts) >= 2 and parts[0] == "django" and parts[1] == "insecure":
+        raise ImproperlyConfigured("A secure SECRET_KEY must be set in production.")
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
