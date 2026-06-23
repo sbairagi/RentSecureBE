@@ -58,7 +58,7 @@ class GenerateUnitHistoryPdfTest(TestCase):
     @patch("documents.utils.render_to_string")
     @patch("documents.utils.HTML")
     @patch("documents.utils.PdfMerger")
-    def test_generate_unit_history_pdf(self, mock_merger, mock_html, mock_render):
+    def test_generate_unit_history_pdf(self, _mock_merger, mock_html, mock_render):
         mock_unit = MagicMock()
         mock_unit.renters.all.return_value = []
         mock_render.return_value = "<html></html>"

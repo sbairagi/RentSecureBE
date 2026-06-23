@@ -10,6 +10,6 @@ from .models import Referral
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def create_referral(sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
+def create_referral(_sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
     if created:
         Referral.objects.create(user=instance)
