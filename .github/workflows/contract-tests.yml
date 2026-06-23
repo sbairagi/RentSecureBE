@@ -79,4 +79,5 @@ jobs:
       - name: Run contract schema validation
         env:
           SECRET_KEY: test-secret-key-contract-test-2026
+          PYTHONPATH: ${{ github.workspace }}
         run: python3 scripts/check_api_contracts.py
