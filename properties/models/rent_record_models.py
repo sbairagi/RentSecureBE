@@ -1,7 +1,9 @@
 from typing import Any
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
 
 from rentsecure_be.type_compat import override
 
@@ -111,6 +113,8 @@ class RentRecord(models.Model):
         ordering = ["-due_date"]
         verbose_name = "Rent Record"
         verbose_name_plural = "Rent Records"
+
+    history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
 
     @property
     def payment_status(self) -> str:

@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/models/rent_record_models.py
+# hypothesis_version: 6.136.0
+
+[100, 500, '-due_date', 'Any discount given', 'Bank Transfer', 'Cancelled', 'Card', 'Cash', 'Cheque', 'Late fee applied', 'Mode of payment used', 'Online Payment', 'Other', 'Overdue', 'PENDING', 'Paid', 'Payment gateway link', 'Payment status', 'Pending', 'Rent Record', 'Rent Records', 'Rent amount paid', 'Rent due date', 'UPI', 'bank_transfer', 'cancelled', 'card', 'cash', 'cheque', 'due_date', 'invoices/', 'online', 'other', 'overdue', 'paid', 'pending', 'properties.Renter', 'rent_records', 'unit', 'upi']

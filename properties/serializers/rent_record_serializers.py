@@ -11,10 +11,33 @@ class RentRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = RentRecord
         fields = "__all__"
-        read_only_fields = ["id", "created_at", "updated_at", "owner"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "owner",
+            "payout_status",
+            "status",
+            "payout_reference",
+            "payment_link",
+            "invoice_pdf",
+            "razorpay_order_id",
+            "payout_retries",
+            "last_payout_retry",
+            "payout_retry_count",
+        ]
+
+    ALLOWED_UPDATE_FIELDS = {"notes", "adjustment_reason", "late_fee", "discount"}
 
     @override
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
+        if self.instance is not None:
+            forbidden = set(self.initial_data.keys()) - self.ALLOWED_UPDATE_FIELDS
+            if forbidden:
+                raise serializers.ValidationError(
+                    {"error": f"Cannot update fields: {', '.join(sorted(forbidden))}"}
+                )
+
         user = self.context["request"].user
         unit = data.get("unit") or getattr(self.instance, "unit", None)
         renter = data.get("renter") or getattr(self.instance, "renter", None)
@@ -44,18 +67,6 @@ class RentRecordSerializer(serializers.ModelSerializer):
     def update(
         self, instance: RentRecord, validated_data: dict[str, Any]
     ) -> RentRecord:
-        user = self.context["request"].user
-        unit_val = validated_data.get("unit", instance.unit)
-        renter_val = validated_data.get("renter", instance.renter)
-        if unit_val and unit_val.owner != user:
-            raise serializers.ValidationError("You do not own the selected unit.")
-        if renter_val and renter_val.unit.owner != user:
-            raise serializers.ValidationError("You do not own the selected renter.")
-
-        if unit_val and renter_val and renter_val.unit.id != unit_val.id:
-            raise serializers.ValidationError(
-                "Renter must be part of the selected unit."
-            )
         return cast(RentRecord, super().update(instance, validated_data))
 
     def get_invoice_url(self, obj: RentRecord) -> str:

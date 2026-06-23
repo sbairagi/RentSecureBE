@@ -255,6 +255,8 @@ class RentAgreementDraft(models.Model):
     class Meta:
         unique_together = ("renter", "unit")
 
+    history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
+
     @override
     def clean(self) -> None:
         from django.core.exceptions import ValidationError

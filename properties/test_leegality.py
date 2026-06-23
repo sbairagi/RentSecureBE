@@ -177,3 +177,125 @@ class LeegalityWebhookTests(APITestCase):
     def test_leegality_webhook_rejects_get_method(self):
         response = self.client.get("/api/leegality/webhook/")
         self.assertEqual(response.status_code, 405)
+
+
+class RentAgreementDraftHistoryTests(TestCase):
+    """Tests confirming RentAgreementDraft history is created and tracked."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="hist2@t.com",
+            password="p",
+            full_name="Hist2",
+            phone="+1",
+        )
+        self.building = Building.objects.create(
+            name="HISTB",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+            owner=self.user,
+        )
+        self.unit = Unit.objects.create(
+            owner=self.user,
+            building=self.building,
+            unit="HIST101",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+            unit_type=Unit.UnitType.FLAT,
+        )
+        self.renter = Renter.objects.create(
+            unit=self.unit,
+            name="Hist Renter",
+            phone="+919999999999",
+            rent_amount=10000,
+            start_date=date(2025, 1, 1),
+        )
+
+    def test_create_draft_creates_history_entry(self):
+        draft = RentAgreementDraft.objects.create(
+            user=self.user,
+            renter=self.renter,
+            unit=self.unit,
+            file=ContentFile(b"PDF", name="draft.pdf"),
+        )
+        self.assertEqual(RentAgreementDraft.history.filter(id=draft.id).count(), 1)
+        entry = RentAgreementDraft.history.filter(id=draft.id).first()
+        self.assertEqual(entry.history_type, "+")
+
+    def test_update_owner_signed_creates_history_entry(self):
+        draft = RentAgreementDraft.objects.create(
+            user=self.user,
+            renter=self.renter,
+            unit=self.unit,
+            file=ContentFile(b"PDF", name="draft.pdf"),
+            owner_signed=False,
+            renter_signed=False,
+        )
+        draft.owner_signed = True
+        draft.save(update_fields=["owner_signed"])
+
+        entries = RentAgreementDraft.history.filter(id=draft.id)
+        self.assertEqual(entries.count(), 2)
+        latest = entries.first()
+        self.assertEqual(latest.history_type, "~")
+        self.assertTrue(latest.owner_signed)
+        self.assertFalse(latest.renter_signed)
+
+    def test_update_renter_signed_creates_history_entry(self):
+        draft = RentAgreementDraft.objects.create(
+            user=self.user,
+            renter=self.renter,
+            unit=self.unit,
+            file=ContentFile(b"PDF", name="draft.pdf"),
+            owner_signed=False,
+            renter_signed=False,
+        )
+        draft.renter_signed = True
+        draft.save(update_fields=["renter_signed"])
+
+        entries = RentAgreementDraft.history.filter(id=draft.id)
+        self.assertEqual(entries.count(), 2)
+        latest = entries.first()
+        self.assertEqual(latest.history_type, "~")
+        self.assertFalse(latest.owner_signed)
+        self.assertTrue(latest.renter_signed)
+
+    def test_update_both_signed_creates_history_entry(self):
+        draft = RentAgreementDraft.objects.create(
+            user=self.user,
+            renter=self.renter,
+            unit=self.unit,
+            file=ContentFile(b"PDF", name="draft.pdf"),
+            owner_signed=False,
+            renter_signed=False,
+        )
+        draft.owner_signed = True
+        draft.renter_signed = True
+        draft.save(update_fields=["owner_signed", "renter_signed"])
+
+        entries = RentAgreementDraft.history.filter(id=draft.id)
+        self.assertEqual(entries.count(), 2)
+        latest = entries.first()
+        self.assertEqual(latest.history_type, "~")
+        self.assertTrue(latest.owner_signed)
+        self.assertTrue(latest.renter_signed)
+
+    def test_delete_draft_creates_history_entry(self):
+        draft = RentAgreementDraft.objects.create(
+            user=self.user,
+            renter=self.renter,
+            unit=self.unit,
+            file=ContentFile(b"PDF", name="draft.pdf"),
+        )
+        draft_id = draft.id
+        draft.delete()
+        entries = RentAgreementDraft.history.filter(id=draft_id)
+        self.assertEqual(entries.count(), 2)
+        latest = entries.first()
+        self.assertEqual(latest.history_type, "-")

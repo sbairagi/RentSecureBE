@@ -1,0 +1,4 @@
+# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/serializers/rent_record_serializers.py
+# hypothesis_version: 6.136.0
+
+['PAID', '__all__', 'adjustment_reason', 'amount_paid', 'created_at', 'date_paid', 'discount', 'error', 'id', 'invoice_pdf', 'last_payout_retry', 'late_fee', 'notes', 'owner', 'payment_link', 'payout_reference', 'payout_retries', 'payout_retry_count', 'payout_status', 'razorpay_order_id', 'rent_month', 'renter', 'request', 'status', 'unit', 'updated_at']
