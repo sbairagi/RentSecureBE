@@ -143,6 +143,8 @@ jobs:
     name: Trivy (FS Vulnerability Scanner)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      security-events: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -246,6 +248,7 @@ jobs:
     permissions:
       security-events: write
       contents: read
+      actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
