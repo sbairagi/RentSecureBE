@@ -9,7 +9,11 @@ import sys
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rentsecure_be.settings")
 
-import django
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+import django  # noqa: E402
 from django.conf import settings  # noqa: E402
 
 django.setup()
@@ -25,31 +29,31 @@ client = Client()
 contracts = {
     "properties:building-list": {
         "method": "GET",
-        "path": "/api/properties/buildings/",
+        "path": "/api/buildings/",
         "expect_status": [200, 401, 403],
         "required_keys_when_200": ["count"],
     },
     "properties:unit-list": {
         "method": "GET",
-        "path": "/api/properties/units/",
+        "path": "/api/units/",
         "expect_status": [200, 401, 403],
         "required_keys_when_200": ["count"],
     },
     "properties:renter-list": {
         "method": "GET",
-        "path": "/api/properties/renters/",
+        "path": "/api/renters/",
         "expect_status": [200, 401, 403],
         "required_keys_when_200": ["count"],
     },
     "properties:rent-record-list": {
         "method": "GET",
-        "path": "/api/properties/rent-records/",
+        "path": "/api/rent-records/",
         "expect_status": [200, 401, 403],
         "required_keys_when_200": ["count"],
     },
     "finance:finance-list": {
         "method": "GET",
-        "path": "/finance/",
+        "path": "/finance/tax-submissions/",
         "expect_status": [200, 401, 403, 404],
     },
 }
