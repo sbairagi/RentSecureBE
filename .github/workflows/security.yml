@@ -98,10 +98,10 @@ jobs:
           pip install pip-audit
 
       - name: Run Pip-audit on production requirements
-        run: python -m pip-audit --requirement=requirements.txt --vulnerability-service=pypi
+        run: python -m pip_audit --requirement=requirements.txt --vulnerability-service=pypi
 
       - name: Run Pip-audit on full requirements
-        run: python -m pip-audit --requirement=requirements.txt --vulnerability-service=pypi
+        run: python -m pip_audit --requirement=requirements.txt --vulnerability-service=pypi
 
   semgrep:
     name: Semgrep (SAST)
@@ -133,6 +133,7 @@ jobs:
           generateSarif: true
 
       - name: Upload Semgrep SARIF to GitHub Security
+        if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: semgrep.sarif
@@ -159,7 +160,7 @@ jobs:
             registry-1.docker.io:443
 
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.55.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -206,6 +207,7 @@ jobs:
 
       - name: Upload Gitleaks SARIF
         if: always()
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: gitleaks-report.sarif
@@ -264,7 +266,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: python
-          queries: security-extended,security-and-quality,python-deprecated-functions
+          queries: security-extended,security-and-quality
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
@@ -297,7 +299,7 @@ jobs:
             api.scorecard.dev:443
 
       - name: Run OpenSSF Scorecard
-        uses: ossf/scorecard-action@v2
+        uses: ossf/scorecard-action@v2.0.0
         with:
           results_file: scorecard-results.sarif
           results_format: sarif

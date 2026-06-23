@@ -176,7 +176,7 @@ if config("USE_SQLITE", default="False", cast=bool):
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": config("DB_NAME", default=str(BASE_DIR / "db.sqlite3")),
             "USER": "",
-            "PASSWORD": "",
+            "PASSWORD": "",  # nosec B105 - SQLite does not require a password
             "HOST": "",
             "PORT": "",
         }
