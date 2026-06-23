@@ -54,7 +54,7 @@ jobs:
           python -m bandit -r smartbot -x '*/tests/*,*/tests.py,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
           python -m bandit -r referral_and_earn -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
           python -m bandit -r dashboard -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r documents -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
+          python -m bandit -r documents -x '*/tests/*,*/tests.py,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
           python -m bandit -r management -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
 
   pip-audit:
