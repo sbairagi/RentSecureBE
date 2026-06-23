@@ -39,6 +39,12 @@ from faker import Faker
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rentsecure_be.settings")
 django.setup()
 
+from django.conf import settings  # noqa: E402
+
+settings.SECURE_SSL_REDIRECT = False
+settings.SESSION_COOKIE_SECURE = False
+settings.CSRF_COOKIE_SECURE = False
+
 from core.models import (  # noqa: E402
     AddOnPurchase,
     NotificationPreference,
