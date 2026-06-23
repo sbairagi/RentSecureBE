@@ -80,4 +80,6 @@ jobs:
         env:
           SECRET_KEY: test-secret-key-contract-test-2026
           PYTHONPATH: ${{ github.workspace }}
+          SECURE_SSL_REDIRECT: "False"
+          DEBUG: "True"
         run: python3 scripts/check_api_contracts.py

@@ -10,8 +10,13 @@ import sys
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rentsecure_be.settings")
 
 import django
+from django.conf import settings  # noqa: E402
 
 django.setup()
+
+settings.SECURE_SSL_REDIRECT = False
+settings.SESSION_COOKIE_SECURE = False
+settings.CSRF_COOKIE_SECURE = False
 
 from django.test import Client  # noqa: E402
 
