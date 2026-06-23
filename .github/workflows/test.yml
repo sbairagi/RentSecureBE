@@ -10,7 +10,7 @@ jobs:
     timeout-minutes: 30
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: test-secret-key-pytest-job-2026
+      SECRET_KEY: test-secret-key-pytest-job-2026!
       DEBUG: "False"
       DJANGO_ENV: test
       ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
