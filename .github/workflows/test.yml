@@ -8,6 +8,9 @@ jobs:
     name: Pytest + Coverage
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
     env:
       USE_SQLITE: "True"
       SECRET_KEY: test-secret-key-pytest-job-2026!
