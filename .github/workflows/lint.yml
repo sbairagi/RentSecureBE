@@ -231,6 +231,7 @@ jobs:
           python -m vulture \
             --exclude .venv,venv,build,dist,migrations,__pycache__,.pytest_cache,.github,.kilo \
             --exclude properties/_legacy,properties/refactored_models_combined.py,properties/original_models.py \
+            --exclude properties/signals,core/signals.py,referral_and_earn/signals.py \
             --min-confidence 80 \
             rentsecure_be core properties finance notification documents smartbot referral_and_earn ai_assistant dashboard \
             2>&1 | tee vulture-report.txt || true

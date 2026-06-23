@@ -228,18 +228,21 @@ skips = ["S404", "S403"]
 
 [tool.vulture]
 exclude = [
-    ".venv",
-    "venv",
-    "build",
-    "dist",
-    "migrations",
-    "__pycache__",
-    ".pytest_cache",
-    ".github",
-    ".kilo",
-    "properties/_legacy",
-    "properties/refactored_models_combined.py",
-    "properties/original_models.py",
+  ".venv",
+  "venv",
+  "build",
+  "dist",
+  "migrations",
+  "__pycache__",
+  ".pytest_cache",
+  ".github",
+  ".kilo",
+  "properties/_legacy",
+  "properties/refactored_models_combined.py",
+  "properties/original_models.py",
+  "properties/signals",
+  "core/signals.py",
+  "referral_and_earn/signals.py",
 ]
 min_confidence = 80
 paths = [

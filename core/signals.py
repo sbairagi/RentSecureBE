@@ -11,7 +11,7 @@ from .models import PlanFeatureLimit, SubscriptionPlan, UserSubscription
 
 @receiver(post_save, sender=User)
 def assign_default_plan(
-    _sender: type[Any],
+    sender: type[Any],
     instance: User,
     created: bool,
     **kwargs: Any,
