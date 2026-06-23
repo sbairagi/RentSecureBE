@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 120
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: test-secret-key-mutmut-2026-v2!!
+      SECRET_KEY: test-secret-key-mutmut-2026
       DEBUG: "False"
       DJANGO_ENV: test
       MUTMUT_CACHE_DIR: .mutmut-cache
