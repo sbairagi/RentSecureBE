@@ -143,7 +143,7 @@ jobs:
           import subprocess, sys, os
 
           apps = ["properties", "core", "finance", "smartbot", "documents", "notification", "referral_and_earn"]
-          env = {**os.environ, "DJANGO_SETTINGS_MODULE": "rentsecure_be.settings"}
+          os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rentsecure_be.settings")
 
           # Django setup
           import django
