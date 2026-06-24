@@ -1,20 +1,71 @@
-name: CI Pipeline - Minimal Test
+name: CI Pipeline
 
 "on":
   push:
-    branches: [main, cleanup/remove-dead-code]
+    branches: [main, master, cleanup/remove-dead-code]
   pull_request:
-    branches: [main, dev]
+    branches: [main, master, dev, cleanup/remove-dead-code]
 
 permissions:
   contents: read
+  security-events: write
+  id-token: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  smoke-test:
-    name: Smoke Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Smoke
-        run: echo "ci.yml starts"
+  lint:
+    name: Lint
+    uses: ./.github/workflows/lint.yml
+
+  test:
+    name: Test
+    needs: lint
+    uses: ./.github/workflows/test.yml
+
+  django-check:
+    name: Django Check
+    needs: test
+    uses: ./.github/workflows/django-check.yml
+
+  hypothesis:
+    name: Property Tests
+    needs: django-check
+    uses: ./.github/workflows/hypothesis.yml
+
+  architecture:
+    name: Architecture
+    needs: hypothesis
+    uses: ./.github/workflows/architecture.yml
+
+  contract-tests:
+    name: Contract Tests
+    needs: hypothesis
+    uses: ./.github/workflows/contract-tests.yml
+
+  security:
+    name: Security
+    needs: [architecture, contract-tests]
+    uses: ./.github/workflows/security.yml
+
+  quality:
+    name: Quality
+    needs: security
+    uses: ./.github/workflows/quality.yml
+
+  performance:
+    name: Performance
+    needs: security
+    uses: ./.github/workflows/performance.yml
+
+  mutation:
+    name: Mutation
+    needs: security
+    uses: ./.github/workflows/mutation.yml
+
+  deploy-readiness:
+    name: Deploy Readiness
+    needs: [performance, mutation, quality]
+    uses: ./.github/workflows/deploy-readiness.yml

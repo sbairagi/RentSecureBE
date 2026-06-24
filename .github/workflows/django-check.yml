@@ -10,7 +10,7 @@ jobs:
     timeout-minutes: 15
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: django-check-ci-pipeline-security-validation-2026-production-grade-random-key-XK9mP2vL7qR4wN8jF5tB3nY6hD1zS0aC9eU3iI7oL4pQ2rT8vX5yW6zA1bE4fG9kH2jK5lM8nP0qS3uV6wX9yZ2cD5fG8hJ1kL4mN7oP0qR2sT5u
+      SECRET_KEY: "django-check-ci-pipeline-security-validation-2026-production-grade-random-key-XK9mP2vL7qR4wN8jF5tB3nY6hD1zS0aC9eU3iI7oL4pQ2rT8vX5yW6zA1bE4fG9kH2jK5lM8nP0qS3uV6wX9yZ2cD5fG8hJ1kL4mN7oP0qR2sT5u"
       DEBUG: "False"
       DJANGO_ENV: test
     steps:
