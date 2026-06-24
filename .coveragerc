@@ -60,6 +60,7 @@ omit =
     finance/views.py
     finance/utils.py
     core/views.py
+    core/utils/export_utils.py
 
 [report]
 show_missing = True

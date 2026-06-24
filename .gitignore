@@ -76,3 +76,4 @@ local_settings.py
 # Report / documentation markdown files
 report_docs/
 .aider*
+.hypothesis/
