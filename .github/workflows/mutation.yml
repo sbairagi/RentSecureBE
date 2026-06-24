@@ -31,6 +31,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          token: ${{ github.token }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Set up Python

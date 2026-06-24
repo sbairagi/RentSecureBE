@@ -11,6 +11,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          token: ${{ github.token }}
       - name: Set up Python
         uses: actions/setup-python@v5
       - name: Cache pip
@@ -56,6 +59,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          token: ${{ github.token }}
       - name: Set up Python
         uses: actions/setup-python@v5
       - name: Cache pip
