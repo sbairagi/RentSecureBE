@@ -24,3 +24,8 @@ jobs:
     name: Test
     needs: lint
     uses: ./.github/workflows/test.yml
+
+  django-check:
+    name: Django Check
+    needs: test
+    uses: ./.github/workflows/django-check.yml
