@@ -28,8 +28,6 @@ from twilio.rest import Client
 
 from core.utils.export_utils import generate_owner_rent_report
 from notification.services.rent_notify_service import send_payout_notification
-from properties.models import RentRecord
-from referral_and_earn.models import Referral
 from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
     process_rent_payout,
@@ -100,6 +98,8 @@ class SendOTP(APIView):
 
 def _process_referral(otp: OTP, user: User) -> Response | None:
     """Shared referral logic for owner/renter OTP verification."""
+    from referral_and_earn.models import Referral
+
     if otp.referral_code:
         try:
             referrer_referral = Referral.objects.get(referral_code=otp.referral_code)
@@ -327,6 +327,8 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     Fixed: rent.save() no longer overwrites `rent` with None.
     Fixed: Removed invalid rent.renter.property.owner chain.
     """
+    from properties.models import RentRecord
+
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
 
@@ -357,6 +359,8 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
 @csrf_exempt
 def create_rent_payment(request: HttpRequest) -> JsonResponse:
     """Create a Razorpay order for rent payment."""
+    from properties.models import RentRecord
+
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
 
@@ -419,6 +423,8 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901
     Handles both payment.captured (order-based) and payment_link.paid events.
     Consolidated from three duplicate definitions into one secure handler.
     """
+    from properties.models import RentRecord
+
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
 
@@ -516,6 +522,8 @@ def update_owner_bank_details(
     Fixed: Uses register_beneficiary from cashfree_service.
     Fixed: Uses correct RentRecord field (owner) instead of renter__property__owner.
     """
+    from properties.models import RentRecord
+
     data = request.data
     owner: User = cast(User, request.user)
 
@@ -578,6 +586,8 @@ def rent_inflow_summary(request: Request, /, *args: Any, **kwargs: Any) -> Respo
 
     Fixed: Uses correct RentRecord field (owner) and (amount) and (PENDING).
     """
+    from properties.models import RentRecord
+
     owner: User = cast(User, request.user)
     total_received = (
         RentRecord.objects.filter(unit__owner=owner, status="PAID").aggregate(
@@ -610,6 +620,8 @@ def owner_rent_records(request: Request, /, *args: Any, **kwargs: Any) -> Respon
 
     Fixed: Uses correct FK path (unit.owner, renter.name, unit.unit).
     """
+    from properties.models import RentRecord
+
     owner: User = cast(User, request.user)
     rents = (
         RentRecord.objects.filter(unit__owner=owner)

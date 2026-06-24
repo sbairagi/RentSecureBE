@@ -7,6 +7,7 @@ jobs:
   vulture:
     name: Vulture (Dead Code)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,12 +25,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+
       - name: Install Vulture
         run: |
           python -m pip install --upgrade pip
           pip install vulture
 
-      - name: Run Vulture (dead code detection)
+      - name: Run Vulture (dead code detection) — advisory, non-blocking
         run: |
           python -m vulture \
             --exclude .venv,venv,build,dist,migrations,__pycache__,.pytest_cache,.github,.kilo \
@@ -42,6 +56,7 @@ jobs:
   import-linter:
     name: Import Linter (Architecture)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,13 +74,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+
       - name: Install import-linter
         run: |
           python -m pip install --upgrade pip
           pip install import-linter
 
-      - name: Verify import-linter configuration
-        run: lint-imports --config import-linter.ini || true
-
-      - name: Run import-linter
+      - name: Run import-linter (advisory, non-blocking)
         run: lint-imports --config import-linter.ini || true

@@ -95,7 +95,6 @@ jobs:
             --users 20 \
             --spawn-rate 2 \
             --run-time 2m \
-            --headless \
             --html locust-report.html \
             --csv locust-report \
             --csv-full-history \

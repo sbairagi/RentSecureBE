@@ -54,3 +54,18 @@ jobs:
     name: Quality
     needs: security
     uses: ./.github/workflows/quality.yml
+
+  performance:
+    name: Performance
+    needs: security
+    uses: ./.github/workflows/performance.yml
+
+  mutation:
+    name: Mutation
+    needs: security
+    uses: ./.github/workflows/mutation.yml
+
+  deploy-readiness:
+    name: Deploy Readiness
+    needs: [performance, mutation, quality]
+    uses: ./.github/workflows/deploy-readiness.yml
