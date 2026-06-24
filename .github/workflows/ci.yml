@@ -24,3 +24,48 @@ jobs:
     name: Test
     needs: lint
     uses: ./.github/workflows/test.yml
+
+  django-check:
+    name: Django Check
+    needs: test
+    uses: ./.github/workflows/django-check.yml
+
+  hypothesis:
+    name: Property Tests
+    needs: django-check
+    uses: ./.github/workflows/hypothesis.yml
+
+  architecture:
+    name: Architecture
+    needs: hypothesis
+    uses: ./.github/workflows/architecture.yml
+
+  contract-tests:
+    name: Contract Tests
+    needs: hypothesis
+    uses: ./.github/workflows/contract-tests.yml
+
+  security:
+    name: Security
+    needs: [architecture, contract-tests]
+    uses: ./.github/workflows/security.yml
+
+  quality:
+    name: Quality
+    needs: security
+    uses: ./.github/workflows/quality.yml
+
+  performance:
+    name: Performance
+    needs: security
+    uses: ./.github/workflows/performance.yml
+
+  mutation:
+    name: Mutation
+    needs: security
+    uses: ./.github/workflows/mutation.yml
+
+  deploy-readiness:
+    name: Deploy Readiness
+    needs: [performance, mutation, quality]
+    uses: ./.github/workflows/deploy-readiness.yml
