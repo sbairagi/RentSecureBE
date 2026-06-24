@@ -11,14 +11,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Set up Python
         uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -65,14 +59,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Set up Python
         uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -110,21 +98,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            api.github.com:443
-            semgrep.dev:443
-            semgrep.net:443
-
       - name: Run Semgrep
         uses: semgrep/semgrep-action@v1
         with:
@@ -150,22 +125,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            api.github.com:443
-            aquasecurity.github.io:443
-            ghcr.io:443
-            registry-1.docker.io:443
-
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -192,20 +153,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            api.github.com:443
-
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
@@ -228,19 +177,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            api.github.com:443
-
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
         with:
@@ -259,22 +197,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            api.github.com:443
-            codeql.githubusercontent.com:443
-            github-releases.githubusercontent.com:443
-            codeload.github.com:443
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
@@ -299,21 +223,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            api.github.com:443
-            scorecard.dev:443
-            api.scorecard.dev:443
-
       - name: Run OpenSSF Scorecard
         uses: ossf/scorecard-action@v2.0.0
         with:
