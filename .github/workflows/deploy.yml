@@ -1,6 +1,6 @@
 name: Deploy Backend
 
-on:
+"on":
   workflow_call:
   push:
     branches:

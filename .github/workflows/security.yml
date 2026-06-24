@@ -1,6 +1,6 @@
 name: Security
 
-on:
+"on":
   workflow_call:
 
 jobs:

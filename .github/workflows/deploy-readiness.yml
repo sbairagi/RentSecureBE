@@ -1,6 +1,6 @@
 name: Deploy Readiness
 
-on:
+"on":
   workflow_call:
 
 jobs:

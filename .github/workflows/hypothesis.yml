@@ -1,6 +1,6 @@
 name: Property-Based Testing
 
-on:
+"on":
   workflow_call:
   schedule:
     - cron: '0 3 * * *'  # Nightly at 03:00 UTC

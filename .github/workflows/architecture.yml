@@ -1,6 +1,6 @@
 name: Architecture & Maintainability
 
-on:
+"on":
   workflow_call:
 
 jobs:
