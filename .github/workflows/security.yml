@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Python
         uses: actions/setup-python@v5
       - name: Cache pip
@@ -59,6 +61,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Python
         uses: actions/setup-python@v5
       - name: Cache pip
@@ -98,6 +102,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Run Semgrep
@@ -125,6 +131,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Run Trivy filesystem scan
@@ -153,6 +161,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Run Gitleaks
@@ -177,6 +187,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Dependency Review
@@ -197,6 +209,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Initialize CodeQL
@@ -204,7 +218,6 @@ jobs:
         with:
           languages: python
           queries: security-extended,security-and-quality
-
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
         with:
@@ -223,6 +236,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Run OpenSSF Scorecard

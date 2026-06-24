@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Download coverage artifact
@@ -54,20 +56,19 @@ jobs:
           SONAR_ORGANIZATION: sbairagi
           SONAR_PROJECT_KEY: sbairagi_RentSecureBE
         with:
-          args: >
-            -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=300
-            -Dsonar.coverageReportPaths=coverage.xml
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.sources=.
-            -Dsonar.exclusions=**/migrations/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/*.pyc,**/db.sqlite3,**/.github/**,**/htmlcov/**,**/coverage.xml,**/*.md,**/requirements*.txt,**/.env.example
-            -Dsonar.tests=.
-            -Dsonar.test.inclusions=**/test_*.py,**/tests.py,**/*_tests.py,**/tests/**/*.py
-            -Dsonar.python.unitTest.source=.
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
-            -Dsonar.pullrequest.branch=${{ github.head_ref }}
-            -Dsonar.pullrequest.base=${{ github.base_ref }}
-            -Dsonar.verbose=true
+          projectProperties: |
+            sonar.host.url=https://sonarcloud.io
+            sonar.organization=${{ env.SONAR_ORGANIZATION }}
+            sonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            sonar.qualitygate.wait=true
+            sonar.qualitygate.timeout=300
+            sonar.coverageReportPaths=coverage.xml
+            sonar.python.coverage.reportPaths=coverage.xml
+            sonar.sources=.
+            sonar.exclusions=**/migrations/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/*.pyc,**/db.sqlite3,**/.github/**,**/htmlcov/**,**/coverage.xml,**/*.md,**/requirements*.txt,**/.env.example
+            sonar.tests=.
+            sonar.test.inclusions=**/test_*.py,**/tests.py,**/*_tests.py,**/tests/**/*.py
+            sonar.python.unitTest.source=.
+            sonar.pullrequest.key=${{ github.event.pull_request.number }}
+            sonar.pullrequest.branch=${{ github.head_ref }}
+            sonar.pullrequest.base=${{ github.base_ref }}

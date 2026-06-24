@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 60
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: test-secret-key-hypothesis-2026
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
       DEBUG: "False"
       DJANGO_ENV: test
       HYPOTHESIS_MAX_EXAMPLES: "200"
@@ -30,6 +30,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Set up Python
