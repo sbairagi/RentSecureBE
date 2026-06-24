@@ -16,8 +16,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Set up Python
@@ -67,8 +65,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Set up Python
