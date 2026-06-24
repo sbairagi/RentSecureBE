@@ -6,13 +6,6 @@ name: CI Pipeline
   pull_request:
     branches: [main, master, dev, cleanup/remove-dead-code]
 
-permissions:
-  contents: read
-  security-events: write
-  id-token: write
-  actions: read
-  packages: read
-
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true

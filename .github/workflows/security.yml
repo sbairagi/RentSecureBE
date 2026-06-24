@@ -199,11 +199,11 @@ jobs:
           allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0
 
   codeql:
-    name: CodeQL (Security + Quality)
+    name: CodeQL (Local Analysis)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      security-events: write
+      security-events: read
       contents: read
       actions: read
     steps:
@@ -222,7 +222,7 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:python"
-          upload: true
+          upload: false
 
   osrf-scorecard:
     name: OpenSSF Scorecard
