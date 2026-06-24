@@ -43,19 +43,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install bandit
 
-      - name: Run Bandit on all app source directories
+      - name: Run Bandit on app source directories
         run: |
           python -m bandit -r rentsecure_be -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r core -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r properties -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r ai_assistant -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r notification -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r finance -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r smartbot -x '*/tests/*,*/tests.py,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r referral_and_earn -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r dashboard -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r documents -x '*/tests/*,*/tests.py,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r management -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
+          python -m bandit -r core -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
+          python -m bandit -r properties -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
+          python -m bandit -r ai_assistant -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
+          python -m bandit -r notification -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
+          python -m bandit -r finance -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
+          python -m bandit -r smartbot -x '*/tests/*,*/tests.py,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
+          python -m bandit -r referral_and_earn -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
+          python -m bandit -r dashboard -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
+          python -m bandit -r documents -x '*/tests/*,*/tests.py,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
 
   pip-audit:
     name: Pip-audit (Dependency Scanner)
@@ -245,7 +244,6 @@ jobs:
     permissions:
       security-events: write
       contents: read
-      actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
