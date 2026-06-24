@@ -34,3 +34,13 @@ jobs:
     name: Property Tests
     needs: django-check
     uses: ./.github/workflows/hypothesis.yml
+
+  architecture:
+    name: Architecture
+    needs: hypothesis
+    uses: ./.github/workflows/architecture.yml
+
+  contract-tests:
+    name: Contract Tests
+    needs: hypothesis
+    uses: ./.github/workflows/contract-tests.yml
