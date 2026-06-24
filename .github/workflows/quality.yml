@@ -13,9 +13,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Download coverage artifact

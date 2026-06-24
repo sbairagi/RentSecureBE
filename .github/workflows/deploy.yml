@@ -17,9 +17,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.7
       - name: Install Sentry CLI
