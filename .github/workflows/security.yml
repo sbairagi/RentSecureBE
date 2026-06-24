@@ -97,6 +97,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       security-events: write
+      contents: read
       actions: read
     steps:
       - name: Checkout code
