@@ -289,6 +289,7 @@ jobs:
 
   osrf-scorecard:
     name: OpenSSF Scorecard
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
