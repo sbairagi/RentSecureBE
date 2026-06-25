@@ -5,8 +5,12 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Quality
 
-"on":
+on:
   workflow_call:
+
+permissions:
+  contents: read
+  security-events: write
 
 jobs:
   sonarcloud:
@@ -14,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,6 +26,14 @@ jobs:
           fetch-depth: 1
       - name: Harden Runner
         uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            objects.githubusercontent.com:443
+            api.sonarcloud.io:443
+            sonarcloud.io:443
+
       - name: Download coverage artifact
         uses: actions/download-artifact@v4
         with:
@@ -55,25 +67,18 @@ jobs:
           pip install coverage
 
       - name: Run SonarCloud analysis
-        uses: SonarSource/sonarcloud-github-action@v1
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_ORGANIZATION: sbairagi
-          SONAR_PROJECT_KEY: sbairagi_RentSecureBE
+        uses: SonarSource/sonarcloud-github-action@v5.0.0
         with:
-          projectProperties: |
-            sonar.host.url=https://sonarcloud.io
-            sonar.organization=${{ env.SONAR_ORGANIZATION }}
-            sonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
-            sonar.qualitygate.wait=true
-            sonar.qualitygate.timeout=300
-            sonar.coverageReportPaths=coverage.xml
-            sonar.python.coverage.reportPaths=coverage.xml
-            sonar.sources=.
-            sonar.exclusions=**/migrations/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/*.pyc,**/db.sqlite3,**/.github/**,**/htmlcov/**,**/coverage.xml,**/*.md,**/requirements*.txt,**/.env.example
-            sonar.tests=.
-            sonar.test.inclusions=**/test_*.py,**/tests.py,**/*_tests.py,**/tests/**/*.py
-            sonar.python.unitTest.source=.
-            sonar.pullrequest.key=${{ github.event.pull_request.number }}
-            sonar.pullrequest.branch=${{ github.head_ref }}
-            sonar.pullrequest.base=${{ github.base_ref }}
+          args: |
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.organization=sbairagi
+            -Dsonar.projectKey=sbairagi_RentSecureBE
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+            -Dsonar.coverageReportPaths=coverage.xml
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.sources=.
+            -Dsonar.exclusions=**/migrations/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/*.pyc,**/db.sqlite3,**/.github/**,**/htmlcov/**,**/coverage.xml,**/*.md,**/requirements*.txt,**/.env.example
+            -Dsonar.tests=.
+            -Dsonar.test.inclusions=**/test_*.py,**/tests.py,**/*_tests.py,**/tests/**/*.py
+            -Dsonar.python.unitTest.source=.
