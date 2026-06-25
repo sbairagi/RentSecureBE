@@ -2,7 +2,7 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [main, master, cleanup/remove-dead-code]
+    branches: [main, master, cleanup/remove-dead-code, backup/remove-dead-code-before-reset]
   pull_request:
     branches: [main, master, dev, cleanup/remove-dead-code]
 
