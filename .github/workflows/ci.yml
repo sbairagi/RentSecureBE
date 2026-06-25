@@ -21,49 +21,31 @@ concurrency:
 
 jobs:
   lint:
-    name: Lint
+    name: Lint & Code Quality
     uses: ./.github/workflows/lint.yml
     secrets: inherit
 
-  test:
-    name: Test
+  security:
+    name: Security & Supply Chain
     needs: lint
+    uses: ./.github/workflows/security.yml
+    secrets: inherit
+
+  test:
+    name: Test Coverage
+    needs: security
     uses: ./.github/workflows/test.yml
     secrets: inherit
 
-  django-check:
-    name: Django Check
-    needs: test
-    uses: ./.github/workflows/django-check.yml
-    secrets: inherit
-
   hypothesis:
-    name: Property Tests
-    needs: django-check
+    name: Hypothesis Property Tests
+    needs: security
     uses: ./.github/workflows/hypothesis.yml
-    secrets: inherit
-
-  architecture:
-    name: Architecture
-    needs: hypothesis
-    uses: ./.github/workflows/architecture.yml
-    secrets: inherit
-
-  contract-tests:
-    name: Contract Tests
-    needs: hypothesis
-    uses: ./.github/workflows/contract-tests.yml
-    secrets: inherit
-
-  security:
-    name: Security
-    needs: [architecture, contract-tests]
-    uses: ./.github/workflows/security.yml
     secrets: inherit
 
   quality:
     name: Quality
-    needs: security
+    needs: test
     uses: ./.github/workflows/quality.yml
     secrets: inherit
 
@@ -79,8 +61,26 @@ jobs:
     uses: ./.github/workflows/mutation.yml
     secrets: inherit
 
-  # deploy-readiness:
-  #   name: Deploy Readiness
-  #   needs: [performance, mutation, quality]
-  #   uses: ./.github/workflows/deploy-readiness.yml
-  #   secrets: inherit
+  django-check:
+    name: Django Management Checks
+    needs: security
+    uses: ./.github/workflows/django-check.yml
+    secrets: inherit
+
+  architecture:
+    name: Architecture & Contracts
+    needs: django-check
+    uses: ./.github/workflows/architecture.yml
+    secrets: inherit
+
+  contract-tests:
+    name: Contract Tests
+    needs: architecture
+    uses: ./.github/workflows/contract-tests.yml
+    secrets: inherit
+
+  deploy-readiness:
+    name: Deploy Readiness
+    needs: [contract-tests, performance, mutation, quality]
+    uses: ./.github/workflows/deploy-readiness.yml
+    secrets: inherit
