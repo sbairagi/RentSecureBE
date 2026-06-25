@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 30
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      SECRET_KEY: test-secret-key-loadtest-2026
       DEBUG: "False"
       DJANGO_ENV: test
       ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
@@ -107,7 +107,7 @@ jobs:
     timeout-minutes: 30
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      SECRET_KEY: test-secret-key-perf-bench-2026
       DEBUG: "False"
       DJANGO_ENV: test
     steps:

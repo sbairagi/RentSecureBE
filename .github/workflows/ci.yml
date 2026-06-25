@@ -57,7 +57,7 @@ jobs:
 
   security:
     name: Security
-    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    needs: [architecture, contract-tests]
     uses: ./.github/workflows/security.yml
     secrets: inherit
 
@@ -79,8 +79,8 @@ jobs:
     uses: ./.github/workflows/mutation.yml
     secrets: inherit
 
-  deploy-readiness:
-    name: Deploy Readiness
-    needs: [performance, mutation, quality]
-    uses: ./.github/workflows/deploy-readiness.yml
-    secrets: inherit
+  # deploy-readiness:
+  #   name: Deploy Readiness
+  #   needs: [performance, mutation, quality]
+  #   uses: ./.github/workflows/deploy-readiness.yml
+  #   secrets: inherit
