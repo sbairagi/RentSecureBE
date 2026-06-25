@@ -90,19 +90,19 @@ jobs:
         id: discover
         run: |
           echo "=== properties ==="
-          ls -1 properties/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find properties/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== core ==="
-          ls -1 core/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find core/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== finance ==="
-          ls -1 finance/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find finance/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== smartbot ==="
-          ls -1 smartbot/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find smartbot/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== documents ==="
-          ls -1 documents/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find documents/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== notification ==="
-          ls -1 notification/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find notification/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== referral_and_earn ==="
-          ls -1 referral_and_earn/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find referral_and_earn/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
 
       - name: Run all migrations forward
         run: python manage.py migrate --run-syncdb --verbosity=2
