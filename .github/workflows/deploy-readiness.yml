@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 8a: Deploy Readiness Check
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: Django system check, deploy check, migration validation, collectstatic
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Deploy Readiness
 
 "on":
@@ -5,7 +10,7 @@ name: Deploy Readiness
 
 jobs:
   deploy-readiness:
-    name: Deploy Readiness Check
+    name: Stage 8a │ Deploy Readiness Check
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 5: Architecture & Maintainability
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: Vulture (dead code), import-linter (layered architecture validation)
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Architecture & Maintainability
 
 "on":
@@ -5,7 +10,7 @@ name: Architecture & Maintainability
 
 jobs:
   vulture:
-    name: Vulture (Dead Code)
+    name: Stage 5a │ Vulture (Dead Code)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -52,7 +57,7 @@ jobs:
             2>&1 | tee vulture-report.txt || true
 
   import-linter:
-    name: Import Linter (Architecture)
+    name: Stage 5b │ Import Linter (Architecture)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

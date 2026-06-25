@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 3e: Performance & Load Testing
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: Locust load test + Pytest benchmark regression
+# Schedule: Mon/Wed/Fri at 04:00 UTC (off-peak)
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Load & Performance Regression Testing
 
 "on":
@@ -18,7 +24,7 @@ concurrency:
 
 jobs:
   load-test:
-    name: Locust Load Test
+    name: Stage 3e_i  │ Locust Load Test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -102,7 +108,7 @@ jobs:
           retention-days: 30
 
   perf-regression:
-    name: Pytest Benchmark Regression
+    name: Stage 3e_ii │ Pytest Benchmark Regression
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

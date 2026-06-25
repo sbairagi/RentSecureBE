@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 7: Quality Gate (SonarCloud)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: SonarCloud analysis with quality gate check (wait for gate status)
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Quality
 
 "on":
@@ -5,7 +10,7 @@ name: Quality
 
 jobs:
   sonarcloud:
-    name: SonarCloud Analysis
+    name: Stage 7 │ SonarCloud Quality Gate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 8b: Deploy to Production
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: EC2 SSH deploy, Sentry release & deploy tracking
+# NOTE: Disabled temporarily — restore `push` trigger before actual deployment
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Deploy Backend
 
 "on":
@@ -13,7 +19,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy to EC2
+    name: Stage 8b │ Deploy to Production
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

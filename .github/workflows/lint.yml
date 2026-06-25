@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 1: Setup & Prepare        │ STAGE 2: Code Quality (Fast-Fail)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Jobs: pre-commit, black, ruff, pylint, mypy (strict), vulture (dead code)
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Lint
 
 "on":
@@ -5,7 +10,7 @@ name: Lint
 
 jobs:
   pre-commit:
-    name: Pre-commit
+    name: Stage 1 │ Pre-commit
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -46,7 +51,7 @@ jobs:
         run: pre-commit run --all-files
 
   black:
-    name: Black
+    name: Stage 2a │ Black Format
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -82,7 +87,7 @@ jobs:
         run: python -m black --check .
 
   ruff:
-    name: Ruff
+    name: Stage 2b │ Ruff Lint
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -118,7 +123,7 @@ jobs:
         run: python -m ruff check .
 
   pylint:
-    name: Pylint
+    name: Stage 2c │ Pylint Analysis
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -158,7 +163,7 @@ jobs:
         run: python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot
 
   mypy:
-    name: Mypy (Strict)
+    name: Stage 2d │ Mypy (Strict Typing)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -200,7 +205,7 @@ jobs:
         run: python -m mypy --config-file=mypy.ini .
 
   vulture:
-    name: Vulture (Dead Code Detection)
+    name: Stage 2e │ Vulture (Dead Code Detection)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

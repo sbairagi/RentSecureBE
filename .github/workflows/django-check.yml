@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 4: Django System & Migration Checks
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: Django system check, deploy check, migration validation, rollback
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Django Check
 
 "on":
@@ -5,7 +10,7 @@ name: Django Check
 
 jobs:
   django-check:
-    name: Django Management Checks
+    name: Stage 4a │ Django System & Migration Check
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -53,7 +58,7 @@ jobs:
           echo "All migrations applied successfully on clean database."
 
   migration-rollback:
-    name: Migration Rollback Validation
+    name: Stage 4b │ Migration Rollback Validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: django-check

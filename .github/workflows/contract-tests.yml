@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 3c: API Contract Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+# Validates DRF API endpoints match documented contract/schema
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Contract Testing
 
 "on":
@@ -17,7 +22,7 @@ concurrency:
 
 jobs:
   contract-test:
-    name: API Contract Tests
+    name: Stage 3c │ API Contract Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

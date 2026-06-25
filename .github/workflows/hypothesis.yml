@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 3b: Hypothesis Property-Based Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: property-based tests on core/properties/finance domain models
+# Runs nightly (03:00 UTC) and on PRs touching key domains
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Property-Based Testing
 
 "on":
@@ -17,7 +23,7 @@ concurrency:
 
 jobs:
   hypothesis:
-    name: Hypothesis Property-Based Tests
+    name: Stage 3b │ Hypothesis Property Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:

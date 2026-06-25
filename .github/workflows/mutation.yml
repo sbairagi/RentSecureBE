@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 3d: Mutation Testing
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs mutmut to verify test suite catches code mutations
+# Runs nightly (02:00 UTC) and on PRs touching core domains
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Mutation Testing
 
 "on":
@@ -19,7 +25,7 @@ concurrency:
 
 jobs:
   mutmut:
-    name: Mutation Testing (mutmut)
+    name: Stage 3d │ Mutation Testing (mutmut)
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:

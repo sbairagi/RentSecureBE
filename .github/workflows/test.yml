@@ -1,3 +1,8 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 3a: Pytest + Coverage
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: full test suite with coverage (≥90%), migration validation on clean DB
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Test
 
 "on":
@@ -5,7 +10,7 @@ name: Test
 
 jobs:
   pytest:
-    name: Pytest + Coverage
+    name: Stage 3a │ Pytest + Coverage (≥90%)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

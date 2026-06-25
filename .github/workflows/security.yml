@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 6: Security & Supply Chain
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: Bandit SAST, Semgrep (OWASP+Django), Pip-audit, Trivy FS, Gitleaks,
+#        Dependency Review, CodeQL, OpenSSF Scorecard
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Security
 
 "on":
@@ -5,7 +11,7 @@ name: Security
 
 jobs:
   bandit:
-    name: Bandit (SAST)
+    name: Stage 6a │ Bandit (SAST)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -55,7 +61,7 @@ jobs:
           python -m bandit -r documents -x '*/tests/*,*/tests.py,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
 
   pip-audit:
-    name: Pip-audit (Dependency Scanner)
+    name: Stage 6b │ Pip-audit (Dependency Scanner)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -96,7 +102,7 @@ jobs:
         run: python -m pip_audit --requirement=requirements.txt --vulnerability-service=pypi --ignore-vuln PYSEC-2022-252
 
   semgrep:
-    name: Semgrep (SAST)
+    name: Stage 6c │ Semgrep (SAST — OWASP + Django)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -125,7 +131,7 @@ jobs:
           sarif_file: semgrep.sarif
 
   trivy:
-    name: Trivy (FS Vulnerability Scanner)
+    name: Stage 6d │ Trivy (FS Vulnerability Scan)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -159,7 +165,7 @@ jobs:
           sarif_file: trivy-results.sarif
 
   gitleaks:
-    name: Gitleaks (Secret Scanning)
+    name: Stage 6e │ Gitleaks (Secret Scanning)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -182,7 +188,7 @@ jobs:
           sarif_file: gitleaks-report.sarif
 
   dependency-review:
-    name: Dependency Review
+    name: Stage 6f │ Dependency Review (License + Vuln)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: github.event_name == 'pull_request'
@@ -199,7 +205,7 @@ jobs:
           allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0
 
   codeql:
-    name: CodeQL (Local Analysis)
+    name: Stage 6g │ CodeQL (Advanced Python Analysis)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -223,7 +229,7 @@ jobs:
           upload: false
 
   osrf-scorecard:
-    name: OpenSSF Scorecard
+    name: Stage 6h │ OpenSSF Scorecard
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 10
