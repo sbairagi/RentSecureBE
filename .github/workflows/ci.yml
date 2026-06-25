@@ -1,6 +1,6 @@
 name: CI Pipeline
 
-on:
+"on":
   push:
     branches: [main, master, cleanup/remove-dead-code, backup/remove-dead-code-before-reset]
   pull_request:
