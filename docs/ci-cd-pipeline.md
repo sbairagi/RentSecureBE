@@ -2,7 +2,7 @@
 
 > **Project:** RentSecureBE — Production-Grade Django Backend
 > **Stack:** Django 5.2 / DRF / PostgreSQL / AWS EC2 / Cashfree
-> **Last Updated:** 26 June 2026
+> **Pipeline Version:** 2.0.0
 
 ---
 

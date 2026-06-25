@@ -8,13 +8,7 @@ name: Contract Testing
 "on":
   workflow_call:
   pull_request:
-    paths:
-      - 'properties/**/*.py'
-      - 'core/**/*.py'
-      - 'finance/**/*.py'
-      - 'smartbot/**/*.py'
-      - 'documents/**/*.py'
-      - 'notification/**/*.py'
+    branches: [main, master, dev]
 
 concurrency:
   group: contract-test-${{ github.ref }}
@@ -34,6 +28,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Set up Python

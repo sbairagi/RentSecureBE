@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -67,6 +69,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -112,6 +116,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Run Semgrep
@@ -121,7 +138,6 @@ jobs:
             p/security-audit
             p/owasp-top-ten
             p/django
-          generateSarif: true
 
       - name: Upload Semgrep SARIF to GitHub Security
         if: always()
@@ -141,6 +157,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Run Trivy filesystem scan
@@ -171,6 +189,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Run Gitleaks
@@ -195,6 +215,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Dependency Review
@@ -215,6 +237,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Initialize CodeQL
@@ -241,6 +265,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Run OpenSSF Scorecard

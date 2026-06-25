@@ -1,0 +1,98 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# ARCHITECTURE CONTRACT GUARD
+# ═══════════════════════════════════════════════════════════════════════════════
+# This workflow enforces the approved CI/CD pipeline architecture.
+# The CI architecture itself is an enforceable contract.
+# Any unauthorized workflow modification must fail CI.
+#
+# This guard runs on every PR that modifies workflow files.
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Architecture Contract Guard
+
+"on":
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/architecture_contract.py'
+  push:
+    branches: [main, master]
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/architecture_contract.py'
+  # Also allow manual trigger for ad-hoc compliance checks
+  workflow_dispatch:
+
+concurrency:
+  group: architecture-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  id-token: write
+
+jobs:
+  enforce-contract:
+    name: Enforce Architecture Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # optimized shallow clone
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+
+      - name: Run Architecture Contract Validator
+        id: contract-check
+        run: |
+          python scripts/architecture_contract.py --verbose
+        continue-on-error: false
+
+      - name: Upload compliance report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-compliance-report
+          path: |
+            architecture-compliance-report.json
+          retention-days: 90
+
+      - name: Post failure summary
+        if: failure()
+        run: |
+          echo "============================================"
+          echo "❌ ARCHITECTURE CONTRACT VIOLATION DETECTED"
+          echo "============================================"
+          echo ""
+          echo "The CI/CD pipeline structure has been modified"
+          echo "in a way that violates the approved architecture"
+          echo "contract."
+          echo ""
+          echo "To resolve:"
+          echo "  1. Revert workflow changes"
+          echo "  2. Or update the contract in:"
+          echo "     scripts/architecture_contract.py"
+          echo "  3. And update docs in:"
+          echo "     docs/architecture-contract.md"
+          echo "  4. Get architecture review approval"
+          echo ""
+          echo "See: docs/architecture-contract.md for details"
+          echo "============================================"

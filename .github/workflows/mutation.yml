@@ -8,16 +8,14 @@ name: Mutation Testing
 
 "on":
   workflow_call:
-  schedule:
-    - cron: '0 2 * * *'  # Nightly at 02:00 UTC
+  push:
+    branches:
+      - main
+      - master
   pull_request:
-    paths:
-      - 'properties/**/*.py'
-      - 'core/**/*.py'
-      - 'finance/**/*.py'
-      - 'smartbot/**/*.py'
-      - 'notification/**/*.py'
-      - 'documents/**/*.py'
+    branches: [main, master, dev]
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly on Sundays at 02:00 UTC
 
 concurrency:
   group: mutation-${{ github.ref }}
@@ -37,6 +35,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Set up Python

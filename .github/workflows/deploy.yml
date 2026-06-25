@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v0.1.7
         with:

@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Harden Runner
         uses: step-security/harden-runner@v2
       - name: Download coverage artifact
