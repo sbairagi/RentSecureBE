@@ -143,8 +143,8 @@ django_settings_module = "rentsecure_be.settings"
 DJANGO_SETTINGS_MODULE = "rentsecure_be.settings"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 addopts = "--strict-markers --strict-config --tb=short --durations=10 --cov=. --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
- filterwarnings = ["error", "ignore::DeprecationWarning", "ignore::PendingDeprecationWarning"]
- testpaths = ["."]
+filterwarnings = ["error", "ignore::DeprecationWarning", "ignore::PendingDeprecationWarning"]
+testpaths = ["."]
 
 [tool.coverage.run]
 branch = true
