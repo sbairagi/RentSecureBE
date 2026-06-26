@@ -6,7 +6,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Deploy Backend
 
-on:
+'on':
   workflow_call:
   # DISABLED TEMPORARILY — restore before actual deployment
   # push:
