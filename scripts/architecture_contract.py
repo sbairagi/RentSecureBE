@@ -862,12 +862,13 @@ class ArchitectureContractValidator:
         }
 
         max_score = 100
-        per_category = max_score // len(categories)  # ~14 per category
+        per_category = max_score // len(categories)
+        remainder = max_score % len(categories)
         total_score = 0
 
         breakdown = {}
-        for cat_name, cat_data in categories.items():
-            cat_max = per_category
+        for i, (cat_name, cat_data) in enumerate(categories.items()):
+            cat_max = per_category + (1 if i < remainder else 0)
             cat_penalty = min(cat_data["fail"] * (cat_max // 2), cat_max)
             cat_score = max(cat_max - cat_penalty, 0)
             if cat_data["fail"] == 0:
