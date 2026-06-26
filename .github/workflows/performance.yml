@@ -6,7 +6,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Load & Performance Regression Testing
 
-"on":
+on:
   workflow_call:
   push:
     branches:
