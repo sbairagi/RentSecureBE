@@ -303,14 +303,21 @@ def rerun_workflow(request, run_id: str):
 
 
 def job_detail(request, job_run_id: str):
-    """Show details for a specific job run."""
+    """Show details for a specific job run, including nested reusable workflow jobs."""
     job_run = get_object_or_404(JobRun, id=job_run_id)
+
+    nested_jobs = JobRun.objects.filter(
+        workflow_run=job_run.workflow_run,
+        job_id__startswith=f"{job_run.job_id}.",
+    ).order_by("created_at")
+
     context = _build_context(
         {
             "page_title": f"Job: {job_run.name}",
             "job_run": job_run,
             "steps": job_run.steps.all(),
             "logs": job_run.log_entries.all()[:500],
+            "nested_jobs": nested_jobs,
         }
     )
     return render(request, "ci_dashboard/job_detail.html", context)

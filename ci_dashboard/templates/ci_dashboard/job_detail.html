@@ -52,6 +52,48 @@
     </div>
 </div>
 
+<!-- Nested Reusable Workflow Jobs -->
+{% if nested_jobs %}
+<div class="card bg-dark border-secondary mb-4">
+    <div class="card-header bg-dark border-secondary">
+        <h5 class="mb-0">Reusable Workflow Jobs</h5>
+    </div>
+    <div class="card-body">
+        <div class="timeline">
+            {% for nested in nested_jobs %}
+            <div class="timeline-item step-{{ nested.status }}">
+                <div class="timeline-marker">
+                    {% if nested.status == 'passed' %}<i class="bi bi-check-circle-fill text-success"></i>
+                    {% elif nested.status == 'failed' %}<i class="bi bi-x-circle-fill text-danger"></i>
+                    {% elif nested.status == 'running' %}<i class="bi bi-arrow-repeat text-info"></i>
+                    {% elif nested.status == 'cancelled' %}<i class="bi bi-slash-circle text-muted"></i>
+                    {% elif nested.status == 'skipped' %}<i class="bi bi-skip-forward text-muted"></i>
+                    {% else %}<i class="bi bi-circle text-muted"></i>
+                    {% endif %}
+                </div>
+                <div class="timeline-content">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="text-white">{{ nested.name }}</strong>
+                            <code class="text-muted small ms-2">{{ nested.job_id }}</code>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge status-{{ nested.status }}">{{ nested.get_status_display }}</span>
+                            <small class="text-muted d-block">{{ nested.duration|default:"—" }}</small>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <a href="{% url 'ci_dashboard:job_detail' job_run_id=nested.id %}" class="btn btn-sm btn-outline-info">Details</a>
+                        <a href="{% url 'ci_dashboard:logs' run_id=nested.workflow_run.id %}" class="btn btn-sm btn-outline-secondary">Logs</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Steps -->
 <div class="card bg-dark border-secondary mb-4">
     <div class="card-header bg-dark border-secondary">
