@@ -120,6 +120,8 @@ INSTALLED_APPS = [
     "referral_and_earn",
     "documents",
     "smartbot",
+    "ci_dashboard",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [

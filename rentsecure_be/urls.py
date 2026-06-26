@@ -29,6 +29,7 @@ urlpatterns: list[object] = [
     path("finance/", include("finance.urls")),
     path("documents/", include("documents.urls")),
     path("dashboard/", include("dashboard.urls")),
+    path("ci/", include("ci_dashboard.urls")),
 ]
 
 

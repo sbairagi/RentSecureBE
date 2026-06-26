@@ -1,0 +1,76 @@
+{% extends "ci_dashboard/base.html" %}
+{% load static ci_dashboard_tags %}
+
+{% block extra_css %}
+<style>
+@media print {
+    body { background: white; color: black; }
+    .navbar, .btn, footer { display: none !important; }
+    .card { border: 1px solid #ddd !important; break-inside: avoid; }
+    .log-container { max-height: none !important; }
+    .log-entry { color: black; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h2">Workflow Run Report</h1>
+        <p class="text-muted">{{ workflow_run.workflow_name }} &mdash; {{ workflow_run.short_id }}</p>
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="bi bi-printer"></i> Print / Save as PDF
+        </button>
+    </div>
+</div>
+
+<!-- Summary -->
+<div class="card bg-dark border-secondary mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <strong>Status:</strong>
+                <span class="badge status-{{ workflow_run.status }} ms-1">{{ workflow_run.get_status_display }}</span>
+            </div>
+            <div class="col-md-3">
+                <strong>Branch:</strong> {{ workflow_run.branch|default:"—" }}
+            </div>
+            <div class="col-md-3">
+                <strong>Duration:</strong> {{ workflow_run.duration|default:"—" }}
+            </div>
+            <div class="col-md-3">
+                <strong>Trigger:</strong> {{ workflow_run.trigger_event }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Jobs -->
+<div class="card bg-dark border-secondary mb-4">
+    <div class="card-header bg-dark border-secondary">
+        <h5>Jobs</h5>
+    </div>
+    <div class="card-body">
+        {% for job in jobs %}
+        <div class="mb-3 pb-3 border-bottom border-secondary">
+            <div class="d-flex justify-content-between">
+                <strong class="text-white">{{ job.name }}</strong>
+                <span class="badge status-{{ job.status }}">{{ job.get_status_display }}</span>
+            </div>
+            <small class="text-muted">Duration: {{ job.duration|default:"—" }}</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Logs -->
+<div class="card bg-dark border-secondary">
+    <div class="card-header bg-dark border-secondary">
+        <h5>Logs</h5>
+    </div>
+    <div class="card-body">
+        <pre class="log-container" style="max-height: 800px; overflow-y: auto; font-size: 0.85rem;">{% for entry in log_entries %}[{{ entry.timestamp|date:"H:i:s" }}] [{{ entry.stream|upper }}] {{ entry.content }}
+{% endfor %}</pre>
+    </div>
+</div>
+{% endblock %}
