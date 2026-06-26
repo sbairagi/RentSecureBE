@@ -1,0 +1,115 @@
+name: CI Pipeline
+
+'on':
+  push:
+    branches: [main, master, cleanup/remove-dead-code]
+  pull_request:
+    branches: [main, master, dev, cleanup/remove-dead-code]
+
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
+
+permissions:
+  contents: read
+  security-events: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # STAGE 1 & 2: Setup & Prepare → Code Quality (Fast-Fail)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  lint:
+    name: Stage 1-2 │ Setup & Code Quality
+    uses: ./.github/workflows/lint.yml
+    secrets: inherit
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # STAGE 3: Tests (parallel after lint passes)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  test:
+    name: Stage 3a  │ Pytest + Coverage
+    needs: lint
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
+
+  hypothesis:
+    name: Stage 3b  │ Hypothesis Property Tests
+    needs: lint
+    uses: ./.github/workflows/hypothesis.yml
+    secrets: inherit
+
+  contract-tests:
+    name: Stage 3c  │ API Contract Tests
+    needs: lint
+    uses: ./.github/workflows/contract-tests.yml
+    secrets: inherit
+
+  mutation:
+    name: Stage 3d  │ Mutation Testing
+    needs: lint
+    uses: ./.github/workflows/mutation.yml
+    secrets: inherit
+
+  performance:
+    name: Stage 3e  │ Performance & Load Tests
+    needs: lint
+    uses: ./.github/workflows/performance.yml
+    secrets: inherit
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # STAGE 4: Django Checks
+  # ═══════════════════════════════════════════════════════════════════════════════
+  django-check:
+    name: Stage 4   │ Django System & Migration Checks
+    needs: lint
+    uses: ./.github/workflows/django-check.yml
+    secrets: inherit
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # STAGE 5: Architecture & Maintainability
+  # ═══════════════════════════════════════════════════════════════════════════════
+  architecture:
+    name: Stage 5   │ Architecture & Contracts
+    needs: django-check
+    uses: ./.github/workflows/architecture.yml
+    secrets: inherit
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # STAGE 6: Security & Supply Chain
+  # ═══════════════════════════════════════════════════════════════════════════════
+  security:
+    name: Stage 6   │ Security & Supply Chain
+    needs: architecture
+    uses: ./.github/workflows/security.yml
+    secrets: inherit
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # STAGE 7: Quality Gate
+  # ═══════════════════════════════════════════════════════════════════════════════
+  quality:
+    name: Stage 7   │ Quality Gate (SonarCloud)
+    needs: [test, contract-tests]
+    uses: ./.github/workflows/quality.yml
+    secrets: inherit
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # STAGE 8: Deploy Readiness & Deploy
+  # ═══════════════════════════════════════════════════════════════════════════════
+  deploy-readiness:
+    name: Stage 8a  │ Deploy Readiness Check
+    needs: [security, quality, performance, mutation]
+    uses: ./.github/workflows/deploy-readiness.yml
+    secrets: inherit
+
+  deploy:
+    name: Stage 8b  │ Deploy to Production
+    needs: deploy-readiness
+    # Only deploy on push to main/master
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
