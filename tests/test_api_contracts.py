@@ -14,9 +14,7 @@ Run with:
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from core.models import (
-    SubscriptionPlan,
-)
+from core.models import SubscriptionPlan
 from tests.factories import (
     BuildingFactory,
     RenterFactory,

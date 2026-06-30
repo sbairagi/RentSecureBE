@@ -9,8 +9,9 @@ try:
     import boto3  # type: ignore[import-untyped]
 except ImportError:
     boto3 = None
-from django.conf import settings
 from twilio.rest import Client
+
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 

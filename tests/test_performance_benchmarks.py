@@ -20,26 +20,16 @@ CI note: These run on a schedule (Mon/Wed/Fri) not on every PR.
 """
 
 import pytest
-from django.contrib.auth import get_user_model
-from django.test import TestCase
-from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import (
-    SubscriptionPlan,
-    UserSubscription,
-)
-from properties.models import (
-    Building,
-    Renter,
-    RentRecord,
-    Unit,
-)
-from properties.services.unit_service import (
-    get_building_analytics,
-    get_owner_analytics,
-)
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.utils import timezone
+
+from core.models import SubscriptionPlan, UserSubscription
+from properties.models import Building, Renter, RentRecord, Unit
+from properties.services.unit_service import get_building_analytics, get_owner_analytics
 
 User = get_user_model()
 

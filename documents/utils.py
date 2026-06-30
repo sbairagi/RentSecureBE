@@ -4,10 +4,10 @@ import os
 import tempfile
 from typing import Any
 
+from PyPDF2 import PdfMerger
+
 from django.conf import settings
 from django.template.loader import render_to_string
-from PyPDF2 import PdfMerger
-from weasyprint import HTML
 
 from properties.models import RentAgreementDraft
 
@@ -28,6 +28,8 @@ def _get_tax_records(unit_obj: Any) -> Any:
 
 
 def generate_unit_history_pdf(unit_obj: Any) -> bytes:
+    from weasyprint import HTML
+
     context = {
         "unit": unit_obj,
         "owner": unit_obj.owner,

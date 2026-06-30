@@ -15,6 +15,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from decouple import Csv, config  # type: ignore[import-untyped]
+
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -120,7 +121,6 @@ INSTALLED_APPS = [
     "referral_and_earn",
     "documents",
     "smartbot",
-    "ci_dashboard",
     "django_extensions",
 ]
 
@@ -153,6 +153,19 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "rentsecure_be.wsgi.application"
+ASGI_APPLICATION = "rentsecure_be.asgi.application"
+
+# Channels
+INSTALLED_APPS += ["channels"]
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [config("REDIS_URL", default="redis://127.0.0.1:6379/0")],
+        },
+    },
+}
 
 
 # Database
@@ -193,8 +206,7 @@ AUTH_USER_MODEL = "core.User"
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": (
-            "django.contrib.auth.password_validation."
-            "UserAttributeSimilarityValidator"
+            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
         ),
     },
     {

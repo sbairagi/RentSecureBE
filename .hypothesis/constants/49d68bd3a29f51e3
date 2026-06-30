@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/serializers/__init__.py
-# hypothesis_version: 6.136.0
-
-['BuildingSerializer', 'CaretakerSerializer', 'RentRecordSerializer', 'RenterSerializer', 'UnitImageSerializer', 'UnitSerializer']

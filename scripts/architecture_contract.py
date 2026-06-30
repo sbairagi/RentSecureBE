@@ -1,20 +1,10 @@
 #!/usr/bin/env python3
 """
 Architecture Contract Validator v2.0
-════════════════════════════════════════════════════════════════════════════════
-Enterprise-grade CI/CD governance enforcement.
-
-The CI architecture itself is an enforceable contract.
-Any unauthorized workflow modification must fail CI.
-
-Features:
-- Protected file validation (CRITICAL)
-- Architecture version enforcement
-- Documentation sync validation
-- Contract self-protection
-- Compliance scoring (100/100)
-- 9+ validation check categories
+...
 """
+
+# pylint: disable=too-many-lines
 
 import argparse
 import json
@@ -231,11 +221,13 @@ class ArchitectureContractValidator:
                 f"CI configuration not found at {self.ci_yaml_path}."
             )
 
-        with open(self.ci_yaml_path) as f:
-            config = yaml.safe_load(f)
+        with open(self.ci_yaml_path, encoding="utf-8") as f:
+            loaded = yaml.safe_load(f)
 
-        if config is None:
+        if not isinstance(loaded, dict):
             raise ValueError(f"Empty or invalid YAML in {self.ci_yaml_path}")
+
+        config: dict[str, Any] = loaded
 
         self.ci_config = config
 
@@ -543,24 +535,6 @@ class ArchitectureContractValidator:
             if expected_needs is None and actual_needs is not None:
                 self.violations.append(
                     {
-                        "type": Violation.EXTRA_DEPENDENCY,
-                        "severity": "ERROR",
-                        "message": (
-                            f"Job '{job}' should have no dependencies (root job), "
-                            f"but has: {actual_needs}"
-                        ),
-                        "details": {
-                            "job": job,
-                            "expected": None,
-                            "actual": actual_needs,
-                        },
-                    }
-                )
-                continue
-
-            if expected_needs is not None and actual_needs is None:
-                self.violations.append(
-                    {
                         "type": Violation.MISSING_DEPENDENCY,
                         "severity": "ERROR",
                         "message": (
@@ -576,32 +550,51 @@ class ArchitectureContractValidator:
                 )
                 continue
 
-            expected_sorted = sorted(expected_needs)
-            actual_sorted = sorted(actual_needs)
-
-            if expected_sorted != actual_sorted:
+            if expected_needs is not None and actual_needs is None:
                 self.violations.append(
                     {
-                        "type": (
-                            Violation.EXTRA_DEPENDENCY
-                            if set(actual_sorted) - set(expected_sorted)
-                            else Violation.MISSING_DEPENDENCY
-                        ),
+                        "type": Violation.MISSING_DEPENDENCY,
                         "severity": "ERROR",
                         "message": (
-                            f"Job '{job}' dependencies changed.\n"
-                            f"  Expected: {expected_sorted}\n"
-                            f"  Actual:   {actual_sorted}"
+                            f"Job '{job}' had dependencies removed. "
+                            f"Expected: {sorted(expected_needs)}"
                         ),
                         "details": {
                             "job": job,
-                            "expected": expected_sorted,
-                            "actual": actual_sorted,
+                            "expected": sorted(expected_needs),
+                            "actual": None,
                         },
                     }
                 )
-            else:
-                self.log(f"  {job}: ✓ dependencies match: {expected_sorted}")
+                continue
+
+            if expected_needs is not None and actual_needs is not None:
+                expected_sorted = sorted(expected_needs)
+                actual_sorted = sorted(actual_needs)
+
+                if expected_sorted != actual_sorted:
+                    self.violations.append(
+                        {
+                            "type": (
+                                Violation.EXTRA_DEPENDENCY
+                                if set(actual_sorted) - set(expected_sorted)
+                                else Violation.MISSING_DEPENDENCY
+                            ),
+                            "severity": "ERROR",
+                            "message": (
+                                f"Job '{job}' dependencies changed.\n"
+                                f"  Expected: {expected_sorted}\n"
+                                f"  Actual:   {actual_sorted}"
+                            ),
+                            "details": {
+                                "job": job,
+                                "expected": expected_sorted,
+                                "actual": actual_sorted,
+                            },
+                        }
+                    )
+                else:
+                    self.log(f"  {job}: ✓ dependencies match: {expected_sorted}")
 
     # ═══════════════════════════════════════════════════════════════════════════
     # CHECK 9: Stage Ordering (transitive)
@@ -764,7 +757,7 @@ class ArchitectureContractValidator:
         self.log("Checking deploy trigger restrictions...")
 
         deploy_job = "deploy"
-        if deploy_job not in self.ci_config.get("jobs", {}):
+        if self.ci_config is None or deploy_job not in self.ci_config.get("jobs", {}):
             return
 
         deploy_def = self.ci_config["jobs"][deploy_job]
@@ -1063,7 +1056,7 @@ class ArchitectureContractValidator:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Architecture Contract Validator — enforce " "CI/CD pipeline structure"
+            "Architecture Contract Validator — enforce CI/CD pipeline structure"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(

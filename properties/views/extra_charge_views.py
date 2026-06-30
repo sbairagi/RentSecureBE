@@ -1,10 +1,11 @@
 from typing import Any
 
-from django.contrib.auth.models import AnonymousUser
 from rest_framework import viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import BaseSerializer
+
+from django.contrib.auth.models import AnonymousUser
 
 from rentsecure_be.type_compat import override
 

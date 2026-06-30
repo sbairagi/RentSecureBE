@@ -11,14 +11,15 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
-from django.contrib.auth.models import AnonymousUser
-from django.core.cache import cache
-from django.http import HttpRequest, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import BaseSerializer
+
+from django.contrib.auth.models import AnonymousUser
+from django.core.cache import cache
+from django.http import HttpRequest, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 from core.models import User
 from rentsecure_be.services.leegality_service import send_agreement_for_signature
@@ -26,13 +27,7 @@ from rentsecure_be.type_compat import override
 
 from ..constants import UNITS_CACHE_TIMEOUT
 from ..feature_enforcer import FeatureEnforcer
-from ..models import (
-    RentAgreementDraft,
-    Renter,
-    Unit,
-    UnitDocument,
-    UnitImage,
-)
+from ..models import RentAgreementDraft, Renter, Unit, UnitDocument, UnitImage
 from ..serializers import (
     RentAgreementDraftSerializer,
     UnitDocumentSerializer,

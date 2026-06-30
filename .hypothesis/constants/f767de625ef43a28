@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/urls.py
-# hypothesis_version: 6.136.0
-
-['buildings', 'caretakers', 'extra-charges', 'leegality/webhook/', 'owner/rent-records/', 'owner/rents/', 'rent-agreements', 'rent-records', 'renter/rent-due/', 'renter/rent-history/', 'renters', 'unit-all-documents', 'unit-images', 'units']

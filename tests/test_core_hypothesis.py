@@ -7,16 +7,14 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
-from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.django import TestCase as HypothesisDjangoTestCase
 
-from core.models import (
-    PlanFeatureLimit,
-    SubscriptionPlan,
-)
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+
+from core.models import PlanFeatureLimit, SubscriptionPlan
 
 User = get_user_model()
 

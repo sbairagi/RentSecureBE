@@ -1,6 +1,7 @@
 from typing import Any
 
 import requests
+
 from django.conf import settings
 
 LEEGALITY_URL = "https://sandbox.leegality.com/api/v3/document"

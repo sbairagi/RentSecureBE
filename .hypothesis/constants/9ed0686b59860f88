@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/documents/tests.py
-# hypothesis_version: 6.136.0
-
-[b'PDF content', 200, 404, 999, '+1', '<html></html>', 'Doc User', 'doc@test.com', 'doc_user', 'documents.utils.HTML', 'documents.views.HTML', 'p', 'pk']

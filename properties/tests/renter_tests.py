@@ -3,10 +3,11 @@
 from datetime import date
 from decimal import Decimal
 
-from django.contrib.auth import get_user_model
-from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase
 
 from core.models import PlanFeatureLimit, SubscriptionPlan, UserSubscription
 from properties.models import Building, Renter, Unit

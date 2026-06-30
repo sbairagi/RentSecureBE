@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/models/building_models.py
-# hypothesis_version: 6.136.0
-
-[100, 255, '-created_at', 'Building', 'Buildings', 'Country name', 'State or province', 'ZIP or postal code', 'address_line', 'buildings', 'city', 'is_archived', 'name', 'owner']

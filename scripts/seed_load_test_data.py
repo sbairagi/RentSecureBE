@@ -1,5 +1,7 @@
 """Seed load test data for Locust/performance testing."""
 
+# pylint: disable=wrong-import-position
+
 import os
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rentsecure_be.settings")

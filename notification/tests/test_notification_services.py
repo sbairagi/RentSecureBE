@@ -192,6 +192,22 @@ class LateFeesNotifyServiceTest(TestCase):
         notify_owner_about_late_fee(rent, 500)
         mock_send.assert_called_once()
 
+    @patch("notification.services.late_fees_notify_service.send_whatsapp_message")
+    def test_notify_renter_about_late_fee_no_renter(self, mock_send):
+        rent = MagicMock()
+        rent.renter = None
+        rent.adjustment_reason = "Late payment"
+        notify_renter_about_late_fee(rent, 500)
+        mock_send.assert_not_called()
+
+    @patch("notification.services.late_fees_notify_service.send_whatsapp_message")
+    def test_notify_owner_about_late_fee_no_renter(self, mock_send):
+        rent = MagicMock()
+        rent.renter = None
+        rent.adjustment_reason = "Late payment"
+        notify_owner_about_late_fee(rent, 500)
+        mock_send.assert_not_called()
+
 
 class NotificationUtilsTest(TestCase):
     def setUp(self):

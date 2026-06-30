@@ -14,9 +14,10 @@
 
 from typing import Any
 
-from django.conf import settings
 from fcm_django.models import FCMDevice  # type: ignore[import-untyped]
 from twilio.rest import Client
+
+from django.conf import settings
 
 
 def send_push_notification(user: Any, title: str, body: str) -> None:

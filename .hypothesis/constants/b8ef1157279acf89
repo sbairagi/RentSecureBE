@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/notification/services/whatsapp_service.py
-# hypothesis_version: 6.136.0
-
-['ContentType', 'TWILIO_SID', 'TWILIO_TOKEN', 'audio/mpeg', 's3']

@@ -10,9 +10,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from weasyprint import HTML
+
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
-from weasyprint import HTML
 
 if TYPE_CHECKING:
     from properties.models import RentRecord

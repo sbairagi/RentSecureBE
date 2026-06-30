@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/core/signals.py
-# hypothesis_version: 6.136.0
-
-['1', '12', '2', '3', 'Free plan', 'features', 'free', 'is_active', 'max_buildings', 'max_caretakers', 'max_document_uploads', 'max_renters', 'max_unit_images', 'max_units', 'monthly_price', 'rent_records', 'unit_documents', 'unit_images', 'userprofile', 'value', 'yearly_price']

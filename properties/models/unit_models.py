@@ -5,11 +5,12 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, cast
 
+from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
-from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
 
 # Local Imports
 from core.models import User

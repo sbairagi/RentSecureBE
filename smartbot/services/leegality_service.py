@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 import requests
+
 from django.conf import settings
 
 LEEGALITY_API_URL = "https://api.leegality.com/v3/document/upload"

@@ -4,7 +4,6 @@ import tempfile
 from typing import TYPE_CHECKING
 
 from django.template.loader import render_to_string
-from weasyprint import HTML
 
 if TYPE_CHECKING:
     from properties.models import Renter, RentRecord
@@ -14,6 +13,8 @@ def generate_final_invoice_pdf(
     renter: "Renter",
     latest_rent: "RentRecord",
 ) -> str:
+    from weasyprint import HTML
+
     context = {
         "renter": renter,
         "unit": renter.unit,

@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/documents/urls.py
-# hypothesis_version: 6.136.0
-
-['document/', 'properties', 'rent-agreement-pdf', 'rent-receipt-pdf', 'rent_agreement', 'rent_receipt', 'unit-dossier-pdf']

@@ -15,6 +15,7 @@
 # -----------------------------------------------------------------------------
 # Django core (LTS)
 Django==4.2.30
+django-extensions==4.1
 asgiref==3.8.1
 # Build / packaging (razorpay 1.4.2 requires pkg_resources)
 setuptools==78.1.1
@@ -71,8 +72,8 @@ types-openpyxl==3.1.5.20260518
 # Linting & Formatting
 black==26.3.1
 ruff==0.15.14
-pylint==3.3.2
-pylint-django==2.6.1
+pylint==4.0.6
+pylint-django==2.7.0
 # Security Scanning
 bandit==1.8.3
 pip-audit==2.7.3
@@ -90,6 +91,8 @@ hypothesis==6.136.0
 vulture==2.14
 import-linter==1.6.0
 mutmut==3.6.0
+isort==5.13.2
+autoflake==2.2.1
 pre-commit==4.2.0
 # Schema / Contract Testing
 schemathesis==4.21.10
@@ -97,8 +100,11 @@ schemathesis==4.21.10
 locust==2.32.0
 # Database URL parsing (roadmap)
 dj-database-url==2.3.0
+# Django Channels + Redis
+channels==4.2.0
+channels-redis==4.1.0
 # =============================================================================
-# END — 54 pinned packages (25 runtime + 29 dev/test/stubs)
+# END — 56 pinned packages (27 runtime + 29 dev/test/stubs)
 # =============================================================================
 #
 # Migration notes:

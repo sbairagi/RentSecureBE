@@ -10,8 +10,9 @@ Run with:
 
 from datetime import date
 
-from django.test import TestCase
 from rest_framework.test import APIClient
+
+from django.test import TestCase
 
 from properties.models import Building, Renter, RentRecord, Unit
 from properties.services.unit_service import get_building_analytics, get_owner_analytics

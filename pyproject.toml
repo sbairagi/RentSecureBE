@@ -9,6 +9,7 @@ include = '\.pyi?$'
 exclude = '''
 /(
   \.git
+  | \.nox
   | \.venv
   | venv
   | build
@@ -18,16 +19,37 @@ exclude = '''
   | \.pytest_cache
   | \.github
   | \.kilo/.*
+  | node_modules
+  | htmlcov
+  | site-packages
 )/
 '''
 
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-exclude = ["**/.venv/**", "**/venv/**", "**/migrations/**", "**/__pycache__/**", ".github/**", "properties/refactored_models_combined.py", "properties/original_models.py", "properties/_legacy/**", "properties/test_*.py"]
+exclude = [
+    "**/.nox/**",
+    "**/.venv/**",
+    "**/venv/**",
+    "**/site-packages/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/htmlcov/**",
+    "**/.pytest_cache/**",
+    "**/migrations/**",
+    "**/__pycache__/**",
+    ".github/**",
+    "properties/refactored_models_combined.py",
+    "properties/original_models.py",
+    "properties/_legacy/**",
+    "properties/test_*.py",
+]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "C", "N", "I", "S", "B", "UP"]
+select = ["E", "F", "W", "C", "N", "S", "B", "UP"]
+ignore = ["I001"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/migrations/**" = ["ALL"]
@@ -142,7 +164,7 @@ django_settings_module = "rentsecure_be.settings"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "rentsecure_be.settings"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
-addopts = "--strict-markers --strict-config --tb=short --durations=10 --cov=. --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
+addopts = "--strict-markers --strict-config --tb=short --durations=10 --cov=rentsecure_be,ai_assistant,core,dashboard,documents,finance,notification,properties,referral_and_earn,smartbot --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
 filterwarnings = ["error", "ignore::DeprecationWarning", "ignore::PendingDeprecationWarning"]
 testpaths = ["."]
 
@@ -264,3 +286,22 @@ inline-quotes = "double"
 multiline-quotes = "double"
 docstring-quotes = "double"
 avoid-escape = true
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["rentsecure_be", "core", "properties", "finance", "notification", "documents", "smartbot", "referral_and_earn", "ai_assistant", "dashboard", "ci_dashboard"]
+known_django = ["django"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLDER"]
+skip = ["migrations", "__pycache__", ".venv", "venv", "build", "dist", ".nox", "site-packages", "node_modules", "htmlcov", ".pytest_cache"]
+skip_glob = [
+    "**/migrations/*.py",
+    "**/__pycache__/*.py",
+    ".kilo/**/*.py",
+    ".hypothesis/**/*.py",
+    ".nox/**/*.py",
+    "**/site-packages/**/*.py",
+    "node_modules/**/*.py",
+    "htmlcov/**/*.py",
+    ".pytest_cache/**/*.py",
+]

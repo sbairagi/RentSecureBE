@@ -129,9 +129,7 @@ def send_monthly_rent_summary_email(
         and getattr(owner, "whatsapp_number", None)
     ):
         try:
-            from notification.services.whatsapp_service import (
-                send_whatsapp_message,
-            )
+            from notification.services.whatsapp_service import send_whatsapp_message
 
             result = send_whatsapp_message(owner.whatsapp_number, message_text)
             sent_any = sent_any or bool(result)
@@ -145,9 +143,7 @@ def send_monthly_rent_summary_email(
         whatsapp_number = getattr(owner.profile, "whatsapp_number", None)
         if whatsapp_number:
             try:
-                from notification.services.whatsapp_service import (
-                    send_whatsapp_message,
-                )
+                from notification.services.whatsapp_service import send_whatsapp_message
 
                 result = send_whatsapp_message(whatsapp_number, message_text)
                 sent_any = sent_any or bool(result)

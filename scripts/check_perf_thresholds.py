@@ -11,7 +11,7 @@ import sys
 
 def main() -> int:
     try:
-        with open("locust-report_stats.csv") as f:
+        with open("locust-report_stats.csv", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 if not row.get("Name") or row["Name"] in ("Aggregated", ""):

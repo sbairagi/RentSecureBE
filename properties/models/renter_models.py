@@ -4,10 +4,11 @@ import builtins
 from datetime import date
 from typing import Any
 
+from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
+
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
-from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
 
 from core.models import User
 from rentsecure_be.type_compat import override
@@ -24,7 +25,6 @@ phone_regex = RegexValidator(
 
 
 class Renter(models.Model):
-
     class RenterStatus(models.TextChoices):
         ACTIVE = "active", "Active"
         NOTICE_PERIOD = "notice_period", "Notice Period"

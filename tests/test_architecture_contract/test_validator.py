@@ -151,7 +151,7 @@ def write_temp_env(
 
     governance_doc = doc_dir / "governance.md"
     governance_doc.write_text(
-        "# Enterprise CI/CD Governance\n\n" "> **Version:** 2.0.0\n\n"
+        "# Enterprise CI/CD Governance\n\n> **Version:** 2.0.0\n\n"
     )
 
     # Add extra files if specified

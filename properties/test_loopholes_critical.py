@@ -16,6 +16,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
@@ -168,7 +169,7 @@ class PaymentProcessingLoopholes(TestCase):
             paid_on=date(2025, 1, 5),
         )
         # Try to create another for same month
-        with self.assertRaises(Exception):  # Should be unique constraint
+        with self.assertRaises(IntegrityError):  # unique constraint
             RentRecord.objects.create(
                 renter=renter,
                 unit=self.unit,
@@ -368,7 +369,6 @@ class DataConsistencyLoopholes(TestCase):
     def test_loophole_caretaker_without_id_proof(self):
         """LOOPHOLE: ID proof is required but might be set to empty"""
         # This test depends on model field being required or not
-        pass
 
     def test_loophole_multiple_caretakers_overlapping_dates(self):
         """LOOPHOLE: Multiple caretakers can work same date on same unit"""
@@ -569,7 +569,7 @@ class ConcurrencyLoopholes(TransactionTestCase):
         )
 
         # Second concurrent request should fail
-        with self.assertRaises(Exception):
+        with self.assertRaises(IntegrityError):
             RentRecord.objects.create(
                 renter=self.renter,
                 unit=self.unit,
@@ -610,7 +610,6 @@ class UniquenessConstraintTests(TestCase):
         """LOOPHOLE: Null values in unique constraint might allow duplicates"""
         # Django allows multiple NULLs in unique constraints
         # This might be unintended for phone fields
-        pass
 
     def test_loophole_renter_unique_phone_per_unit_bypass(self):
         """LOOPHOLE: Same renter phone can exist across different units"""

@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/migrations/0003_rentagreementdraft_history.py
-# hypothesis_version: 6.136.0
-
-[100, 255, '+', '-', '-history_date', '-history_id', 'Changed', 'Created', 'Deleted', 'ID', 'file', 'generated_at', 'get_latest_by', 'history_date', 'history_id', 'history_type', 'history_user', 'id', 'ordering', 'owner_signed', 'properties', 'properties.renter', 'properties.unit', 'renter', 'renter_signed', 'unit', 'user', 'verbose_name', 'verbose_name_plural', '~']

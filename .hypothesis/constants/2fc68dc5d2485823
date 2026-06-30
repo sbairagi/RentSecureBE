@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/models/__init__.py
-# hypothesis_version: 6.136.0
-
-['ArchivedRenter', 'Building', 'Caretaker', 'ExtraCharge', 'PoliceVerification', 'PropertyTaxRecord', 'RentAgreementDraft', 'RentRecord', 'RentReminderLog', 'Renter', 'Unit', 'UnitDocument', 'UnitImage', 'UnitVacancy']

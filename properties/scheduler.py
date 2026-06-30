@@ -16,9 +16,10 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
+from django_celery_beat.models import PeriodicTask  # type: ignore[import-untyped]
+
 from django.db.models import QuerySet
 from django.utils.timezone import now
-from django_celery_beat.models import PeriodicTask  # type: ignore[import-untyped]
 
 from notification.services.voice_note_service import (
     alert_owner_about_delay,

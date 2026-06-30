@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/views/rent_record_views.py
-# hypothesis_version: 6.136.0
-
-[300, 400, 403, 500, '-due_date', 'FAILED', 'GET', 'No pending rent', 'Not a renter', 'PAID', 'PENDING', 'POST', 'Payout not retryable', 'SUCCESS', 'active', 'amount', 'application/pdf', 'building', 'due_date', 'error', 'invoice_url', 'message', 'month', 'notice_period', 'payment_link', 'payout', 'property', 'rb', 'rent_records', 'renter', 'status', 'tenant', 'unit', 'year']

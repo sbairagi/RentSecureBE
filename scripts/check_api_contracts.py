@@ -4,6 +4,8 @@ Validates that critical endpoints return expected status codes and
 response shapes. Runs without pytest to avoid collection failures.
 """
 
+# pylint: disable=wrong-import-position
+
 import os
 import sys
 

@@ -45,7 +45,7 @@ class Command(BaseCommand):
                 if success:
                     self.stdout.write(
                         self.style.SUCCESS(
-                            f"✅ Summary sent to {owner.username} " f"({owner.email})"
+                            f"✅ Summary sent to {owner.username} ({owner.email})"
                         )
                     )
                 else:

@@ -13,11 +13,12 @@ import tempfile
 import zipfile
 from typing import TYPE_CHECKING, Any
 
+from openpyxl import Workbook
+from weasyprint import HTML
+
 from django.core.files import File
 from django.db.models import QuerySet
 from django.template.loader import render_to_string
-from openpyxl import Workbook
-from weasyprint import HTML
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser

@@ -63,7 +63,9 @@ jobs:
 
       - name: Run tests with coverage (random order)
         run: |
-          python -m coverage run -m pytest -v --randomly-seed=last --cov=. --cov-report=term-missing --cov-report=xml
+          python -m coverage run -m pytest -v --randomly-seed=last \
+            --cov=rentsecure_be,ai_assistant,core,dashboard,documents,finance,notification,properties,referral_and_earn,smartbot \
+            --cov-report=term-missing --cov-report=xml
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4

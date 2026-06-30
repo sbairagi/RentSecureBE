@@ -25,7 +25,7 @@ class Command(BaseCommand):
                 continue
 
             msg = f"""📢 *Rent Due Reminder*
-Hi {renter.name}, your rent of ₹{renter.rent_amount} for *{renter.property.name}* is due on *{renter.rent_due_date.strftime('%d %B')}*.
+Hi {renter.name}, your rent of ₹{renter.rent_amount} for *{renter.property.name}* is due on *{renter.rent_due_date.strftime("%d %B")}*.
 Please pay on time to avoid late fees. Thank you! 🙏
 """
             send_whatsapp_message(renter.whatsapp_number, msg)
