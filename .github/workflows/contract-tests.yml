@@ -10,9 +10,6 @@ name: Contract Testing
   pull_request:
     branches: [main, master, dev]
 
-concurrency:
-  group: contract-test-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   contract-test:
@@ -33,7 +30,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443

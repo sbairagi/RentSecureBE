@@ -19,9 +19,6 @@ name: Mutation Testing
       - main
       - master
 
-concurrency:
-  group: mutation-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   mutmut:
@@ -42,7 +39,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
@@ -64,7 +61,7 @@ jobs:
             echo "SMOKE MODE: selecting changed files only for PR"
             CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD 2>/dev/null || git diff --name-only HEAD~1)
             echo "Changed files: $CHANGED_FILES"
-            PATHS=$(echo "$CHANGED_FILES" | grep -E '\.(py)$' | grep -v '__pycache__' | grep -v 'tests/' | grep -v '\.pyc' | tr '\n' ',' | sed 's/,$//' || true)
+            PATHS=$(echo "$CHANGED_FILES" | grep -E '\.(py)$' | grep -v '__pycache__' | grep -v 'tests/' | grep -v '\.pyc' | tr '\n' ',' | sed 's/,$//' )
             if [ -z "$PATHS" ]; then
               echo "No Python source files changed — defaulting to core slim set"
               PATHS="core/models.py,properties/models/,finance/models.py"
@@ -96,16 +93,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ "${{ vars.SKIP_MUTATION || '' }}" = "true" ] || [ "${SKIP_MUTATION:-}" = "true" ]; then
+            echo "SKIP_MUTATION=true; skipping mutation testing."
+            exit 0
+          fi
           python -m mutmut run --simple-output 2>&1 | tee mutmut-output.txt
       - name: Report mutmut results
         shell: bash
         run: |
           set -euo pipefail
+          if [ "${{ vars.SKIP_MUTATION || '' }}" = "true" ] || [ "${SKIP_MUTATION:-}" = "true" ]; then
+            echo "Skipping mutmut reporting because mutation testing was disabled."
+            exit 0
+          fi
           python -m mutmut report
       - name: Check mutation score
         shell: bash
         run: |
           set -euo pipefail
+          if [ "${{ vars.SKIP_MUTATION || '' }}" = "true" ] || [ "${SKIP_MUTATION:-}" = "true" ]; then
+            echo "Skipping mutation score check because mutation testing was disabled."
+            exit 0
+          fi
           python -m mutmut report 2>&1 | head -60
           echo "Mutation score report generated successfully."
       - name: Upload mutmut results artifact

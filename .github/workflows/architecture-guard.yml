@@ -46,29 +46,16 @@ jobs:
         with:
           fetch-depth: 1  # optimized shallow clone
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-python-environment
         with:
-          python-version: '3.12'
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pyyaml
+          python-version: "3.12"
+          extra-packages: "pyyaml"
+          cache-key-suffix: "-architecture-guard"
 
       - name: Run Architecture Contract Validator
         id: contract-check
         run: |
           python scripts/architecture_contract.py --verbose
-        continue-on-error: false
 
       - name: Upload compliance report artifact
         if: always()

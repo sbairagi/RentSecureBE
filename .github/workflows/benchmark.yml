@@ -38,7 +38,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
@@ -60,7 +60,7 @@ jobs:
             --benchmark-json=benchmark-results.json \
             --benchmark-sort=mean \
             --benchmark-columns=min,max,mean,stddev,median,rounds \
-            --tb=short || true
+            --tb=short
         timeout-minutes: 25
       - name: Upload benchmark results
         if: always()

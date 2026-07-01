@@ -13,6 +13,7 @@ concurrency:
 jobs:
   hypothesis:
     name: Hypothesis (Full) — Nightly
+    timeout-minutes: 80
     uses: ./.github/workflows/hypothesis.yml
     with:
       hypothesis_mode: full
@@ -20,6 +21,7 @@ jobs:
 
   mutation:
     name: Mutation Testing (Full) — Nightly
+    timeout-minutes: 140
     uses: ./.github/workflows/mutation.yml
     with:
       mutation_mode: full
@@ -27,15 +29,18 @@ jobs:
 
   benchmark:
     name: Benchmark — Nightly
+    timeout-minutes: 40
     uses: ./.github/workflows/benchmark.yml
     secrets: inherit
 
   load-test:
     name: Load Test — Nightly
+    timeout-minutes: 45
     uses: ./.github/workflows/load-test.yml
     secrets: inherit
 
   security-deep:
     name: Security Deep Scan — Nightly
+    timeout-minutes: 60
     uses: ./.github/workflows/security-deep.yml
     secrets: inherit

@@ -14,9 +14,6 @@ name: Property-Based Testing
         type: string
         default: "smoke"
 
-concurrency:
-  group: hypothesis-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   hypothesis:
@@ -37,7 +34,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
@@ -57,8 +54,7 @@ jobs:
           python -m pytest tests/test_properties_hypothesis.py tests/test_core_hypothesis.py -v \
             --hypothesis-show-statistics \
             --tb=short \
-            --randomly-seed=last \
-            || true
+            --randomly-seed=last
         timeout-minutes: 55
       - name: Upload Hypothesis report
         if: always()

@@ -27,7 +27,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             objects.githubusercontent.com:443
@@ -67,12 +67,30 @@ jobs:
           python -m coverage xml -o coverage.xml
           mv coverage.xml ../coverage.xml
       - name: Validate coverage.xml exists
+        shell: bash
         run: |
+          set -euo pipefail
           if [ ! -f coverage.xml ]; then
             echo "ERROR: coverage.xml not found after combining shards."
             ls -la
             exit 1
           fi
+      - name: Validate coverage.xml integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import sys
+          from xml.etree import ElementTree as ET
+
+          tree = ET.parse('coverage.xml')
+          root = tree.getroot()
+          if root.tag != 'coverage':
+              raise SystemExit('coverage.xml does not contain a coverage root element')
+          if root.get('line-rate') is None:
+              raise SystemExit('coverage.xml is missing line-rate metadata')
+          print('coverage.xml parsed successfully and contains coverage metadata.')
+          PY
 
       - uses: ./.github/actions/setup-python-environment
         with:
@@ -96,3 +114,37 @@ jobs:
             -Dsonar.tests=.
             -Dsonar.test.inclusions=**/test_*.py,**/tests.py,**/*_tests.py,**/tests/**/*.py
             -Dsonar.python.unitTest.source=.
+      - name: Enforce SonarCloud quality gate result
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: sbairagi_RentSecureBE
+        run: |
+          set -euo pipefail
+          if [ -z "${SONAR_TOKEN:-}" ]; then
+            echo "ERROR: SONAR_TOKEN is not configured."
+            exit 1
+          fi
+          python - <<'PY'
+          import base64
+          import json
+          import os
+          import sys
+          import urllib.parse
+          import urllib.request
+
+          token = os.environ['SONAR_TOKEN']
+          project_key = os.environ['SONAR_PROJECT_KEY']
+          url = f"https://sonarcloud.io/api/qualitygates/project_status?projectKey={urllib.parse.quote(project_key)}"
+          req = urllib.request.Request(
+              url,
+              headers={"Authorization": f"Basic {base64.b64encode(f'{token}:'.encode()).decode()}"},
+          )
+          with urllib.request.urlopen(req, timeout=60) as response:
+              payload = json.load(response)
+          project_status = payload.get('projectStatus', {})
+          status = project_status.get('status')
+          print(json.dumps(project_status, indent=2))
+          if status != 'OK':
+              sys.exit(f"SonarCloud quality gate failed with status: {status}")
+          PY

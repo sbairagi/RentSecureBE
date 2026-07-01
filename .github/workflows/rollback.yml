@@ -80,10 +80,10 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: |
           export RELEASE=${{ github.event.inputs.rollback_sha }}
-          ./sentry-cli releases new --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE" || true
-          ./sentry-cli releases set-commits --auto --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE" || true
-          ./sentry-cli releases finalize --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE" || true
-          ./sentry-cli releases deploys --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE" new -e production || true
+          ./sentry-cli releases new --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE"
+          ./sentry-cli releases set-commits --auto --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE"
+          ./sentry-cli releases finalize --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE"
+          ./sentry-cli releases deploys --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE" new -e production
 
   rollback-validation:
     name: Rollback Validation Report

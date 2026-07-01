@@ -40,7 +40,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
@@ -54,7 +54,10 @@ jobs:
           extra-packages: "pytest-split pytest-django pytest-cov pytest-randomly"
           cache-key-suffix: "-test-shard-${{ inputs.shard }}"
       - name: Validate test collection
-        run: python -m pytest --collect-only -q tests/ || true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest --collect-only -q tests/
       - name: Run tests with coverage (shard ${{ inputs.shard }}/${{ inputs.total }})
         run: |
           python -m coverage run -m pytest -v --randomly-seed=last \
@@ -63,11 +66,34 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=90 \
             tests/
+      - name: Generate shard metrics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          payload = {
+              'shard': int('${{ inputs.shard }}'),
+              'total': int('${{ inputs.total }}'),
+              'coverage_file': '.coverage.${{ inputs.shard }}',
+              'workflow': 'test.yml',
+          }
+          with open('shard-metrics.json', 'w', encoding='utf-8') as fh:
+              json.dump(payload, fh, indent=2)
+          print(json.dumps(payload, indent=2))
+          PY
       - name: Upload coverage shard
         uses: actions/upload-artifact@v4
         with:
           name: coverage-shard-${{ inputs.shard }}
           path: .coverage.${{ inputs.shard }}
+          retention-days: 30
+      - name: Upload shard metrics artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard-metrics-${{ inputs.shard }}
+          path: shard-metrics.json
           retention-days: 30
       - name: Run migration application validation on clean DB
         run: |

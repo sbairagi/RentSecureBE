@@ -8,19 +8,17 @@ name: Deploy Backend
 
 'on':
   workflow_call:
-  # DISABLED TEMPORARILY — restore before actual deployment
-  # push:
-  #   branches:
-  #     - main
+  push:
+    branches:
+      - main
+      - master
 
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: false
 
 jobs:
   deploy:
     name: Stage 8b │ Deploy to Production
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

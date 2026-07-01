@@ -30,6 +30,7 @@ REQUIRED_JOBS: set[str] = {
     "test-shard-2",
     "test-shard-3",
     "test-shard-4",
+    "shard-validation",
     "contract-tests",
     "django-check",
     "hypothesis-fast",
@@ -37,6 +38,7 @@ REQUIRED_JOBS: set[str] = {
     "security-fast",
     "mutation-smoke",
     "quality",
+    "branch-protection",
     "deploy-readiness",
     "deploy",
 }
@@ -55,6 +57,7 @@ REQUIRED_WORKFLOW_FILES: set[str] = {
     ".github/workflows/quality.yml",
     ".github/workflows/performance.yml",
     ".github/workflows/mutation.yml",
+    ".github/workflows/branch-protection.yml",
     ".github/workflows/deploy-readiness.yml",
     ".github/workflows/deploy.yml",
     ".github/workflows/nightly.yml",
@@ -98,6 +101,12 @@ APPROVED_DEPENDENCY_CHAIN: dict[str, list[str] | None] = {
     "test-shard-2": ["lint-fast"],
     "test-shard-3": ["lint-fast"],
     "test-shard-4": ["lint-fast"],
+    "shard-validation": [
+        "test-shard-1",
+        "test-shard-2",
+        "test-shard-3",
+        "test-shard-4",
+    ],
     "contract-tests": ["lint-fast"],
     "django-check": ["lint-fast"],
     "hypothesis-fast": ["lint-fast"],
@@ -109,10 +118,17 @@ APPROVED_DEPENDENCY_CHAIN: dict[str, list[str] | None] = {
         "test-shard-2",
         "test-shard-3",
         "test-shard-4",
+        "shard-validation",
         "contract-tests",
         "architecture",
     ],
-    "deploy-readiness": ["quality", "security-fast", "django-check"],
+    "branch-protection": ["quality", "security-fast", "django-check"],
+    "deploy-readiness": [
+        "quality",
+        "security-fast",
+        "django-check",
+        "branch-protection",
+    ],
     "deploy": ["deploy-readiness"],
 }
 
@@ -123,14 +139,16 @@ STAGE_MAP: dict[str, str] = {
     "test-shard-2": "Stage 2a  │ Pytest + Coverage (Shard 2/4)",
     "test-shard-3": "Stage 2a  │ Pytest + Coverage (Shard 3/4)",
     "test-shard-4": "Stage 2a  │ Pytest + Coverage (Shard 4/4)",
-    "contract-tests": "Stage 2b  │ API Contract Tests",
+    "shard-validation": "Stage 2b  │ Shard Distribution Validation",
+    "contract-tests": "Stage 2c  │ API Contract Tests",
     "django-check": "Stage 2c  │ Django System & Migration Checks",
     "hypothesis-fast": "Stage 2d  │ Hypothesis Property Tests (Fast)",
     "architecture": "Stage 2e  │ Architecture & Contracts",
     "security-fast": "Stage 2f  │ Security Fast-Track",
     "mutation-smoke": "Stage 2g  │ Mutation Testing (Smoke)",
     "quality": "Stage 3   │ Quality Gate (SonarCloud)",
-    "deploy-readiness": "Stage 4   │ Deploy Readiness Check",
+    "branch-protection": "Stage 4a  │ Branch Protection Validation",
+    "deploy-readiness": "Stage 4b  │ Deploy Readiness Check",
     "deploy": "Stage 5   │ Deploy to Production",
 }
 
@@ -153,6 +171,7 @@ APPROVED_STAGE_ORDER: list[str] = [
     "test-shard-2",
     "test-shard-3",
     "test-shard-4",
+    "shard-validation",
     "contract-tests",
     "django-check",
     "hypothesis-fast",
@@ -160,6 +179,7 @@ APPROVED_STAGE_ORDER: list[str] = [
     "security-fast",
     "mutation-smoke",
     "quality",
+    "branch-protection",
     "deploy-readiness",
     "deploy",
 ]
@@ -761,6 +781,7 @@ class ArchitectureContractValidator:
                 "test-shard-2",
                 "test-shard-3",
                 "test-shard-4",
+                "shard-validation",
                 "contract-tests",
                 "architecture",
             ],
@@ -777,7 +798,12 @@ class ArchitectureContractValidator:
                 "DEPLOY READINESS BYPASS: The 'deploy-readiness' job "
                 "dependencies have been altered."
             ),
-            expected_needs=["quality", "security-fast", "django-check"],
+            expected_needs=[
+                "quality",
+                "security-fast",
+                "django-check",
+                "branch-protection",
+            ],
         )
 
     # ═══════════════════════════════════════════════════════════════════════════

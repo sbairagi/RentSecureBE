@@ -36,7 +36,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
@@ -69,7 +69,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
@@ -101,7 +101,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
@@ -118,7 +118,6 @@ jobs:
             p/django
       - name: Upload Semgrep SARIF to GitHub Security
         if: always()
-        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif
@@ -139,7 +138,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
@@ -162,7 +161,6 @@ jobs:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
       - name: Upload Trivy SARIF to GitHub Security
         if: always()
-        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
@@ -179,7 +177,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
@@ -195,7 +193,6 @@ jobs:
           args: detect --source=. --redact --log-level=warning
       - name: Upload Gitleaks SARIF
         if: always()
-        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: gitleaks-report.sarif
@@ -213,7 +210,7 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          egress-policy: audit
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
