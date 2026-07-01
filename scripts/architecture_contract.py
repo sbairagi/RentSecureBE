@@ -68,6 +68,7 @@ REQUIRED_WORKFLOW_FILES: set[str] = {
     ".github/workflows/load-test.yml",
     ".github/workflows/weekly.yml",
     ".github/workflows/ci-metrics.yml",
+    ".github/workflows/sbom.yml",
     ".github/workflows/rollback.yml",
 }
 
@@ -84,6 +85,7 @@ PROTECTED_FILES: set[str] = {
     ".github/workflows/deploy-readiness.yml",
     ".github/workflows/nightly.yml",
     ".github/workflows/architecture-guard.yml",
+    ".github/workflows/sbom.yml",
     "scripts/architecture_contract.py",
     "docs/architecture-contract.md",
     "docs/ci-cd-pipeline.md",

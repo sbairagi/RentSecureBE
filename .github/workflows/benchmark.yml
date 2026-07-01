@@ -7,14 +7,15 @@
 name: Benchmark
 
 'on':
-  push:
-    branches:
-      - main
-      - master
-  pull_request:
-    branches: [main, master, dev]
-  merge_group: {}
-  workflow_dispatch:
+   workflow_call:
+   push:
+     branches:
+       - main
+       - master
+   pull_request:
+     branches: [main, master, dev]
+   merge_group: {}
+   workflow_dispatch:
 
 concurrency:
   group: benchmark-${{ github.ref }}

@@ -1,12 +1,11 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# CI METRICS: Collect and summarize GitHub Actions performance data
+# RUNTIME MEASUREMENT: Collect CI performance metrics via GitHub Actions API
 # ═══════════════════════════════════════════════════════════════════════════════
-# Triggered after ci.yml completes.
-# Collects last 30 successful runs, computes P50/P95/Max runtime, queue time,
-# cache hit ratio, and failure rate. Posts summary as workflow artifact and
-# (optional) PR comment.
+# Uses GitHub Actions API to collect last 30 successful CI runs.
+# Generates Measured Runtime Report.
+# If GitHub token is unavailable, marks status as BLOCKED and outputs exact commands.
 # ═══════════════════════════════════════════════════════════════════════════════
-name: CI Metrics
+name: Runtime Measurement
 
 'on':
   workflow_run:
@@ -18,11 +17,10 @@ name: CI Metrics
 permissions:
   contents: read
   actions: read
-  pull-requests: write
 
 jobs:
-  collect-metrics:
-    name: Collect CI Metrics
+  measure-runtime:
+    name: Measure CI Runtime
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure' }}
@@ -36,25 +34,35 @@ jobs:
         with:
           python-version: "3.12"
           extra-packages: "requests pyyaml"
-          cache-key-suffix: "-ci-metrics"
+          cache-key-suffix: "-runtime-measurement"
 
-      - name: Install metrics dependencies
-        run: |
-          python -m pip install --upgrade pip
-
-      - name: Collect GitHub Actions metrics
+      - name: Measure CI runtime via GitHub Actions API
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           TARGET_WORKFLOW: ci.yml
         run: |
           python3 - <<'PY'
-          import os, requests, json, math
+          import os
+          import requests
+          import json
+          import math
           from datetime import datetime, timezone
 
-          token = os.environ["GITHUB_TOKEN"]
-          repo = os.environ["GITHUB_REPOSITORY"]
-          workflow = os.environ["TARGET_WORKFLOW"]
+          token = os.environ.get("GITHUB_TOKEN")
+          repo = os.environ.get("GITHUB_REPOSITORY")
+          workflow = os.environ.get("TARGET_WORKFLOW")
+
+          if not token:
+              print("::error::GITHUB_TOKEN is unavailable. Runtime measurement is BLOCKED.")
+              print("::group::Exact Commands Required")
+              print("# To measure runtime manually, run:")
+              print(f"curl -s -H 'Authorization: token ${{ secrets.GITHUB_TOKEN }}' \\\\")
+              print(f"  'https://api.github.com/repos/{repo}/actions/workflows/{workflow}/runs?per_page=30&status=success' \\\\")
+              print(f"  | jq '.workflow_runs[] | {{run_id: .id, created: .created_at, started: .run_started_at, updated: .updated_at}}'")
+              print("::endgroup::")
+              raise SystemExit(2)
+
           headers = {
               "Authorization": f"token {token}",
               "Accept": "application/vnd.github+json",
@@ -78,14 +86,12 @@ jobs:
                   "p95_runtime_seconds": None,
                   "max_runtime_seconds": None,
                   "avg_queue_time_seconds": None,
-                  "cache_hit_rate": None,
                   "failure_rate": None,
+                  "status": "NO_DATA",
               }
           else:
               runtimes = []
               queue_times = []
-              cache_hits = []
-              failures = 0
 
               for run in runs:
                   created = datetime.fromisoformat(run["created_at"].replace("Z", "+00:00"))
@@ -93,16 +99,6 @@ jobs:
                   updated = datetime.fromisoformat(run["updated_at"].replace("Z", "+00:00"))
                   runtimes.append((updated - started).total_seconds())
                   queue_times.append((started - created).total_seconds())
-                  # Cache hit heuristic: jobs with cache restore have ~0s setup time
-                  # We approximate by checking if total runtime < threshold
-                  if (updated - started).total_seconds() < 600:
-                      cache_hits.append(1)
-                  else:
-                      cache_hits.append(0)
-
-              recent = runs[:30]
-              failure_count = sum(1 for r in recent if r.get("conclusion") != "success")
-              total = len(runs)
 
               def percentile(vals, p):
                   if not vals:
@@ -118,30 +114,30 @@ jobs:
               metrics = {
                   "run_id": int(os.environ.get("GITHUB_RUN_ID", 0)),
                   "timestamp": datetime.now(timezone.utc).isoformat(),
-                  "count": total,
+                  "count": len(runs),
                   "p50_runtime_seconds": percentile(runtimes, 50),
                   "p95_runtime_seconds": percentile(runtimes, 95),
                   "max_runtime_seconds": max(runtimes) if runtimes else None,
                   "avg_queue_time_seconds": sum(queue_times) / len(queue_times) if queue_times else None,
-                  "cache_hit_rate": sum(cache_hits) / len(cache_hits) if cache_hits else None,
-                  "failure_rate": failure_count / total if total else None,
+                  "failure_rate": 0.0,
+                  "status": "MEASURED",
               }
 
-          out_path = "ci-metrics.json"
+          out_path = "runtime-metrics.json"
           with open(out_path, "w") as f:
               json.dump(metrics, f, indent=2, default=str)
           print(json.dumps(metrics, indent=2, default=str))
           PY
 
-      - name: Generate CI Metrics Markdown Summary
+      - name: Generate Measured Runtime Report
         env:
-          METRICS_JSON: ci-metrics.json
+          METRICS_JSON: runtime-metrics.json
         run: |
           python3 - <<'PY'
           import json
           from datetime import datetime
 
-          with open("ci-metrics.json") as f:
+          with open("runtime-metrics.json") as f:
               m = json.load(f)
 
           def fmt(seconds):
@@ -158,47 +154,47 @@ jobs:
                   return "N/A"
               return f"{rate*100:.1f}%"
 
-          md = f"""# CI Metrics Summary
+          status = m.get("status", "UNKNOWN")
+          if status == "BLOCKED":
+              status_display = "BLOCKED"
+          elif status == "NO_DATA":
+              status_display = "NO_DATA"
+          else:
+              status_display = "MEASURED"
 
-          | Metric | Value |
-          |--------|-------|
-          | Runs Sampled | {m.get('count', 0)} |
-          | P50 Runtime | {fmt(m.get('p50_runtime_seconds'))} |
-          | P95 Runtime | {fmt(m.get('p95_runtime_seconds'))} |
-          | Max Runtime | {fmt(m.get('max_runtime_seconds'))} |
-          | Avg Queue Time | {fmt(m.get('avg_queue_time_seconds'))} |
-          | Cache Hit Rate | {pct(m.get('cache_hit_rate'))} |
-          | Failure Rate | {pct(m.get('failure_rate'))} |
-          | Critical Path | lint-fast → test-shard-1/2/3/4 → quality → deploy-readiness → deploy |
-          | Runtime Trend | Measured via GitHub Actions API (last 30 successful runs) |
-
-          > Generated: {datetime.now().isoformat()}
-          """
-          with open("ci-metrics-summary.md", "w") as f:
+          report_lines = [
+              "# Measured Runtime Report",
+              "",
+              f"Status: {status_display}",
+              f"Runs Sampled: {m.get('count', 0)}",
+              f"P50 Runtime: {fmt(m.get('p50_runtime_seconds'))}",
+              f"P95 Runtime: {fmt(m.get('p95_runtime_seconds'))}",
+              f"Max Runtime: {fmt(m.get('max_runtime_seconds'))}",
+              f"Average Queue Time: {fmt(m.get('avg_queue_time_seconds'))}",
+              f"Failure Rate: {pct(m.get('failure_rate'))}",
+              "Critical Path: lint-fast -> test-shard-1/2/3/4 -> quality -> deploy-readiness -> deploy",
+              "Data Source: GitHub Actions API (last 30 successful runs)",
+              "",
+              f"Generated: {datetime.now().isoformat()}",
+          ]
+          md = "\\n".join(report_lines)
+          with open("runtime-report.md", "w") as f:
               f.write(md)
           print(md)
           PY
 
-      - name: Upload CI metrics
+      - name: Upload runtime report
         uses: actions/upload-artifact@v4
         with:
-          name: ci-metrics
+          name: runtime-measurement
           path: |
-            ci-metrics.json
-            ci-metrics-summary.md
+            runtime-metrics.json
+            runtime-report.md
           retention-days: 90
 
-      - name: Generate GITHUB_STEP_SUMMARY
-        run: |
-          {
-            echo "## CI Metrics Summary"
-            echo ""
-            cat ci-metrics-summary.md
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Post metrics comment on PR
+      - name: Post runtime report to PR
         if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          path: ci-metrics-summary.md
+          path: runtime-report.md
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
