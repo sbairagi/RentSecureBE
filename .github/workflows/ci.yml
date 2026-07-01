@@ -23,13 +23,11 @@ concurrency:
 jobs:
   lint-fast:
     name: Stage 1 │ Lint Fast
-    timeout-minutes: 20
     uses: ./.github/workflows/lint.yml
     secrets: inherit
 
   test-shard-1:
     name: Stage 2 │ Test Shard 1/4
-    timeout-minutes: 45
     needs: [lint-fast]
     uses: ./.github/workflows/test.yml
     with:
@@ -38,7 +36,6 @@ jobs:
 
   test-shard-2:
     name: Stage 2 │ Test Shard 2/4
-    timeout-minutes: 45
     needs: [lint-fast]
     uses: ./.github/workflows/test.yml
     with:
@@ -47,7 +44,6 @@ jobs:
 
   test-shard-3:
     name: Stage 2 │ Test Shard 3/4
-    timeout-minutes: 45
     needs: [lint-fast]
     uses: ./.github/workflows/test.yml
     with:
@@ -56,7 +52,6 @@ jobs:
 
   test-shard-4:
     name: Stage 2 │ Test Shard 4/4
-    timeout-minutes: 45
     needs: [lint-fast]
     uses: ./.github/workflows/test.yml
     with:
@@ -109,28 +104,24 @@ jobs:
 
   contract-tests:
     name: Stage 2 │ Contract Tests
-    timeout-minutes: 40
     needs: [lint-fast]
     uses: ./.github/workflows/contract-tests.yml
     secrets: inherit
 
   django-check:
     name: Stage 2 │ Django Check
-    timeout-minutes: 25
     needs: [lint-fast]
     uses: ./.github/workflows/django-check.yml
     secrets: inherit
 
   architecture:
     name: Stage 2 │ Architecture
-    timeout-minutes: 20
     needs: [lint-fast]
     uses: ./.github/workflows/architecture.yml
     secrets: inherit
 
   security-fast:
     name: Stage 2 │ Security Fast
-    timeout-minutes: 30
     needs: [lint-fast]
     uses: ./.github/workflows/security.yml
     with:
@@ -139,16 +130,20 @@ jobs:
 
   mutation-smoke:
     name: Stage 2 │ Mutation Smoke
-    timeout-minutes: 60
     needs: [lint-fast]
     uses: ./.github/workflows/mutation.yml
     with:
       mutation_mode: smoke
     secrets: inherit
 
+  migration-rollback-validation:
+    name: Stage 2 │ Migration Rollback Validation
+    needs: [lint-fast]
+    uses: ./.github/workflows/migration-rollback.yml
+    secrets: inherit
+
   hypothesis-fast:
     name: Stage 2 │ Hypothesis Fast
-    timeout-minutes: 70
     needs: [lint-fast]
     uses: ./.github/workflows/hypothesis.yml
     with:
@@ -157,28 +152,24 @@ jobs:
 
   quality:
     name: Stage 3 │ Quality
-    timeout-minutes: 25
     needs: [test-shard-1, test-shard-2, test-shard-3, test-shard-4, shard-validation, contract-tests, architecture]
     uses: ./.github/workflows/quality.yml
     secrets: inherit
 
   branch-protection:
     name: Stage 4 │ Branch Protection
-    timeout-minutes: 10
     needs: [quality, security-fast, django-check]
     uses: ./.github/workflows/branch-protection.yml
     secrets: inherit
 
   deploy-readiness:
     name: Stage 4 │ Deploy Readiness
-    timeout-minutes: 20
     needs: [quality, security-fast, django-check, branch-protection]
     uses: ./.github/workflows/deploy-readiness.yml
     secrets: inherit
 
   deploy:
     name: Stage 5 │ Deploy
-    timeout-minutes: 30
     needs: [deploy-readiness]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     uses: ./.github/workflows/deploy.yml

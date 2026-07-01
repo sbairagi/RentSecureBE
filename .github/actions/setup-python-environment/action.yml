@@ -3,19 +3,15 @@ description: "Installs Python, sets up caches, and installs project dependencies
 inputs:
   python-version:
     description: "Python version to install"
-    type: string
     default: "3.12"
   requirements-file:
     description: "Path to requirements file"
-    type: string
     default: "requirements.txt"
   extra-packages:
     description: "Additional packages to install (space-separated)"
-    type: string
     default: ""
   cache-key-suffix:
     description: "Optional suffix for cache key"
-    type: string
     default: ""
 runs:
   using: "composite"
