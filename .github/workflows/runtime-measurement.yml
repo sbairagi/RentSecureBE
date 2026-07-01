@@ -17,13 +17,14 @@ name: Runtime Measurement
 permissions:
   contents: read
   actions: read
+  pull-requests: write
 
 jobs:
   measure-runtime:
     name: Measure CI Runtime
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -177,7 +178,7 @@ jobs:
               "",
               f"Generated: {datetime.now().isoformat()}",
           ]
-          md = "\\n".join(report_lines)
+          md = "\n".join(report_lines)
           with open("runtime-report.md", "w") as f:
               f.write(md)
           print(md)
