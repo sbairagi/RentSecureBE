@@ -52,9 +52,18 @@ jobs:
           name: coverage-shard-4
           path: coverage-artifacts
       - name: Combine coverage and generate XML
+        shell: bash
         run: |
+          set -euo pipefail
           cd coverage-artifacts
-          python -m coverage combine .coverage.* || true
+          shopt -s nullglob
+          coverage_files=(.coverage.*)
+          if [ ${#coverage_files[@]} -eq 0 ]; then
+            echo "ERROR: no coverage shard files found in coverage-artifacts."
+            ls -la
+            exit 1
+          fi
+          python -m coverage combine "${coverage_files[@]}"
           python -m coverage xml -o coverage.xml
           mv coverage.xml ../coverage.xml
       - name: Validate coverage.xml exists

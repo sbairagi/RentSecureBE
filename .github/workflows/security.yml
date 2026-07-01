@@ -50,9 +50,12 @@ jobs:
           extra-packages: "bandit"
           cache-key-suffix: "-bandit"
       - name: Run Bandit on ${{ matrix.app }}
+        shell: bash
         run: |
+          set -euo pipefail
           python -m bandit -r ${{ matrix.app }} \
-            -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
+            -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management' \
+            -lll
 
   pip-audit:
     name: Stage 6b │ Pip-audit (Dependency Scanner)

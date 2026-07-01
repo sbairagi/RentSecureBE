@@ -93,16 +93,21 @@ jobs:
             EOF
           fi
       - name: Run mutmut
+        shell: bash
         run: |
-          python -m mutmut run \
-            --simple-output 2>&1 | tee mutmut-output.txt
+          set -euo pipefail
+          python -m mutmut run --simple-output 2>&1 | tee mutmut-output.txt
       - name: Report mutmut results
+        shell: bash
         run: |
-          python -m mutmut report || true
+          set -euo pipefail
+          python -m mutmut report
       - name: Check mutation score
+        shell: bash
         run: |
-          python -m mutmut report 2>&1 | head -60 || true
-          echo "Mutation score report generated (advisory — non-blocking)."
+          set -euo pipefail
+          python -m mutmut report 2>&1 | head -60
+          echo "Mutation score report generated successfully."
       - name: Upload mutmut results artifact
         if: always()
         uses: actions/upload-artifact@v4

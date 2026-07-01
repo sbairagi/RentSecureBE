@@ -51,10 +51,13 @@ jobs:
       - name: Validate DRF API contract (critical endpoints)
         env:
           SECRET_KEY: "test-secret-key-contract-test-2026!"
+        shell: bash
         run: |
-          python manage.py test tests.test_api_contracts --verbosity=2 --no-input --randomly-seed=last 2>&1 || \
-          python -m pytest tests/test_api_contracts.py -v --tb=short --randomly-seed=last 2>&1 || \
-          echo "Contract tests file not yet created — creating minimal smoke test"
+          set -euo pipefail
+          if python manage.py test tests.test_api_contracts --verbosity=2 --no-input --randomly-seed=last; then
+            exit 0
+          fi
+          python -m pytest tests/test_api_contracts.py -v --tb=short --randomly-seed=last
       - name: Run contract schema validation
         env:
           SECRET_KEY: "test-secret-key-contract-test-2026!"

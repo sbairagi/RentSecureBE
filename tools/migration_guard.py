@@ -10,10 +10,12 @@ Validates:
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DJANGO_APPS = [
@@ -39,7 +41,7 @@ class MigrationResult:
     error: str | None = None
 
 
-def _run(cmd: list[str], **kwargs) -> tuple[bool, str]:
+def _run(cmd: list[str], **kwargs: Any) -> tuple[bool, str]:
     result = subprocess.run(  # noqa: S603
         cmd, cwd=REPO_ROOT, capture_output=True, text=True, **kwargs
     )
@@ -55,7 +57,7 @@ def check_missing_migrations() -> MigrationResult:
         "DJANGO_ENV": "test",
     }
     cmd = [sys.executable, "manage.py", "makemigrations", "--check", "--dry-run"]
-    ok, out = _run(cmd, env={**dict(subprocess.os.environ), **env})
+    ok, out = _run(cmd, env={**dict(os.environ), **env})
     return MigrationResult(
         name="missing-migrations",
         passed=ok,
@@ -73,7 +75,7 @@ def check_migration_graph() -> MigrationResult:
         "DJANGO_ENV": "test",
     }
     cmd = [sys.executable, "manage.py", "showmigrations", "--plan"]
-    ok, out = _run(cmd, env={**dict(subprocess.os.environ), **env})
+    ok, out = _run(cmd, env={**dict(os.environ), **env})
     return MigrationResult(
         name="migration-graph",
         passed=ok,
@@ -94,7 +96,7 @@ def check_rollback_safety() -> MigrationResult:
     apply = subprocess.run(
         [sys.executable, "manage.py", "migrate", "--run-syncdb", "--verbosity=0"],
         cwd=REPO_ROOT,
-        env={**dict(subprocess.os.environ), **env},
+        env={**dict(os.environ), **env},
     )
     ok = apply.returncode == 0
     out = ""

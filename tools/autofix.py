@@ -11,10 +11,12 @@ Applies safe, automated fixes for:
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SOURCE_DIRS = [
@@ -87,7 +89,7 @@ def _source_args() -> list[str]:
     return [d for d in SOURCE_DIRS if (REPO_ROOT / d).exists()]
 
 
-def run(cmd: str | Sequence[str], **kwargs) -> bool:
+def run(cmd: str | Sequence[str], **kwargs: Any) -> bool:
     """Run a hardcoded CI tool command and return True on success."""
     if isinstance(cmd, str):
         cmd = cmd.split()
@@ -147,14 +149,14 @@ def step_migrations() -> bool:
     check = subprocess.run(
         [sys.executable, "manage.py", "makemigrations", "--check", "--dry-run"],
         cwd=REPO_ROOT,
-        env={**dict(subprocess.os.environ), **env},
+        env={**dict(os.environ), **env},
     )  # noqa: S603
     if check.returncode != 0:
         print("[autofix] missing migrations detected — generating them ...")
         gen = subprocess.run(
             [sys.executable, "manage.py", "makemigrations"],
             cwd=REPO_ROOT,
-            env={**dict(subprocess.os.environ), **env},
+            env={**dict(os.environ), **env},
         )  # noqa: S603
         return gen.returncode == 0
     print("[autofix] no new migrations required.")

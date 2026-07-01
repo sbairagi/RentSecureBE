@@ -13,6 +13,7 @@ import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -28,7 +29,7 @@ class CheckResult:
     results: list[dict] = field(default_factory=list)
 
 
-def _run(cmd: Sequence[str] | str, **kwargs) -> tuple[bool, str, float]:
+def _run(cmd: Sequence[str] | str, **kwargs: Any) -> tuple[bool, str, float]:
     if isinstance(cmd, str):
         cmd = cmd.split()
     start = time.time()
@@ -95,7 +96,9 @@ def run_security() -> CheckResult:
         command="security_guard.run_all",
         duration=time.time() - start,
         error=(
-            "; ".join(f"{r.name}: {r.error[:100]}" for r in failed) if failed else None
+            "; ".join(f"{r.name}: {(r.error or "")[:100]}" for r in failed)
+            if failed
+            else None
         ),
         results=[r.__dict__ for r in results],
     )
@@ -198,7 +201,9 @@ def run_migrations() -> CheckResult:
         command="migration_guard.run_all",
         duration=time.time() - start,
         error=(
-            "; ".join(f"{r.name}: {r.error[:100]}" for r in failed) if failed else None
+            "; ".join(f"{r.name}: {(r.error or "")[:100]}" for r in failed)
+            if failed
+            else None
         ),
         results=[r.__dict__ for r in results],
     )

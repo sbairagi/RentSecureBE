@@ -28,14 +28,14 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles(inputs.requirements-file) }}${{ inputs.cache-key-suffix }}
+        key: ${{ runner.os }}-pip-${{ hashFiles(inputs.requirements-file, 'pyproject.toml') }}${{ inputs.cache-key-suffix }}
         restore-keys: |
           ${{ runner.os }}-pip-${{ inputs.cache-key-suffix }}
     - name: Cache mypy
       uses: actions/cache@v4
       with:
         path: .mypy_cache
-        key: ${{ runner.os }}-mypy-${{ hashFiles(inputs.requirements-file) }}${{ inputs.cache-key-suffix }}
+        key: ${{ runner.os }}-mypy-${{ hashFiles(inputs.requirements-file, 'pyproject.toml') }}${{ inputs.cache-key-suffix }}
         restore-keys: |
           ${{ runner.os }}-mypy-${{ inputs.cache-key-suffix }}
     - name: Cache pytest
@@ -44,7 +44,7 @@ runs:
         path: |
           .pytest_cache
           .pytest-split
-        key: ${{ runner.os }}-pytest-${{ hashFiles(inputs.requirements-file) }}${{ inputs.cache-key-suffix }}
+        key: ${{ runner.os }}-pytest-${{ hashFiles(inputs.requirements-file, 'pyproject.toml') }}${{ inputs.cache-key-suffix }}
         restore-keys: |
           ${{ runner.os }}-pytest-${{ inputs.cache-key-suffix }}
     - name: Cache pre-commit

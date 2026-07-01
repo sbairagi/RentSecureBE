@@ -13,6 +13,7 @@ import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LOCATIONS = [
@@ -40,7 +41,7 @@ class SecurityResult:
     skipped: bool = False
 
 
-def _run(cmd: Sequence[str], **kwargs) -> tuple[bool, str]:
+def _run(cmd: Sequence[str], **kwargs: Any) -> tuple[bool, str]:
     result = subprocess.run(  # noqa: S603
         cmd, cwd=REPO_ROOT, capture_output=True, text=True, **kwargs
     )

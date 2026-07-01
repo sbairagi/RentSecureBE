@@ -36,4 +36,7 @@ jobs:
           extra-packages: "import-linter"
           cache-key-suffix: "-architecture"
       - name: Run import-linter
-        run: lint-imports --config import-linter.ini || true
+        shell: bash
+        run: |
+          set -euo pipefail
+          lint-imports --config import-linter.ini
