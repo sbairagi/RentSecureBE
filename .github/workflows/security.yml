@@ -117,7 +117,7 @@ jobs:
             p/owasp-top-ten
             p/django
       - name: Upload Semgrep SARIF to GitHub Security
-        if: always()
+        if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif
@@ -160,7 +160,7 @@ jobs:
         env:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
       - name: Upload Trivy SARIF to GitHub Security
-        if: always()
+        if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
@@ -169,6 +169,10 @@ jobs:
     name: Stage 6e │ Gitleaks (Secret Scanning)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -192,7 +196,7 @@ jobs:
         with:
           args: detect --source=. --redact --log-level=warning
       - name: Upload Gitleaks SARIF
-        if: always()
+        if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: gitleaks-report.sarif
