@@ -6,7 +6,7 @@ can be validated locally with ``nox -s ci``.
 
 from __future__ import annotations
 
-import nox
+import nox  # type: ignore[import-not-found]
 
 # ---------------------------------------------------------------------------
 # Shared options
@@ -121,7 +121,7 @@ def _run_if_available(session: nox.Session, label: str, cmd: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="lint", tags=["quality"])
+@nox.session(python=PYTHON_VERSIONS, name="lint", tags=["quality"])  # type: ignore[misc]
 def lint(session: nox.Session) -> None:
     """Run all linting checks: pre-commit, black, ruff, pylint, vulture."""
     _install_test_deps(session)
@@ -176,7 +176,7 @@ def lint(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="autofix", tags=["fix"])
+@nox.session(python=PYTHON_VERSIONS, name="autofix", tags=["fix"])  # type: ignore[misc]
 def autofix(session: nox.Session) -> None:
     """Auto-fix code quality issues: ruff, black, isort, autoflake, migrations."""
     _install_test_deps(session)
@@ -217,7 +217,7 @@ def autofix(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="typing", tags=["quality"])
+@nox.session(python=PYTHON_VERSIONS, name="typing", tags=["quality"])  # type: ignore[misc]
 def typing(session: nox.Session) -> None:
     """Run mypy strict type checking."""
     _install_test_deps(session)
@@ -232,7 +232,7 @@ def typing(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="security", tags=["security"])
+@nox.session(python=PYTHON_VERSIONS, name="security", tags=["security"])  # type: ignore[misc]
 def security(session: nox.Session) -> None:
     """Run bandit, pip-audit, semgrep, gitleaks, trivy."""
     session.install("bandit", "pip-audit")
@@ -278,7 +278,7 @@ def security(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="django-checks", tags=["django"])
+@nox.session(python=PYTHON_VERSIONS, name="django-checks", tags=["django"])  # type: ignore[misc]
 def django_checks(session: nox.Session) -> None:
     """Run Django system checks and deploy validation."""
     _install_test_deps(session)
@@ -304,7 +304,7 @@ def django_checks(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="migrations", tags=["django"])
+@nox.session(python=PYTHON_VERSIONS, name="migrations", tags=["django"])  # type: ignore[misc]
 def migrations(session: nox.Session) -> None:
     """Validate Django system checks, deploy checks, and migrations."""
     _install_test_deps(session)
@@ -335,7 +335,7 @@ def migrations(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="tests", tags=["testing"])
+@nox.session(python=PYTHON_VERSIONS, name="tests", tags=["testing"])  # type: ignore[misc]
 def tests(session: nox.Session) -> None:
     """Run the full pytest suite."""
     _install_test_deps(session)
@@ -347,7 +347,7 @@ def tests(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="coverage", tags=["testing"])
+@nox.session(python=PYTHON_VERSIONS, name="coverage", tags=["testing"])  # type: ignore[misc]
 def coverage(session: nox.Session) -> None:
     """Run pytest with enforced ≥90% coverage on business-logic packages."""
     _install_test_deps(session)
@@ -369,7 +369,7 @@ def coverage(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="contracts", tags=["testing"])
+@nox.session(python=PYTHON_VERSIONS, name="contracts", tags=["testing"])  # type: ignore[misc]
 def contracts(session: nox.Session) -> None:
     """Run API contract tests and schema validation."""
     _install_test_deps(session)
@@ -396,7 +396,7 @@ def contracts(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="architecture", tags=["quality"])
+@nox.session(python=PYTHON_VERSIONS, name="architecture", tags=["quality"])  # type: ignore[misc]
 def architecture(session: nox.Session) -> None:
     """Run architecture contract validator and import-linter."""
     session.install("pyyaml", "import-linter")
@@ -410,7 +410,7 @@ def architecture(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="hypothesis", tags=["testing"])
+@nox.session(python=PYTHON_VERSIONS, name="hypothesis", tags=["testing"])  # type: ignore[misc]
 def hypothesis(session: nox.Session) -> None:
     """Run Hypothesis property-based tests."""
     _install_test_deps(session)
@@ -438,7 +438,7 @@ def hypothesis(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="mutation", tags=["testing"])
+@nox.session(python=PYTHON_VERSIONS, name="mutation", tags=["testing"])  # type: ignore[misc]
 def mutation(session: nox.Session) -> None:
     """Run mutmut mutation testing."""
     _install_test_deps(session)
@@ -469,7 +469,7 @@ def mutation(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="benchmark", tags=["performance"])
+@nox.session(python=PYTHON_VERSIONS, name="benchmark", tags=["performance"])  # type: ignore[misc]
 def benchmark(session: nox.Session) -> None:
     """Run pytest-benchmark performance regression suite."""
     _install_test_deps(session)
@@ -498,7 +498,7 @@ def benchmark(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="deploy-readiness", tags=["deploy"])
+@nox.session(python=PYTHON_VERSIONS, name="deploy-readiness", tags=["deploy"])  # type: ignore[misc]
 def deploy_readiness(session: nox.Session) -> None:
     """Validate Django deploy readiness: system checks, migrations, collectstatic."""
     _install_test_deps(session)
@@ -526,7 +526,7 @@ def deploy_readiness(session: nox.Session) -> None:
 # ---------------------------------------------------------------------------
 
 
-@nox.session(python=PYTHON_VERSIONS, name="ci", tags=["ci"])
+@nox.session(python=PYTHON_VERSIONS, name="ci", tags=["ci"])  # type: ignore[misc]
 def ci(session: nox.Session) -> None:
     """Run the complete CI pipeline locally.
 
