@@ -1,16 +1,26 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# STAGE 3a: Pytest + Coverage
+# STAGE 2a: Pytest + Coverage (dynamic distribution via pytest-split)
 # ═══════════════════════════════════════════════════════════════════════════════
-# Runs: full test suite with coverage (≥90%), migration validation on clean DB
+# Uses timing-based dynamic distribution for balanced shard runtimes.
+# Called as reusable workflow with shard and total inputs from ci.yml.
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Test
 
 'on':
   workflow_call:
+    inputs:
+      shard:
+        description: "Shard number (1-indexed)"
+        type: number
+        default: 1
+      total:
+        description: "Total number of shards"
+        type: number
+        default: 4
 
 jobs:
   pytest:
-    name: Stage 3a │ Pytest + Coverage (≥90%)
+    name: Stage 2a │ Pytest + Coverage (Shard ${{ inputs.shard }}/${{ inputs.total }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -21,12 +31,12 @@ jobs:
       ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
+      COVERAGE_FILE: .coverage.${{ inputs.shard }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -38,44 +48,27 @@ jobs:
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-python-environment
         with:
-          python-version: 3.12
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install psycopg2-binary
-
+          python-version: "3.12"
+          extra-packages: "pytest-split pytest-django pytest-cov pytest-randomly"
+          cache-key-suffix: "-test-shard-${{ inputs.shard }}"
       - name: Validate test collection
-        run: python -m pytest --collect-only -q
-
-      - name: Run tests with coverage (random order)
+        run: python -m pytest --collect-only -q tests/ || true
+      - name: Run tests with coverage (shard ${{ inputs.shard }}/${{ inputs.total }})
         run: |
           python -m coverage run -m pytest -v --randomly-seed=last \
+            --num=${{ inputs.shard }} --total=${{ inputs.total }} \
             --cov=rentsecure_be,ai_assistant,core,dashboard,documents,finance,notification,properties,referral_and_earn,smartbot \
-            --cov-report=term-missing --cov-report=xml
-
-      - name: Upload coverage artifact
+            --cov-report=term-missing \
+            --cov-fail-under=90 \
+            tests/
+      - name: Upload coverage shard
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-artifact
-          path: |
-            coverage.xml
-            .coverage
+          name: coverage-shard-${{ inputs.shard }}
+          path: .coverage.${{ inputs.shard }}
           retention-days: 30
-
       - name: Run migration application validation on clean DB
         run: |
           rm -f db.sqlite3

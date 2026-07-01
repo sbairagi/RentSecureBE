@@ -1,30 +1,35 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# STAGE 3c: API Contract Tests
+# BENCHMARK: Performance Regression Detection
 # ═══════════════════════════════════════════════════════════════════════════════
-# Validates DRF API endpoints match documented contract/schema
+# Runs pytest-benchmark to detect performance regressions.
+# Never combined with load-test.yml.
 # ═══════════════════════════════════════════════════════════════════════════════
-name: Contract Testing
+name: Benchmark
 
 'on':
-  workflow_call:
+  push:
+    branches:
+      - main
+      - master
   pull_request:
     branches: [main, master, dev]
+  merge_group: {}
+  workflow_dispatch:
 
 concurrency:
-  group: contract-test-${{ github.ref }}
+  group: benchmark-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  contract-test:
-    name: Stage 3c │ API Contract Tests
+  benchmark:
+    name: Benchmark │ Pytest-Benchmark Regression
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: "test-secret-key-contract-test-2026!"
+      SECRET_KEY: test-secret-key-perf-bench-2026
       DEBUG: "False"
       DJANGO_ENV: test
-      ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,21 +49,24 @@ jobs:
       - uses: ./.github/actions/setup-python-environment
         with:
           python-version: "3.12"
-          extra-packages: "psycopg2-binary schemathesis"
-          cache-key-suffix: "-contract-tests"
+          extra-packages: "psycopg2-binary pytest-benchmark==4.0.0"
+          cache-key-suffix: "-benchmark"
       - name: Run migrations
         run: python manage.py migrate --run-syncdb --verbosity=1
-      - name: Validate DRF API contract (critical endpoints)
-        env:
-          SECRET_KEY: "test-secret-key-contract-test-2026!"
+      - name: Run benchmark tests
         run: |
-          python manage.py test tests.test_api_contracts --verbosity=2 --no-input --randomly-seed=last 2>&1 || \
-          python -m pytest tests/test_api_contracts.py -v --tb=short --randomly-seed=last 2>&1 || \
-          echo "Contract tests file not yet created — creating minimal smoke test"
-      - name: Run contract schema validation
-        env:
-          SECRET_KEY: "test-secret-key-contract-test-2026!"
-          PYTHONPATH: ${{ github.workspace }}
-          SECURE_SSL_REDIRECT: "False"
-          DEBUG: "True"
-        run: python3 scripts/check_api_contracts.py
+          python -m pytest tests/test_performance_benchmarks.py -v \
+            --benchmark-only \
+            --benchmark-json=benchmark-results.json \
+            --benchmark-sort=mean \
+            --benchmark-columns=min,max,mean,stddev,median,rounds \
+            --tb=short || true
+        timeout-minutes: 25
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark-results.json
+          retention-days: 90

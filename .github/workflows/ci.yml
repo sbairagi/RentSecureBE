@@ -5,6 +5,7 @@ name: CI Pipeline
     branches: [main, master, dev, cleanup/remove-dead-code]
   pull_request:
     branches: [main, master, dev, cleanup/remove-dead-code]
+  merge_group:
 
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
@@ -20,96 +21,100 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ═══════════════════════════════════════════════════════════════════════════════
-  # STAGE 1 & 2: Setup & Prepare → Code Quality (Fast-Fail)
-  # ═══════════════════════════════════════════════════════════════════════════════
-  lint:
-    name: Stage 1-2 │ Setup & Code Quality
+  lint-fast:
+    name: Stage 1 │ Lint Fast
     uses: ./.github/workflows/lint.yml
     secrets: inherit
 
-  # ═══════════════════════════════════════════════════════════════════════════════
-  # STAGE 3: Tests (parallel after lint passes)
-  # ═══════════════════════════════════════════════════════════════════════════════
-  test:
-    name: Stage 3a  │ Pytest + Coverage
-    needs: lint
+  test-shard-1:
+    name: Stage 2 │ Test Shard 1/4
+    needs: [lint-fast]
     uses: ./.github/workflows/test.yml
+    with:
+      shard: 1
     secrets: inherit
 
-  hypothesis:
-    name: Stage 3b  │ Hypothesis Property Tests
-    needs: lint
-    uses: ./.github/workflows/hypothesis.yml
+  test-shard-2:
+    name: Stage 2 │ Test Shard 2/4
+    needs: [lint-fast]
+    uses: ./.github/workflows/test.yml
+    with:
+      shard: 2
+    secrets: inherit
+
+  test-shard-3:
+    name: Stage 2 │ Test Shard 3/4
+    needs: [lint-fast]
+    uses: ./.github/workflows/test.yml
+    with:
+      shard: 3
+    secrets: inherit
+
+  test-shard-4:
+    name: Stage 2 │ Test Shard 4/4
+    needs: [lint-fast]
+    uses: ./.github/workflows/test.yml
+    with:
+      shard: 4
     secrets: inherit
 
   contract-tests:
-    name: Stage 3c  │ API Contract Tests
-    needs: lint
+    name: Stage 2 │ Contract Tests
+    needs: [lint-fast]
     uses: ./.github/workflows/contract-tests.yml
     secrets: inherit
 
-  mutation:
-    name: Stage 3d  │ Mutation Testing
-    needs: lint
-    uses: ./.github/workflows/mutation.yml
-    secrets: inherit
-
-  performance:
-    name: Stage 3e  │ Performance & Load Tests
-    needs: lint
-    uses: ./.github/workflows/performance.yml
-    secrets: inherit
-
-  # ═══════════════════════════════════════════════════════════════════════════════
-  # STAGE 4: Django Checks
-  # ═══════════════════════════════════════════════════════════════════════════════
   django-check:
-    name: Stage 4   │ Django System & Migration Checks
-    needs: lint
+    name: Stage 2 │ Django Check
+    needs: [lint-fast]
     uses: ./.github/workflows/django-check.yml
     secrets: inherit
 
-  # ═══════════════════════════════════════════════════════════════════════════════
-  # STAGE 5: Architecture & Maintainability
-  # ═══════════════════════════════════════════════════════════════════════════════
   architecture:
-    name: Stage 5   │ Architecture & Contracts
-    needs: django-check
+    name: Stage 2 │ Architecture
+    needs: [lint-fast]
     uses: ./.github/workflows/architecture.yml
     secrets: inherit
 
-  # ═══════════════════════════════════════════════════════════════════════════════
-  # STAGE 6: Security & Supply Chain
-  # ═══════════════════════════════════════════════════════════════════════════════
-  security:
-    name: Stage 6   │ Security & Supply Chain
-    needs: architecture
+  security-fast:
+    name: Stage 2 │ Security Fast
+    needs: [lint-fast]
     uses: ./.github/workflows/security.yml
+    with:
+      run_dependency_review: ${{ github.event_name == 'pull_request' }}
     secrets: inherit
 
-  # ═══════════════════════════════════════════════════════════════════════════════
-  # STAGE 7: Quality Gate
-  # ═══════════════════════════════════════════════════════════════════════════════
+  mutation-smoke:
+    name: Stage 2 │ Mutation Smoke
+    needs: [lint-fast]
+    uses: ./.github/workflows/mutation.yml
+    with:
+      mutation_mode: smoke
+    secrets: inherit
+
+  hypothesis-fast:
+    name: Stage 2 │ Hypothesis Fast
+    needs: [lint-fast]
+    uses: ./.github/workflows/hypothesis.yml
+    with:
+      hypothesis_mode: smoke
+    secrets: inherit
+
   quality:
-    name: Stage 7   │ Quality Gate (SonarCloud)
-    needs: [test, contract-tests]
+    name: Stage 3 │ Quality
+    needs: [test-shard-1, test-shard-2, test-shard-3, test-shard-4, contract-tests, architecture]
     uses: ./.github/workflows/quality.yml
     secrets: inherit
 
-  # ═══════════════════════════════════════════════════════════════════════════════
-  # STAGE 8: Deploy Readiness & Deploy
-  # ═══════════════════════════════════════════════════════════════════════════════
   deploy-readiness:
-    name: Stage 8a  │ Deploy Readiness Check
-    needs: [security, quality, performance, mutation]
+    name: Stage 4 │ Deploy Readiness
+    needs: [quality, security-fast, django-check]
     uses: ./.github/workflows/deploy-readiness.yml
     secrets: inherit
 
   deploy:
-    name: Stage 8b  │ Deploy to Production
-    needs: deploy-readiness
-    # Only deploy on push to main/master
+    name: Stage 5 │ Deploy
+    needs: [deploy-readiness]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     uses: ./.github/workflows/deploy.yml
     secrets: inherit

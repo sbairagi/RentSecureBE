@@ -1,17 +1,61 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# STAGE 6: Security & Supply Chain
+# STAGE 6: Security & Supply Chain (PR Fast-Track)
 # ═══════════════════════════════════════════════════════════════════════════════
-# Runs: Bandit SAST, Semgrep (OWASP+Django), Pip-audit, Trivy FS, Gitleaks,
-#        Dependency Review, CodeQL, OpenSSF Scorecard
+# Runs: Bandit (matrix per app), Pip-audit, Semgrep, Trivy FS, Gitleaks
+# Deep scans (CodeQL, Scorecard, Dependency Review) run in security-deep.yml nightly.
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Security
 
 'on':
   workflow_call:
+    inputs:
+      run_dependency_review:
+        description: "Run dependency-review job (true for PRs)"
+        type: boolean
+        default: false
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches: [main, master, dev]
 
 jobs:
   bandit:
-    name: Stage 6a │ Bandit (SAST)
+    name: Stage 6a │ Bandit (SAST — Matrix)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        app: [rentsecure_be, core, properties, ai_assistant, notification, finance, smartbot, referral_and_earn, dashboard, documents]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "bandit"
+          cache-key-suffix: "-bandit"
+      - name: Run Bandit on ${{ matrix.app }}
+        run: |
+          python -m bandit -r ${{ matrix.app }} \
+            -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
+
+  pip-audit:
+    name: Stage 6b │ Pip-audit (Dependency Scanner)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -19,18 +63,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -39,75 +71,21 @@ jobs:
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
-            api.github.com:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-
-      - name: Install Bandit
-        run: |
-          python -m pip install --upgrade pip
-          pip install bandit
-
-      - name: Run Bandit on app source directories
-        run: |
-          python -m bandit -r rentsecure_be -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,properties/refactored_models_combined.py,properties/original_models.py,management'
-          python -m bandit -r core -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
-          python -m bandit -r properties -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
-          python -m bandit -r ai_assistant -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
-          python -m bandit -r notification -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
-          python -m bandit -r finance -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
-          python -m bandit -r smartbot -x '*/tests/*,*/tests.py,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
-          python -m bandit -r referral_and_earn -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
-          python -m bandit -r dashboard -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
-          python -m bandit -r documents -x '*/tests/*,*/tests.py,*/test_*.py,.venv,venv,migrations,.kilo,.github,management'
-
-  pip-audit:
-    name: Stage 6b │ Pip-audit (Dependency Scanner)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-environment
         with:
-          fetch-depth: 1
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            api.github.com:443
-            pypi.org:443
-            pypi.python.org:443
-            files.pythonhosted.org:443
-
-      - name: Install pip-audit
-        run: |
-          python -m pip install --upgrade pip
-          pip install pip-audit
-
+          python-version: "3.12"
+          extra-packages: "pip-audit"
+          cache-key-suffix: "-pip-audit"
       - name: Run Pip-audit on full requirements
         run: python -m pip_audit --requirement=requirements.txt --vulnerability-service=pypi --ignore-vuln PYSEC-2022-252
 
   semgrep:
     name: Stage 6c │ Semgrep (SAST — OWASP + Django)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       security-events: write
       contents: read
@@ -117,18 +95,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -137,11 +103,9 @@ jobs:
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
-            api.github.com:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-
       - name: Run Semgrep
         uses: semgrep/semgrep-action@v1
         with:
@@ -149,7 +113,6 @@ jobs:
             p/security-audit
             p/owasp-top-ten
             p/django
-
       - name: Upload Semgrep SARIF to GitHub Security
         if: always()
         continue-on-error: true
@@ -160,7 +123,7 @@ jobs:
   trivy:
     name: Stage 6d │ Trivy (FS Vulnerability Scan)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       security-events: write
       contents: read
@@ -170,7 +133,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -182,7 +144,6 @@ jobs:
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -196,7 +157,6 @@ jobs:
           ignore-unfixed: true
         env:
           TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
-
       - name: Upload Trivy SARIF to GitHub Security
         if: always()
         continue-on-error: true
@@ -207,13 +167,12 @@ jobs:
   gitleaks:
     name: Stage 6e │ Gitleaks (Secret Scanning)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -222,18 +181,15 @@ jobs:
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
-            api.github.com:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: detect --source=. --redact --log-level=warning
-
       - name: Upload Gitleaks SARIF
         if: always()
         continue-on-error: true
@@ -243,15 +199,14 @@ jobs:
 
   dependency-review:
     name: Stage 6f │ Dependency Review (License + Vuln)
+    if: ${{ inputs.run_dependency_review }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.event_name == 'pull_request'
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -263,89 +218,13 @@ jobs:
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-dep-review"
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0
           allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0
-
-  codeql:
-    name: Stage 6g │ CodeQL (Advanced Python Analysis)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      security-events: write
-      contents: read
-      actions: read
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            pypi.org:443
-            pypi.python.org:443
-            files.pythonhosted.org:443
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: python
-          queries: security-extended,security-and-quality
-      - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: "/language:python"
-          upload: false
-
-  osrf-scorecard:
-    name: Stage 6h │ OpenSSF Scorecard
-    if: github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      security-events: write
-      id-token: write
-      contents: read
-      actions: read
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            pypi.org:443
-            pypi.python.org:443
-            files.pythonhosted.org:443
-
-      - name: Run OpenSSF Scorecard
-        uses: ossf/scorecard-action@v2.0.0
-        with:
-          results_file: scorecard-results.sarif
-          results_format: sarif
-          publish_results: true
-
-      - name: Upload Scorecard SARIF to GitHub Security
-        if: always()
-        continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: scorecard-results.sarif

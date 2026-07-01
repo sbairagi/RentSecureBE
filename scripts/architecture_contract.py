@@ -19,22 +19,24 @@ import yaml
 # ARCHITECTURE CONTRACT — THE SOURCE OF TRUTH
 # ═══════════════════════════════════════════════════════════════════════════════
 
-ARCHITECTURE_VERSION = "2.0.0"
-PIPELINE_VERSION = "2.0.0"
-CONTRACT_VERSION = "2.0.0"
+ARCHITECTURE_VERSION = "2.3.0"
+PIPELINE_VERSION = "2.3.0"
+CONTRACT_VERSION = "2.3.0"
 
 # Every required job that MUST exist in ci.yml
 REQUIRED_JOBS: set[str] = {
-    "lint",
-    "test",
-    "django-check",
-    "hypothesis",
+    "lint-fast",
+    "test-shard-1",
+    "test-shard-2",
+    "test-shard-3",
+    "test-shard-4",
     "contract-tests",
+    "django-check",
+    "hypothesis-fast",
     "architecture",
-    "security",
+    "security-fast",
+    "mutation-smoke",
     "quality",
-    "performance",
-    "mutation",
     "deploy-readiness",
     "deploy",
 }
@@ -49,11 +51,19 @@ REQUIRED_WORKFLOW_FILES: set[str] = {
     ".github/workflows/contract-tests.yml",
     ".github/workflows/architecture.yml",
     ".github/workflows/security.yml",
+    ".github/workflows/security-deep.yml",
     ".github/workflows/quality.yml",
     ".github/workflows/performance.yml",
     ".github/workflows/mutation.yml",
     ".github/workflows/deploy-readiness.yml",
     ".github/workflows/deploy.yml",
+    ".github/workflows/nightly.yml",
+    ".github/workflows/architecture-guard.yml",
+    ".github/workflows/benchmark.yml",
+    ".github/workflows/load-test.yml",
+    ".github/workflows/weekly.yml",
+    ".github/workflows/ci-metrics.yml",
+    ".github/workflows/rollback.yml",
 }
 
 # Protected files that are critical to the governance system itself (CRITICAL severity)
@@ -62,10 +72,12 @@ PROTECTED_FILES: set[str] = {
     ".github/workflows/lint.yml",
     ".github/workflows/test.yml",
     ".github/workflows/security.yml",
+    ".github/workflows/security-deep.yml",
     ".github/workflows/quality.yml",
     ".github/workflows/deploy.yml",
     ".github/workflows/architecture.yml",
     ".github/workflows/deploy-readiness.yml",
+    ".github/workflows/nightly.yml",
     ".github/workflows/architecture-guard.yml",
     "scripts/architecture_contract.py",
     "docs/architecture-contract.md",
@@ -81,34 +93,45 @@ SELF_PROTECTION_FILES: set[str] = {
 
 # Approved dependency chain
 APPROVED_DEPENDENCY_CHAIN: dict[str, list[str] | None] = {
-    "lint": None,
-    "test": ["lint"],
-    "hypothesis": ["lint"],
-    "contract-tests": ["lint"],
-    "mutation": ["lint"],
-    "performance": ["lint"],
-    "django-check": ["lint"],
-    "architecture": ["django-check"],
-    "security": ["architecture"],
-    "quality": ["test", "contract-tests"],
-    "deploy-readiness": ["security", "quality", "performance", "mutation"],
+    "lint-fast": None,
+    "test-shard-1": ["lint-fast"],
+    "test-shard-2": ["lint-fast"],
+    "test-shard-3": ["lint-fast"],
+    "test-shard-4": ["lint-fast"],
+    "contract-tests": ["lint-fast"],
+    "django-check": ["lint-fast"],
+    "hypothesis-fast": ["lint-fast"],
+    "architecture": ["lint-fast"],
+    "security-fast": ["lint-fast"],
+    "mutation-smoke": ["lint-fast"],
+    "quality": [
+        "test-shard-1",
+        "test-shard-2",
+        "test-shard-3",
+        "test-shard-4",
+        "contract-tests",
+        "architecture",
+    ],
+    "deploy-readiness": ["quality", "security-fast", "django-check"],
     "deploy": ["deploy-readiness"],
 }
 
 # Stage labels
 STAGE_MAP: dict[str, str] = {
-    "lint": "Stage 1-2 │ Setup & Code Quality",
-    "test": "Stage 3a  │ Pytest + Coverage",
-    "hypothesis": "Stage 3b  │ Hypothesis Property Tests",
-    "contract-tests": "Stage 3c  │ API Contract Tests",
-    "mutation": "Stage 3d  │ Mutation Testing",
-    "performance": "Stage 3e  │ Performance & Load Tests",
-    "django-check": "Stage 4   │ Django System & Migration Checks",
-    "architecture": "Stage 5   │ Architecture & Contracts",
-    "security": "Stage 6   │ Security & Supply Chain",
-    "quality": "Stage 7   │ Quality Gate (SonarCloud)",
-    "deploy-readiness": "Stage 8a  │ Deploy Readiness Check",
-    "deploy": "Stage 8b  │ Deploy to Production",
+    "lint-fast": "Stage 1   │ Lint Fast",
+    "test-shard-1": "Stage 2a  │ Pytest + Coverage (Shard 1/4)",
+    "test-shard-2": "Stage 2a  │ Pytest + Coverage (Shard 2/4)",
+    "test-shard-3": "Stage 2a  │ Pytest + Coverage (Shard 3/4)",
+    "test-shard-4": "Stage 2a  │ Pytest + Coverage (Shard 4/4)",
+    "contract-tests": "Stage 2b  │ API Contract Tests",
+    "django-check": "Stage 2c  │ Django System & Migration Checks",
+    "hypothesis-fast": "Stage 2d  │ Hypothesis Property Tests (Fast)",
+    "architecture": "Stage 2e  │ Architecture & Contracts",
+    "security-fast": "Stage 2f  │ Security Fast-Track",
+    "mutation-smoke": "Stage 2g  │ Mutation Testing (Smoke)",
+    "quality": "Stage 3   │ Quality Gate (SonarCloud)",
+    "deploy-readiness": "Stage 4   │ Deploy Readiness Check",
+    "deploy": "Stage 5   │ Deploy to Production",
 }
 
 # Required stage names for documentation sync validation
@@ -125,15 +148,17 @@ REQUIRED_DOC_STAGES: list[str] = [
 
 # The topological order that defines valid stage sequencing
 APPROVED_STAGE_ORDER: list[str] = [
-    "lint",
-    "test",
-    "hypothesis",
+    "lint-fast",
+    "test-shard-1",
+    "test-shard-2",
+    "test-shard-3",
+    "test-shard-4",
     "contract-tests",
-    "mutation",
-    "performance",
     "django-check",
+    "hypothesis-fast",
     "architecture",
-    "security",
+    "security-fast",
+    "mutation-smoke",
     "quality",
     "deploy-readiness",
     "deploy",
@@ -708,17 +733,17 @@ class ArchitectureContractValidator:
             )
 
     def check_security_not_bypassed(self) -> None:
-        """Verify security cannot be bypassed."""
-        self.log("Checking security stage integrity...")
+        """Verify security-fast cannot be bypassed."""
+        self.log("Checking security-fast stage integrity...")
         self._check_bypass(
-            job_name="security",
+            job_name="security-fast",
             violation_type=Violation.SECURITY_BYPASSED,
             severity="CRITICAL",
             message_template=(
-                "SECURITY BYPASS: The 'security' job dependencies have been altered. "
-                "Security must always run after architecture validation."
+                "SECURITY BYPASS: The 'security-fast' job dependencies"
+                " have been altered. Security must always run after lint-fast."
             ),
-            expected_needs=["architecture"],
+            expected_needs=["lint-fast"],
         )
 
     def check_quality_gate_not_bypassed(self) -> None:
@@ -731,7 +756,14 @@ class ArchitectureContractValidator:
             message_template=(
                 "QUALITY GATE BYPASS: The 'quality' job dependencies have been altered."
             ),
-            expected_needs=["test", "contract-tests"],
+            expected_needs=[
+                "test-shard-1",
+                "test-shard-2",
+                "test-shard-3",
+                "test-shard-4",
+                "contract-tests",
+                "architecture",
+            ],
         )
 
     def check_deploy_readiness_not_bypassed(self) -> None:
@@ -745,7 +777,7 @@ class ArchitectureContractValidator:
                 "DEPLOY READINESS BYPASS: The 'deploy-readiness' job "
                 "dependencies have been altered."
             ),
-            expected_needs=["security", "quality", "performance", "mutation"],
+            expected_needs=["quality", "security-fast", "django-check"],
         )
 
     # ═══════════════════════════════════════════════════════════════════════════
@@ -859,7 +891,7 @@ class ArchitectureContractValidator:
         remainder = max_score % len(categories)
         total_score = 0
 
-        breakdown = {}
+        breakdown: dict[str, Any] = {}
         for i, (cat_name, cat_data) in enumerate(categories.items()):
             cat_max = per_category + (1 if i < remainder else 0)
             cat_penalty = min(cat_data["fail"] * (cat_max // 2), cat_max)

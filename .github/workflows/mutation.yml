@@ -2,20 +2,22 @@
 # STAGE 3d: Mutation Testing
 # ═══════════════════════════════════════════════════════════════════════════════
 # Runs mutmut to verify test suite catches code mutations
-# Runs nightly (02:00 UTC) and on PRs touching core domains
+# PR: smoke (subset of paths, fewer workers) — called from ci.yml
+# Push main/master + nightly: full (all paths, full workers)
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Mutation Testing
 
 'on':
   workflow_call:
+    inputs:
+      mutation_mode:
+        description: "smoke for PRs, full for nightly/main"
+        type: string
+        default: "smoke"
   push:
     branches:
       - main
       - master
-  pull_request:
-    branches: [main, master, dev]
-  schedule:
-    - cron: '0 2 * * 0'  # Weekly on Sundays at 02:00 UTC
 
 concurrency:
   group: mutation-${{ github.ref }}
@@ -48,67 +50,59 @@ jobs:
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-python-environment
         with:
-          python-version: 3.12
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Cache mutmut results
-        uses: actions/cache@v4
-        with:
-          path: .mutmut-cache
-          key: ${{ runner.os }}-mutmut-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-mutmut-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install psycopg2-binary mutmut==3.6.0
-
+          python-version: "3.12"
+          extra-packages: "psycopg2-binary mutmut==3.6.0"
+          cache-key-suffix: "-mutation-${{ inputs.mutation_mode }}"
       - name: Run migrations
         run: python manage.py migrate --run-syncdb --verbosity=1
-
-      - name: Configure mutmut paths
+      - name: 'Configure mutmut (mode: ${{ inputs.mutation_mode }})'
         run: |
           mkdir -p .mutmut
-          cat > .mutmut/config.ini << 'EOF'
-          [mutmut]
-          paths_to_mutate = core/models.py,properties/models/,properties/services/,properties/utils/,finance/models.py,smartbot/services/,notification/services/,properties/feature_enforcer.py
-          backups = .mutmut-backups
-          runner = python -m pytest --no-header -q --tb=short --randomly-seed=last
-          tests_dir = .
-          dict_paths =
-          worker = 4
-          show_progress = True
-          EOF
-
+          if [ "${{ inputs.mutation_mode }}" == "smoke" ]; then
+            echo "SMOKE MODE: selecting changed files only for PR"
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD 2>/dev/null || git diff --name-only HEAD~1)
+            echo "Changed files: $CHANGED_FILES"
+            PATHS=$(echo "$CHANGED_FILES" | grep -E '\.(py)$' | grep -v '__pycache__' | grep -v 'tests/' | grep -v '\.pyc' | tr '\n' ',' | sed 's/,$//' || true)
+            if [ -z "$PATHS" ]; then
+              echo "No Python source files changed — defaulting to core slim set"
+              PATHS="core/models.py,properties/models/,finance/models.py"
+            fi
+            echo "Selected paths_to_mutate: $PATHS"
+            cat > .mutmut/config.ini << EOF
+            [mutmut]
+            paths_to_mutate = $PATHS
+            backups = .mutmut-backups
+            runner = python -m pytest --no-header -q --tb=short --randomly-seed=last
+            tests_dir = .
+            dict_paths =
+            worker = 2
+            show_progress = True
+            EOF
+          else
+            cat > .mutmut/config.ini << 'EOF'
+            [mutmut]
+            paths_to_mutate = core/models.py,properties/models/,properties/services/,properties/utils/,finance/models.py,smartbot/services/,notification/services/,properties/feature_enforcer.py
+            backups = .mutmut-backups
+            runner = python -m pytest --no-header -q --tb=short --randomly-seed=last
+            tests_dir = .
+            dict_paths =
+            worker = 4
+            show_progress = True
+            EOF
+          fi
       - name: Run mutmut
         run: |
-          python -m mutmut run --paths-to-mutate=core/models.py,properties/models/,properties/services/,properties/utils/,finance/models.py,smartbot/services/,notification/services/,properties/feature_enforcer.py \
-            --runner="python -m pytest --no-header -q --tb=short --randomly-seed=last -x" \
-            --worker=4 \
+          python -m mutmut run \
             --simple-output 2>&1 | tee mutmut-output.txt
-
       - name: Report mutmut results
         run: |
           python -m mutmut report || true
-
       - name: Check mutation score
         run: |
           python -m mutmut report 2>&1 | head -60 || true
           echo "Mutation score report generated (advisory — non-blocking)."
-
       - name: Upload mutmut results artifact
         if: always()
         uses: actions/upload-artifact@v4

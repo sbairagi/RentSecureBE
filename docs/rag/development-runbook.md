@@ -12,7 +12,7 @@
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt   # fix python-decouple to 3.8 if 3.9 fails
+pip install -r requirements.txt
 cp .env.example .env
 ```
 

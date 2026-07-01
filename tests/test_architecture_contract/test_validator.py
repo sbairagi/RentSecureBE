@@ -25,45 +25,73 @@ def compliant_ci_yaml() -> dict[str, Any]:
         "on": {
             "push": {"branches": ["main"]},
             "pull_request": {"branches": ["main"]},
+            "merge_group": {},
         },
         "jobs": {
-            "lint": {"uses": "./.github/workflows/lint.yml"},
-            "test": {"needs": "lint", "uses": "./.github/workflows/test.yml"},
-            "hypothesis": {
-                "needs": "lint",
-                "uses": "./.github/workflows/hypothesis.yml",
+            "lint-fast": {"uses": "./.github/workflows/lint.yml"},
+            "test-shard-1": {
+                "needs": ["lint-fast"],
+                "uses": "./.github/workflows/test.yml",
+                "with": {"shard": 1, "total": 4},
+            },
+            "test-shard-2": {
+                "needs": ["lint-fast"],
+                "uses": "./.github/workflows/test.yml",
+                "with": {"shard": 2, "total": 4},
+            },
+            "test-shard-3": {
+                "needs": ["lint-fast"],
+                "uses": "./.github/workflows/test.yml",
+                "with": {"shard": 3, "total": 4},
+            },
+            "test-shard-4": {
+                "needs": ["lint-fast"],
+                "uses": "./.github/workflows/test.yml",
+                "with": {"shard": 4, "total": 4},
             },
             "contract-tests": {
-                "needs": "lint",
+                "needs": ["lint-fast"],
                 "uses": "./.github/workflows/contract-tests.yml",
             },
-            "mutation": {"needs": "lint", "uses": "./.github/workflows/mutation.yml"},
-            "performance": {
-                "needs": "lint",
-                "uses": "./.github/workflows/performance.yml",
-            },
             "django-check": {
-                "needs": "lint",
+                "needs": ["lint-fast"],
                 "uses": "./.github/workflows/django-check.yml",
             },
+            "hypothesis-fast": {
+                "needs": ["lint-fast"],
+                "uses": "./.github/workflows/hypothesis.yml",
+                "with": {"hypothesis_mode": "smoke"},
+            },
             "architecture": {
-                "needs": "django-check",
+                "needs": ["lint-fast"],
                 "uses": "./.github/workflows/architecture.yml",
             },
-            "security": {
-                "needs": "architecture",
+            "security-fast": {
+                "needs": ["lint-fast"],
                 "uses": "./.github/workflows/security.yml",
             },
+            "mutation-smoke": {
+                "needs": ["lint-fast"],
+                "uses": "./.github/workflows/mutation.yml",
+                "with": {"mutation_mode": "smoke"},
+            },
             "quality": {
-                "needs": ["test", "contract-tests"],
+                "needs": [
+                    "test-shard-1",
+                    "test-shard-2",
+                    "test-shard-3",
+                    "test-shard-4",
+                    "contract-tests",
+                    "architecture",
+                ],
                 "uses": "./.github/workflows/quality.yml",
             },
             "deploy-readiness": {
-                "needs": ["security", "quality", "performance", "mutation"],
+                "needs": ["quality", "security-fast", "django-check"],
                 "uses": "./.github/workflows/deploy-readiness.yml",
             },
             "deploy": {
-                "needs": "deploy-readiness",
+                "needs": ["deploy-readiness"],
                 "if": "github.event_name == 'push' && github.ref == 'refs/heads/main'",
                 "uses": "./.github/workflows/deploy.yml",
             },
@@ -106,12 +134,19 @@ def write_temp_env(
         "contract-tests.yml",
         "architecture.yml",
         "security.yml",
+        "security-deep.yml",
         "quality.yml",
         "performance.yml",
         "mutation.yml",
         "deploy-readiness.yml",
         "deploy.yml",
+        "nightly.yml",
         "architecture-guard.yml",
+        "benchmark.yml",
+        "load-test.yml",
+        "weekly.yml",
+        "ci-metrics.yml",
+        "rollback.yml",
     ]
     for fname in required_files:
         stub = workflow_dir / fname
@@ -131,13 +166,13 @@ def write_temp_env(
     # Write doc files with all required content
     arc_contract_doc = doc_dir / "architecture-contract.md"
     arc_contract_doc.write_text(
-        "# Architecture Contract\n\n> **Version:** 2.0.0\n\nSome content with 2.0.0 version.\n"
+        "# Architecture Contract\n\n> **Version:** 2.3.0\n\nSome content with 2.3.0 version.\n"
     )
 
     pipeline_doc = doc_dir / "ci-cd-pipeline.md"
     pipeline_doc.write_text(
         "# CI/CD Pipeline & UML Overview\n\n"
-        "> **Pipeline Version:** 2.0.0\n\n"
+        "> **Pipeline Version:** 2.3.0\n\n"
         "## Part 1: CI/CD Pipeline Flow Diagram\n\n"
         "### Setup\n"
         "### Code Quality\n"
@@ -151,7 +186,7 @@ def write_temp_env(
 
     governance_doc = doc_dir / "governance.md"
     governance_doc.write_text(
-        "# Enterprise CI/CD Governance\n\n> **Version:** 2.0.0\n\n"
+        "# Enterprise CI/CD Governance\n\n> **Version:** 2.3.0\n\n"
     )
 
     # Add extra files if specified
@@ -427,8 +462,8 @@ class TestParsing:
         val.repo_root = Path(tmpdir)
         config = val.parse_ci_yaml()
         assert config["name"] == "CI Pipeline"
-        assert len(val.actual_jobs) == 12
-        assert "lint" in val.actual_jobs
+        assert len(val.actual_jobs) == 14
+        assert "lint-fast" in val.actual_jobs
         assert "deploy" in val.actual_jobs
 
     def test_parse_missing_file(self):
@@ -475,8 +510,8 @@ class TestRequiredJobs:
             "name": "CI Pipeline",
             "on": {"push": {"branches": ["main"]}},
             "jobs": {
-                "lint": {"uses": "./lint.yml"},
-                "test": {"needs": "lint", "uses": "./test.yml"},
+                "lint-fast": {"uses": "./lint.yml"},
+                "test-shard-1": {"needs": "lint-fast", "uses": "./test.yml"},
             },
         }
         tmpdir = write_temp_env(broken)
@@ -543,21 +578,26 @@ class TestDependencies:
             "name": "CI Pipeline",
             "on": {"push": {"branches": ["main"]}},
             "jobs": {
-                "lint": {"uses": "./lint.yml"},
-                "test": {"needs": "lint", "uses": "./test.yml"},
-                "hypothesis": {"needs": "lint", "uses": "./hypothesis.yml"},
+                "lint-fast": {"uses": "./lint.yml"},
+                "test-shard-1": {"needs": "lint-fast", "uses": "./test.yml"},
+                "hypothesis-fast": {"needs": "lint-fast", "uses": "./hypothesis.yml"},
                 "contract-tests": {"needs": "lint", "uses": "./contract-tests.yml"},
-                "mutation": {"needs": "lint", "uses": "./mutation.yml"},
+                "mutation-smoke": {"needs": "lint-fast", "uses": "./mutation.yml"},
                 "performance": {"needs": "lint", "uses": "./performance.yml"},
                 "django-check": {"needs": "lint", "uses": "./django-check.yml"},
                 "architecture": {"needs": "lint", "uses": "./architecture.yml"},
-                "security": {"needs": "architecture", "uses": "./security.yml"},
+                "security-fast": {"needs": "architecture", "uses": "./security.yml"},
                 "quality": {
                     "needs": ["test", "contract-tests"],
                     "uses": "./quality.yml",
                 },
                 "deploy-readiness": {
-                    "needs": ["security", "quality", "performance", "mutation"],
+                    "needs": [
+                        "security-fast",
+                        "quality",
+                        "performance",
+                        "mutation-smoke",
+                    ],
                     "uses": "./deploy-readiness.yml",
                 },
                 "deploy": {"needs": "deploy-readiness", "uses": "./deploy.yml"},
@@ -577,21 +617,26 @@ class TestDependencies:
             "name": "CI Pipeline",
             "on": {"push": {"branches": ["main"]}},
             "jobs": {
-                "lint": {"uses": "./lint.yml"},
-                "test": {"needs": "lint", "uses": "./test.yml"},
-                "hypothesis": {"needs": "lint", "uses": "./hypothesis.yml"},
+                "lint-fast": {"uses": "./lint.yml"},
+                "test-shard-1": {"needs": "lint-fast", "uses": "./test.yml"},
+                "hypothesis-fast": {"needs": "lint-fast", "uses": "./hypothesis.yml"},
                 "contract-tests": {"uses": "./contract-tests.yml"},
-                "mutation": {"needs": "lint", "uses": "./mutation.yml"},
+                "mutation-smoke": {"needs": "lint-fast", "uses": "./mutation.yml"},
                 "performance": {"needs": "lint", "uses": "./performance.yml"},
                 "django-check": {"needs": "lint", "uses": "./django-check.yml"},
                 "architecture": {"needs": "django-check", "uses": "./architecture.yml"},
-                "security": {"needs": "architecture", "uses": "./security.yml"},
+                "security-fast": {"needs": "architecture", "uses": "./security.yml"},
                 "quality": {
                     "needs": ["test", "contract-tests"],
                     "uses": "./quality.yml",
                 },
                 "deploy-readiness": {
-                    "needs": ["security", "quality", "performance", "mutation"],
+                    "needs": [
+                        "security-fast",
+                        "quality",
+                        "performance",
+                        "mutation-smoke",
+                    ],
                     "uses": "./deploy-readiness.yml",
                 },
                 "deploy": {"needs": "deploy-readiness", "uses": "./deploy.yml"},
@@ -618,21 +663,26 @@ class TestBypassProtections:
             "name": "CI Pipeline",
             "on": {"push": {"branches": ["main"]}},
             "jobs": {
-                "lint": {"uses": "./lint.yml"},
-                "test": {"needs": "lint", "uses": "./test.yml"},
-                "hypothesis": {"needs": "lint", "uses": "./hypothesis.yml"},
+                "lint-fast": {"uses": "./lint.yml"},
+                "test-shard-1": {"needs": "lint-fast", "uses": "./test.yml"},
+                "hypothesis-fast": {"needs": "lint-fast", "uses": "./hypothesis.yml"},
                 "contract-tests": {"needs": "lint", "uses": "./contract-tests.yml"},
-                "mutation": {"needs": "lint", "uses": "./mutation.yml"},
+                "mutation-smoke": {"needs": "lint-fast", "uses": "./mutation.yml"},
                 "performance": {"needs": "lint", "uses": "./performance.yml"},
                 "django-check": {"needs": "lint", "uses": "./django-check.yml"},
                 "architecture": {"needs": "django-check", "uses": "./architecture.yml"},
-                "security": {"uses": "./security.yml"},
+                "security-fast": {"uses": "./security.yml"},
                 "quality": {
                     "needs": ["test", "contract-tests"],
                     "uses": "./quality.yml",
                 },
                 "deploy-readiness": {
-                    "needs": ["security", "quality", "performance", "mutation"],
+                    "needs": [
+                        "security-fast",
+                        "quality",
+                        "performance",
+                        "mutation-smoke",
+                    ],
                     "uses": "./deploy-readiness.yml",
                 },
                 "deploy": {"needs": "deploy-readiness", "uses": "./deploy.yml"},
@@ -655,18 +705,23 @@ class TestBypassProtections:
             "name": "CI Pipeline",
             "on": {"push": {"branches": ["main"]}},
             "jobs": {
-                "lint": {"uses": "./lint.yml"},
-                "test": {"needs": "lint", "uses": "./test.yml"},
-                "hypothesis": {"needs": "lint", "uses": "./hypothesis.yml"},
+                "lint-fast": {"uses": "./lint.yml"},
+                "test-shard-1": {"needs": "lint-fast", "uses": "./test.yml"},
+                "hypothesis-fast": {"needs": "lint-fast", "uses": "./hypothesis.yml"},
                 "contract-tests": {"needs": "lint", "uses": "./contract-tests.yml"},
-                "mutation": {"needs": "lint", "uses": "./mutation.yml"},
+                "mutation-smoke": {"needs": "lint-fast", "uses": "./mutation.yml"},
                 "performance": {"needs": "lint", "uses": "./performance.yml"},
                 "django-check": {"needs": "lint", "uses": "./django-check.yml"},
                 "architecture": {"needs": "django-check", "uses": "./architecture.yml"},
-                "security": {"needs": "architecture", "uses": "./security.yml"},
+                "security-fast": {"needs": "architecture", "uses": "./security.yml"},
                 "quality": {"uses": "./quality.yml"},
                 "deploy-readiness": {
-                    "needs": ["security", "quality", "performance", "mutation"],
+                    "needs": [
+                        "security-fast",
+                        "quality",
+                        "performance",
+                        "mutation-smoke",
+                    ],
                     "uses": "./deploy-readiness.yml",
                 },
                 "deploy": {"needs": "deploy-readiness", "uses": "./deploy.yml"},
@@ -689,15 +744,15 @@ class TestBypassProtections:
             "name": "CI Pipeline",
             "on": {"push": {"branches": ["main"]}},
             "jobs": {
-                "lint": {"uses": "./lint.yml"},
-                "test": {"needs": "lint", "uses": "./test.yml"},
-                "hypothesis": {"needs": "lint", "uses": "./hypothesis.yml"},
+                "lint-fast": {"uses": "./lint.yml"},
+                "test-shard-1": {"needs": "lint-fast", "uses": "./test.yml"},
+                "hypothesis-fast": {"needs": "lint-fast", "uses": "./hypothesis.yml"},
                 "contract-tests": {"needs": "lint", "uses": "./contract-tests.yml"},
-                "mutation": {"needs": "lint", "uses": "./mutation.yml"},
+                "mutation-smoke": {"needs": "lint-fast", "uses": "./mutation.yml"},
                 "performance": {"needs": "lint", "uses": "./performance.yml"},
                 "django-check": {"needs": "lint", "uses": "./django-check.yml"},
                 "architecture": {"needs": "django-check", "uses": "./architecture.yml"},
-                "security": {"needs": "architecture", "uses": "./security.yml"},
+                "security-fast": {"needs": "architecture", "uses": "./security.yml"},
                 "quality": {
                     "needs": ["test", "contract-tests"],
                     "uses": "./quality.yml",
@@ -740,21 +795,26 @@ class TestStageOrdering:
             "name": "CI Pipeline",
             "on": {"push": {"branches": ["main"]}},
             "jobs": {
-                "lint": {"uses": "./lint.yml"},
-                "test": {"needs": "lint", "uses": "./test.yml"},
-                "hypothesis": {"needs": "lint", "uses": "./hypothesis.yml"},
+                "lint-fast": {"uses": "./lint.yml"},
+                "test-shard-1": {"needs": "lint-fast", "uses": "./test.yml"},
+                "hypothesis-fast": {"needs": "lint-fast", "uses": "./hypothesis.yml"},
                 "contract-tests": {"needs": "lint", "uses": "./contract-tests.yml"},
-                "mutation": {"needs": "lint", "uses": "./mutation.yml"},
+                "mutation-smoke": {"needs": "lint-fast", "uses": "./mutation.yml"},
                 "performance": {"needs": "lint", "uses": "./performance.yml"},
                 "django-check": {"needs": "lint", "uses": "./django-check.yml"},
-                "security": {"needs": "django-check", "uses": "./security.yml"},
+                "security-fast": {"needs": "django-check", "uses": "./security.yml"},
                 "architecture": {"needs": "security", "uses": "./architecture.yml"},
                 "quality": {
                     "needs": ["test", "contract-tests"],
                     "uses": "./quality.yml",
                 },
                 "deploy-readiness": {
-                    "needs": ["security", "quality", "performance", "mutation"],
+                    "needs": [
+                        "security-fast",
+                        "quality",
+                        "performance",
+                        "mutation-smoke",
+                    ],
                     "uses": "./deploy-readiness.yml",
                 },
                 "deploy": {"needs": "deploy-readiness", "uses": "./deploy.yml"},
@@ -791,21 +851,26 @@ class TestDeployOnPR:
             "name": "CI Pipeline",
             "on": {"push": {"branches": ["main"]}},
             "jobs": {
-                "lint": {"uses": "./lint.yml"},
-                "test": {"needs": "lint", "uses": "./test.yml"},
-                "hypothesis": {"needs": "lint", "uses": "./hypothesis.yml"},
+                "lint-fast": {"uses": "./lint.yml"},
+                "test-shard-1": {"needs": "lint-fast", "uses": "./test.yml"},
+                "hypothesis-fast": {"needs": "lint-fast", "uses": "./hypothesis.yml"},
                 "contract-tests": {"needs": "lint", "uses": "./contract-tests.yml"},
-                "mutation": {"needs": "lint", "uses": "./mutation.yml"},
+                "mutation-smoke": {"needs": "lint-fast", "uses": "./mutation.yml"},
                 "performance": {"needs": "lint", "uses": "./performance.yml"},
                 "django-check": {"needs": "lint", "uses": "./django-check.yml"},
                 "architecture": {"needs": "django-check", "uses": "./architecture.yml"},
-                "security": {"needs": "architecture", "uses": "./security.yml"},
+                "security-fast": {"needs": "architecture", "uses": "./security.yml"},
                 "quality": {
                     "needs": ["test", "contract-tests"],
                     "uses": "./quality.yml",
                 },
                 "deploy-readiness": {
-                    "needs": ["security", "quality", "performance", "mutation"],
+                    "needs": [
+                        "security-fast",
+                        "quality",
+                        "performance",
+                        "mutation-smoke",
+                    ],
                     "uses": "./deploy-readiness.yml",
                 },
                 "deploy": {"needs": "deploy-readiness", "uses": "./deploy.yml"},
@@ -881,8 +946,8 @@ class TestTopologicalOrder:
 
         deps = {
             "deploy": ["deploy-readiness"],
-            "deploy-readiness": ["security", "quality"],
-            "security": ["architecture"],
+            "deploy-readiness": ["security-fast", "quality"],
+            "security-fast": ["architecture"],
             "architecture": ["django-check"],
             "django-check": ["lint"],
             "quality": ["test"],

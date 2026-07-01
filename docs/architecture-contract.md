@@ -1,6 +1,6 @@
 # Architecture Contract
 
-> **Version:** 2.0.0
+> **Version:** 2.3.0
 > **Purpose:** Enforce the approved CI/CD pipeline architecture as a machine-verifiable contract.
 > **File:** `scripts/architecture_contract.py`
 > **Workflow:** `.github/workflows/architecture-guard.yml`
@@ -43,18 +43,20 @@ Every one of these jobs **must** appear in `.github/workflows/ci.yml`:
 
 | Job | Stage | Purpose |
 |-----|-------|---------|
-| `lint` | 1-2 | Setup & Code Quality |
-| `test` | 3a | Pytest + Coverage |
-| `hypothesis` | 3b | Hypothesis Property Tests |
-| `contract-tests` | 3c | API Contract Tests |
-| `mutation` | 3d | Mutation Testing |
-| `performance` | 3e | Performance & Load Tests |
-| `django-check` | 4 | Django System & Migration Checks |
-| `architecture` | 5 | Architecture & Contracts |
-| `security` | 6 | Security & Supply Chain |
-| `quality` | 7 | Quality Gate (SonarCloud) |
-| `deploy-readiness` | 8a | Deploy Readiness Check |
-| `deploy` | 8b | Deploy to Production |
+| `lint-fast` | 1 | Lint Fast |
+| `test-shard-1` | 2a | Pytest + Coverage (Shard 1/4) |
+| `test-shard-2` | 2a | Pytest + Coverage (Shard 2/4) |
+| `test-shard-3` | 2a | Pytest + Coverage (Shard 3/4) |
+| `test-shard-4` | 2a | Pytest + Coverage (Shard 4/4) |
+| `contract-tests` | 2b | API Contract Tests |
+| `django-check` | 2c | Django System & Migration Checks |
+| `hypothesis-fast` | 2d | Hypothesis Property Tests (Fast) |
+| `architecture` | 2e | Architecture & Contracts |
+| `security-fast` | 2f | Security Fast-Track |
+| `mutation-smoke` | 2g | Mutation Testing (Smoke) |
+| `quality` | 3 | Quality Gate (SonarCloud) |
+| `deploy-readiness` | 4 | Deploy Readiness Check |
+| `deploy` | 5 | Deploy to Production |
 
 ### Required Workflow Files
 
@@ -68,36 +70,46 @@ Every one of these files **must** exist in `.github/workflows/`:
 - `contract-tests.yml`
 - `architecture.yml`
 - `security.yml`
+- `security-deep.yml`
 - `quality.yml`
 - `performance.yml`
 - `mutation.yml`
 - `deploy-readiness.yml`
 - `deploy.yml`
+- `nightly.yml`
+- `benchmark.yml`
+- `load-test.yml`
+- `weekly.yml`
+- `ci-metrics.yml`
+- `rollback.yml`
+- `architecture-guard.yml`
 
 ### Approved Dependency Chain
 
 | Job | Must Depend On |
 |-----|----------------|
-| `lint` | *(none — root job)* |
-| `test` | `lint` |
-| `hypothesis` | `lint` |
-| `contract-tests` | `lint` |
-| `mutation` | `lint` |
-| `performance` | `lint` |
-| `django-check` | `lint` |
-| `architecture` | `django-check` |
-| `security` | `architecture` |
-| `quality` | `test`, `contract-tests` |
-| `deploy-readiness` | `security`, `quality`, `performance`, `mutation` |
+| `lint-fast` | *(none — root job)* |
+| `test-shard-1` | `lint-fast` |
+| `test-shard-2` | `lint-fast` |
+| `test-shard-3` | `lint-fast` |
+| `test-shard-4` | `lint-fast` |
+| `contract-tests` | `lint-fast` |
+| `django-check` | `lint-fast` |
+| `hypothesis-fast` | `lint-fast` |
+| `architecture` | `lint-fast` |
+| `security-fast` | `lint-fast` |
+| `mutation-smoke` | `lint-fast` |
+| `quality` | `test-shard-1`, `test-shard-2`, `test-shard-3`, `test-shard-4`, `contract-tests`, `architecture` |
+| `deploy-readiness` | `quality`, `security-fast`, `django-check` |
 | `deploy` | `deploy-readiness` |
 
 ### Protected Paths (Cannot Be Bypassed)
 
 | Path | Protected By | Risk If Bypassed |
 |------|-------------|------------------|
-| Security | `security` must depend on `architecture` | Vulnerabilities deployed to production |
-| Quality Gate | `quality` must depend on `test` + `contract-tests` | Low-quality code merged |
-| Deploy Readiness | `deploy-readiness` must depend on `security`, `quality`, `performance`, `mutation` | Broken deployments |
+| Security | `security-fast` must depend on `lint-fast` | Vulnerabilities deployed to production |
+| Quality Gate | `quality` must depend on all test shards + contract-tests + architecture | Low-quality code merged |
+| Deploy Readiness | `deploy-readiness` must depend on `security-fast`, `quality`, `django-check` | Broken deployments |
 | Deploy Trigger | `deploy` must be restricted to push events | Accidental deployment from PR |
 
 ---
@@ -111,7 +123,7 @@ Every one of these files **must** exist in `.github/workflows/`:
 | 3 | Extra jobs | `WARNING` | Unrecognized jobs found (advisory) |
 | 4 | Dependency exact match | `ERROR` | A job's `needs:` list changed |
 | 5 | Stage ordering | `ERROR` | Transitive dependency is missing |
-| 6 | Security bypass | `CRITICAL` | `security` job dependency altered |
+| 6 | Security bypass | `CRITICAL` | `security-fast` job dependency altered |
 | 7 | Quality gate bypass | `CRITICAL` | `quality` job dependency altered |
 | 8 | Deploy readiness bypass | `CRITICAL` | `deploy-readiness` dependency altered |
 | 9 | Deploy on PR | `ERROR` | Deploy not restricted to push events |
@@ -157,12 +169,12 @@ python -m pytest tests/test_architecture_contract/ -v
 
 ### What happens if you remove a required job?
 
-1. A developer removes the `mutation` job from `ci.yml`
+1. A developer removes the `mutation-smoke` job from `ci.yml`
 2. The `architecture-guard.yml` workflow triggers on the PR
 3. `architecture_contract.py` detects the violation:
 
 ```
-🔴 [ERROR] Required job 'mutation' is missing from ci.yml
+🔴 [ERROR] Required job 'mutation-smoke' is missing from ci.yml
 ```
 
 4. CI fails with a detailed report
@@ -170,11 +182,11 @@ python -m pytest tests/test_architecture_contract/ -v
 
 ### What happens if you bypass security?
 
-1. A developer changes `security`'s dependencies to `[]`
+1. A developer changes `security-fast`'s dependencies to `[]`
 2. The guard detects:
 
 ```
-🔴 [CRITICAL] SECURITY BYPASS: The 'security' job has no dependencies.
+🔴 [CRITICAL] SECURITY BYPASS: The 'security-fast' job has no dependencies.
 ```
 
 3. CI fails immediately — security bypass is never allowed

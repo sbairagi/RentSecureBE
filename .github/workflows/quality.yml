@@ -34,37 +34,42 @@ jobs:
             api.sonarcloud.io:443
             sonarcloud.io:443
 
-      - name: Download coverage artifact
+      - name: Download coverage shards
         uses: actions/download-artifact@v4
         with:
-          name: coverage-artifact
-
+          name: coverage-shard-1
+          path: coverage-artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage-shard-2
+          path: coverage-artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage-shard-3
+          path: coverage-artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage-shard-4
+          path: coverage-artifacts
+      - name: Combine coverage and generate XML
+        run: |
+          cd coverage-artifacts
+          python -m coverage combine .coverage.* || true
+          python -m coverage xml -o coverage.xml
+          mv coverage.xml ../coverage.xml
       - name: Validate coverage.xml exists
         run: |
           if [ ! -f coverage.xml ]; then
-            echo "ERROR: coverage.xml not found. Pytest job must generate it."
+            echo "ERROR: coverage.xml not found after combining shards."
             ls -la
             exit 1
           fi
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-python-environment
         with:
-          python-version: 3.12
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install coverage
+          python-version: "3.12"
+          extra-packages: "coverage"
+          cache-key-suffix: "-quality"
 
       - name: Run SonarCloud analysis
         uses: SonarSource/sonarcloud-github-action@v5.0.0

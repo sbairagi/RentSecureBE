@@ -1,65 +1,16 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 5: Architecture & Maintainability
 # ═══════════════════════════════════════════════════════════════════════════════
-# Runs: Vulture (dead code), import-linter (layered architecture validation)
+# Runs: import-linter (layered architecture validation)
 # ═══════════════════════════════════════════════════════════════════════════════
-name: Architecture & Maintainability
+name: Architecture
 
 'on':
   workflow_call:
 
 jobs:
-  vulture:
-    name: Stage 5a │ Vulture (Dead Code)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            api.github.com:443
-            pypi.org:443
-            pypi.python.org:443
-            files.pythonhosted.org:443
-
-      - name: Install Vulture
-        run: |
-          python -m pip install --upgrade pip
-          pip install vulture
-
-      - name: Run Vulture (dead code detection) — advisory, non-blocking
-        run: |
-          python -m vulture \
-            --exclude .venv,venv,build,dist,migrations,__pycache__,.pytest_cache,.github,.kilo \
-            --exclude properties/_legacy,properties/refactored_models_combined.py,properties/original_models.py \
-            --exclude properties/signals,core/signals.py,referral_and_earn/signals.py \
-            --min-confidence 80 \
-            rentsecure_be core properties finance notification documents smartbot referral_and_earn ai_assistant dashboard \
-            2>&1 | tee vulture-report.txt || true
-
   import-linter:
-    name: Stage 5b │ Import Linter (Architecture)
+    name: Stage 5 │ Import Linter (Architecture)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -67,18 +18,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -91,11 +30,10 @@ jobs:
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-
-      - name: Install import-linter
-        run: |
-          python -m pip install --upgrade pip
-          pip install import-linter
-
-      - name: Run import-linter (advisory, non-blocking)
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "import-linter"
+          cache-key-suffix: "-architecture"
+      - name: Run import-linter
         run: lint-imports --config import-linter.ini || true

@@ -2,7 +2,7 @@
 
 > **Project:** RentSecureBE — Production-Grade Django Backend
 > **Stack:** Django 5.2 / DRF / PostgreSQL / AWS EC2 / Cashfree
-> **Pipeline Version:** 2.0.0
+> **Pipeline Version:** 2.3.0
 
 ---
 
@@ -12,59 +12,59 @@
 flowchart LR
     %% ─── Node Definitions ──────────────────────────────────────────────────────
 
-    S1["<b>🛠  Setup & Prepare</b><br/><br/>• Checkout Code<br/>• Setup Python 3.12<br/>• Cache pip dependencies<br/>• Install requirements"]
+    S1["<b>🛠  Setup & Code Quality</b><br/><br/>• Checkout Code<br/>• Setup Python 3.12<br/>• Cache pip dependencies<br/>• Pre-commit + Black + Ruff<br/>• Pylint + Mypy (strict)<br/>• Vulture Dead Code Detection"]
 
-    S2["<b>✅  Code Quality<br/>(Fast-Fail)</b><br/><br/>• Black Format Check<br/>• Ruff Lint<br/>• Pylint Analysis<br/>• Mypy Strict Typing<br/>• Vulture Dead Code Detection"]
+    S2["<b>🧪  Tests</b><br/><br/>• Pytest + Coverage (≥90%, 4-way sharded)<br/>• API Contract Tests<br/>• Django System & Migration Checks"]
 
-    S3["<b>🧪  Tests</b><br/><br/>• Pytest + Coverage (≥90%)<br/>• Hypothesis Property Tests<br/>• API Contract Tests<br/>• Mutation Testing (mutmut)"]
+    S3["<b>📐  Architecture</b><br/><br/>• Import Linter Validation<br/>• Layered Architecture Check"]
 
-    S4["<b>🔍  Django Checks</b><br/><br/>• Django System Check<br/>• Migration Validation<br/>• Migration Rollback Test<br/>• Management Command Test"]
+    S4["<b>🔒  Security Fast</b><br/><br/>• Bandit (matrix per app)<br/>• Semgrep (OWASP + Django)<br/>• Pip-audit Dependencies<br/>• Trivy FS Vulnerability<br/>• Gitleaks Secret Scan"]
 
-    S5["<b>📐  Architecture</b><br/><br/>• Import Linter Validation<br/>• Dependency Graph Check<br/>• Layered Architecture Check<br/>• Benchmark Threshold Check"]
+    S5["<b>📊  Quality Gate</b><br/><br/>• SonarCloud Analysis<br/>• Quality Gate Check<br/>• Wait for Gate Status<br/>• Coverage Report Upload"]
 
-    S6["<b>🔒  Security</b><br/><br/>• Bandit SAST<br/>• Semgrep (OWASP + Django)<br/>• Pip-audit Dependencies<br/>• Trivy FS Vulnerability<br/>• Gitleaks Secret Scan<br/>• CodeQL Advanced<br/>• Dependency Review"]
+    S6["<b>🚀  Deploy Readiness</b><br/><br/>• Environment Variable Validation<br/>• Deployment Script Verification"]
 
-    S7["<b>📊  Quality Gate</b><br/><br/>• SonarCloud Analysis<br/>• Quality Gate Check<br/>• Wait for Gate Status<br/>• Coverage Report Upload"]
-
-    S8["<b>🚀  Deploy</b><br/><br/>• Build Docker Image<br/>• Push to Container Registry<br/>• Deploy to AWS EC2<br/>• Sentry Release & Deploy<br/>• Slack Notification"]
+    D["<b>🚀  Deploy</b><br/><br/>• Build Docker Image<br/>• Push to Container Registry<br/>• Deploy to AWS EC2<br/>• Sentry Release & Deploy"]
 
     %% ─── Edges ─────────────────────────────────────────────────────────────────
-    S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8
+    S1 --> S2
+    S1 --> S3
+    S1 --> S4
+    S2 --> S5
+    S3 --> S5
+    S5 --> S6
+    S6 --> D
 
     %% ─── Styling ───────────────────────────────────────────────────────────────
     classDef setup     fill:#E3F2FD,stroke:#1565C0,stroke-width:3px,color:#0D47A1,rx:12px,ry:12px
     classDef quality   fill:#FFF3E0,stroke:#E65100,stroke-width:3px,color:#BF360C,rx:12px,ry:12px
     classDef test      fill:#E8F5E9,stroke:#2E7D32,stroke-width:3px,color:#1B5E20,rx:12px,ry:12px
-    classDef django    fill:#F3E5F5,stroke:#6A1B9A,stroke-width:3px,color:#4A148C,rx:12px,ry:12px
     classDef arch      fill:#E0F7FA,stroke:#00838F,stroke-width:3px,color:#006064,rx:12px,ry:12px
     classDef security  fill:#FFEBEE,stroke:#C62828,stroke-width:3px,color:#B71C1C,rx:12px,ry:12px
     classDef gate      fill:#FCE4EC,stroke:#AD1457,stroke-width:3px,color:#880E4F,rx:12px,ry:12px
     classDef deploy    fill:#E8F5E9,stroke:#1B5E20,stroke-width:3px,color:#0D47A1,rx:12px,ry:12px
 
     class S1 setup
-    class S2 quality
-    class S3 test
-    class S4 django
-    class S5 arch
-    class S6 security
-    class S7 gate
-    class S8 deploy
+    class S2,S3 test
+    class S4 security
+    class S5 gate
+    class S6 deploy
+    class D deploy
 ```
 
 ### Pipeline Summary (from `.github/workflows/ci.yml`)
 
-| # | Stage | Key Jobs | Avg. Duration |
-|---|-------|----------|---------------|
-| 1 | **Setup & Prepare** | `actions/checkout@v4`, `setup-python`, `actions/cache` | ~30s |
-| 2 | **Code Quality** | `black`, `ruff`, `pylint`, `mypy`, `vulture` | ~5 min |
-| 3 | **Tests** | `pytest + coverage`, `hypothesis`, `contract-tests`, `mutation` | ~10 min |
-| 4 | **Django Checks** | `django-check` (system check, migration validation) | ~2 min |
-| 5 | **Architecture** | `import-linter`, `architecture` workflow | ~2 min |
-| 6 | **Security** | `bandit`, `semgrep`, `pip-audit`, `trivy`, `gitleaks`, `codeql`, `dependency-review` | ~8 min |
-| 7 | **Quality Gate** | `sonarcloud` analysis + quality gate wait | ~3 min |
-| 8 | **Deploy** | `deploy.yml`: EC2 SSH, Docker, Sentry release | ~5 min |
+| # | Stage | Key Jobs | Runtime Source |
+|---|-------|----------|----------------|
+| 1 | **Setup & Code Quality** | `pre-commit, black, ruff, pylint, mypy, vulture` | Measured by CI Metrics (`ci-metrics.yml`) |
+| 2 | **Tests** | `pytest + coverage (4-way sharded)`, `API contract tests`, `Django checks` | Measured by CI Metrics |
+| 3 | **Architecture** | `import-linter` | Measured by CI Metrics |
+| 4 | **Security Fast** | `bandit (matrix)`, `semgrep`, `pip-audit`, `trivy`, `gitleaks`, `dependency-review` | Measured by CI Metrics |
+| 5 | **Quality Gate** | `sonarcloud` analysis + quality gate wait | Measured by CI Metrics |
+| 6 | **Deploy Readiness** | `env validation`, `script verification` | Measured by CI Metrics |
+| 7 | **Deploy** | `deploy.yml`: EC2 SSH, Docker, Sentry release | Measured by CI Metrics |
 
-> **Note:** Stages 2–6 run in parallel where possible. The full end-to-end pipeline typically completes in **12–18 minutes**.
+> **Note:** Runtimes are collected automatically via `.github/workflows/ci-metrics.yml` using the GitHub Actions API (last 30 successful runs). PR pipeline target is ≤15 minutes. Deep validation (hypothesis, mutation, load testing, codeql, scorecard, SBOM scanning) runs nightly/weekly.
 
 ---
 
@@ -73,7 +73,7 @@ flowchart LR
 | Enhancement | Description |
 |-------------|-------------|
 | ⚡ **Parallel Job Execution** | Lint, Security, and Test workflows run concurrently to reduce total wall-clock time. |
-| 🐍 **Matrix Testing** | Test against Python 3.10, 3.11, and 3.12 to guarantee cross-version compatibility. |
+| 🐍 **Matrix Testing** | Python 3.12 (standardized runtime). |
 | 💾 **Aggressive Caching** | pip cache (`~/.cache/pip`) and pre-commit cache (`~/.cache/pre-commit`) cut CI time by ~40%. |
 | 📦 **Build Artifacts** | Coverage reports, Locust HTML reports, and mutmut results persist as downloadable artifacts. |
 | 🔔 **Notifications** | Slack / Email alerts on pipeline failure, deploy success, or quality gate breach. |
