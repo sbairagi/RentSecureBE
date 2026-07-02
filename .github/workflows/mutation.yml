@@ -84,7 +84,7 @@ jobs:
                 '[mutmut]' \
                 "source_paths = $PATHS" \
                 'backups = .mutmut-backups' \
-                'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last' \
+                'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last -o addopts= --cov=rentsecure_be --cov=ai_assistant --cov=core --cov=dashboard --cov=documents --cov=finance --cov=notification --cov=properties --cov=referral_and_earn --cov=smartbot --cov-report=term-missing --cov-report=xml' \
                 'tests_dir = tests' \
                 'dict_paths =' \
                 'worker = 2' \
@@ -95,7 +95,7 @@ jobs:
                '[mutmut]' \
                'source_paths = conftest.py,core/models.py,properties/models/,properties/services/,properties/utils/,finance/models.py,smartbot/services/,notification/services/,properties/feature_enforcer.py' \
                'backups = .mutmut-backups' \
-               'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last' \
+               'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last -o addopts= --cov=rentsecure_be --cov=ai_assistant --cov=core --cov=dashboard --cov=documents --cov=finance --cov=notification --cov=properties --cov=referral_and_earn --cov=smartbot --cov-report=term-missing --cov-report=xml' \
                'tests_dir = tests' \
                'dict_paths =' \
                'worker = 4' \
