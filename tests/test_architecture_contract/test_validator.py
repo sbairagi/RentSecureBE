@@ -75,19 +75,33 @@ def compliant_ci_yaml() -> dict[str, Any]:
                 "uses": "./.github/workflows/mutation.yml",
                 "with": {"mutation_mode": "smoke"},
             },
+            "migration-rollback-validation": {
+                "needs": ["lint-fast"],
+                "uses": "./.github/workflows/migration-rollback.yml",
+            },
             "quality": {
                 "needs": [
                     "test-shard-1",
                     "test-shard-2",
                     "test-shard-3",
                     "test-shard-4",
+                    "shard-validation",
                     "contract-tests",
                     "architecture",
                 ],
                 "uses": "./.github/workflows/quality.yml",
             },
-            "deploy-readiness": {
+            "branch-protection": {
                 "needs": ["quality", "security-fast", "django-check"],
+                "uses": "./.github/workflows/branch-protection.yml",
+            },
+            "deploy-readiness": {
+                "needs": [
+                    "quality",
+                    "security-fast",
+                    "django-check",
+                    "branch-protection",
+                ],
                 "uses": "./.github/workflows/deploy-readiness.yml",
             },
             "deploy": {
@@ -138,6 +152,8 @@ def write_temp_env(
         "quality.yml",
         "performance.yml",
         "mutation.yml",
+        "migration-rollback.yml",
+        "branch-protection.yml",
         "deploy-readiness.yml",
         "deploy.yml",
         "nightly.yml",
@@ -146,6 +162,7 @@ def write_temp_env(
         "load-test.yml",
         "weekly.yml",
         "ci-metrics.yml",
+        "sbom.yml",
         "rollback.yml",
     ]
     for fname in required_files:

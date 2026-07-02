@@ -58,8 +58,10 @@ jobs:
           set -euo pipefail
           python -m pytest --collect-only -q tests/
       - name: Run tests with coverage (shard ${{ inputs.shard }}/${{ inputs.total }})
+        shell: bash
         run: |
-          python -m coverage run -m pytest -v --randomly-seed=last \
+          set -euo pipefail
+          python -m pytest -v --randomly-seed=last \
             --cov=rentsecure_be,ai_assistant,core,dashboard,documents,finance,notification,properties,referral_and_earn,smartbot \
             --cov-report=term-missing \
             --cov-fail-under=90 \
