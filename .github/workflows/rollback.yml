@@ -104,23 +104,24 @@ jobs:
           curl -f https://${{ secrets.EC2_HOST }}/api/health/ || (echo "Health check failed" && exit 1)
       - name: Generate rollback report
         run: |
-          cat > rollback-report.md << EOF
-          # Rollback Validation Report
-
-          | Field | Value |
-          |-------|-------|
-          | Target SHA | `${{ github.event.inputs.rollback_sha }}` |
-          | Reason | ${{ github.event.inputs.reason }} |
-          | Triggered By | ${{ github.actor }} |
-          | Timestamp | $(date -u +%Y-%m-%dT%H:%M:%SZ) |
-          | Health Check | ✅ Passed |
-
-          ## Rollback Validation Steps
-
-          - [x] Target SHA validated
-          - [x] Deployment executed
-          - [x] Post-deploy health check passed
-          EOF
+           printf '%s\n' \
+             '# Rollback Validation Report' \
+             '' \
+             '| Field | Value |' \
+             '|-------|-------|' \
+             "| Target SHA | \`${{ github.event.inputs.rollback_sha }}\` |" \
+             "| Reason | ${{ github.event.inputs.reason }} |" \
+             "| Triggered By | ${{ github.actor }} |" \
+             "| Timestamp | $(date -u +%Y-%m-%dT%H:%M:%SZ) |" \
+             '| Health Check | Passed |' \
+             '' \
+             '## Rollback Validation Steps' \
+             '' \
+             '- [x] Target SHA validated' \
+             '- [x] Deployment executed' \
+             '- [x] Post-deploy health check passed' \
+             '' \
+             > rollback-report.md
       - name: Upload rollback report
         uses: actions/upload-artifact@v4
         with:

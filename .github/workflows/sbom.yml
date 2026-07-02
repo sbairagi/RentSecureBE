@@ -151,32 +151,33 @@ jobs:
           allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0
       - name: Generate dependency risk report
         run: |
-          cat > dependency-risk-report.md << 'EOF'
-          # Dependency Risk Assessment Report
-
-          ## Executive Summary
-          - Reviewed all direct and transitive dependencies in `requirements.txt`
-          - License compliance verified against approved allowlist
-          - High-severity vulnerabilities block merge
-
-          ## Risk Categories
-          | Category | Status |
-          |----------|--------|
-          | License Compliance | Pass (GPL/AGPL denied) |
-          | High Vuln Block | Pass (fail-on-severity: high) |
-          | Transitive Depth | Reviewed by dependency-review-action |
-          | SBOM Generation | Pass (Syft + CycloneDX + SPDX) |
-          | SBOM Scanning | Pass (Grype + OSV Scanner) |
-
-          ## Actions
-          - [x] Run `dependency-review-action` on PR and main branch
-          - [x] Generate SBOM in CycloneDX and SPDX formats
-          - [x] Scan SBOM with Grype and OSV Scanner
-          - [x] Publish artifacts for 90 days
-
-          ## Next Review
-          Next scheduled review: $(date -d 'next Sunday' '+%Y-%m-%d')
-          EOF
+           printf '%s\n' \
+             '# Dependency Risk Assessment Report' \
+             '' \
+             '## Executive Summary' \
+             '- Reviewed all direct and transitive dependencies in `requirements.txt`' \
+             '- License compliance verified against approved allowlist' \
+             '- High-severity vulnerabilities block merge' \
+             '' \
+             '## Risk Categories' \
+             '| Category | Status |' \
+             '|----------|--------|' \
+             '| License Compliance | Pass (GPL/AGPL denied) |' \
+             '| High Vuln Block | Pass (fail-on-severity: high) |' \
+             '| Transitive Depth | Reviewed by dependency-review-action |' \
+             '| SBOM Generation | Pass (Syft + CycloneDX + SPDX) |' \
+             '| SBOM Scanning | Pass (Grype + OSV Scanner) |' \
+             '' \
+             '## Actions' \
+             '- [x] Run `dependency-review-action` on PR and main branch' \
+             '- [x] Generate SBOM in CycloneDX and SPDX formats' \
+             '- [x] Scan SBOM with Grype and OSV Scanner' \
+             '- [x] Publish artifacts for 90 days' \
+             '' \
+             '## Next Review' \
+             'Next scheduled review: $(date -d '"'"'next Sunday'"'"' '"'"'+%Y-%m-%d'"'"')' \
+             '' \
+             > dependency-risk-report.md
       - name: Upload dependency risk report
         if: always()
         uses: actions/upload-artifact@v4
