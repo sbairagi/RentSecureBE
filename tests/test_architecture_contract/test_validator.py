@@ -49,6 +49,16 @@ def compliant_ci_yaml() -> dict[str, Any]:
                 "uses": "./.github/workflows/test.yml",
                 "with": {"shard": 4, "total": 4},
             },
+            "shard-validation": {
+                "needs": [
+                    "test-shard-1",
+                    "test-shard-2",
+                    "test-shard-3",
+                    "test-shard-4",
+                ],
+                "runs-on": "ubuntu-latest",
+                "timeout-minutes": 15,
+            },
             "contract-tests": {
                 "needs": ["lint-fast"],
                 "uses": "./.github/workflows/contract-tests.yml",
@@ -479,7 +489,7 @@ class TestParsing:
         val.repo_root = Path(tmpdir)
         config = val.parse_ci_yaml()
         assert config["name"] == "CI Pipeline"
-        assert len(val.actual_jobs) == 14
+        assert len(val.actual_jobs) == 17
         assert "lint-fast" in val.actual_jobs
         assert "deploy" in val.actual_jobs
 
