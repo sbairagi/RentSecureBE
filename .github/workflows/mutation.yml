@@ -73,27 +73,27 @@ jobs:
               PATHS="core/models.py,properties/models/,finance/models.py"
             fi
             echo "Selected paths_to_mutate: $PATHS"
-            printf '%s\n' \
-              '[mutmut]' \
-              "paths_to_mutate = $PATHS" \
-              'backups = .mutmut-backups' \
-              'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last' \
-              'tests_dir = .' \
-              'dict_paths =' \
-              'worker = 2' \
-              'show_progress = True' \
-              > .mutmut/config.ini
+             printf '%s\n' \
+               '[mutmut]' \
+               "source_paths = $PATHS" \
+               'backups = .mutmut-backups' \
+               'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last' \
+               'tests_dir = .' \
+               'dict_paths =' \
+               'worker = 2' \
+               'show_progress = True' \
+               > .mutmut/config.ini
           else
             printf '%s\n' \
-              '[mutmut]' \
-              'paths_to_mutate = core/models.py,properties/models/,properties/services/,properties/utils/,finance/models.py,smartbot/services/,notification/services/,properties/feature_enforcer.py' \
-              'backups = .mutmut-backups' \
-              'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last' \
-              'tests_dir = .' \
-              'dict_paths =' \
-              'worker = 4' \
-              'show_progress = True' \
-              > .mutmut/config.ini
+               '[mutmut]' \
+               'source_paths = core/models.py,properties/models/,properties/services/,properties/utils/,finance/models.py,smartbot/services/,notification/services/,properties/feature_enforcer.py' \
+               'backups = .mutmut-backups' \
+               'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last' \
+               'tests_dir = .' \
+               'dict_paths =' \
+               'worker = 4' \
+               'show_progress = True' \
+               > .mutmut/config.ini
           fi
       - name: Run mutmut
         shell: bash
