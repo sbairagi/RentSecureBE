@@ -201,15 +201,15 @@ jobs:
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-      - name: Install Trivy
-        run: |
-          curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v0.70.0/trivy_0.70.0_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
-          tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
-          chmod +x /usr/local/bin/trivy
-          trivy --version
       - name: Run Trivy Secret Scan
-        run: |
-          trivy secret --severity HIGH,CRITICAL --exit-code 0 --format sarif --output trivy-secrets.sarif .
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          scan-type: secret
+          scan-ref: .
+          format: 'sarif'
+          output: trivy-secrets.sarif
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
       - name: Upload Trivy Secret SARIF
         if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a  # v4
