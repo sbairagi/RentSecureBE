@@ -80,7 +80,7 @@ jobs:
           from pathlib import Path
 
           metrics_dir = Path('shard-metrics')
-          files = sorted(metrics_dir.glob('shard-metrics-*.json'))
+          files = sorted(metrics_dir.glob('*/shard-metrics.json'))
           if len(files) != 4:
               print(f'ERROR: expected 4 shard metrics files, found {len(files)}')
               for path in files:
