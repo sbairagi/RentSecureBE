@@ -29,7 +29,7 @@ jobs:
     timeout-minutes: 60
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: "test-secret-key-hypothesis-2026"
+      SECRET_KEY: "test-secret-key-hypothesis-2026-abcdefghijklmnopqrstuvwxyz1234567890"
       DEBUG: "False"
       DJANGO_ENV: test
       HYPOTHESIS_VERBOSITY_LEVEL: "normal"

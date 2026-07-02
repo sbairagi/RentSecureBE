@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 30
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: "test-secret-key-contract-test-2026!"
+      SECRET_KEY: "test-secret-key-contract-test-2026-abcdefghijklmnopqrstuvwxyz1234567890!"
       DEBUG: "False"
       DJANGO_ENV: test
       ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
@@ -54,7 +54,7 @@ jobs:
         run: python manage.py migrate --run-syncdb --verbosity=1
       - name: Validate DRF API contract (critical endpoints)
         env:
-          SECRET_KEY: "test-secret-key-contract-test-2026!"
+          SECRET_KEY: "test-secret-key-contract-test-2026-abcdefghijklmnopqrstuvwxyz1234567890!"
         shell: bash
         run: |
           set -euo pipefail
@@ -64,7 +64,7 @@ jobs:
           python -m pytest tests/test_api_contracts.py -v --tb=short --randomly-seed=last
       - name: Run contract schema validation
         env:
-          SECRET_KEY: "test-secret-key-contract-test-2026!"
+          SECRET_KEY: "test-secret-key-contract-test-2026-abcdefghijklmnopqrstuvwxyz1234567890!"
           PYTHONPATH: ${{ github.workspace }}
           SECURE_SSL_REDIRECT: "False"
           DEBUG: "True"

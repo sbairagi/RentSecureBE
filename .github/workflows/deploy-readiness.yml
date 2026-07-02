@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 15
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: "test-secret-key-deploy-readiness-2026"
+      SECRET_KEY: "test-secret-key-deploy-readiness-2026-abcdefghijklmnopqrstuvwxyz1234567890"
       DEBUG: "False"
       DJANGO_ENV: test
     steps:
