@@ -103,7 +103,7 @@ jobs:
             echo "SKIP_MUTATION=true; skipping mutation testing."
             exit 0
           fi
-          python -m mutmut run --simple-output 2>&1 | tee mutmut-output.txt
+          python -m mutmut run 2>&1 | tee mutmut-output.txt
       - name: Report mutmut results
         shell: bash
         run: |
