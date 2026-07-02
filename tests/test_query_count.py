@@ -118,6 +118,7 @@ class N1QueryBudgetTests(QueryBudgetTestCase):
         token = str(RefreshToken.for_user(self.owner).access_token)
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
+        cache.clear()
         with self.assertNumQueries(3):
             resp = client.get("/api/units/")
         self.assertEqual(resp.status_code, 200)
