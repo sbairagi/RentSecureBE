@@ -177,13 +177,13 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
 
-  gitleaks:
-    name: Stage 6e │ Gitleaks (Secret Scanning)
+  trivy-secrets:
+    name: Stage 6e │ Trivy (Secret Scanning)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      security-events: write
       contents: read
+      security-events: write
       actions: read
     steps:
       - name: Checkout code
@@ -201,18 +201,21 @@ jobs:
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7  # v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: detect --source=. --redact --log-level=warning --report-format=sarif --report-path=gitleaks-report.sarif --exit-code=0
-      - name: Upload Gitleaks SARIF
+      - name: Install Trivy
+        run: |
+          curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v0.36.0/trivy_0.36.0_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+          tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
+          chmod +x /usr/local/bin/trivy
+          trivy --version
+      - name: Run Trivy Secret Scan
+        run: |
+          trivy secret --severity HIGH,CRITICAL --exit-code 0 --format sarif --output trivy-secrets.sarif .
+      - name: Upload Trivy Secret SARIF
         if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a  # v4
         continue-on-error: true
         with:
-          sarif_file: gitleaks-report.sarif
+          sarif_file: trivy-secrets.sarif
 
   dependency-review:
     name: Stage 6f │ Dependency Review (License + Vuln)
