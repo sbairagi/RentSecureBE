@@ -62,7 +62,8 @@ jobs:
         run: |
           set -euo pipefail
           python -m pytest -v --randomly-seed=last \
-            --cov=. \
+            --cov \
+            --cov-config=pyproject.toml \
             --cov-report=term-missing \
             tests/
       - name: Generate shard metrics

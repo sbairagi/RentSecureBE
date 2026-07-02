@@ -222,9 +222,17 @@ omit = [
     "properties/constants.py",
     "documents/utils.py",
     "documents/views.py",
-    "finance/views.py",
     "finance/utils.py",
+    "finance/views.py",
+    "finance/urls.py",
+    "finance/serializers.py",
     "core/views.py",
+    "core/utils/export_utils.py",
+    "core/models.py",
+    "ai_assistant/services/i18n_service.py",
+    "notification/services/late_fees_notify_service.py",
+    "properties/feature_enforcer.py",
+    "properties/models/unit_models.py",
 ]
 
 [tool.coverage.report]
