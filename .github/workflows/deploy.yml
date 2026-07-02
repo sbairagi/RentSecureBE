@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 1
       - name: Deploy to EC2
         uses: appleboy/ssh-action@d91a1af6f57cd4478ceee14d7705601dafabaa19  # v0.1.7
-        if: ${{ secrets.EC2_HOST != '' && secrets.EC2_USER != '' && secrets.EC2_SSH_KEY != '' }}
+        if: ${{ secrets.EC2_HOST && secrets.EC2_USER && secrets.EC2_SSH_KEY }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
