@@ -24,8 +24,6 @@ name: Deploy Backend
 
 permissions:
   contents: read
-  deployments: write
-  pull-requests: write
 
 concurrency:
   group: deploy-${{ github.ref }}
