@@ -8,7 +8,11 @@ loading during collection from subdirectories.
 import importlib.util
 from pathlib import Path
 
-_ROOT_CONFTEST = Path(__file__).resolve().parents[1] / "conftest.py"
+_ROOT_CONFTEST = (
+    Path(__file__).resolve().parents[1] / "conftest.py"
+    if (Path(__file__).resolve().parents[1] / "conftest.py").exists()
+    else Path(__file__).resolve().parents[2] / "conftest.py"
+)
 _SPEC = importlib.util.spec_from_file_location("_root_conftest", _ROOT_CONFTEST)
 _MOD = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(_MOD)
