@@ -116,6 +116,7 @@ jobs:
             p/security-audit
             p/owasp-top-ten
             p/django
+          output: semgrep.sarif
       - name: Upload Semgrep SARIF to GitHub Security
         if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: github/codeql-action/upload-sarif@v4
@@ -194,7 +195,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: detect --source=. --redact --log-level=warning
+          args: detect --source=. --redact --log-level=warning --report-format=sarif --report-path=gitleaks-report.sarif --exit-code=0
       - name: Upload Gitleaks SARIF
         if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: github/codeql-action/upload-sarif@v4

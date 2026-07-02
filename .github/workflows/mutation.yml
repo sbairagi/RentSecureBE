@@ -59,8 +59,14 @@ jobs:
           mkdir -p .mutmut
           if [ "${{ inputs.mutation_mode }}" == "smoke" ]; then
             echo "SMOKE MODE: selecting changed files only for PR"
-            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD 2>/dev/null || git diff --name-only HEAD~1)
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD 2>/dev/null || true)
             echo "Changed files: $CHANGED_FILES"
+            if [ -z "$CHANGED_FILES" ]; then
+              if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+                CHANGED_FILES=$(git diff --name-only HEAD~1 || echo "")
+                echo "Changed files (HEAD~1 fallback): $CHANGED_FILES"
+              fi
+            fi
             PATHS=$(echo "$CHANGED_FILES" | grep -E '\.(py)$' | grep -v '__pycache__' | grep -v 'tests/' | grep -v '\.pyc' | tr '\n' ',' | sed 's/,$//' )
             if [ -z "$PATHS" ]; then
               echo "No Python source files changed — defaulting to core slim set"
