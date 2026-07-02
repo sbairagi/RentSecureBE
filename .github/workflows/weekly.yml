@@ -21,6 +21,7 @@ permissions:
 jobs:
   exhaustive-mutation:
     name: Weekly │ Exhaustive Mutation Testing
+    runs-on: ubuntu-latest
     uses: ./.github/workflows/mutation.yml
     with:
       mutation_mode: exhaustive
@@ -28,6 +29,7 @@ jobs:
 
   stress-property-testing:
     name: Weekly │ Stress Property Testing
+    runs-on: ubuntu-latest
     uses: ./.github/workflows/hypothesis.yml
     with:
       hypothesis_mode: stress
@@ -35,6 +37,7 @@ jobs:
 
   sbom:
     name: Weekly │ SBOM
+    runs-on: ubuntu-latest
     uses: ./.github/workflows/sbom.yml
     with:
       artifact_retention_days: 90

@@ -17,6 +17,7 @@ permissions:
 jobs:
   hypothesis:
     name: Hypothesis (Full) — Nightly
+    runs-on: ubuntu-latest
     uses: ./.github/workflows/hypothesis.yml
     with:
       hypothesis_mode: full
@@ -24,6 +25,7 @@ jobs:
 
   mutation:
     name: Mutation Testing (Full) — Nightly
+    runs-on: ubuntu-latest
     uses: ./.github/workflows/mutation.yml
     with:
       mutation_mode: full
@@ -31,15 +33,18 @@ jobs:
 
   benchmark:
     name: Benchmark — Nightly
+    runs-on: ubuntu-latest
     uses: ./.github/workflows/benchmark.yml
     secrets: inherit
 
   load-test:
     name: Load Test — Nightly
+    runs-on: ubuntu-latest
     uses: ./.github/workflows/load-test.yml
     secrets: inherit
 
   security-deep:
     name: Security Deep Scan — Nightly
+    runs-on: ubuntu-latest
     uses: ./.github/workflows/security-deep.yml
     secrets: inherit
