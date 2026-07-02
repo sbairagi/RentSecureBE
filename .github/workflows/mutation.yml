@@ -67,7 +67,7 @@ jobs:
           printf '%s\n' \
             '#!/usr/bin/env bash' \
             'set -uo pipefail' \
-            'cp -f "${GITHUB_WORKSPACE}/conftest.py" conftest.py 2>/dev/null || true' \
+            'cp -f ../conftest.py conftest.py 2>/dev/null || true' \
             'exec python -m pytest --no-header -q --tb=short --randomly-seed=last "$@"' \
             > /tmp/mutmut-pytest-runner.sh
           chmod +x /tmp/mutmut-pytest-runner.sh
