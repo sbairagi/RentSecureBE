@@ -17,6 +17,13 @@ name: Migration Rollback Validation
         type: string
         default: "3.12"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-rollback-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   migration-rollback-validation:
     name: Migration Rollback Validation
@@ -24,11 +31,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
         with:
           egress-policy: block
           disable-sudo: true

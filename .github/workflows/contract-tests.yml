@@ -11,6 +11,13 @@ name: Contract Testing
     branches: [main, master, dev]
 
 
+permissions:
+  contents: read
+
+concurrency:
+  group: contract-tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   contract-test:
     name: Stage 3c │ API Contract Tests
@@ -24,11 +31,11 @@ jobs:
       ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
         with:
           egress-policy: block
           disable-sudo: true

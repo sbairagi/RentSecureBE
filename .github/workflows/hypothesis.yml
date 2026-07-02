@@ -15,6 +15,13 @@ name: Property-Based Testing
         default: "smoke"
 
 
+permissions:
+  contents: read
+
+concurrency:
+  group: hypothesis-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   hypothesis:
     name: Stage 3b │ Hypothesis Property Tests
@@ -28,11 +35,11 @@ jobs:
       HYPOTHESIS_VERBOSITY_LEVEL: "normal"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
         with:
           egress-policy: block
           disable-sudo: true
@@ -58,7 +65,7 @@ jobs:
         timeout-minutes: 55
       - name: Upload Hypothesis report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: hypothesis-results
           path: |

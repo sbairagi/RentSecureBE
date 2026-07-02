@@ -15,6 +15,13 @@ name: SBOM
         default: 90
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: sbom-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   sbom-generation:
     name: SBOM Generation (Syft + CycloneDX + SPDX)
@@ -22,11 +29,11 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
         with:
           egress-policy: block
           disable-sudo: true
@@ -47,11 +54,14 @@ jobs:
           python -m cyclonedx-py requirements --output-file sbom.cdx.json --format json
       - name: Generate Syft SBOM
         run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSL "https://github.com/anchore/syft/releases/download/v1.46.0/syft_1.46.0_linux_amd64.tar.gz" -o /tmp/syft.tar.gz
+          tar -xzf /tmp/syft.tar.gz -C /usr/local/bin syft
+          chmod +x /usr/local/bin/syft
+          syft --version
           syft . -o spdx-json=sbom.spdx.json -o cyclonedx-json=sbom-syft.cdx.json
       - name: Upload SBOM artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: sbom-weekly
           path: |
@@ -67,26 +77,29 @@ jobs:
     needs: [sbom-generation]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
       - name: Download SBOM artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
           name: sbom-weekly
           path: sbom-artifacts
       - name: Run Grype scan
         run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSL "https://github.com/anchore/grype/releases/download/v0.115.0/grype_0.115.0_linux_amd64.tar.gz" -o /tmp/grype.tar.gz
+          tar -xzf /tmp/grype.tar.gz -C /usr/local/bin grype
+          chmod +x /usr/local/bin/grype
+          grype --version
           grype sbom-artifacts/sbom-syft.cdx.json -o json > grype-report.json
           grype sbom-artifacts/sbom-syft.cdx.json -o table
       - name: Run OSV Scanner
         run: |
-          docker run --rm -v "$(pwd)/sbom-artifacts:/app/sbom" ghcr.io/google/osv-scanner:latest scan /app/sbom/sbom-syft.cdx.json --json > osv-report.json
-          docker run --rm -v "$(pwd)/sbom-artifacts:/app/sbom" ghcr.io/google/osv-scanner:latest scan /app/sbom/sbom-syft.cdx.json
+          docker run --rm -v "$(pwd)/sbom-artifacts:/app/sbom" ghcr.io/google/osv-scanner:v2.3.8 scan /app/sbom/sbom-syft.cdx.json --json > osv-report.json
+          docker run --rm -v "$(pwd)/sbom-artifacts:/app/sbom" ghcr.io/google/osv-scanner:v2.3.8 scan /app/sbom/sbom-syft.cdx.json
       - name: Upload scan results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: sbom-scan-results
           path: |
@@ -100,11 +113,11 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
         with:
           egress-policy: block
           disable-sudo: true
@@ -129,11 +142,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
         with:
           egress-policy: block
           disable-sudo: true
@@ -144,7 +157,7 @@ jobs:
             pypi.python.org:443
             files.pythonhosted.org:443
       - name: Dependency Review
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48  # v4
         with:
           fail-on-severity: high
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0
@@ -180,7 +193,7 @@ jobs:
              > dependency-risk-report.md
       - name: Upload dependency risk report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: dependency-risk-report
           path: dependency-risk-report.md

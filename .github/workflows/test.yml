@@ -17,6 +17,13 @@ name: Test
         type: number
         default: 4
 
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pytest:
     name: Stage 2a │ Pytest + Coverage (Shard ${{ inputs.shard }}/${{ inputs.total }})
@@ -33,11 +40,11 @@ jobs:
       COVERAGE_FILE: .coverage.${{ inputs.shard }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
         with:
           egress-policy: block
           disable-sudo: true
@@ -84,13 +91,13 @@ jobs:
           print(json.dumps(payload, indent=2))
           PY
       - name: Upload coverage shard
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: coverage-shard-${{ inputs.shard }}
           path: .coverage.${{ inputs.shard }}
           retention-days: 30
       - name: Upload shard metrics artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: shard-metrics-${{ inputs.shard }}
           path: shard-metrics.json

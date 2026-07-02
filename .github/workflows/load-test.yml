@@ -21,6 +21,9 @@ concurrency:
   group: load-test-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   load-test:
     name: Load Test │ Locust Scalability Check
@@ -36,11 +39,11 @@ jobs:
       CELERY_TASK_EAGER_PROPOGATES: "True"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
         with:
           egress-policy: block
           disable-sudo: true
@@ -89,7 +92,7 @@ jobs:
         run: python3 scripts/check_perf_thresholds.py
       - name: Upload Locust report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: locust-report
           path: |

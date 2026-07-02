@@ -17,25 +17,25 @@ runs:
   using: "composite"
   steps:
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
       with:
         python-version: ${{ inputs.python-version }}
     - name: Cache pip
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles(inputs.requirements-file, 'pyproject.toml') }}${{ inputs.cache-key-suffix }}
         restore-keys: |
           ${{ runner.os }}-pip-${{ inputs.cache-key-suffix }}
     - name: Cache mypy
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: .mypy_cache
         key: ${{ runner.os }}-mypy-${{ hashFiles(inputs.requirements-file, 'pyproject.toml') }}${{ inputs.cache-key-suffix }}
         restore-keys: |
           ${{ runner.os }}-mypy-${{ inputs.cache-key-suffix }}
     - name: Cache pytest
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: |
           .pytest_cache
@@ -44,7 +44,7 @@ runs:
         restore-keys: |
           ${{ runner.os }}-pytest-${{ inputs.cache-key-suffix }}
     - name: Cache pre-commit
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: ~/.cache/pre-commit
         key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}${{ inputs.cache-key-suffix }}

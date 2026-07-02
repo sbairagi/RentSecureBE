@@ -8,11 +8,15 @@ name: Deploy Backend
 
 'on':
   workflow_call:
-  push:
-    branches:
-      - main
-      - master
 
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -21,17 +25,21 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v0.1.7
+        uses: appleboy/ssh-action@d91a1af6f57cd4478ceee14d7705601dafabaa19  # v0.1.7
+        if: ${{ secrets.EC2_HOST != '' && secrets.EC2_USER != '' && secrets.EC2_SSH_KEY != '' }}
         with:
-          host: placeholder
-          username: placeholder
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
       - name: Install Sentry CLI
         run: |
-          curl -sL https://sentry.io/get-cli/ | bash
+          curl -sSL "https://github.com/getsentry/sentry-cli/releases/download/3.6.0/sentry-cli-Linux-x86_64" -o /usr/local/bin/sentry-cli
+          chmod +x /usr/local/bin/sentry-cli
+          sentry-cli --version
 
       - name: Create Sentry release
         env:

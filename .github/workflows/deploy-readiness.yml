@@ -8,6 +8,13 @@ name: Deploy Readiness
 'on':
   workflow_call:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-readiness-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy-readiness:
     name: Stage 8a │ Deploy Readiness Check
@@ -15,16 +22,16 @@ jobs:
     timeout-minutes: 15
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: "test-secret-key-deploy-readiness-2026-abcdefghijklmnopqrstuvwxyz1234567890"
+      SECRET_KEY: "test-secret-key-deploy-readiness-2026"
       DEBUG: "False"
       DJANGO_ENV: test
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 1
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
         with:
           egress-policy: block
           disable-sudo: true
