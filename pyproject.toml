@@ -168,7 +168,7 @@ django_settings_module = "rentsecure_be.settings"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "rentsecure_be.settings"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
-addopts = "--strict-markers --strict-config --tb=short --durations=10 --cov=rentsecure_be,ai_assistant,core,dashboard,documents,finance,notification,properties,referral_and_earn,smartbot --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
+addopts = "--strict-markers --strict-config --tb=short --durations=10 --cov=rentsecure_be --cov=ai_assistant --cov=core --cov=dashboard --cov=documents --cov=finance --cov=notification --cov=properties --cov=referral_and_earn --cov=smartbot --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
 filterwarnings = ["error", "ignore::DeprecationWarning", "ignore::PendingDeprecationWarning"]
 testpaths = ["."]
 

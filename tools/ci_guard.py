@@ -127,27 +127,25 @@ def run_tests() -> CheckResult:
 
 def run_coverage() -> CheckResult:
     print("[ci] coverage ...")
-    cov_source = ",".join(
-        [
-            "rentsecure_be",
-            "ai_assistant",
-            "core",
-            "dashboard",
-            "documents",
-            "finance",
-            "notification",
-            "properties",
-            "referral_and_earn",
-            "smartbot",
-        ]
-    )
+    cov_source = [
+        "rentsecure_be",
+        "ai_assistant",
+        "core",
+        "dashboard",
+        "documents",
+        "finance",
+        "notification",
+        "properties",
+        "referral_and_earn",
+        "smartbot",
+    ]
     cmd = [
         sys.executable,
         "-m",
         "pytest",
         "tests",
         "ci_dashboard/tests.py",
-        f"--cov={cov_source}",
+        *[f"--cov={pkg}" for pkg in cov_source],
         "--cov-report=term-missing",
         "--cov-report=xml",
         "--cov-fail-under=90",

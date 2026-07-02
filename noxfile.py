@@ -356,7 +356,7 @@ def coverage(session: nox.Session) -> None:
         "-m",
         "pytest",
         *TEST_LOCATIONS,
-        f"--cov={','.join(COV_SOURCE)}",
+        *[f"--cov={pkg}" for pkg in COV_SOURCE],
         "--cov-report=term-missing",
         "--cov-report=xml",
         "--cov-fail-under=90",
