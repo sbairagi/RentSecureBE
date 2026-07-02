@@ -204,11 +204,12 @@ jobs:
       - name: Run Trivy Secret Scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
-          scan-type: secret
+          scan-type: fs
           scan-ref: .
           format: 'sarif'
           output: trivy-secrets.sarif
           severity: 'HIGH,CRITICAL'
+          security-checks: secret
           ignore-unfixed: true
       - name: Upload Trivy Secret SARIF
         if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
