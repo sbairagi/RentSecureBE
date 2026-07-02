@@ -13,10 +13,6 @@ permissions:
   id-token: write
   actions: read
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
   lint-fast:
     name: Stage 1 │ Lint Fast
