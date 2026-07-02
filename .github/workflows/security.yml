@@ -203,7 +203,7 @@ jobs:
             files.pythonhosted.org:443
       - name: Install Trivy
         run: |
-          curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v0.36.0/trivy_0.36.0_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+          curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v0.70.0/trivy_0.70.0_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
           tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
           chmod +x /usr/local/bin/trivy
           trivy --version
