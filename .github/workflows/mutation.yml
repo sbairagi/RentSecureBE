@@ -61,6 +61,16 @@ jobs:
           cache-key-suffix: "-mutation-${{ inputs.mutation_mode }}"
       - name: Run migrations
         run: python manage.py migrate --run-syncdb --verbosity=1
+      - name: Configure mutmut runner wrapper
+        shell: bash
+        run: |
+          printf '%s\n' \
+            '#!/usr/bin/env bash' \
+            'set -uo pipefail' \
+            'cp -f ../conftest.py conftest.py 2>/dev/null || true' \
+            'exec python -m pytest --no-header -q --tb=short --randomly-seed=last "$@"' \
+            > /tmp/mutmut-pytest-runner.sh
+          chmod +x /tmp/mutmut-pytest-runner.sh
       - name: 'Configure mutmut (mode: ${{ inputs.mutation_mode }})'
         run: |
           mkdir -p .mutmut
@@ -80,22 +90,22 @@ jobs:
               PATHS="conftest.py,core/models.py,properties/models/,finance/models.py"
             fi
             echo "Selected paths_to_mutate: $PATHS"
-              printf '%s\n' \
-                '[mutmut]' \
-                "source_paths = $PATHS" \
-                'backups = .mutmut-backups' \
-                'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last' \
-                'tests_dir = tests' \
-                'dict_paths =' \
-                'worker = 2' \
-                'show_progress = True' \
-                > .mutmut/config.ini
+             printf '%s\n' \
+               '[mutmut]' \
+               "source_paths = $PATHS" \
+               'backups = .mutmut-backups' \
+               "runner = /tmp/mutmut-pytest-runner.sh" \
+               'tests_dir = tests' \
+               'dict_paths =' \
+               'worker = 2' \
+               'show_progress = True' \
+               > .mutmut/config.ini
           else
             printf '%s\n' \
                '[mutmut]' \
                'source_paths = conftest.py,core/models.py,properties/models/,properties/services/,properties/utils/,finance/models.py,smartbot/services/,notification/services/,properties/feature_enforcer.py' \
                'backups = .mutmut-backups' \
-               'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last' \
+               "runner = /tmp/mutmut-pytest-runner.sh" \
                'tests_dir = tests' \
                'dict_paths =' \
                'worker = 4' \
