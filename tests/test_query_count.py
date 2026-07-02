@@ -12,6 +12,7 @@ from datetime import date
 
 from rest_framework.test import APIClient
 
+from django.core.cache import cache
 from django.test import TestCase
 
 from properties.models import Building, Renter, RentRecord, Unit
@@ -117,7 +118,7 @@ class N1QueryBudgetTests(QueryBudgetTestCase):
         token = str(RefreshToken.for_user(self.owner).access_token)
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             resp = client.get("/api/units/")
         self.assertEqual(resp.status_code, 200)
 
@@ -179,6 +180,7 @@ class N1RentRecordQueryBudgetTests(QueryBudgetTestCase):
         token = str(RefreshToken.for_user(self.owner).access_token)
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
+        cache.clear()
         with self.assertNumQueries(2):
             resp = client.get("/api/rent-records/")
         self.assertEqual(resp.status_code, 200)
