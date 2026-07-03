@@ -421,7 +421,7 @@ def check_signature_or_return_http_response(
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt
-def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901
+def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901, S3776
     """Single Razorpay webhook handler with HMAC signature verification.
 
     Handles both payment.captured (order-based) and payment_link.paid events.
