@@ -321,7 +321,7 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 # ---------------------------------------------------------------------------
 
 
-# Webhook endpoint: CSRF exempted to allow external service calls
+# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt
 def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     """Handle Cashfree payout status webhook.
@@ -358,7 +358,7 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"message": "Webhook received"}, status=200)
 
 
-# Webhook endpoint: CSRF exempted to allow external service calls
+# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt
 def create_rent_payment(request: HttpRequest) -> JsonResponse:
     """Create a Razorpay order for rent payment."""
@@ -419,7 +419,7 @@ def check_signature_or_return_http_response(
     return None
 
 
-# Webhook endpoint: CSRF exempted to allow external service calls
+# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt
 def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901
     """Single Razorpay webhook handler with HMAC signature verification.
