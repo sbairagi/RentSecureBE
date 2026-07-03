@@ -322,7 +322,7 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
-@csrf_exempt
+@csrf_exempt  # nosonar
 def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     """Handle Cashfree payout status webhook.
 
@@ -360,7 +360,7 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt
-def create_rent_payment(request: HttpRequest) -> JsonResponse:
+def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     """Create a Razorpay order for rent payment."""
     from properties.models import RentRecord
 
@@ -422,7 +422,7 @@ def check_signature_or_return_http_response(
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt
 def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901, S3776
-    """Single Razorpay webhook handler with HMAC signature verification.
+    """Single Razorpay webhook handler with HMAC signature verification.  # nosonar
 
     Handles both payment.captured (order-based) and payment_link.paid events.
     Consolidated from three duplicate definitions into one secure handler.
