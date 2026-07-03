@@ -152,32 +152,3 @@ def notify_owner_post_payout(rent: Any) -> None:
     # 2. Send voice note
     if audio_path and phone:
         send_whatsapp_audio(phone, audio_path)
-
-
-#     if audio_path:
-#         send_whatsapp_audio(renter.phone, audio_path)
-
-
-# # notifications/utils.py
-
-#     """
-#     Sends a WhatsApp message to renter based on payout status.
-#     """
-#     if rent.payout_status == "SUCCESS":
-#         msg = (
-#             f"Namaste! Aapka ₹{rent.amount} rent "
-#             f"{rent.updated_at.date()} ko jama hua hai."
-#         )
-#     elif rent.payout_status == "FAILED":
-#         msg = (
-#             f"⚠️ ₹{rent.amount} rent ka transfer fail ho gaya hai. "
-#             f"Kripya apna bank detail verify karein."
-#         )
-#     else:
-#         msg = None
-
-#     if msg:
-#         try:
-#             notify_renter(rent.renter, msg)
-#         except Exception as e:
-#             print(f"WhatsApp message failed: {e}")

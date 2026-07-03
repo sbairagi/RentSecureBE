@@ -2,12 +2,6 @@
 #     token_obj = DeviceToken.objects.filter(user=user).first()
 #     if not token_obj: return
 
-#     send_expo_notification(
-#         token_obj.token,
-#         title=title,
-#         body=message
-#     )
-
 
 from typing import Any
 
