@@ -35,7 +35,7 @@ class CaretakerViewSet(viewsets.ModelViewSet[Caretaker]):
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         unit: Unit | None = serializer.validated_data.get("unit")
         if not unit or unit.owner != self.request.user:
-            raise PermissionDenied("You do not own the selected unit.")
+            raise PermissionDenied("You do not own the selected unit.")  # noqa: S1192
 
         enforcer = FeatureEnforcer(self.request.user)
         if not enforcer.can_create("max_caretakers"):

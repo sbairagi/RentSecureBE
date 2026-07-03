@@ -50,7 +50,7 @@ class GenerateRentAgreementPdfViewSet(viewsets.ViewSet):
 
         pdf_file = HTML(string=html_string).write_pdf()
 
-        response = HttpResponse(pdf_file, content_type="application/pdf")
+        response = HttpResponse(pdf_file, content_type="application/pdf")  # noqa: S1192
         response["Content-Disposition"] = (
             f"inline; filename=rent_agreement_{renter.id}.pdf"
         )

@@ -262,7 +262,7 @@ class CaretakerFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
         model = Caretaker
 
     unit = factory.SubFactory(UnitFactory)
-    owner = factory.SelfAttribute("unit.owner")
+    owner = factory.SelfAttribute("unit.owner")  # noqa: S1192
     name = factory.LazyAttribute(lambda _: fake.name())
     phone = factory.LazyAttribute(lambda _: f"+91{fake.random_number(digits=10)}")
     email = factory.LazyAttribute(lambda _: fake.email())

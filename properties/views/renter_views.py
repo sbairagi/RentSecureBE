@@ -74,7 +74,7 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         """Persist a new renter, enforce ownership, and update unit state."""
         unit: Unit | None = serializer.validated_data.get("unit")
         if unit is None or unit.owner != self.request.user:
-            raise PermissionDenied("You do not own the selected unit.")
+            raise PermissionDenied("You do not own the selected unit.")  # noqa: S1192
 
         enforcer = FeatureEnforcer(self.request.user)
         if not enforcer.can_create("max_renters"):

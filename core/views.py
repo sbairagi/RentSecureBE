@@ -332,7 +332,7 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     from properties.models import RentRecord
 
     if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)
+        return JsonResponse({"error": "Invalid method"}, status=405)  # noqa: S1192
 
     payload = json.loads(request.body)
     transfer_id = payload.get("transferId")
