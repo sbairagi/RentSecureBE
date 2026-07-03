@@ -1,4 +1,3 @@
-# from rent.models import RentRecord
 from datetime import date
 from typing import Any
 

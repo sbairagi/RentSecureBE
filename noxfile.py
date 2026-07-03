@@ -42,6 +42,16 @@ COV_SOURCE = [
     "smartbot",
 ]
 
+# ---------------------------------------------------------------------------
+# Repeated command fragments (SonarCloud S1192)
+# ---------------------------------------------------------------------------
+MANAGE_PY = "manage.py"
+VERBOSITY_2 = "--verbosity=2"
+FAIL_LEVEL_ERROR = "--fail-level=ERROR"
+FAIL_LEVEL_WARNING = "--fail-level=WARNING"
+TB_SHORT = "--tb=short"
+
+
 nox.options.sessions = [
     "lint",
     "typing",
@@ -206,10 +216,10 @@ def autofix(session: nox.Session) -> None:
     session.env["DJANGO_ENV"] = "test"
 
     try:
-        session.run("python", "manage.py", "makemigrations", "--check", "--verbosity=2")
+        session.run("python", MANAGE_PY, "makemigrations", "--check", VERBOSITY_2)
     except nox.command.CommandFailed:
         session.log("Missing migrations detected — generating them safely...")
-        session.run("python", "manage.py", "makemigrations", "--verbosity=2")
+        session.run("python", MANAGE_PY, "makemigrations", VERBOSITY_2)
 
 
 # ---------------------------------------------------------------------------
@@ -287,16 +297,16 @@ def django_checks(session: nox.Session) -> None:
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 
-    session.run("python", "manage.py", "check", "--verbosity=2", "--fail-level=ERROR")
+    session.run("python", MANAGE_PY, "check", VERBOSITY_2, FAIL_LEVEL_ERROR)
     session.run(
         "python",
-        "manage.py",
+        MANAGE_PY,
         "check",
         "--deploy",
-        "--verbosity=2",
-        "--fail-level=WARNING",
+        VERBOSITY_2,
+        FAIL_LEVEL_WARNING,
     )
-    session.run("python", "manage.py", "diffsettings", "--all")
+    session.run("python", MANAGE_PY, "diffsettings", "--all")
 
 
 # ---------------------------------------------------------------------------
@@ -313,21 +323,21 @@ def migrations(session: nox.Session) -> None:
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 
-    session.run("python", "manage.py", "check", "--verbosity=2", "--fail-level=ERROR")
+    session.run("python", MANAGE_PY, "check", VERBOSITY_2, FAIL_LEVEL_ERROR)
     session.run(
         "python",
-        "manage.py",
+        MANAGE_PY,
         "check",
         "--deploy",
-        "--verbosity=2",
-        "--fail-level=WARNING",
+        VERBOSITY_2,
+        FAIL_LEVEL_WARNING,
     )
     session.run(
-        "python", "manage.py", "makemigrations", "--check", "--dry-run", "--verbosity=2"
+        "python", MANAGE_PY, "makemigrations", "--check", "--dry-run", VERBOSITY_2
     )
 
     session.run("rm", "-f", "db.sqlite3", external=True)
-    session.run("python", "manage.py", "migrate", "--run-syncdb", "--verbosity=2")
+    session.run("python", MANAGE_PY, "migrate", "--run-syncdb", VERBOSITY_2)
 
 
 # ---------------------------------------------------------------------------
@@ -339,7 +349,7 @@ def migrations(session: nox.Session) -> None:
 def tests(session: nox.Session) -> None:
     """Run the full pytest suite."""
     _install_test_deps(session)
-    session.run("python", "-m", "pytest", *TEST_LOCATIONS, "-v", "--tb=short")
+    session.run("python", "-m", "pytest", *TEST_LOCATIONS, "-v", TB_SHORT)
 
 
 # ---------------------------------------------------------------------------
@@ -360,7 +370,7 @@ def coverage(session: nox.Session) -> None:
         "--cov-report=term-missing",
         "--cov-report=xml",
         "--cov-fail-under=90",
-        "--tb=short",
+        TB_SHORT,
     )
 
 
@@ -378,14 +388,14 @@ def contracts(session: nox.Session) -> None:
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 
-    session.run("python", "manage.py", "migrate", "--run-syncdb", "--verbosity=1")
+    session.run("python", MANAGE_PY, "migrate", "--run-syncdb", "--verbosity=1")
     session.run(
         "python",
         "-m",
         "pytest",
         "tests/test_api_contracts.py",
         "-v",
-        "--tb=short",
+        TB_SHORT,
         "--randomly-seed=last",
     )
     session.run("python", "scripts/check_api_contracts.py")
@@ -428,7 +438,7 @@ def hypothesis(session: nox.Session) -> None:
         "tests/test_core_hypothesis.py",
         "-v",
         "--hypothesis-show-statistics",
-        "--tb=short",
+        TB_SHORT,
         "--randomly-seed=last",
     )
 
@@ -448,7 +458,7 @@ def mutation(session: nox.Session) -> None:
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 
-    session.run("python", "manage.py", "migrate", "--run-syncdb", "--verbosity=1")
+    session.run("python", MANAGE_PY, "migrate", "--run-syncdb", "--verbosity=1")
 
     session.run(
         "python",
@@ -489,7 +499,7 @@ def benchmark(session: nox.Session) -> None:
         "--benchmark-json=benchmark-results.json",
         "--benchmark-sort=mean",
         "--benchmark-columns=min,max,mean,stddev,median,rounds",
-        "--tb=short",
+        TB_SHORT,
     )
 
 
@@ -507,18 +517,18 @@ def deploy_readiness(session: nox.Session) -> None:
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 
-    session.run("python", "manage.py", "check", "--verbosity=2", "--fail-level=ERROR")
+    session.run("python", MANAGE_PY, "check", VERBOSITY_2, FAIL_LEVEL_ERROR)
     session.run(
         "python",
-        "manage.py",
+        MANAGE_PY,
         "check",
         "--deploy",
-        "--verbosity=2",
-        "--fail-level=WARNING",
+        VERBOSITY_2,
+        FAIL_LEVEL_WARNING,
     )
     session.run("rm", "-f", "db.sqlite3", external=True)
-    session.run("python", "manage.py", "migrate", "--run-syncdb", "--verbosity=2")
-    session.run("python", "manage.py", "collectstatic", "--noinput", "--verbosity=0")
+    session.run("python", MANAGE_PY, "migrate", "--run-syncdb", VERBOSITY_2)
+    session.run("python", MANAGE_PY, "collectstatic", "--noinput", "--verbosity=0")
 
 
 # ---------------------------------------------------------------------------

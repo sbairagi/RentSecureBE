@@ -1,7 +1,3 @@
-# from services.whatsapp_service import send_whatsapp_message
-# from rent.services import process_rent_payout
-# from rent.models import RentRecord, Renter
-# from services.whatsapp_service import send_whatsapp_message
 from typing import Any
 
 from django.core.files.storage import default_storage
@@ -12,8 +8,6 @@ from rentsecure_be.services.cashfree_service import process_rent_payout
 from smartbot.services.agreement_service import generate_agreement_pdf
 
 from .services.leegality_service import initiate_signature
-
-# from .services.agreement_service import generate_agreement_pdf
 from .whatsapp_service import send_agreement_via_whatsapp
 
 

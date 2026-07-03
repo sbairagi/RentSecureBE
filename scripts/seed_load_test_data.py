@@ -17,11 +17,12 @@ from core.models import SubscriptionPlan  # noqa: E402
 User = get_user_model()
 
 for i in range(5):
+    password = os.environ.get("SEED_USER_PASSWORD", "testpass123")
     User.objects.get_or_create(
         username=f"loadtest_user_{i}",
         defaults={
             "email": f"loadtest{i}@test.com",
-            "password": "testpass123",
+            "password": password,
             "full_name": f"User {i}",
             "phone": f"+91987654321{i}",
         },

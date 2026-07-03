@@ -1,10 +1,8 @@
 from typing import Any
 
-from django.core.mail import EmailMessage
 from django.utils.timezone import now
 
 from core.models import User
-from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import RentRecord
 
 
@@ -14,7 +12,11 @@ def send_all_owners_monthly_summary() -> None:
         msg = build_summary_message(summary)
         phone = owner.whatsapp_number or ""
         if phone:
+            from notification.services.whatsapp_service import send_whatsapp_message
+
             send_whatsapp_message(phone, msg)
+
+        from django.core.mail import EmailMessage
 
         email = EmailMessage(
             subject="Your Monthly Rent Summary", body=msg, to=[owner.email]
@@ -40,18 +42,22 @@ def generate_monthly_summary_for_owner(owner: User) -> dict[str, Any]:
     }
 
     for r in rents:
-        if r.status == "PAID":
-            summary["received"] += r.amount_paid
-            if r.payout_status != "SUCCESS":
-                summary["failed_payouts"].append(
-                    f"{r.renter.name if r.renter else ''} ({r.unit.unit}) - ₹{r.amount_paid}"
-                )
-        else:
-            summary["pending_rents"].append(
-                f"{r.renter.name if r.renter else ''} ({r.unit.unit}) - ₹{r.amount_paid}"
-            )
+        _categorize_rent(r, summary)
 
     return summary
+
+
+def _categorize_rent(rent: RentRecord, summary: dict[str, Any]) -> None:
+    renter_name = rent.renter.name if rent.renter else ""
+    unit_label = rent.unit.unit
+    entry = f"{renter_name} ({unit_label}) - ₹{rent.amount_paid}"
+
+    if rent.status == "PAID":
+        summary["received"] += rent.amount_paid
+        if rent.payout_status != "SUCCESS":
+            summary["failed_payouts"].append(entry)
+    else:
+        summary["pending_rents"].append(entry)
 
 
 def build_summary_message(summary: dict[str, Any]) -> str:

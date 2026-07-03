@@ -1,11 +1,7 @@
 # # your_app/management/commands/seed_subscription_plans.py
 
-# from django.core.management.base import BaseCommand
-# from core.models import SubscriptionPlan
 # from properties.models import UsageLimit
 
-# class Command(BaseCommand):
-#     help = 'Seed default subscription plans with usage limits'
 
 #     def handle(self, *args, **kwargs):
 #         plans_data = [

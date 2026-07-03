@@ -52,20 +52,19 @@ class NotificationPreference(models.Model):
     def save(self, *args: Any, **kwargs: Any) -> None:
         # Handle upsert for NotificationPreference
         is_new = self.pk is None
-        if is_new:
-            if self.owner_id is not None:
-                existing = NotificationPreference.objects.filter(
-                    owner_id=self.owner_id
-                ).first()
-                if existing:
-                    for field in self._meta.fields:
-                        if field.name in {"id", "owner"}:
-                            continue
-                        setattr(existing, field.attname, getattr(self, field.attname))
-                    existing.save()
-                    self.pk = existing.pk
-                    self.__dict__.update(existing.__dict__)
-                    return
+        if is_new and self.owner_id is not None:
+            existing = NotificationPreference.objects.filter(
+                owner_id=self.owner_id
+            ).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {"id", "owner"}:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
         return super().save(*args, **kwargs)
 
     @override
@@ -123,18 +122,17 @@ class SubscriptionPlan(models.Model):
     def save(self, *args: Any, **kwargs: Any) -> None:
         # Handle upsert for SubscriptionPlan
         is_new = self.pk is None
-        if is_new:
-            if self.name:
-                existing = SubscriptionPlan.objects.filter(name=self.name).first()
-                if existing:
-                    for field in self._meta.fields:
-                        if field.name in {"id", "name", "created_at", "updated_at"}:
-                            continue
-                        setattr(existing, field.attname, getattr(self, field.attname))
-                    existing.save()
-                    self.pk = existing.pk
-                    self.__dict__.update(existing.__dict__)
-                    return
+        if is_new and self.name:
+            existing = SubscriptionPlan.objects.filter(name=self.name).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {"id", "name", "created_at", "updated_at"}:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
         return super().save(*args, **kwargs)
 
     @override
@@ -165,24 +163,23 @@ class UserSubscription(models.Model):
     def save(self, *args: Any, **kwargs: Any) -> None:
         # Handle upsert for UserSubscription
         is_new = self.pk is None
-        if is_new:
-            if self.user_id is not None:
-                existing = UserSubscription.objects.filter(user_id=self.user_id).first()
-                if existing:
-                    for field in self._meta.fields:
-                        if field.name in {
-                            "id",
-                            "user",
-                            "start_date",
-                            "created_at",
-                            "updated_at",
-                        }:
-                            continue
-                        setattr(existing, field.attname, getattr(self, field.attname))
-                    existing.save()
-                    self.pk = existing.pk
-                    self.__dict__.update(existing.__dict__)
-                    return
+        if is_new and self.user_id is not None:
+            existing = UserSubscription.objects.filter(user_id=self.user_id).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {
+                        "id",
+                        "user",
+                        "start_date",
+                        "created_at",
+                        "updated_at",
+                    }:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
         return super().save(*args, **kwargs)
 
     @override

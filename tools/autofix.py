@@ -59,7 +59,7 @@ EXCLUDE_DIRS = {
 def get_tracked_python_files() -> list[str]:
     """Return Python files from git tracked sources, excluding virtualenv/build dirs."""
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603
             ["git", "ls-files"],  # noqa: S607
             cwd=REPO_ROOT,
             capture_output=True,
@@ -146,14 +146,14 @@ def step_migrations() -> bool:
         "DJANGO_ENV": "test",
     }
     # Dry-run to detect missing migrations
-    check = subprocess.run(
+    check = subprocess.run(  # noqa: S603
         [sys.executable, "manage.py", "makemigrations", "--check", "--dry-run"],
         cwd=REPO_ROOT,
         env={**dict(os.environ), **env},
     )  # noqa: S603
     if check.returncode != 0:
         print("[autofix] missing migrations detected — generating them ...")
-        gen = subprocess.run(
+        gen = subprocess.run(  # noqa: S603
             [sys.executable, "manage.py", "makemigrations"],
             cwd=REPO_ROOT,
             env={**dict(os.environ), **env},

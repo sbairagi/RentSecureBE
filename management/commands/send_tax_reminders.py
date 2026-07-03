@@ -1,12 +1,8 @@
-# from django.core.management.base import BaseCommand
-# from django.utils.timezone import now
 # from django.core.mail import send_mail
 # from properties.models import PropertyTaxRecord, UserSubscription
 # from datetime import timedelta
 # from communication.utils import send_push_notification, send_whatsapp_message
 
-# class Command(BaseCommand):
-#     help = "Send upcoming property tax reminders"
 
 #     def handle(self, *args, **options):
 #         today = now().date()

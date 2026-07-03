@@ -9,8 +9,6 @@ from notification.utils import send_whatsapp_message
 from properties.models import Renter
 from rentsecure_be.type_compat import override
 
-# from yourapp.models import Renter
-
 
 class Command(BaseCommand):
     help = "Auto-deactivate renters whose notice period has expired."
@@ -38,8 +36,3 @@ def auto_deactivate_notice_period_renters() -> None:
         )
 
         # Optional: notify owner via WhatsApp or push
-
-
-# @periodic_task(run_every=crontab(hour=0, minute=0))
-# def run_auto_deactivation():
-#     auto_deactivate_notice_period_renters()

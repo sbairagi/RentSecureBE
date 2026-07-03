@@ -41,7 +41,6 @@ def register_owner_with_cashfree(owner: OwnerBankDetails) -> None:
         owner.beneficiary_id = bene_id
         owner.bank_account_verified = True
         owner.save()
-    return
 
 
 def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
@@ -50,15 +49,15 @@ def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
 
     owner = rent.renter.unit.owner if rent.renter else None
     if owner is None:
-        raise Exception("Owner not found for rent")
+        raise ValueError("Owner not found for rent")
 
     try:
         bank_details = OwnerBankDetails.objects.get(owner=owner)
     except OwnerBankDetails.DoesNotExist:
-        raise Exception("Owner not registered with Cashfree") from None
+        raise ValueError("Owner not registered with Cashfree") from None
 
     if not bank_details.beneficiary_id:
-        raise Exception("Owner not registered with Cashfree")
+        raise ValueError("Owner not registered with Cashfree")
 
     transfer_id = f"rent_{rent.id}"
     response = make_payout(
@@ -76,7 +75,6 @@ def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
         rent.payout_status = "FAILED"
 
     if rent.payout_status == "SUCCESS":
-        # msg = (
         #     f"Namaste! Aapka ₹{rent.amount_paid} rent "
         #     f"{rent.updated_at.date()} ko jama hua hai."
         # )
@@ -184,11 +182,11 @@ def process_rent_payout(rent: RentRecord) -> dict[str, Any]:
             remarks="Monthly rent payout",
             bene_id=bank_details.beneficiary_id,
         )
-    except Exception as e:
-        logger.error(f"Cashfree payout API error for rent {rent.id}: {e}")
+    except Exception:
+        logger.exception("Cashfree payout API error for rent %s", rent.id)
         rent.payout_status = "FAILED"
         rent.save(update_fields=["payout_status"])
-        return {"status": "FAILED", "message": str(e)}
+        return {"status": "FAILED", "message": "Payout failed"}
 
     # Set payout status based on response
     if response.get("status") == "SUCCESS":

@@ -1,4 +1,3 @@
-# from core.models import User
 from django.conf import settings
 from django.db import models
 
@@ -27,7 +26,7 @@ class TaxSubmissionToCA(models.Model):
     financial_year = models.CharField(max_length=9, help_text="e.g., 2024-25")
     sent_to_email = models.EmailField()
     sent_at = models.DateTimeField(auto_now_add=True)
-    message = models.TextField(blank=True, null=True)
+    message = models.TextField(blank=True)
 
     @override
     def __str__(self) -> str:

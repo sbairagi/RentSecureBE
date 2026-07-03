@@ -13,7 +13,7 @@ class Command(BaseCommand):
 
     @override
     def add_arguments(self, parser: Any) -> None:
-        pass
+        """No custom arguments needed for this command."""
 
     @override
     def handle(self, *args: Any, **options: Any) -> None:

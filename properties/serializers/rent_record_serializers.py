@@ -31,6 +31,18 @@ class RentRecordSerializer(serializers.ModelSerializer):
 
     @override
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
+        self._validate_update_fields(data)
+        user = self.context["request"].user
+        unit = data.get("unit") or getattr(self.instance, "unit", None)
+        renter = data.get("renter") or getattr(self.instance, "renter", None)
+        self._validate_unit_ownership(unit, user)
+        self._validate_renter_ownership(renter, user)
+        self._validate_renter_unit_assignment(renter, unit)
+        self._validate_amount_paid(data)
+        self._validate_rent_month_and_date_paid(data)
+        return data
+
+    def _validate_update_fields(self, data: dict[str, Any]) -> None:
         if self.instance is not None:
             forbidden = set(self.initial_data.keys()) - self.ALLOWED_UPDATE_FIELDS
             if forbidden:
@@ -38,21 +50,25 @@ class RentRecordSerializer(serializers.ModelSerializer):
                     {"error": f"Cannot update fields: {', '.join(sorted(forbidden))}"}
                 )
 
-        user = self.context["request"].user
-        unit = data.get("unit") or getattr(self.instance, "unit", None)
-        renter = data.get("renter") or getattr(self.instance, "renter", None)
-
+    def _validate_unit_ownership(self, unit: Any, user: Any) -> None:
         if not unit or unit.owner != user:
             raise serializers.ValidationError("You do not own the selected unit.")
+
+    def _validate_renter_ownership(self, renter: Any, user: Any) -> None:
         if not renter or renter.unit.owner != user:
             raise serializers.ValidationError("You do not own the selected renter.")
-        if renter.unit.id != unit.id:
+
+    def _validate_renter_unit_assignment(self, renter: Any, unit: Any) -> None:
+        if renter and unit and renter.unit.id != unit.id:
             raise serializers.ValidationError(
                 "Renter is not assigned to the selected unit."
             )
+
+    def _validate_amount_paid(self, data: dict[str, Any]) -> None:
         if "amount_paid" in data and data["amount_paid"] < 0:
             raise serializers.ValidationError("Amount paid cannot be negative.")
 
+    def _validate_rent_month_and_date_paid(self, data: dict[str, Any]) -> None:
         rent_month = data.get("rent_month") or getattr(
             self.instance, "rent_month", None
         )
@@ -61,7 +77,6 @@ class RentRecordSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Date paid cannot be before the rent month."
             )
-        return data
 
     @override
     def update(

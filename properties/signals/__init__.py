@@ -215,28 +215,41 @@ def generate_final_invoice_on_exit(
     sender: type[Renter], instance: Renter, **kwargs: object
 ) -> None:
     update_fields = kwargs.get("update_fields")
-    if update_fields is not None and set(cast(Iterable[str], update_fields)).issubset(
-        {"onboarding_token", "onboarding_link_sent_at"}
-    ):
+    if _is_onboarding_update(update_fields):
         return
 
-    if instance.status in ["notice_period", "deactivated", "revoked"]:
-        latest_rent = RentRecord.objects.filter(renter=instance).last()
-        if latest_rent:
-            from ai_assistant.services.invoice_service import generate_final_invoice_pdf
+    if instance.status not in {"notice_period", "deactivated", "revoked"}:
+        return
 
-            pdf_path = generate_final_invoice_pdf(instance, latest_rent)
-            instance.final_invoice_path = pdf_path
-            instance.save(update_fields=["final_invoice_path"])
+    _generate_final_invoice_if_needed(instance)
 
-        if instance.status in ["revoked", "deactivated"]:
-            if not ArchivedRenter.objects.filter(renter=instance).exists():
-                try:
-                    from ai_assistant.services.archive_service import (
-                        archive_renter_data,
-                    )
-                except ImportError:
-                    archive_renter_data = None  # type: ignore[assignment]
+    if instance.status in {"revoked", "deactivated"}:
+        _archive_renter_if_needed(instance)
 
-                if archive_renter_data is not None:
-                    archive_renter_data(instance)
+
+def _is_onboarding_update(update_fields: object) -> bool:
+    if update_fields is None:
+        return False
+    allowed = {"onboarding_token", "onboarding_link_sent_at"}
+    return set(cast(Iterable[str], update_fields)).issubset(allowed)
+
+
+def _generate_final_invoice_if_needed(instance: Renter) -> None:
+    latest_rent = RentRecord.objects.filter(renter=instance).last()
+    if not latest_rent:
+        return
+    from ai_assistant.services.invoice_service import generate_final_invoice_pdf
+
+    pdf_path = generate_final_invoice_pdf(instance, latest_rent)
+    instance.final_invoice_path = pdf_path
+    instance.save(update_fields=["final_invoice_path"])
+
+
+def _archive_renter_if_needed(instance: Renter) -> None:
+    if ArchivedRenter.objects.filter(renter=instance).exists():
+        return
+    try:
+        from ai_assistant.services.archive_service import archive_renter_data
+    except ImportError:
+        return
+    archive_renter_data(instance)

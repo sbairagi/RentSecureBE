@@ -70,7 +70,7 @@ def _migrate_all_once() -> None:
     print("[init] All migrations applied.\n")
 
 
-def _current_targets(app_label: str, loader: MigrationLoader) -> set[str]:
+def _current_targets(app_label: str) -> set[str]:
     """Return the set of applied migration names for an app."""
     from django.db import connection
 
@@ -222,7 +222,7 @@ def main() -> int:
         print("=" * 60)
 
         # Pre-rollback validation
-        before_rollback = _current_targets(app, loader)
+        before_rollback = _current_targets(app)
         if not _validate_latest_applied(app, latest_name, before_rollback):
             failed += 1
             continue
@@ -236,7 +236,7 @@ def main() -> int:
             continue
 
         # Post-rollback validation
-        after_rollback = _current_targets(app, loader)
+        after_rollback = _current_targets(app)
         if not _validate_latest_not_rolled_back(app, latest_name, after_rollback):
             failed += 1
             continue
@@ -247,7 +247,7 @@ def main() -> int:
             continue
 
         # Post-re-apply validation
-        after_reapply = _current_targets(app, loader)
+        after_reapply = _current_targets(app)
         if not _validate_latest_reapplied(app, latest_name, after_reapply):
             failed += 1
             continue

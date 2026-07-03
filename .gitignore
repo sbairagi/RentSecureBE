@@ -77,3 +77,4 @@ local_settings.py
 report_docs/
 .aider*
 .hypothesis/
+.scannerwork/

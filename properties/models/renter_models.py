@@ -63,17 +63,15 @@ class Renter(models.Model):
         validators=[phone_regex],
         max_length=15,
         blank=True,
-        null=True,
         help_text="Alternate phone number",
     )
     emergency_contact_name = models.CharField(
-        max_length=100, blank=True, null=True, help_text="Emergency contact name"
+        max_length=100, blank=True, help_text="Emergency contact name"
     )
     emergency_contact_number = models.CharField(
         validators=[phone_regex],
         max_length=15,
         blank=True,
-        null=True,
         help_text="Emergency contact number",
     )
     renter_image = models.ImageField(
@@ -93,9 +91,9 @@ class Renter(models.Model):
     is_active = models.BooleanField(
         default=True, help_text="Is renter currently active?"
     )
-    notes = models.TextField(blank=True, null=True, help_text="Additional notes")
+    notes = models.TextField(blank=True, help_text="Additional notes")
     whatsapp_number = models.CharField(
-        max_length=15, blank=True, null=True, help_text="For WhatsApp messages"
+        max_length=15, blank=True, help_text="For WhatsApp messages"
     )
     rent_due_date = models.DateField(
         blank=True,
@@ -110,10 +108,10 @@ class Renter(models.Model):
 
     missed_rents = models.PositiveIntegerField(default=0)
     is_flagged = models.BooleanField(default=False)
-    flagged_reason = models.TextField(blank=True, null=True)
+    flagged_reason = models.TextField(blank=True)
 
     is_agreement_revoked = models.BooleanField(default=False)
-    revocation_reason = models.TextField(blank=True, null=True)
+    revocation_reason = models.TextField(blank=True)
     revoked_by_owner = models.BooleanField(default=False)
     revoked_on = models.DateTimeField(blank=True, null=True)
 
@@ -124,7 +122,7 @@ class Renter(models.Model):
     )
     notice_start_date = models.DateField(null=True, blank=True)
 
-    final_invoice_path = models.CharField(max_length=255, null=True, blank=True)
+    final_invoice_path = models.CharField(max_length=255, blank=True)
 
     # Self-onboarding status
     class OnboardingStatus(models.TextChoices):
@@ -152,7 +150,6 @@ class Renter(models.Model):
     )
     onboarding_token = models.CharField(
         max_length=255,
-        null=True,
         blank=True,
         unique=True,
         help_text="Secure token for onboarding link",
@@ -248,7 +245,7 @@ class RentAgreementDraft(models.Model):
     )
     generated_at = models.DateTimeField(auto_now_add=True)
     file = models.FileField(upload_to="auto_agreements/")
-    leegality_document_id = models.CharField(max_length=255, null=True, blank=True)
+    leegality_document_id = models.CharField(max_length=255, blank=True)
     owner_signed = models.BooleanField(default=False)
     renter_signed = models.BooleanField(default=False)
 

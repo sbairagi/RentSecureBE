@@ -111,60 +111,64 @@ def send_monthly_rent_summary_email(
     sent_any: bool = False
 
     if prefs.monthly_summary_email and getattr(owner, "email", None):
-        try:
-            send_mail(
-                subject=f"Monthly Rent Summary - {summary['month_name']}",
-                message=message_text,
-                from_email="no-reply@rentsecure.in",
-                recipient_list=[owner.email],
-                fail_silently=False,
-            )
-            sent_any = True
-        except Exception as exc:
-            logger.exception("Failed to send email to %s: %s", owner.email, exc)
+        sent_any = _send_summary_email(owner, summary, message_text) or sent_any
 
-    if (
-        send_whatsapp
-        and prefs.monthly_summary_whatsapp
-        and getattr(owner, "whatsapp_number", None)
-    ):
-        try:
-            from notification.services.whatsapp_service import send_whatsapp_message
-
-            result = send_whatsapp_message(owner.whatsapp_number, message_text)
-            sent_any = sent_any or bool(result)
-        except Exception as exc:
-            logger.exception(
-                "Failed to send WhatsApp to %s: %s", owner.whatsapp_number, exc
-            )
-            sent_any = True
-
-    if send_whatsapp and prefs.monthly_summary_whatsapp and hasattr(owner, "profile"):
-        whatsapp_number = getattr(owner.profile, "whatsapp_number", None)
-        if whatsapp_number:
-            try:
-                from notification.services.whatsapp_service import send_whatsapp_message
-
-                result = send_whatsapp_message(whatsapp_number, message_text)
-                sent_any = sent_any or bool(result)
-            except Exception as exc:
-                logger.exception(
-                    "Failed to send WhatsApp to %s: %s", whatsapp_number, exc
-                )
+    if send_whatsapp:
+        sent_any = _send_summary_whatsapp(owner, message_text, prefs) or sent_any
 
     if not sent_any:
-        owner_label = getattr(owner, "email", None) or getattr(
-            owner, "username", "<unknown>"
-        )
-        logger.info(
-            "No monthly summary notification was sent for %s. "
-            "Preferences: email=%s, whatsapp=%s",
-            owner_label,
-            prefs.monthly_summary_email,
-            prefs.monthly_summary_whatsapp,
-        )
+        _log_no_notification_sent(owner, prefs)
 
     return sent_any
+
+
+def _send_summary_email(
+    owner: User, summary: MonthlySummary, message_text: str
+) -> bool:
+    try:
+        send_mail(
+            subject=f"Monthly Rent Summary - {summary['month_name']}",
+            message=message_text,
+            from_email="no-reply@rentsecure.in",
+            recipient_list=[owner.email],
+            fail_silently=False,
+        )
+        return True
+    except Exception as exc:
+        logger.exception("Failed to send email to %s: %s", owner.email, exc)
+        return False
+
+
+def _send_summary_whatsapp(
+    owner: User, message_text: str, prefs: NotificationPreference
+) -> bool:
+    if not (prefs.monthly_summary_whatsapp and getattr(owner, "whatsapp_number", None)):
+        return False
+    return _send_whatsapp_message(owner.whatsapp_number, message_text)
+
+
+def _send_whatsapp_message(phone: str, message_text: str) -> bool:
+    try:
+        from notification.services.whatsapp_service import send_whatsapp_message
+
+        result = send_whatsapp_message(phone, message_text)
+        return bool(result)
+    except Exception as exc:
+        logger.exception("Failed to send WhatsApp to %s: %s", phone, exc)
+        return False
+
+
+def _log_no_notification_sent(owner: User, prefs: NotificationPreference) -> None:
+    owner_label = getattr(owner, "email", None) or getattr(
+        owner, "username", "<unknown>"
+    )
+    logger.info(
+        "No monthly summary notification was sent for %s. "
+        "Preferences: email=%s, whatsapp=%s",
+        owner_label,
+        prefs.monthly_summary_email,
+        prefs.monthly_summary_whatsapp,
+    )
 
 
 def _build_summary_message(summary: MonthlySummary) -> str:

@@ -1,14 +1,9 @@
-# from django.core.management.base import BaseCommand
-# from django.core.mail import send_mail
 # from django.utils import timezone
 # from datetime import timedelta
 # from properties.models import Renter
 # from django.conf import settings
 # from communication.utils import send_whatsapp_message
 
-
-# class Command(BaseCommand):
-#     help = 'Send rent due reminders'
 
 #     def handle(self, *args, **kwargs):
 #         today = timezone.now().date()

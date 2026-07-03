@@ -74,8 +74,8 @@ PERMISSIONS_OVERRIDE: dict[str, str | None] = {
     "  contents: read\n"
     "  actions: read\n"
     "  pull-requests: write\n",
-    "quality.yml": "permissions:\n" "  contents: read\n" "  security-events: write\n",
-    "branch-protection.yml": "permissions:\n" "  contents: read\n",
+    "quality.yml": ("permissions:\n" "  contents: read\n" "  security-events: write\n"),
+    "branch-protection.yml": ("permissions:\n" "  contents: read\n"),
     "security.yml": None,
     "security-deep.yml": None,
     "architecture-guard.yml": "permissions:\n"
@@ -200,7 +200,11 @@ def process_file(path: Path, workflow_name: str) -> None:
         text = add_concurrency(text, workflow_name)
 
     if text != original:
-        path.write_text(text, encoding="utf-8")
+        resolved = path.resolve()
+        if not str(resolved).startswith(str(REPO_ROOT)):
+            print(f"Skipped: {path.relative_to(REPO_ROOT)} (outside repo root)")
+            return
+        resolved.write_text(text, encoding="utf-8")
         print(f"Updated: {path.relative_to(REPO_ROOT)}")
     else:
         print(f"Unchanged: {path.relative_to(REPO_ROOT)}")

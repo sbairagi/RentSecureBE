@@ -32,8 +32,6 @@ def generate_final_invoice_pdf(
     return temp_file.name
 
 
-# from services.whatsapp_service import send_whatsapp_message
-
 # send_whatsapp_message(
 #     renter.phone,
 #     f"📄 Your final rent invoice has been generated.",

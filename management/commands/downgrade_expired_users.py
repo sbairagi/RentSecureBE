@@ -1,19 +1,11 @@
 # # core/management/commands/downgrade_expired_users.py
 
-# from django.core.management.base import BaseCommand
-# from django.utils import timezone
-# from datetime import timedelta
 # from core.models import UserSubscription, PlanFeatureLimit, UsageLimit, SubscriptionPlan
 # from properties.models import Building, Unit, Caretaker, Renter, UnitImage, UnitDocument
 
 # # python manage.py downgrade_expired_users
 
-# FREE_PLAN_NAME = 'free'
 
-# class Command(BaseCommand):
-#     help = 'Downgrade users whose subscription expired 7+ days ago and trim their resources.'
-
-#     def handle(self, *args, **kwargs):
 #         now = timezone.now()
 #         expired_users = UserSubscription.objects.filter(
 #             expiry_date__lt=now - timedelta(days=7)

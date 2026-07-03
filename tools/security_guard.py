@@ -169,7 +169,12 @@ def run_all() -> list[SecurityResult]:
     ):
         result = fn()
         results.append(result)
-        status = "PASS" if result.passed else ("SKIP" if result.skipped else "FAIL")
+        if result.passed:
+            status = "PASS"
+        elif result.skipped:
+            status = "SKIP"
+        else:
+            status = "FAIL"
         print(f"[security] {result.name}: {status}")
     return results
 
