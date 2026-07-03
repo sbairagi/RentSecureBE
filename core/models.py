@@ -91,9 +91,7 @@ class OwnerBankDetails(models.Model):
     bank_account_number = models.CharField(max_length=30)
     ifsc_code = models.CharField(max_length=20)
     account_holder_name = models.CharField(max_length=100, blank=True, default="")
-    beneficiary_id = models.CharField(
-        max_length=100, unique=True, null=True, blank=True
-    )
+    beneficiary_id = models.CharField(max_length=100, unique=True, blank=True)
     bank_account_verified = models.BooleanField(default=False)
 
     @override

@@ -201,7 +201,7 @@ def process_file(path: Path, workflow_name: str) -> None:
 
     if text != original:
         resolved = path.resolve()
-        if not str(resolved).startswith(str(REPO_ROOT)):
+        if not str(resolved).startswith(str(REPO_ROOT)):  # noqa: S108
             print(f"Skipped: {path.relative_to(REPO_ROOT)} (outside repo root)")
             return
         resolved.write_text(text, encoding="utf-8")
