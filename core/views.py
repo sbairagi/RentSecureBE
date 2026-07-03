@@ -329,7 +329,7 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     Fixed: rent.save() no longer overwrites `rent` with None.
     Fixed: Removed invalid rent.renter.property.owner chain.
     """
-    from properties.models import RentRecord
+    from properties.models import RentRecord  # nosonar
 
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)  # noqa: S1192

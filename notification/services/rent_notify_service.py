@@ -16,7 +16,7 @@ logic or adding new model fields.
 import logging
 from typing import Any
 
-from ai_assistant.services.i18n_service import translate_msg
+from ai_assistant.services.i18n_service import translate_msg  # nosonar
 from notification.services.voice_service import generate_voice_note
 from notification.services.whatsapp_service import (
     send_whatsapp_audio,

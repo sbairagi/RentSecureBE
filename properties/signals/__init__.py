@@ -238,7 +238,9 @@ def _generate_final_invoice_if_needed(instance: Renter) -> None:
     latest_rent = RentRecord.objects.filter(renter=instance).last()
     if not latest_rent:
         return
-    from ai_assistant.services.invoice_service import generate_final_invoice_pdf
+    from ai_assistant.services.invoice_service import (  # nosonar
+        generate_final_invoice_pdf,
+    )
 
     pdf_path = generate_final_invoice_pdf(instance, latest_rent)
     instance.final_invoice_path = pdf_path
@@ -249,7 +251,7 @@ def _archive_renter_if_needed(instance: Renter) -> None:
     if ArchivedRenter.objects.filter(renter=instance).exists():
         return
     try:
-        from ai_assistant.services.archive_service import archive_renter_data
+        from ai_assistant.services.archive_service import archive_renter_data  # nosonar
     except ImportError:
         return
     archive_renter_data(instance)

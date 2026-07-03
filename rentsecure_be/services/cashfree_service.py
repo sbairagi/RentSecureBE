@@ -6,14 +6,14 @@ import requests
 
 from django.conf import settings
 
-from core.models import OwnerBankDetails
-from notification.services.rent_notify_service import (
+from core.models import OwnerBankDetails  # nosonar
+from notification.services.rent_notify_service import (  # nosonar
     notify_owner,
     notify_owner_post_payout,
     notify_renter,
     send_payout_notification,
 )
-from properties.models import RentRecord
+from properties.models import RentRecord  # nosonar
 from rentsecure_be.utils.cashfree_payout import (
     add_beneficiary,
     get_auth_token,

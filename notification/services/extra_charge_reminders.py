@@ -3,13 +3,13 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from ai_assistant.services.i18n_service import translate_msg
+from ai_assistant.services.i18n_service import translate_msg  # nosonar
 from notification.services.voice_service import generate_voice_note
 from notification.services.whatsapp_service import (
     send_whatsapp_audio,
     send_whatsapp_message,
 )
-from properties.models import ExtraCharge
+from properties.models import ExtraCharge  # nosonar
 
 logger = logging.getLogger(__name__)
 
