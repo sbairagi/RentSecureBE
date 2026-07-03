@@ -1,5 +1,4 @@
-import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
@@ -7,9 +6,10 @@ from django.core.management.base import BaseCommand
 from properties.services.summary_service import send_monthly_rent_summary_email
 from rentsecure_be.type_compat import override
 
-logger = logging.getLogger(__name__)
-
-User = get_user_model()
+if TYPE_CHECKING:
+    from core.models import User
+else:
+    User = get_user_model()
 
 
 class Command(BaseCommand):
