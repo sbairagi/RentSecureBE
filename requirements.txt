@@ -1,137 +1,125 @@
-aiohappyeyeballs==2.6.1
-aiohttp==3.11.18
-aiohttp-retry==2.9.1
-aiosignal==1.3.2
-amqp==5.3.1
-anyio==4.12.1
-appnope==0.1.4
-asgiref==3.8.1
-asttokens==3.0.0
-attrs==25.3.0
-beautifulsoup4==4.14.3
-billiard==4.2.4
-Brotli==1.1.0
-CacheControl==0.14.3
-cachetools==5.5.2
-celery==5.6.3
-certifi==2025.4.26
-cffi==1.17.1
-chardet==3.0.4
-charset-normalizer==3.4.2
-click==8.1.8
-click-didyoumean==0.3.1
-click-plugins==1.1.1.2
-click-repl==0.3.0
-comm==0.2.2
-cron-descriptor==1.4.5
-cryptography==45.0.2
-cssselect2==0.8.0
-debugpy==1.8.14
-decorator==5.2.1
-deep-translator==1.11.4
-defusedxml==0.7.1
+# =============================================================================
+# RentSecureBE – Unified Dependencies (Runtime + Dev)
+# =============================================================================
+# Source: requirements.txt (runtime) + requirements-dev.txt (dev/CI)
+# Created: 2026-06-22
+# Python : 3.12
+# Django: 4.2.30
+# DRF    : 3.16.x
+#
+# This is the SINGLE authoritative dependency file.
+# Install with: pip install -r requirements.txt
+# =============================================================================
+# -----------------------------------------------------------------------------
+# A. RUNTIME / PRODUCTION DEPENDENCIES
+# -----------------------------------------------------------------------------
+# Django core (LTS)
 Django==4.2.30
-django-celery-beat==2.9.0
-django-simple-history==3.8.0
-django-timezone-field==7.2.1
+django-extensions==4.1
+asgiref==3.8.1
+# Build / packaging (razorpay 1.4.2 requires pkg_resources)
+setuptools==78.1.1
+# REST API + JWT Auth
 djangorestframework==3.16.0
-djangorestframework_simplejwt==5.5.0
-et_xmlfile==2.0.0
-executing==2.2.0
+djangorestframework_simplejwt==5.5.1
+# Audit / History tracking
+django-simple-history==3.8.0
+# Configuration / Environment
+python-decouple==3.5
+# Date / Time helpers
+python-dateutil==2.9.0.post0
+# HTTP / Networking
+requests==2.33.0
+# PDF Generation & Merging
+weasyprint==68.0
+PyPDF2==3.0.1
+# Image handling (ImageField backend)
+Pillow==12.2.0
+# Spreadsheet / Excel exports
+openpyxl==3.1.5
+xlsxwriter==3.2.9
+# Twilio: SMS / WhatsApp / Voice
+twilio==9.6.1
+# Voice notes via gTTS
+gTTS==2.5.4
+# Firebase Cloud Messaging
 fcm-django==2.2.1
 firebase-admin==6.8.0
-fonttools==4.60.2
-fpdf2==2.8.3
-frozenlist==1.6.0
-google-api-core==2.25.0rc1
-google-api-python-client==2.170.0
-google-auth==2.40.2
-google-auth-httplib2==0.2.0
-google-cloud-core==2.4.3
-google-cloud-firestore==2.20.2
-google-cloud-storage==3.1.0
-google-crc32c==1.7.1
-google-resumable-media==2.7.2
-googleapis-common-protos==1.70.0
-grpcio==1.71.0
-grpcio-status==1.71.0
-gTTS==2.5.4
-h11==0.16.0
-h2==3.2.0
-hpack==3.0.0
-hstspreload==2025.1.1
-httpcore==1.0.9
-httplib2==0.22.0
-httpx==0.28.1
-hyperframe==5.2.0
-idna==2.10
-iniconfig==2.1.0
-ipykernel==6.29.5
-ipython==8.18.1
-ipython_pygments_lexers==1.1.1
-jedi==0.19.2
-jupyter_client==8.6.3
-jupyter_core==5.7.2
-kombu==5.6.2
-matplotlib-inline==0.1.7
-msgpack==1.1.0
-multidict==6.4.4
-nest-asyncio==1.6.0
-openpyxl==3.1.5
-packaging==25.0
-parso==0.8.4
-pexpect==4.9.0
-pillow==11.2.1
-platformdirs==4.3.8
-pluggy==1.6.0
-prompt_toolkit==3.0.51
-propcache==0.3.1
-proto-plus==1.26.1
-protobuf==5.29.4
-psutil==7.0.0
-ptyprocess==0.7.0
-pure_eval==0.2.3
-pyasn1==0.6.1
-pyasn1_modules==0.4.2
-pycparser==2.22
-pydyf==0.11.0
-Pygments==2.19.1
-PyJWT==2.9.0
-pyparsing==3.2.3
-pyphen==0.17.2
-PyPDF2==3.0.0
-pytest==8.3.5
-pytest-django==4.11.1
-python-crontab==3.3.0
-python-dateutil==2.9.0.post0
-pyzmq==26.4.0
+# Translations
+deep-translator==1.11.4
+# Background tasks / Celery (infrastructure)
+celery==5.6.3
+django-celery-beat==2.9.0
+# Razorpay Payments
 razorpay==1.4.2
-requests==2.32.3
-rfc3986==1.5.0
-rsa==4.9.1
-setuptools==80.8.0
-six==1.17.0
-sniffio==1.3.1
-soupsieve==2.8.3
-sqlparse==0.5.3
-stack-data==0.6.3
-swapper==1.4.0
-tinycss2==1.4.0
-tinyhtml5==2.0.0
-tornado==6.5.1
-traitlets==5.14.3
-twilio==9.6.1
-typing_extensions==4.15.0
-tzdata==2026.1
-tzlocal==5.3.1
-uritemplate==4.1.1
-urllib3==2.4.0
-vine==5.1.0
-wcwidth==0.2.13
-weasyprint==66.0
-webencodings==0.5.1
-wheel==0.45.1
-xlsxwriter==3.2.9
-yarl==1.20.0
-zopfli==0.2.3.post1
-python-decouple==3.9
+# AWS SDK + S3
+boto3==1.35.28
+# AI Assistant (OpenAI v0.x — code uses legacy API)
+openai==0.28.1
+# PostgreSQL production driver
+psycopg2-binary==2.9.10
+# -----------------------------------------------------------------------------
+# B. DEVELOPMENT / CI / TEST DEPENDENCIES
+# -----------------------------------------------------------------------------
+# Type Checking
+mypy==1.13.0
+django-stubs==6.0.5
+django-stubs-ext==6.0.5
+djangorestframework-stubs==3.17.0
+types-requests==2.33.0.20260518
+types-python-dateutil==2.9.0.20260518
+types-openpyxl==3.1.5.20260518
+# Linting & Formatting
+black==26.3.1
+ruff==0.15.14
+pylint==4.0.6
+pylint-django==2.7.0
+# Security Scanning
+bandit==1.8.3
+pip-audit==2.7.3
+# Testing Framework
+pytest==9.0.3
+pytest-django==4.11.1
+pytest-cov==7.0.0
+pytest-randomly==3.15.0
+pytest-split==0.11.0
+pytest-benchmark==4.0.0
+coverage[toml]==7.10.6
+factory-boy==3.3.0
+Faker==30.8.0
+hypothesis==6.136.0
+# Code Quality
+vulture==2.14
+import-linter==1.6.0
+mutmut==3.6.0
+isort==5.13.2
+autoflake==2.2.1
+pre-commit==4.2.0
+# Schema / Contract Testing
+schemathesis==4.21.10
+# Load Testing
+locust==2.32.0
+# Database URL parsing (roadmap)
+dj-database-url==2.3.0
+# Django Channels + Redis
+channels==4.2.0
+channels-redis==4.1.0
+# =============================================================================
+# END — 56 pinned packages (27 runtime + 29 dev/test/stubs)
+# =============================================================================
+#
+# Migration notes:
+#   - requirements.txt  (this file) is now the unified authoritative source.
+#   - requirements-dev.txt, requirements_proposed_final.txt,
+#     requirements_dev_proposed_final.txt remain as READ-ONLY archives.
+#   - gitleaks and semgrep were never pip dependencies; removed.
+#     (semgrep/semgrep-action@v1, gitleaks/gitleaks-action@v2 are GitHub Actions.)
+#   - type stubs updated to venv-resolved versions.
+#   - pylint resolved to 3.3.2 (pylint-django requires <4).
+#   - pytest resolved to 9.0.3 (CVE-2025-71176 fix; schemathesis bumped to 4.21.10 for compat).
+#   - coverage[toml] resolved to 7.10.6 (pytest-cov requires >=7.10.6).
+#   - import-linter resolved to 1.6.0 (1.6.6 never published on PyPI).
+#   - mutmut resolved to 3.6.0 (4.2.0 never published on PyPI).
+# =============================================================================
+    # pip-audit: subdependency explicitly fixed
+starlette==1.3.1

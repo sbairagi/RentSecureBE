@@ -1,7 +1,34 @@
-from properties.models import RentRecord
-from communication.utils import send_whatsapp_message
+import logging
 
-def send_signature_reminders():
-    rents = RentRecord.objects.filter(signature_status="PENDING")
-    for rent in rents:
-        send_whatsapp_message(rent.renter.phone, "🖊️ Reminder: Please sign your rent agreement.")
+from notification.services.whatsapp_service import send_whatsapp_message
+from properties.models import RentAgreementDraft
+
+logger = logging.getLogger(__name__)
+
+
+def send_signature_reminders() -> None:
+    """Send reminders for rent agreements where the renter has not yet signed.
+
+    ``RentRecord`` has no ``signature_status`` column — signature tracking
+    lives on ``RentAgreementDraft``.  We query that model instead.
+    """
+    unsigned = RentAgreementDraft.objects.filter(
+        renter_signed=False,
+    ).select_related("renter")
+    for draft in unsigned:
+        phone = draft.renter.whatsapp_number or draft.renter.phone or ""
+        if not phone:
+            logger.warning(
+                "No phone number for renter %s — skipping signature reminder",
+                draft.renter_id,
+            )
+            continue
+        try:
+            send_whatsapp_message(
+                phone, "🖊️ Reminder: Please sign your rent agreement."
+            )
+        except Exception:
+            logger.exception(
+                "Failed to send signature reminder to renter %s",
+                draft.renter_id,
+            )

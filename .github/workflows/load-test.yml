@@ -1,0 +1,102 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# LOAD TEST: Scalability Detection
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs Locust to detect scalability issues.
+# Never combined with benchmark.yml.
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Load Test
+
+'on':
+   workflow_call:
+   push:
+     branches:
+       - main
+       - master
+   pull_request:
+     branches: [main, master, dev]
+   merge_group: {}
+   workflow_dispatch:
+
+concurrency:
+  group: load-test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  load-test:
+    name: Load Test │ Locust Scalability Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      USE_SQLITE: "True"
+      SECRET_KEY: test-secret-key-loadtest-2026-abcdefghijklmnopqrstuvwxyz1234567890
+      DEBUG: "False"
+      DJANGO_ENV: test
+      ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
+      CELERY_TASK_ALWAYS_EAGER: "True"
+      CELERY_TASK_EAGER_PROPOGATES: "True"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "psycopg2-binary locust==2.32.0"
+          cache-key-suffix: "-load-test"
+      - name: Run migrations
+        run: python manage.py migrate --run-syncdb --verbosity=1
+      - name: Seed test data
+        run: python3 scripts/seed_load_test_data.py
+      - name: Start Django dev server
+        run: |
+          python manage.py runserver 0.0.0.0:8000 --noreload &
+          for i in $(seq 1 30); do
+            if python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/')" 2>/dev/null; then
+              echo "Server ready"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+        timeout-minutes: 10
+      - name: Run Locust load test
+        run: |
+          locust -f tests/load/locustfile.py \
+            --headless \
+            --host=http://127.0.0.1:8000 \
+            --users 20 \
+            --spawn-rate 2 \
+            --run-time 2m \
+            --html locust-report.html \
+            --csv locust-report \
+            --csv-full-history \
+            --exit-code-on-error 1 \
+            2>&1 | tee locust-output.txt
+        timeout-minutes: 10
+      - name: Check Locust performance thresholds
+        run: python3 scripts/check_perf_thresholds.py
+      - name: Upload Locust report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: locust-report
+          path: |
+            locust-report.html
+            locust-report_*.csv
+            locust-output.txt
+          retention-days: 30

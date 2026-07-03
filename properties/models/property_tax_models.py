@@ -1,8 +1,25 @@
-"""Placeholder module for property tax models.
-
-This file is part of the enterprise modular structure for the properties app.
-If actual property tax models are defined in a dedicated tax app, this module
-can be extended with local aliases or shared helpers.
+"""
+Property Tax Record model for tracking property tax payments and due dates.
 """
 
-__all__ = []
+from django.db import models
+
+from rentsecure_be.type_compat import override
+
+
+class PropertyTaxRecord(models.Model):
+    """Tracks property tax payments and due dates."""
+
+    property = models.ForeignKey(
+        "properties.Building", on_delete=models.CASCADE, related_name="tax_records"
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    due_date = models.DateField()
+    paid = models.BooleanField(default=False)
+    paid_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.property.name} - ₹{self.amount} due {self.due_date}"

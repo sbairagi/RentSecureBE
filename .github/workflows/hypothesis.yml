@@ -1,0 +1,73 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 3b: Hypothesis Property-Based Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+# PR: smoke property tests (--max-examples=25)
+# Nightly: full property tests (--max-examples=1000)
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Property-Based Testing
+
+'on':
+  workflow_call:
+    inputs:
+      hypothesis_mode:
+        description: "smoke for PRs, full for nightly"
+        type: string
+        default: "smoke"
+
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hypothesis-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hypothesis:
+    name: Stage 3b │ Hypothesis Property Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      USE_SQLITE: "True"
+      SECRET_KEY: "test-secret-key-hypothesis-2026-abcdefghijklmnopqrstuvwxyz1234567890"
+      DEBUG: "False"
+      DJANGO_ENV: test
+      HYPOTHESIS_VERBOSITY_LEVEL: "normal"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "psycopg2-binary hypothesis==6.136.0"
+          cache-key-suffix: "-hypothesis-${{ inputs.hypothesis_mode }}"
+      - name: Run Hypothesis property tests
+        env:
+          HYPOTHESIS_MAX_EXAMPLES: ${{ inputs.hypothesis_mode == 'full' && '1000' || '25' }}
+        run: |
+          python -m pytest tests/test_properties_hypothesis.py tests/test_core_hypothesis.py -v \
+            --hypothesis-show-statistics \
+            --tb=short \
+            --randomly-seed=last
+        timeout-minutes: 55
+      - name: Upload Hypothesis report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: hypothesis-results
+          path: |
+            .hypothesis/
+          retention-days: 30

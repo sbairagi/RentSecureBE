@@ -1,4 +1,7 @@
-def analyze_financial_health(rents, taxes):
+from typing import Any
+
+
+def analyze_financial_health(rents: list[Any], taxes: list[Any]) -> dict[str, Any]:
     on_time_rents = sum(1 for r in rents if not r.is_late)
     total_rents = len(rents)
 
@@ -20,5 +23,5 @@ def analyze_financial_health(rents, taxes):
         "rent_score": round(rent_score, 2),
         "tax_score": round(tax_score, 2),
         "overall_score": overall_score,
-        "suggestions": suggestions
+        "suggestions": suggestions,
     }

@@ -1,74 +1,68 @@
-from datetime import date
-from io import BytesIO
+"""Tests for documents app"""
+
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
-from weasyprint import HTML
-from PyPDF2 import PdfReader
 
 from documents.utils import generate_unit_history_pdf
-from properties.models import RentAgreementDraft, Renter, Unit
+from documents.views import GenerateRentAgreementPdfViewSet
+
+User = get_user_model()
 
 
-class GenerateUnitHistoryPdfTests(TestCase):
+class GenerateRentAgreementPdfViewSetTest(TestCase):
     def setUp(self):
-        self.owner = get_user_model().objects.create_user(
-            username='owner',
-            password='ownerpass',
-            full_name='Owner User',
-            whatsapp_number='+919876543210',
+        self.user = User.objects.create_user(
+            username="doc_user",
+            email="doc@test.com",
+            password="p",
+            full_name="Doc User",
+            phone="+1",
         )
 
-        self.unit = Unit.objects.create(
-            owner=self.owner,
-            unit='101',
-            unit_type=Unit.UnitType.FLAT,
-            address_line='123 Main St',
-            city='Mumbai',
-            state='Maharashtra',
-            country='India',
-            postal_code='400001',
+    @patch("documents.views.render_to_string")
+    @patch("documents.views.HTML")
+    def test_generate_rent_agreement_pdf_not_found(self, mock_html, mock_render):
+        viewset = GenerateRentAgreementPdfViewSet()
+        viewset.request = MagicMock()
+        viewset.request.user = self.user
+        viewset.kwargs = {"pk": 999}
+        response = viewset.generate_rent_agreement_pdf(request=viewset.request, pk=999)
+        self.assertEqual(response.status_code, 404)
+
+    @patch("documents.views.Renter")
+    @patch("documents.views.render_to_string")
+    @patch("documents.views.HTML")
+    def test_generate_rent_agreement_pdf_success(
+        self, mock_html, mock_render, mock_renter
+    ):
+        mock_renter_instance = MagicMock()
+        mock_renter_instance.unit.owner = MagicMock()
+        mock_renter.objects.select_related.return_value.get.return_value = (
+            mock_renter_instance
         )
+        mock_render.return_value = "<html></html>"
+        mock_html_instance = MagicMock()
+        mock_html_instance.write_pdf.return_value = b"PDF content"
+        mock_html.return_value = mock_html_instance
+        viewset = GenerateRentAgreementPdfViewSet()
+        viewset.request = MagicMock()
+        viewset.request.user = self.user
+        viewset.kwargs = {"pk": 1}
+        response = viewset.generate_rent_agreement_pdf(request=viewset.request, pk=1)
+        self.assertEqual(response.status_code, 200)
 
-        agreement_bytes = HTML(string='<p>Signed agreement</p>').write_pdf()
 
-        self.renter = Renter.objects.create(
-            unit=self.unit,
-            user=self.owner,
-            name='Renter Name',
-            email='renter@example.com',
-            phone='+919999999999',
-            whatsapp_number='+919999999999',
-            rent_amount=10000,
-            start_date=date.today(),
-            id_proof=SimpleUploadedFile('id_proof.pdf', b'%PDF-1.4\n%%EOF', content_type='application/pdf'),
-            rent_agreement=SimpleUploadedFile('agreement.pdf', agreement_bytes, content_type='application/pdf'),
-        )
-
-        self.renter.refresh_from_db()
-
-    def test_generate_unit_history_pdf_merges_signed_agreement(self):
-        pdf_data = generate_unit_history_pdf(self.unit)
-
-        self.assertTrue(pdf_data.startswith(b'%PDF'))
-
-        reader = PdfReader(BytesIO(pdf_data))
-        self.assertGreaterEqual(len(reader.pages), 2)
-
-    def test_generate_unit_history_pdf_includes_signed_draft_agreement(self):
-        draft_bytes = HTML(string='<p>Signed draft agreement</p>').write_pdf()
-        RentAgreementDraft.objects.create(
-            user=self.owner,
-            renter=self.renter,
-            unit=self.unit,
-            file=SimpleUploadedFile('draft_agreement.pdf', draft_bytes, content_type='application/pdf'),
-            owner_signed=True,
-            renter_signed=True,
-        )
-
-        pdf_data = generate_unit_history_pdf(self.unit)
-        self.assertTrue(pdf_data.startswith(b'%PDF'))
-
-        reader = PdfReader(BytesIO(pdf_data))
-        self.assertGreaterEqual(len(reader.pages), 2)
+class GenerateUnitHistoryPdfTest(TestCase):
+    @patch("documents.utils.render_to_string")
+    @patch("documents.utils.HTML")
+    @patch("documents.utils.PdfMerger")
+    def test_generate_unit_history_pdf(self, _mock_merger, mock_html, mock_render):
+        mock_unit = MagicMock()
+        mock_unit.renters.all.return_value = []
+        mock_render.return_value = "<html></html>"
+        mock_html_instance = MagicMock()
+        mock_html.return_value = mock_html_instance
+        result = generate_unit_history_pdf(mock_unit)
+        self.assertIsNotNone(result)

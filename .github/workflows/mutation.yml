@@ -1,0 +1,144 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 3d: Mutation Testing
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs mutmut to verify test suite catches code mutations
+# PR: smoke (subset of paths, fewer workers) — called from ci.yml
+# Push main/master + nightly: full (all paths, full workers)
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Mutation Testing
+
+'on':
+  workflow_call:
+    inputs:
+      mutation_mode:
+        description: "smoke for PRs, full for nightly/main"
+        type: string
+        default: "smoke"
+  push:
+    branches:
+      - main
+      - master
+
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutmut:
+    name: Stage 3d │ Mutation Testing (mutmut)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      USE_SQLITE: "True"
+      SECRET_KEY: test-secret-key-mutmut-2026-abcdefghijklmnopqrstuvwxyz1234567890
+      DEBUG: "False"
+      DJANGO_ENV: test
+      MUTMUT_CACHE_DIR: .mutmut-cache
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "psycopg2-binary mutmut==3.6.0"
+          cache-key-suffix: "-mutation-${{ inputs.mutation_mode }}"
+      - name: Run migrations
+        run: python manage.py migrate --run-syncdb --verbosity=1
+      - name: 'Configure mutmut (mode: ${{ inputs.mutation_mode }})'
+        run: |
+          mkdir -p .mutmut
+          if [ "${{ inputs.mutation_mode }}" == "smoke" ]; then
+            echo "SMOKE MODE: selecting changed files only for PR"
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD 2>/dev/null || true)
+            echo "Changed files: $CHANGED_FILES"
+            if [ -z "$CHANGED_FILES" ]; then
+              if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+                CHANGED_FILES=$(git diff --name-only HEAD~1 || echo "")
+                echo "Changed files (HEAD~1 fallback): $CHANGED_FILES"
+              fi
+            fi
+            PATHS=$(echo "$CHANGED_FILES" | grep -E '\.(py)$' | grep -v '__pycache__' | grep -v 'tests/' | grep -v '\.pyc' | tr '\n' ',' | sed 's/,$//' )
+            if [ -z "$PATHS" ]; then
+              echo "No Python source files changed — defaulting to core slim set"
+              PATHS="conftest.py,core/models.py,properties/models/,finance/models.py"
+            fi
+            echo "Selected paths_to_mutate: $PATHS"
+              printf '%s\n' \
+                '[mutmut]' \
+                "source_paths = $PATHS" \
+                'backups = .mutmut-backups' \
+                'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last -o addopts= --cov=rentsecure_be --cov=ai_assistant --cov=core --cov=dashboard --cov=documents --cov=finance --cov=notification --cov=properties --cov=referral_and_earn --cov=smartbot --cov-report=term-missing --cov-report=xml' \
+                'tests_dir = tests' \
+                'dict_paths =' \
+                'worker = 2' \
+                'show_progress = True' \
+                > .mutmut/config.ini
+          else
+            printf '%s\n' \
+               '[mutmut]' \
+               'source_paths = conftest.py,core/models.py,properties/models/,properties/services/,properties/utils/,finance/models.py,smartbot/services/,notification/services/,properties/feature_enforcer.py' \
+               'backups = .mutmut-backups' \
+               'runner = python -m pytest --no-header -q --tb=short --randomly-seed=last -o addopts= --cov=rentsecure_be --cov=ai_assistant --cov=core --cov=dashboard --cov=documents --cov=finance --cov=notification --cov=properties --cov=referral_and_earn --cov=smartbot --cov-report=term-missing --cov-report=xml' \
+               'tests_dir = tests' \
+               'dict_paths =' \
+               'worker = 4' \
+               'show_progress = True' \
+               > .mutmut/config.ini
+          fi
+      - name: Prepare mutmut sandbox
+        run: cp -f conftest.py mutants/conftest.py 2>/dev/null || true
+      - name: Run mutmut
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ vars.SKIP_MUTATION || '' }}" = "true" ] || [ "${SKIP_MUTATION:-}" = "true" ]; then
+            echo "SKIP_MUTATION=true; skipping mutation testing."
+            exit 0
+          fi
+          python -m mutmut run 2>&1 | tee mutmut-output.txt
+      - name: Report mutmut results
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ vars.SKIP_MUTATION || '' }}" = "true" ] || [ "${SKIP_MUTATION:-}" = "true" ]; then
+            echo "Skipping mutmut reporting because mutation testing was disabled."
+            exit 0
+          fi
+          python -m mutmut report
+      - name: Check mutation score
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ vars.SKIP_MUTATION || '' }}" = "true" ] || [ "${SKIP_MUTATION:-}" = "true" ]; then
+            echo "Skipping mutation score check because mutation testing was disabled."
+            exit 0
+          fi
+          python -m mutmut report 2>&1 | head -60
+          echo "Mutation score report generated successfully."
+      - name: Upload mutmut results artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: mutmut-results
+          path: |
+            mutmut-output.txt
+            .mutmut-cache/
+          retention-days: 30
+          compression-level: 1

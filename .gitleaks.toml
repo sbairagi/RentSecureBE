@@ -1,0 +1,5 @@
+[allowlist]
+  description = "Allowlist test-specific secret key patterns used in CI workflows"
+  regexes = [
+    '''test-secret-key-[a-z0-9-]+''',
+  ]

@@ -5,61 +5,61 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from core.models import UserProfile
-from properties.models import ExtraCharge, Renter, Unit
 from notification.services.extra_charge_reminders import send_due_extra_charge_reminders
+from properties.models import ExtraCharge, Renter, Unit
 
 
 class ExtraChargeReminderTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
-            username='testuser',
-            password='testpass',
-            full_name='Test User',
-            whatsapp_number='+911234567890',
+            username="testuser",
+            password="testpass",
+            full_name="Test User",
+            whatsapp_number="+911234567890",
         )
         self.profile, _ = UserProfile.objects.get_or_create(
             user=self.user,
             defaults={
-                'whatsapp_number': '+911234567890',
-                'language_preference': 'hi',
+                "whatsapp_number": "+911234567890",
+                "language_preference": "hi",
             },
         )
-        self.profile.whatsapp_number = '+911234567890'
-        self.profile.language_preference = 'hi'
+        self.profile.whatsapp_number = "+911234567890"
+        self.profile.language_preference = "hi"
         self.profile.save()
 
         self.owner = get_user_model().objects.create_user(
-            username='owner',
-            password='ownerpass',
-            full_name='Owner User',
-            whatsapp_number='+919876543210',
+            username="owner",
+            password="ownerpass",
+            full_name="Owner User",
+            whatsapp_number="+919876543210",
         )
 
         self.unit = Unit.objects.create(
             owner=self.owner,
-            unit='101',
+            unit="101",
             unit_type=Unit.UnitType.FLAT,
-            address_line='123 Test Street',
-            city='Mumbai',
-            state='Maharashtra',
-            country='India',
-            postal_code='400001',
+            address_line="123 Test Street",
+            city="Mumbai",
+            state="Maharashtra",
+            country="India",
+            postal_code="400001",
         )
 
         self.renter = Renter.objects.create(
             unit=self.unit,
             user=self.user,
-            name='Renter Name',
-            phone='+919999999999',
-            whatsapp_number='+919999999999',
+            name="Renter Name",
+            phone="+919999999999",
+            whatsapp_number="+919999999999",
             rent_amount=10000,
             start_date=date.today(),
         )
 
-    @patch('notification.services.extra_charge_reminders.send_whatsapp_audio')
-    @patch('notification.services.extra_charge_reminders.send_whatsapp_message')
-    @patch('notification.services.extra_charge_reminders.generate_voice_note')
-    @patch('notification.services.extra_charge_reminders.translate_msg')
+    @patch("notification.services.extra_charge_reminders.send_whatsapp_audio")
+    @patch("notification.services.extra_charge_reminders.send_whatsapp_message")
+    @patch("notification.services.extra_charge_reminders.generate_voice_note")
+    @patch("notification.services.extra_charge_reminders.translate_msg")
     def test_send_due_extra_charge_reminders_sends_text_and_audio(
         self,
         mock_translate,
@@ -67,13 +67,13 @@ class ExtraChargeReminderTests(TestCase):
         mock_send_whatsapp_message,
         mock_send_whatsapp_audio,
     ):
-        mock_translate.return_value = 'translated message'
-        mock_generate_voice_note.return_value = '/tmp/fake.mp3'
+        mock_translate.return_value = "translated message"
+        mock_generate_voice_note.return_value = "/tmp/fake.mp3"
 
         ExtraCharge.objects.create(
             renter=self.renter,
             unit=self.unit,
-            name='Maintenance',
+            name="Maintenance",
             amount=500,
             due_date=date.today(),
             status=ExtraCharge.Status.DUE,
@@ -85,20 +85,22 @@ class ExtraChargeReminderTests(TestCase):
         mock_translate.assert_called_once()
         mock_send_whatsapp_message.assert_called_once_with(
             self.renter.whatsapp_number,
-            'translated message',
+            "translated message",
         )
-        mock_generate_voice_note.assert_called_once_with('translated message', 'hi')
+        mock_generate_voice_note.assert_called_once_with("translated message", "hi")
         mock_send_whatsapp_audio.assert_called_once_with(
             self.renter.whatsapp_number,
-            '/tmp/fake.mp3',
+            "/tmp/fake.mp3",
         )
 
-    @patch('notification.services.extra_charge_reminders.send_whatsapp_message')
-    def test_send_due_extra_charge_reminders_skips_paid_and_non_due_charges(self, mock_send_whatsapp_message):
+    @patch("notification.services.extra_charge_reminders.send_whatsapp_message")
+    def test_send_due_extra_charge_reminders_skips_paid_and_non_due_charges(
+        self, mock_send_whatsapp_message
+    ):
         ExtraCharge.objects.create(
             renter=self.renter,
             unit=self.unit,
-            name='Electricity',
+            name="Electricity",
             amount=750,
             due_date=date.today(),
             status=ExtraCharge.Status.PAID,
@@ -106,7 +108,7 @@ class ExtraChargeReminderTests(TestCase):
         ExtraCharge.objects.create(
             renter=self.renter,
             unit=self.unit,
-            name='Late Fee',
+            name="Late Fee",
             amount=250,
             due_date=date.today(),
             status=ExtraCharge.Status.MISSED,

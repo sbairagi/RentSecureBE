@@ -3,4 +3,4 @@
 Usage limit models are currently registered in the core app.
 """
 
-__all__ = []
+__all__: list[str] = []

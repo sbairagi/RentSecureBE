@@ -1,0 +1,86 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# ARCHITECTURE CONTRACT GUARD
+# ═══════════════════════════════════════════════════════════════════════════════
+# This workflow enforces the approved CI/CD pipeline architecture.
+# The CI architecture itself is an enforceable contract.
+# Any unauthorized workflow modification must fail CI.
+#
+# This guard runs on every PR that modifies workflow files.
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Architecture Contract Guard
+
+'on':
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/architecture_contract.py'
+  push:
+    branches: [main, master]
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/architecture_contract.py'
+  merge_group:
+  # Also allow manual trigger for ad-hoc compliance checks
+  workflow_dispatch:
+
+concurrency:
+  group: architecture-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  id-token: write
+
+jobs:
+  enforce-contract:
+    name: Enforce Architecture Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1  # optimized shallow clone
+
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "pyyaml"
+          cache-key-suffix: "-architecture-guard"
+
+      - name: Run Architecture Contract Validator
+        id: contract-check
+        run: |
+          python scripts/architecture_contract.py --verbose
+
+      - name: Upload compliance report artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: architecture-compliance-report
+          path: |
+            architecture-compliance-report.json
+          retention-days: 90
+
+      - name: Post failure summary
+        if: failure()
+        run: |
+          echo "============================================"
+          echo "❌ ARCHITECTURE CONTRACT VIOLATION DETECTED"
+          echo "============================================"
+          echo ""
+          echo "The CI/CD pipeline structure has been modified"
+          echo "in a way that violates the approved architecture"
+          echo "contract."
+          echo ""
+          echo "To resolve:"
+          echo "  1. Revert workflow changes"
+          echo "  2. Or update the contract in:"
+          echo "     scripts/architecture_contract.py"
+          echo "  3. And update docs in:"
+          echo "     docs/architecture-contract.md"
+          echo "  4. Get architecture review approval"
+          echo ""
+          echo "See: docs/architecture-contract.md for details"
+          echo "============================================"

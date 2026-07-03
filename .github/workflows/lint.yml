@@ -1,0 +1,202 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 1-2: Setup & Code Quality (Fast-Fail)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Jobs: pre-commit, black, ruff, pylint, mypy (strict), vulture (dead code)
+# All jobs run in parallel for minimal wall-clock time.
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Lint
+
+'on':
+  workflow_call:
+    inputs:
+      python-version:
+        type: string
+        default: "3.12"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: Stage 1 │ Pre-commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: ${{ inputs.python-version }}
+          extra-packages: "pre-commit"
+          cache-key-suffix: "-pre-commit"
+      - name: Run Pre-commit
+        run: pre-commit run --all-files
+
+  black:
+    name: Stage 2a │ Black Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: ${{ inputs.python-version }}
+          extra-packages: "black"
+          cache-key-suffix: "-black"
+      - name: Run Black Format Check
+        run: python -m black --check .
+
+  ruff:
+    name: Stage 2b │ Ruff Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: ${{ inputs.python-version }}
+          extra-packages: "ruff"
+          cache-key-suffix: "-ruff"
+      - name: Run Ruff Lint
+        run: python -m ruff check .
+
+  pylint:
+    name: Stage 2c │ Pylint Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: ${{ inputs.python-version }}
+          extra-packages: "setuptools pylint pylint-django"
+          cache-key-suffix: "-pylint"
+      - name: Run Pylint Analysis
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          SKIP_DJANGO_SIGNALS: "1"
+        run: python -m pylint rentsecure_be ai_assistant core dashboard documents finance notification properties referral_and_earn smartbot
+
+  mypy:
+    name: Stage 2d │ Mypy (Strict Typing)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: ${{ inputs.python-version }}
+          extra-packages: "setuptools mypy==1.13.0 types-requests types-python-dateutil types-openpyxl django-stubs==4.2.7 django-stubs-ext==4.2.7 djangorestframework-stubs==3.16.9 --no-deps"
+          cache-key-suffix: "-mypy"
+      - name: Verify Mypy Configuration
+        run: python -m mypy --show-error-codes --pretty --show-column-numbers --show-error-context .
+      - name: Run Mypy
+        run: python -m mypy --config-file=mypy.ini .
+
+  vulture:
+    name: Stage 2e │ Vulture (Dead Code Detection)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: ${{ inputs.python-version }}
+          extra-packages: "vulture"
+          cache-key-suffix: "-vulture"
+      - name: Run Vulture (Dead Code Detection)
+        run: |
+          python -m vulture \
+            --exclude .venv,venv,build,dist,migrations,__pycache__,.pytest_cache,.github,.kilo \
+            --exclude properties/_legacy,properties/refactored_models_combined.py,properties/original_models.py \
+            --exclude properties/signals,core/signals.py,referral_and_earn/signals.py \
+            --min-confidence 80 \
+            rentsecure_be core properties finance notification documents smartbot referral_and_earn ai_assistant dashboard \
+            2>&1 | tee vulture-report.txt

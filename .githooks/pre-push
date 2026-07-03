@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+
+echo "Running pre-commit hooks before pushing..."
+if ! command -v pre-commit >/dev/null 2>&1; then
+  echo "error: pre-commit is not installed. Install with 'pip install pre-commit' or via requirements.txt."
+  exit 1
+fi
+
+pre-commit run --hook-stage pre-push

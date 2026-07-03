@@ -1,7 +1,10 @@
-from notification.services.whatsapp_service import send_whatsapp_message
 from datetime import date
+from typing import Any
 
-def send_rent_reminder(renter, days_left):
+from notification.services.whatsapp_service import send_whatsapp_message
+
+
+def send_rent_reminder(renter: Any, days_left: int) -> None:
     rent_due_date = date.today().replace(day=renter.rent_due_day)
 
     if days_left > 0:
@@ -12,5 +15,3 @@ def send_rent_reminder(renter, days_left):
         msg = f"⚠️ Rent payment is overdue since {rent_due_date.strftime('%d %b')}. Please pay immediately to avoid late fees."
 
     send_whatsapp_message(renter.phone, msg)
-
-

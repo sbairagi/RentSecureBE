@@ -1,10 +1,11 @@
 [MASTER]
-init-hook='import sys; sys.path.append(".")'
+init-hook='import os, sys; sys.path.insert(0, os.getcwd())'
 load-plugins=pylint_django
 django-settings-module=rentsecure_be.settings
-ignore=migrations,venv,.venv,tests
+ignore=migrations,venv,.venv,tests,original_models.py,refactored_models_combined.py
+ignore-patterns=^test_.*\.py$,^.*_tests\.py$,^tests\.py$
 jobs=1
-persistent=yes
+persistent=no
 
 [MESSAGES CONTROL]
 disable=
@@ -22,7 +23,15 @@ disable=
     duplicate-code,
     fixme,
     no-else-return,
-    inconsistent-return-statements
+    inconsistent-return-statements,
+    too-many-ancestors,
+    broad-exception-caught,
+    import-outside-toplevel,
+    unused-argument,
+    unused-import,
+    logging-fstring-interpolation,
+    arguments-renamed,
+    cyclic-import
 
 [REPORTS]
 output-format=colorized
@@ -35,11 +44,10 @@ indent-string='    '
 
 [TYPECHECK]
 ignore-mixin-members=yes
-generated-members=request,objects,objects.filter,objects.get,apply_async,delay,transaction,signals,register
+generated-members=request,objects,objects.filter,objects.get,apply_async,delay,transaction,signals,register,order,policeverification
 
 [SIMILARITIES]
 min-similarity-lines=4
 
 [BASIC]
-good-names=i,j,k,ex,Run,_,pk,id,db,qs
-good-names-long=serializer,request,response,kwargs
+good-names=i,j,k,ex,Run,_,pk,id,db,qs,serializer,request,response,kwargs

@@ -230,7 +230,7 @@ TEST_EXECUTION = {
     "run_all_tests": [
         "cd /Users/sbairagi/Desktop/MVP\\ Project/RentSecureBE",
         "python manage.py test properties.test_e2e_comprehensive",
-        "python manage.py test properties.test_api_integration", 
+        "python manage.py test properties.test_api_integration",
         "python manage.py test properties.test_loopholes_critical"
     ],
     "run_specific_test_class": [

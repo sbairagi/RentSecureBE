@@ -1,0 +1,31 @@
+{
+  "project": "RentSecureBE",
+  "version": "1.0",
+  "purpose": "RAG chunk manifest for AI retrieval",
+  "base_path": "docs/rag/",
+  "chunks": [
+    {"id": "RAG-001", "file": "project-summary.md", "tags": ["overview", "product", "owners", "renters"]},
+    {"id": "RAG-002", "file": "tech-stack.md", "tags": ["django", "drf", "dependencies", "infrastructure"]},
+    {"id": "RAG-003", "file": "repository-structure.md", "tags": ["folders", "layout", "navigation"]},
+    {"id": "RAG-004", "file": "django-apps-inventory.md", "tags": ["installed_apps", "urls", "apps"]},
+    {"id": "RAG-005", "file": "data-model-core.md", "tags": ["User", "SubscriptionPlan", "OTP", "models"]},
+    {"id": "RAG-006", "file": "data-model-properties.md", "tags": ["Building", "Unit", "Renter", "RentRecord", "models"]},
+    {"id": "RAG-007", "file": "entity-relationships.md", "tags": ["foreign keys", "ownership", "ER"]},
+    {"id": "RAG-008", "file": "api-authentication.md", "tags": ["JWT", "OTP", "auth", "api"]},
+    {"id": "RAG-009", "file": "api-properties-owner.md", "tags": ["buildings", "units", "renters", "api"]},
+    {"id": "RAG-010", "file": "api-properties-renter.md", "tags": ["renter", "rent-due", "api"]},
+    {"id": "RAG-011", "file": "api-finance-documents.md", "tags": ["finance", "tax", "pdf", "api"]},
+    {"id": "RAG-012", "file": "subscription-and-limits.md", "tags": ["subscription", "FeatureEnforcer", "limits"]},
+    {"id": "RAG-013", "file": "payments-razorpay-cashfree.md", "tags": ["razorpay", "cashfree", "webhook", "payout"]},
+    {"id": "RAG-014", "file": "notifications-and-reminders.md", "tags": ["whatsapp", "email", "fcm", "notifications"]},
+    {"id": "RAG-015", "file": "external-integrations.md", "tags": ["twilio", "leegality", "openai", "aws"]},
+    {"id": "RAG-016", "file": "signals-celery-commands.md", "tags": ["signals", "celery", "management commands"]},
+    {"id": "RAG-017", "file": "smartbot-and-ai-assistant.md", "tags": ["smartbot", "gpt", "ai_assistant"]},
+    {"id": "RAG-018", "file": "referral-program.md", "tags": ["referral", "bonus"]},
+    {"id": "RAG-019", "file": "glossary.md", "tags": ["terms", "enums", "definitions"]},
+    {"id": "RAG-020", "file": "environment-configuration.md", "tags": ["env", "settings", "config"]},
+    {"id": "RAG-021", "file": "known-issues-for-ai.md", "tags": ["bugs", "security", "caveats"]},
+    {"id": "RAG-022", "file": "business-rules-pointer.md", "tags": ["policy", "business rules"]},
+    {"id": "RAG-023", "file": "development-runbook.md", "tags": ["setup", "migrate", "pytest", "runserver"]}
+  ]
+}

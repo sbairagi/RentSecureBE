@@ -3,4 +3,4 @@
 Actual property tax administration is managed by the dedicated tax or finance app.
 """
 
-__all__ = []
+__all__: list[str] = []

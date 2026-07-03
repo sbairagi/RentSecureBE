@@ -1,11 +1,24 @@
-from properties.models import RentRecord
+"""
+Smartbot Celery/cron tasks.
 
-# tasks.py (Celery or cron)
+This module is intentionally kept minimal. It exists to satisfy the
+historical import surface; the signature-polling logic it used to
+perform was removed because ``RentRecord`` does not (and never did)
+carry ``signature_status`` or ``signature_request_id`` columns. Those
+fields live on :class:`properties.models.RentAgreementDraft` (see
+``properties.views.unit_views.leegality_webhook`` for the canonical
+implementation).
+"""
 
-def poll_signature_status():
-    rents = RentRecord.objects.filter(signature_status="PENDING")
-    for rent in rents:
-        status = check_signature_status(rent.signature_request_id)
-        if status == "SIGNED":
-            rent.signature_status = "SIGNED"
-            rent.save()
+
+# Keep the symbol below for backward-compatibility with any
+# ``from smartbot.tasks import poll_signature_status`` callers.
+# The function is a no-op because the underlying feature was retired
+# in favour of webhook-driven signature updates on RentAgreementDraft.
+def poll_signature_status() -> None:
+    """No-op stub retained for backward compatibility.
+
+    Real-time signature updates are now driven by the Leegality webhook
+    in :mod:`properties.views.unit_views`.
+    """
+    return None

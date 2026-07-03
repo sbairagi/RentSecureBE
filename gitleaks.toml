@@ -1,0 +1,14 @@
+title = "gitleaks config"
+
+[allowlist]
+description = "RentSecureBE-specific false-positive patterns"
+paths = [
+    { description = "Example env with fake placeholder keys", globs = [".env.example"] },
+    { description = "Lockfiles contain hashes, not secrets", globs = ["**/requirements*.txt"] },
+    { description = "Migration files contain historical model state", globs = ["**/migrations/*.py"] },
+    { description = "Git hooks directory", globs = [".githooks/**"] },
+    { description = "Fake test fixtures", globs = ["**/conftest.py", "**/test_*.py", "**/tests.py", "**/tests/**/*.py"] },
+    { description = "Coverage report", globs = ["**/coverage.xml", "**/htmlcov/**"] },
+    { description = "CI logs", globs = ["**/*.log"] },
+    { description = "Pycache", globs = ["**/__pycache__/**"] },
+]

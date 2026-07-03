@@ -1,0 +1,76 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# BENCHMARK: Performance Regression Detection
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs pytest-benchmark to detect performance regressions.
+# Never combined with load-test.yml.
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Benchmark
+
+'on':
+   workflow_call:
+   push:
+     branches:
+       - main
+       - master
+   pull_request:
+     branches: [main, master, dev]
+   merge_group: {}
+   workflow_dispatch:
+
+concurrency:
+  group: benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: Benchmark │ Pytest-Benchmark Regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      USE_SQLITE: "True"
+      SECRET_KEY: test-secret-key-perf-bench-2026-abcdefghijklmnopqrstuvwxyz1234567890
+      DEBUG: "False"
+      DJANGO_ENV: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "psycopg2-binary pytest-benchmark==4.0.0"
+          cache-key-suffix: "-benchmark"
+      - name: Run migrations
+        run: python manage.py migrate --run-syncdb --verbosity=1
+      - name: Run benchmark tests
+        run: |
+          python -m pytest tests/test_performance_benchmarks.py -v \
+            --benchmark-only \
+            --benchmark-json=benchmark-results.json \
+            --benchmark-sort=mean \
+            --benchmark-columns=min,max,mean,stddev,median,rounds \
+            --tb=short
+        timeout-minutes: 25
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark-results.json
+          retention-days: 90

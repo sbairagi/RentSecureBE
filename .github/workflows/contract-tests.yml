@@ -1,0 +1,71 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 3c: API Contract Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+# Validates DRF API endpoints match documented contract/schema
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Contract Testing
+
+'on':
+  workflow_call:
+  pull_request:
+    branches: [main, master, dev]
+
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contract-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract-test:
+    name: Stage 3c │ API Contract Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      USE_SQLITE: "True"
+      SECRET_KEY: "test-secret-key-contract-test-2026-abcdefghijklmnopqrstuvwxyz1234567890!"
+      DEBUG: "False"
+      DJANGO_ENV: test
+      ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "psycopg2-binary schemathesis"
+          cache-key-suffix: "-contract-tests"
+      - name: Run migrations
+        run: python manage.py migrate --run-syncdb --verbosity=1
+      - name: Validate DRF API contract (critical endpoints)
+        env:
+          SECRET_KEY: "test-secret-key-contract-test-2026-abcdefghijklmnopqrstuvwxyz1234567890!"
+        shell: bash
+        run: |
+          set -euo pipefail
+          if python manage.py test tests.test_api_contracts --verbosity=2 --no-input --randomly-seed=last; then
+            exit 0
+          fi
+          python -m pytest tests/test_api_contracts.py -v --tb=short --randomly-seed=last
+      - name: Run contract schema validation
+        env:
+          SECRET_KEY: "test-secret-key-contract-test-2026-abcdefghijklmnopqrstuvwxyz1234567890!"
+          PYTHONPATH: ${{ github.workspace }}
+          SECURE_SSL_REDIRECT: "False"
+          DEBUG: "True"
+        run: python3 scripts/check_api_contracts.py

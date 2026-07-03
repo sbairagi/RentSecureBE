@@ -1,7 +1,14 @@
+# mypy: disable-error-code="import-untyped"
+from typing import Any
+
+from simple_history.models import HistoricalRecords
+
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from simple_history.models import HistoricalRecords
-from django.conf import settings
+
+from rentsecure_be.type_compat import override
+
 
 # User Models
 class User(AbstractUser):
@@ -9,21 +16,31 @@ class User(AbstractUser):
     phone = models.CharField(max_length=15, blank=True)
     is_investor = models.BooleanField(default=False)
     is_phone_verified = models.BooleanField(default=False)
-    whatsapp_number = models.CharField(max_length=15, help_text="Include country code, e.g. +91xxxxxxxxxx")
+    whatsapp_number = models.CharField(
+        max_length=15, help_text="Include country code, e.g. +91xxxxxxxxxx"
+    )
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return self.full_name
-    
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    whatsapp_number = models.CharField(max_length=15, help_text="Include country code, e.g. +91xxxxxxxxxx")
+    whatsapp_number = models.CharField(
+        max_length=15, help_text="Include country code, e.g. +91xxxxxxxxxx"
+    )
     whatsapp_opt_in = models.BooleanField(default=True)
-    language_preference = models.CharField(max_length=2, default="en", choices=[("en", "English"), ("hi", "Hindi")])
+    language_preference = models.CharField(
+        max_length=2, default="en", choices=[("en", "English"), ("hi", "Hindi")]
+    )
 
 
 class NotificationPreference(models.Model):
-    owner = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_preference')
+    owner = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="notification_preference"
+    )
     rent_alerts_whatsapp = models.BooleanField(default=True)
     rent_alerts_email = models.BooleanField(default=True)
     monthly_summary_email = models.BooleanField(default=True)
@@ -31,7 +48,27 @@ class NotificationPreference(models.Model):
     payout_alerts_whatsapp = models.BooleanField(default=True)
     payout_alerts_email = models.BooleanField(default=False)
 
-    def __str__(self):
+    @override
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Handle upsert for NotificationPreference
+        is_new = self.pk is None
+        if is_new and self.owner_id is not None:
+            existing = NotificationPreference.objects.filter(
+                owner_id=self.owner_id
+            ).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {"id", "owner"}:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
+
+    @override
+    def __str__(self) -> str:
         return f"Notification Preferences for {self.owner.email or self.owner.username}"
 
 
@@ -46,23 +83,28 @@ class OTP(models.Model):
 
 # models.py
 
+
 class OwnerBankDetails(models.Model):
-    owner = models.OneToOneField(User, on_delete=models.CASCADE)  # or PropertyOwner if you have that
+    owner = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="bank_details"
+    )
     bank_account_number = models.CharField(max_length=30)
     ifsc_code = models.CharField(max_length=20)
-    beneficiary_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    account_holder_name = models.CharField(max_length=100, blank=True, default="")
+    beneficiary_id = models.CharField(max_length=100, unique=True, blank=True)
     bank_account_verified = models.BooleanField(default=False)
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f"{self.owner.username} - {self.bank_account_number}"
 
-   
+
 #  Subscription Models
 class SubscriptionPlan(models.Model):
     PLAN_CHOICES = [
-        ('free', 'Free'),
-        ('pro', 'Pro'),
-        ('elite', 'Elite'),
+        ("free", "Free"),
+        ("pro", "Pro"),
+        ("elite", "Elite"),
     ]
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50, choices=PLAN_CHOICES, unique=True)
@@ -74,37 +116,87 @@ class SubscriptionPlan(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
+    @override
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Handle upsert for SubscriptionPlan
+        is_new = self.pk is None
+        if is_new and self.name:
+            existing = SubscriptionPlan.objects.filter(name=self.name).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {"id", "name", "created_at", "updated_at"}:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
+
+    @override
+    def __str__(self) -> str:
         return self.name.capitalize()
-    
+
+
 class UserSubscription(models.Model):
     id = models.AutoField(primary_key=True)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='usersubscription')
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="usersubscription"
+    )
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True)
     start_date = models.DateField(auto_now_add=True)
     end_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_yearly = models.BooleanField(default=False)
-    tax_reminder_days_before = models.PositiveIntegerField(default=7, help_text="Days before tax due date to send reminder")
-    rent_reminder_days_before = models.PositiveIntegerField(default=7, help_text="Days before rent due date to send reminder")
+    tax_reminder_days_before = models.PositiveIntegerField(
+        default=7, help_text="Days before tax due date to send reminder"
+    )
+    rent_reminder_days_before = models.PositiveIntegerField(
+        default=7, help_text="Days before rent due date to send reminder"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return f"{self.user.username} - {self.plan.name}"
+    @override
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Handle upsert for UserSubscription
+        is_new = self.pk is None
+        if is_new and self.user_id is not None:
+            existing = UserSubscription.objects.filter(user_id=self.user_id).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {
+                        "id",
+                        "user",
+                        "start_date",
+                        "created_at",
+                        "updated_at",
+                    }:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.user.username} - {self.plan.name if self.plan else 'no plan'}"
+
 
 class AddOnPurchase(models.Model):
     FEATURE_CHOICES = [
-        ('max_buildings', 'Max Buildings'),
-        ('max_units', 'Max Units'),
-        ('max_renters', 'Max Renters per Unit'),
-        ('max_caretakers', 'Max Caretakers per Unit'),
-        ('max_unit_images', 'Max Unit Images'),
-        ('max_document_uploads', 'Max Document Uploads per Unit'),
-        ('tax_notifications', 'Tax Notifications'),
-        ('whatsapp_alerts', 'WhatsApp Alerts'),
-        ('rent_agreement_drafting', 'Rent Agreement Drafting'),
-        ('export_pdf_dossier', 'Export PDF Dossier'),
+        ("max_buildings", "Max Buildings"),
+        ("max_units", "Max Units"),
+        ("max_renters", "Max Renters per Unit"),
+        ("max_caretakers", "Max Caretakers per Unit"),
+        ("max_unit_images", "Max Unit Images"),
+        ("max_document_uploads", "Max Document Uploads per Unit"),
+        ("tax_notifications", "Tax Notifications"),
+        ("whatsapp_alerts", "WhatsApp Alerts"),
+        ("rent_agreement_drafting", "Rent Agreement Drafting"),
+        ("export_pdf_dossier", "Export PDF Dossier"),
     ]
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -113,32 +205,78 @@ class AddOnPurchase(models.Model):
     is_recurring = models.BooleanField(default=False)
     purchase_date = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return f"{self.name} - {self.user.username}"
-    
+
+
 class PlanFeatureLimit(models.Model):
     id = models.AutoField(primary_key=True)
-    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, related_name='limits')
+    plan = models.ForeignKey(
+        SubscriptionPlan, on_delete=models.CASCADE, related_name="limits"
+    )
     feature_key = models.CharField(max_length=50, choices=AddOnPurchase.FEATURE_CHOICES)
     value = models.CharField(max_length=20)  # store int or 'unlimited' or 'yes/no'
 
     class Meta:
-        unique_together = ('plan', 'feature_key')
+        unique_together = ("plan", "feature_key")
 
-    def __str__(self):
+    @override
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if (
+            self.pk is None  # type: ignore[unreachable]
+            and self.plan_id is not None
+            and self.feature_key
+        ):
+            existing = PlanFeatureLimit.objects.filter(  # type: ignore[unreachable]
+                plan_id=self.plan_id,
+                feature_key=self.feature_key,
+            ).first()
+            if existing:
+                existing.value = self.value
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
+
+    @override
+    def __str__(self) -> str:
         return f"{self.plan.name} - {self.feature_key}: {self.value}"
-    
+
+
 class UsageLimit(models.Model):
     id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='usage_limits')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="usage_limits"
+    )
     feature_key = models.CharField(max_length=50, choices=AddOnPurchase.FEATURE_CHOICES)
     usage_count = models.IntegerField(default=0)
 
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('user', 'feature_key')
+        unique_together = ("user", "feature_key")
 
-    def __str__(self):
+    @override
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if (
+            self.pk is None  # type: ignore[unreachable]
+            and self.user_id is not None
+            and self.feature_key
+        ):
+            existing = UsageLimit.objects.filter(  # type: ignore[unreachable]
+                user_id=self.user_id,
+                feature_key=self.feature_key,
+            ).first()
+            if existing:
+                existing.usage_count = self.usage_count
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
+
+    @override
+    def __str__(self) -> str:
         return f"{self.user.username} - {self.feature_key}: {self.usage_count}"
-    

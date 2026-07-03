@@ -1,0 +1,255 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 6: Security & Supply Chain (PR Fast-Track)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: Bandit (matrix per app), Pip-audit, Semgrep, Trivy FS, Gitleaks
+# Deep scans (CodeQL, Scorecard, Dependency Review) run in security-deep.yml nightly.
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Security
+
+'on':
+  workflow_call:
+    inputs:
+      run_dependency_review:
+        description: "Run dependency-review job (true for PRs)"
+        type: boolean
+        default: false
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches: [main, master, dev]
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  bandit:
+    name: Stage 6a │ Bandit (SAST — Matrix)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        app: [rentsecure_be, core, properties, ai_assistant, notification, finance, smartbot, referral_and_earn, dashboard, documents]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "bandit"
+          cache-key-suffix: "-bandit"
+      - name: Run Bandit on ${{ matrix.app }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m bandit -r ${{ matrix.app }} \
+            -x '*/tests/*,*/test_*.py,.venv,venv,migrations,.kilo,.github,management' \
+            -lll
+
+  pip-audit:
+    name: Stage 6b │ Pip-audit (Dependency Scanner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "pip-audit"
+          cache-key-suffix: "-pip-audit"
+      - name: Run Pip-audit on full requirements
+        run: python -m pip_audit --requirement=requirements.txt --vulnerability-service=pypi --ignore-vuln PYSEC-2022-252
+
+  semgrep:
+    name: Stage 6c │ Semgrep (SAST — OWASP + Django)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@713efdd345f3035192eaa63f56867b88e63e4e5d  # v1
+        with:
+          config: >-
+            p/security-audit
+            p/owasp-top-ten
+            p/django
+          output: semgrep.sarif
+      - name: Upload Semgrep SARIF to GitHub Security
+        if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a  # v4
+        continue-on-error: true
+        with:
+          sarif_file: semgrep.sarif
+
+  trivy:
+    name: Stage 6d │ Trivy (FS Vulnerability Scan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: 'sarif'
+          output: trivy-results.sarif
+          severity: 'CRITICAL,HIGH'
+          skip-dirs: .venv,venv,build,dist,node_modules,.kilo,htmlcov
+          vuln-type: 'os,library'
+          ignore-unfixed: true
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db
+      - name: Upload Trivy SARIF to GitHub Security
+        if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a  # v4
+        continue-on-error: true
+        with:
+          sarif_file: trivy-results.sarif
+
+  trivy-secrets:
+    name: Stage 6e │ Trivy (Secret Scanning)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - name: Run Trivy Secret Scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: 'sarif'
+          output: trivy-secrets.sarif
+          severity: 'HIGH,CRITICAL'
+          security-checks: secret
+          ignore-unfixed: true
+      - name: Upload Trivy Secret SARIF
+        if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a  # v4
+        continue-on-error: true
+        with:
+          sarif_file: trivy-secrets.sarif
+
+  dependency-review:
+    name: Stage 6f │ Dependency Review (License + Vuln)
+    if: ${{ inputs.run_dependency_review }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-dep-review"
+      - name: Dependency Review
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48  # v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0

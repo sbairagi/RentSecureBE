@@ -1,251 +1,330 @@
-from notification.services.late_fees_notify_service import notify_owner_about_late_fee, notify_renter_about_late_fee
-from core.models import UsageLimit, UserSubscription, PlanFeatureLimit, AddOnPurchase
-from properties.models import RentRecord, Unit
-from rest_framework.exceptions import PermissionDenied
-from django.db import transaction
-from django.utils import timezone
-from django.core.exceptions import ValidationError
-from django.db.models import Sum
-from datetime import date
-from dateutil.relativedelta import relativedelta
+from __future__ import annotations
+
 import hashlib
+import tempfile
+from typing import Any, Literal, Union
+
+from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.files.uploadedfile import UploadedFile
+from django.db.models import Sum
+from django.template.loader import render_to_string
+
+from core.models import (
+    AddOnPurchase,
+    PlanFeatureLimit,
+    UsageLimit,
+    User,
+    UserSubscription,
+)
+from notification.services.late_fees_notify_service import (
+    notify_owner_about_late_fee,
+    notify_renter_about_late_fee,
+)
+from properties.feature_enforcer import FeatureEnforcer
+from properties.models import RentRecord, Unit
+
+# ---------------------------------------------------------------------------
+# Type aliases
+# ---------------------------------------------------------------------------
+
+#: A normalized feature limit is either an integer count or the literal
+#: ``"unlimited"``.
+FeatureLimit = Union[int, Literal["unlimited"]]  # noqa: UP007
+
+#: Result of :func:`check_feature_limit`.
+FeatureCheckResult = tuple[bool, int, FeatureLimit, int]
 
 
-def get_plan_limit(user, feature_key):
-    try:
-        from core.models import PlanFeatureLimit
-        plan = user.usersubscription.plan
-        limit = PlanFeatureLimit.objects.get(plan=plan, feature_key=feature_key)
-        return limit.value
-    except:
+# ---------------------------------------------------------------------------
+# Plan / feature helpers
+# ---------------------------------------------------------------------------
+
+
+def get_plan_limit(user: User | AnonymousUser, feature_key: str) -> str | None:
+    """Return the raw ``value`` for the user's plan/feature, or ``None``."""
+    if not user.is_authenticated:
         return None
-
-
-def has_remaining_usage(user, feature_key):
-    plan_limit = get_plan_limit(user, feature_key)
-    if plan_limit in ['unlimited', 'yes']:
-        return True
     try:
-        allowed = int(plan_limit)
-        used = UsageLimit.objects.get(user=user, feature_key=feature_key).usage_count
-        return used < allowed
-    except:
+        plan = user.usersubscription.plan
+        limit: PlanFeatureLimit = PlanFeatureLimit.objects.get(
+            plan=plan, feature_key=feature_key
+        )
+    except (
+        AttributeError,
+        PlanFeatureLimit.DoesNotExist,
+        UserSubscription.DoesNotExist,
+    ):
+        return None
+    return limit.value
+
+
+def has_remaining_usage(user: User | AnonymousUser, feature_key: str) -> bool:
+    """Return ``True`` if the user can perform one more action of ``feature_key``."""
+    if not user.is_authenticated:
         return False
 
+    from django.contrib.auth import get_user_model
 
-def update_usage_count(user, feature_key, model_class):
+    runtime_user = get_user_model().objects.get(pk=int(user.pk))
+    plan_limit: str | None = get_plan_limit(runtime_user, feature_key)
+    if plan_limit in ("unlimited", "yes"):
+        return True
+    try:
+        allowed: int = int(plan_limit)  # type: ignore[arg-type]
+        used: int = UsageLimit.objects.get(
+            user=runtime_user, feature_key=feature_key
+        ).usage_count
+    except (TypeError, ValueError, UsageLimit.DoesNotExist):
+        return False
+    return used < allowed
+
+
+def update_usage_count(
+    user: User | AnonymousUser, feature_key: str, model_class: type[Any]
+) -> None:
+    """Recompute and persist the user's usage count for ``feature_key``."""
     if not user.is_authenticated:
         return
 
-    if model_class == Unit:
-        count = model_class.objects.filter(owner=user).count()
-    elif model_class.__name__ == 'Building':
-        count = model_class.objects.filter(owner=user).count()
-    else:
-        count = model_class.objects.filter(unit__owner=user).count()
+    from django.contrib.auth import get_user_model
 
-    usage_limit, _ = UsageLimit.objects.get_or_create(user=user, feature_key=feature_key)
+    runtime_user = get_user_model().objects.get(pk=int(user.pk))
+
+    if model_class is Unit:
+        count: int = model_class.objects.filter(owner=runtime_user).count()
+    elif model_class.__name__ == "Building":
+        count = model_class.objects.filter(owner=runtime_user).count()
+    else:
+        count = model_class.objects.filter(unit__owner=runtime_user).count()
+
+    usage_limit: UsageLimit
+    usage_limit, _ = UsageLimit.objects.get_or_create(
+        user=runtime_user, feature_key=feature_key
+    )
     usage_limit.usage_count = count
     usage_limit.save()
 
 
-def enforce_limit(user, feature_key):
+def enforce_limit(user: User | AnonymousUser, feature_key: str) -> None:
+    """Raise :class:`PermissionDenied` if the user cannot use ``feature_key``."""
     if not user.is_authenticated:
         return
 
-    subscription = UserSubscription.objects.filter(user=user, is_active=True).first()
+    from django.contrib.auth import get_user_model
+
+    runtime_user = get_user_model().objects.get(pk=int(user.pk))
+
+    subscription: UserSubscription | None = UserSubscription.objects.filter(
+        user=runtime_user, is_active=True
+    ).first()
     if not subscription:
         raise PermissionDenied("No active subscription found.")
 
     try:
-        from core.models import PlanFeatureLimit
-        feature_limit = PlanFeatureLimit.objects.get(plan=subscription.plan, feature_key=feature_key)
-    except PlanFeatureLimit.DoesNotExist:
-        raise PermissionDenied(f"Feature limit for {feature_key} not found in plan.")
+        feature_limit: PlanFeatureLimit = PlanFeatureLimit.objects.get(
+            plan=subscription.plan, feature_key=feature_key
+        )
+    except PlanFeatureLimit.DoesNotExist as exc:
+        raise PermissionDenied(
+            f"Feature limit for {feature_key} not found in plan."
+        ) from exc
 
-    allowed_value = feature_limit.value
-    usage = UsageLimit.objects.filter(user=user, feature_key=feature_key).first()
-    current_usage = usage.usage_count if usage else 0
+    allowed_value: str = feature_limit.value
+    usage: UsageLimit | None = UsageLimit.objects.filter(
+        user=runtime_user, feature_key=feature_key
+    ).first()
+    current_usage: int = usage.usage_count if usage else 0
 
-    if allowed_value.lower() in ['unlimited', 'yes']:
+    if allowed_value.lower() in ("unlimited", "yes"):
         return
 
-    if allowed_value.lower() == 'no':
-        raise PermissionDenied(f"This feature ({feature_key}) is not available in your plan.")
+    if allowed_value.lower() == "no":
+        raise PermissionDenied(
+            f"This feature ({feature_key}) is not available in your plan."
+        )
 
     if current_usage >= int(allowed_value):
-        raise PermissionDenied(f"Feature limit exceeded for {feature_key}: allowed {allowed_value}, used {current_usage}.")
+        raise PermissionDenied(
+            f"Feature limit exceeded for {feature_key}: "
+            f"allowed {allowed_value}, used {current_usage}."
+        )
 
 
-def generate_file_hash(file):
-    """Generate SHA256 hash for uploaded file content"""
+def generate_file_hash(file: UploadedFile) -> str:
+    """Compute the SHA-256 hex digest of an uploaded file's content."""
     hash_sha256 = hashlib.sha256()
     for chunk in file.chunks():
         hash_sha256.update(chunk)
     return hash_sha256.hexdigest()
 
 
-def _normalize_feature_limit_value(value):
-    if value is None:
-        return 0
-    if isinstance(value, str):
-        lower = value.strip().lower()
-        if lower in ['unlimited', 'yes']:
-            return 'unlimited'
-        if lower in ['no']:
-            return 0
-        try:
-            return int(lower)
-        except ValueError:
-            return 0
-    return value
+# ---------------------------------------------------------------------------
+# PDF / rent helpers
+# ---------------------------------------------------------------------------
 
 
-def check_feature_limit(user, feature_key):
+def generate_rent_invoice_pdf(rent: RentRecord) -> str:
+    html_string: str = render_to_string("invoices/rent_invoice.html", {"rent": rent})
+    from weasyprint import HTML
+
+    html = HTML(string=html_string)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as result:
+        result_path = result.name
+    html.write_pdf(target=result_path)
+    return result_path
+
+
+def apply_late_fee_if_needed(rent: RentRecord) -> None:
+    """Apply a late fee and notify both renter and owner if the rent was paid late."""
+    if rent.status != RentRecord.Status.PAID:
+        return
+    if rent.paid_on is None or rent.paid_on <= rent.due_date:
+        return
+
+    days_late: int = (rent.paid_on - rent.due_date).days
+    late_fee: int = days_late * 100
+    rent.late_fee = late_fee
+    note = f"Late fee: {days_late} days late x \u20b9100 = \u20b9{late_fee}"
+    rent.notes = f"{rent.notes or ''}\n{note}".strip()
+    rent.save(update_fields=["late_fee", "notes"])
+
+    notify_renter_about_late_fee(rent, late_fee)
+    notify_owner_about_late_fee(rent, late_fee)
+
+
+def _normalize_feature_limit_value(value: str) -> FeatureLimit:
+    """Convert a raw plan feature limit value to ``int`` or ``"unlimited"``."""
+    if value.lower() in {"unlimited", "yes"}:
+        return "unlimited"
+    return int(value)
+
+
+def check_feature_limit(user: User, feature_key: str) -> FeatureCheckResult:
+    """Compute whether the user can perform one more action of ``feature_key``.
+
+    Returns:
+        A 4-tuple ``(allowed, current_usage, subscription_limit, add_on_limit)``.
     """
-    Check whether the user can create a resource under a feature limit.
+    from django.contrib.auth import get_user_model
 
-    Returns a tuple: (allowed, current_usage, subscription_limit, add_on_limit)
-    """
-    subscription_limit = 0
-    add_on_limit = 0
-    current_usage = 0
+    runtime_user = get_user_model().objects.get(pk=int(user.pk))
+
+    subscription_limit: FeatureLimit = 0
+    add_on_limit: int = 0
+    current_usage: int = 0
 
     try:
-        subscription = user.usersubscription
-        plan_limit = PlanFeatureLimit.objects.filter(
-            plan=subscription.plan,
-            feature_key=feature_key
+        subscription: UserSubscription = runtime_user.usersubscription
+        plan_limit: PlanFeatureLimit | None = PlanFeatureLimit.objects.filter(
+            plan=subscription.plan, feature_key=feature_key
         ).first()
         if plan_limit is not None:
             subscription_limit = _normalize_feature_limit_value(plan_limit.value)
     except UserSubscription.DoesNotExist:
         subscription_limit = 0
 
-    addon_sum = AddOnPurchase.objects.filter(user=user, name=feature_key).aggregate(
-        total=Sum('amount')
-    )['total']
+    addon_sum = AddOnPurchase.objects.filter(
+        user=runtime_user, name=feature_key
+    ).aggregate(total=Sum("amount"))["total"]
     add_on_limit = int(addon_sum) if addon_sum else 0
 
-    usage = UsageLimit.objects.filter(user=user, feature_key=feature_key).first()
+    usage: UsageLimit | None = UsageLimit.objects.filter(
+        user=runtime_user, feature_key=feature_key
+    ).first()
     current_usage = usage.usage_count if usage else 0
 
-    if subscription_limit == 'unlimited':
+    if isinstance(subscription_limit, str) and subscription_limit == "unlimited":
         return True, current_usage, subscription_limit, add_on_limit
 
-    total_allowed = subscription_limit + add_on_limit
-    allowed = current_usage < total_allowed
+    total_allowed: int = subscription_limit + add_on_limit
+    allowed: bool = current_usage < total_allowed
     return allowed, current_usage, subscription_limit, add_on_limit
 
 
-def get_feature_limit(user, feature_key):
-    from core.models import PlanFeatureLimit
-    addon = UsageLimit.objects.filter(user=user, feature_key=feature_key).first()
+def get_feature_limit(user: User | AnonymousUser, feature_key: str) -> int | float:
+    """Return the effective plan limit for ``feature_key`` as a number.
+
+    ``float('inf')`` is returned for unlimited plans so callers can compare
+    without special-casing.
+    """
+    from django.contrib.auth import get_user_model
+
+    if user.pk is None:
+        return 0
+    runtime_user = get_user_model().objects.get(pk=user.pk)
+
+    addon: UsageLimit | None = UsageLimit.objects.filter(
+        user=runtime_user, feature_key=feature_key
+    ).first()
     if addon:
         return int(addon.usage_count)
-    plan = user.usersubscription.plan
-    plan_limit = PlanFeatureLimit.objects.filter(plan=plan, feature_key=feature_key).first()
+
+    plan = runtime_user.usersubscription.plan
+    plan_limit: PlanFeatureLimit | None = PlanFeatureLimit.objects.filter(
+        plan=plan, feature_key=feature_key
+    ).first()
     if not plan_limit:
         return 0
-    return float('inf') if plan_limit.value == 'unlimited' else int(plan_limit.value)
+    return float("inf") if plan_limit.value == "unlimited" else int(plan_limit.value)
 
 
-def get_limit_for_source(source, feature_key):
+def get_limit_for_source(
+    source: UserSubscription | AddOnPurchase, feature_key: str
+) -> int | str:
+    """Return the limit value from a given subscription or add-on source."""
     if isinstance(source, UserSubscription):
-        return PlanFeatureLimit.objects.get(plan=source.plan, feature_key=feature_key).value
-    elif isinstance(source, AddOnPurchase):
-        return source.features.get(feature_key, 0)
+        limit_value: str = PlanFeatureLimit.objects.get(
+            plan=source.plan, feature_key=feature_key
+        ).value
+        return limit_value
+
+    features: dict[str, int | str] | None = getattr(source, "features", None)
+    if features is not None:
+        addon_value = features.get(feature_key, 0)
+        if isinstance(addon_value, (int, str)):
+            return addon_value
     return 0
 
 
-def get_used_units(user, feature_key, source):
-    filters = {
-        'user': user,
-        'feature_key': feature_key,
-    }
+def get_used_units(
+    user: User | AnonymousUser,
+    feature_key: str,
+    source: UserSubscription | AddOnPurchase,
+) -> int:
+    """Return the units used for ``feature_key`` under the given ``source``."""
+    from django.contrib.auth import get_user_model
+
+    if user.pk is None:
+        return 0
+    runtime_user = get_user_model().objects.get(pk=user.pk)
+
+    filters: dict[str, object] = {"user": runtime_user, "feature_key": feature_key}
     if isinstance(source, UserSubscription):
-        filters['user_subscription'] = source
+        filters["user_subscription"] = source
     else:
-        filters['addon_purchase'] = source
-    return UsageLimit.objects.filter(**filters).aggregate(total=Sum('used_units'))['total'] or 0
+        filters["addon_purchase"] = source
+    used: int = (
+        UsageLimit.objects.filter(**filters).aggregate(total=Sum("usage_count"))[
+            "total"
+        ]
+        or 0
+    )
+    return int(used)
 
 
-def deduct_feature_usage_with_priority(user, feature_key, units_to_deduct=1):
-    now = timezone.now()
-    active_subs = UserSubscription.objects.filter(
-        user=user,
-        is_active=True,
-        end_date__gt=now
-    ).order_by('end_date')
-    active_addons = AddOnPurchase.objects.filter(
-        user=user,
-        is_active=True,
-        expires_at__gt=now
-    ).order_by('created_at')
-    usage_sources = list(active_subs) + list(active_addons)
-    units_remaining = units_to_deduct
-
-    with transaction.atomic():
-        for source in usage_sources:
-            limit = get_limit_for_source(source, feature_key)
-            used = get_used_units(user, feature_key, source)
-            available = limit - used
-            if available <= 0:
-                continue
-            deduct = min(available, units_remaining)
-            UsageLimit.objects.create(
-                user=user,
-                feature_key=feature_key,
-                used_units=deduct,
-                user_subscription=source if isinstance(source, UserSubscription) else None,
-                addon_purchase=source if isinstance(source, AddOnPurchase) else None,
-            )
-            units_remaining -= deduct
-            if units_remaining <= 0:
-                break
-
-    if units_remaining > 0:
+def deduct_feature_usage_with_priority(
+    user: User | AnonymousUser, feature_key: str, units_to_deduct: int = 1
+) -> None:
+    """Deduct ``units_to_deduct`` units from the user's quota."""
+    enforcer = FeatureEnforcer(user)
+    if not enforcer.can_create(feature_key):
         raise ValidationError(f"Not enough available units for feature: {feature_key}")
 
-
-from django.template.loader import render_to_string
-from weasyprint import HTML
-import tempfile
-
-
-def generate_rent_invoice_pdf(rent):
-    html_string = render_to_string("invoices/rent_invoice.html", {"rent": rent})
-    html = HTML(string=html_string)
-    result = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    html.write_pdf(target=result.name)
-    return result.name
-
-
-from dateutil.relativedelta import relativedelta
-
-def apply_late_fee_if_needed(rent: RentRecord):
-    if rent.payment_status != "PAID":
-        return
-    if rent.date_paid and rent.date_paid > rent.rent_due_date:
-        days_late = (rent.date_paid - rent.rent_due_date).days
-        late_fee = days_late * 100
-        rent.late_fee = late_fee
-        rent.adjustment_reason = f"{days_late} days late x ₹100 = ₹{late_fee}"
-        rent.save(update_fields=['late_fee', 'adjustment_reason'])
-        next_month = rent.rent_due_date.replace(day=1) + relativedelta(months=1)
-        next_rent, _ = RentRecord.objects.get_or_create(
-            renter=rent.renter,
-            rent_month=next_month,
-            defaults={
-                "amount_paid": rent.renter.rent_amount,
-                "rent_due_date": next_month,
-                "payment_status": RentRecord.PaymentStatus.PENDING,
-                "unit": rent.unit,
-                "owner": rent.owner,
-                "date_paid": next_month,
-            }
-        )
-        next_rent.adjustment_reason = f"Late fee from {rent.rent_due_date}"
-        next_rent.save(update_fields=['adjustment_reason'])
-        notify_renter_about_late_fee(rent, late_fee)
-        notify_owner_about_late_fee(rent, late_fee)
+    for _ in range(units_to_deduct):
+        if enforcer.can_create(feature_key):
+            enforcer.increment(feature_key)
+        else:
+            raise ValidationError(
+                f"Not enough available units for feature: {feature_key}"
+            )

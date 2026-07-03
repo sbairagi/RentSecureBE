@@ -1,0 +1,49 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 5: Architecture & Maintainability
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: import-linter (layered architecture validation)
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Architecture
+
+'on':
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: architecture-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  import-linter:
+    name: Stage 5 │ Import Linter (Architecture)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "import-linter"
+          cache-key-suffix: "-architecture"
+      - name: Run import-linter
+        shell: bash
+        run: |
+          set -euo pipefail
+          lint-imports --config import-linter.ini

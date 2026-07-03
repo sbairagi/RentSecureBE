@@ -1,0 +1,56 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# MIGRATION ROLLBACK VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════════
+# For every project app with >=2 migrations:
+#   1. One fresh SQLite database initialization (apply all once)
+#   2. Roll back the latest migration using Django's migration graph
+#   3. Re-apply forward to the latest migration
+# Fails immediately on any error. No || true. No continue-on-error.
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Migration Rollback Validation
+
+'on':
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version"
+        type: string
+        default: "3.12"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-rollback-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migration-rollback-validation:
+    name: Migration Rollback Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: ${{ inputs.python-version }}
+          extra-packages: ""
+          cache-key-suffix: "-migration-rollback"
+      - name: Run migration rollback validation
+        run: |
+          set -euo pipefail
+          python tools/migration_rollback_validator.py

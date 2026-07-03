@@ -1,60 +1,68 @@
-# services/whatsapp_service.py
+from __future__ import annotations
 
-import os
+# services/whatsapp_service.py
 import logging
-from django.conf import settings
+import os
+from typing import Any
+
+try:
+    import boto3  # type: ignore[import-untyped]
+except ImportError:
+    boto3 = None
 from twilio.rest import Client
+
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-def send_whatsapp_message(phone, text):
+
+def send_whatsapp_message(phone: str, text: str) -> bool:
     try:
-        client = Client(settings.TWILIO_SID, settings.TWILIO_TOKEN)
+        sid = getattr(settings, "TWILIO_SID", settings.TWILIO_ACCOUNT_SID)
+        token = getattr(settings, "TWILIO_TOKEN", settings.TWILIO_AUTH_TOKEN)
+        client = Client(sid, token)
         client.messages.create(
-            body=text,
-            from_=settings.TWILIO_WHATSAPP_NUMBER,
-            to=f'whatsapp:{phone}'
+            body=text, from_=settings.TWILIO_WHATSAPP_NUMBER, to=f"whatsapp:{phone}"
         )
         return True
-    except Exception as exc:
-        logger.error("WhatsApp sending failed: %s", exc)
+    except Exception:
+        logger.exception("WhatsApp sending failed: %s")
         return False
 
 
-def send_whatsapp_audio(phone, audio_path):
+def send_whatsapp_audio(phone: str, audio_path: str) -> bool:
     try:
         media_url = upload_to_s3(audio_path)
 
-        client = Client(settings.TWILIO_SID, settings.TWILIO_TOKEN)
+        sid = getattr(settings, "TWILIO_SID", settings.TWILIO_ACCOUNT_SID)
+        token = getattr(settings, "TWILIO_TOKEN", settings.TWILIO_AUTH_TOKEN)
+        client = Client(sid, token)
         client.messages.create(
             media_url=[media_url],
             from_=settings.TWILIO_WHATSAPP_NUMBER,
-            to=f'whatsapp:{phone}'
+            to=f"whatsapp:{phone}",
         )
         return True
-    except Exception as exc:
-        logger.error("WhatsApp audio failed: %s", exc)
+    except Exception:
+        logger.exception("WhatsApp audio failed: %s")
         return False
 
 
-def upload_to_s3(file_path):
-    try:
-        import boto3
-    except ImportError:
-        raise RuntimeError("boto3 is required for upload_to_s3")
-
+def upload_to_s3(file_path: str) -> str | None:
     bucket_name = settings.AWS_S3_BUCKET_NAME
     if not bucket_name:
         raise RuntimeError("AWS_S3_BUCKET_NAME must be configured in settings.")
+    if boto3 is None:
+        raise RuntimeError("boto3 is required for upload_to_s3")
 
     filename = os.path.basename(file_path)
     key = f"voice_notes/{filename}"
 
-    s3 = boto3.client('s3')
-    s3.upload_file(file_path, bucket_name, key, ExtraArgs={'ContentType': 'audio/mpeg'})
+    s3 = boto3.client("s3")
+    s3.upload_file(file_path, bucket_name, key, ExtraArgs={"ContentType": "audio/mpeg"})
     return f"https://{bucket_name}.s3.amazonaws.com/{key}"
 
 
-def send_agreement_via_whatsapp(renter, pdf_url):
+def send_agreement_via_whatsapp(renter: Any, pdf_url: str) -> bool:
     msg = f"📄 Your rent agreement is ready.\nDownload: {pdf_url}"
-    send_whatsapp_message(renter.phone, msg)
+    return send_whatsapp_message(renter.phone, msg)

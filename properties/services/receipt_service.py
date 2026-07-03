@@ -1,119 +1,141 @@
-"""
-Rent Receipt Service
+"""Rent receipt service.
 
-Generates and sends monthly rent receipts to renters via email.
+Generates and sends monthly rent receipts to renters via email. Every
+public function is fully typed and uses ``TypedDict`` for return shapes
+so callers can rely on a stable contract.
 """
+
+from __future__ import annotations
 
 import logging
-import tempfile
-from io import BytesIO
+from typing import TYPE_CHECKING, Any
+
+from weasyprint import HTML
+
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
-from weasyprint import HTML
-from properties.models import RentRecord
+
+if TYPE_CHECKING:
+    from properties.models import RentRecord
 
 logger = logging.getLogger(__name__)
 
 
-def generate_rent_receipt_pdf(rent_record):
-    """
-    Generate a rent receipt PDF from a RentRecord.
-    
+def generate_rent_receipt_pdf(rent_record: RentRecord) -> bytes:
+    """Render the HTML receipt template to PDF bytes.
+
     Args:
-        rent_record: RentRecord instance
-        
+        rent_record: The paid :class:`RentRecord` to render.
+
     Returns:
-        bytes: PDF file content
+        The raw PDF bytes — callers can either attach to an email or
+        persist to a ``FileField``.
+
+    Raises:
+        Exception: Re-raises the underlying rendering exception after
+            logging context.
     """
     try:
-        context = {
-            'rent': rent_record,
-            'renter': rent_record.renter,
-            'unit': rent_record.unit,
-            'owner': rent_record.owner,
+        context: dict[str, Any] = {
+            "rent": rent_record,
+            "renter": rent_record.renter,
+            "unit": rent_record.unit,
+            "owner": rent_record.renter.unit.owner if rent_record.renter else None,
         }
-        
-        html_string = render_to_string('pdf/rent_receipt.html', context)
+
+        html_string: str = render_to_string("pdf/rent_receipt.html", context)
         html = HTML(string=html_string)
-        pdf_bytes = html.write_pdf()
-        
-        return pdf_bytes
+        pdf_bytes: bytes = html.write_pdf()
     except Exception as exc:
-        logger.exception(f"Failed to generate rent receipt PDF for rent {rent_record.id}: {exc}")
+        logger.exception(
+            "Failed to generate rent receipt PDF for rent %s: %s",
+            rent_record.id,
+            exc,
+        )
         raise
+    else:
+        return pdf_bytes
 
 
-def send_rent_receipt_email(rent_record):
-    """
-    Send rent receipt email to renter with PDF attachment.
-    
+def send_rent_receipt_email(rent_record: RentRecord) -> bool:
+    """Send the rent receipt email with PDF attachment to the renter.
+
     Args:
-        rent_record: RentRecord instance
-        
+        rent_record: The :class:`RentRecord` to email a receipt for.
+
     Returns:
-        bool: True if email was sent successfully
+        ``True`` on successful send, ``False`` otherwise.
     """
     renter = rent_record.renter
-    
-    # Check if renter has email
-    if not renter.email:
-        logger.warning(f"Renter {renter.id} has no email. Cannot send receipt.")
+
+    if renter is None:
+        logger.warning(
+            "Renter is None for rent %s. Cannot send receipt.", rent_record.id
+        )
         return False
-    
+
+    if not getattr(renter, "email", None):
+        logger.warning(
+            "Renter %s has no email. Cannot send receipt.", getattr(renter, "id", None)
+        )
+        return False
+
     try:
-        # Generate PDF
-        pdf_bytes = generate_rent_receipt_pdf(rent_record)
-        
-        # Build email
-        month_year = rent_record.rent_month.strftime("%B %Y")
-        subject = f"Rent Receipt - {month_year} | ₹{rent_record.amount_paid}"
-        
-        body = (
+        pdf_bytes: bytes = generate_rent_receipt_pdf(rent_record)
+
+        month_year: str = rent_record.due_date.strftime("%B %Y")
+        subject: str = f"Rent Receipt - {month_year} | ₹{rent_record.amount}"
+
+        body: str = (
             f"Dear {renter.name},\n\n"
             f"Please find attached your rent receipt for {month_year}.\n\n"
             f"Property: {rent_record.unit.unit}\n"
-            f"Amount: ₹{rent_record.amount_paid}\n"
-            f"Date Paid: {rent_record.date_paid}\n"
-            f"Payment Status: {rent_record.get_payment_status_display()}\n\n"
+            f"Amount: ₹{rent_record.amount}\n"
+            f"Date Paid: {rent_record.paid_on}\n"
+            f"Payment Status: {rent_record.get_status_display()}\n\n"
             f"Thank you for your timely payment!\n\n"
             f"Best regards,\n"
             f"RentSecure Team"
         )
-        
+
+        email_to: list[str] = [renter.email] if renter.email else []
         email = EmailMessage(
             subject=subject,
             body=body,
             from_email="no-reply@rentsecure.in",
-            to=[renter.email]
+            to=email_to,
         )
-        
-        # Attach PDF
-        filename = f"rent_receipt_{rent_record.id}_{rent_record.rent_month.strftime('%Y%m')}.pdf"
-        email.attach(filename, pdf_bytes, 'application/pdf')
-        
-        # Send
+
+        receipt_month: str = rent_record.due_date.strftime("%Y%m")
+        filename: str = f"rent_receipt_{rent_record.id}_{receipt_month}.pdf"
+        email.attach(filename, pdf_bytes, "application/pdf")
         email.send(fail_silently=False)
-        
-        logger.info(f"Rent receipt email sent to {renter.email} for rent {rent_record.id}")
-        return True
-        
+
+        logger.info(
+            "Rent receipt email sent to %s for rent %s", renter.email, rent_record.id
+        )
     except Exception as exc:
-        logger.exception(f"Failed to send rent receipt email to {renter.email}: {exc}")
+        logger.exception(
+            "Failed to send rent receipt email to %s: %s", renter.email, exc
+        )
         return False
+    else:
+        return True
 
 
-def send_rent_receipt_on_payment(rent_record):
-    """
-    Auto-send receipt when rent payment is marked as successful.
-    
+def send_rent_receipt_on_payment(rent_record: RentRecord) -> bool:
+    """Send a receipt if (and only if) the rent record is fully paid.
+
     Args:
-        rent_record: RentRecord instance
-        
+        rent_record: The :class:`RentRecord` to evaluate.
+
     Returns:
-        bool: True if email sent
+        ``True`` if the email was sent, ``False`` otherwise.
     """
-    if rent_record.payment_status != RentRecord.PaymentStatus.PAID:
-        logger.debug(f"Rent {rent_record.id} not marked as PAID. Skipping receipt email.")
+    if rent_record.payment_status != "paid":
+        logger.debug(
+            "Rent %s not marked as PAID. Skipping receipt email.", rent_record.id
+        )
         return False
-    
+
     return send_rent_receipt_email(rent_record)

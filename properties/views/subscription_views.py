@@ -3,4 +3,4 @@
 The current subscription and usage limit management is handled by the core app.
 """
 
-__all__ = []
+__all__: list[str] = []

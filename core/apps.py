@@ -1,9 +1,16 @@
+import os
+
 from django.apps import AppConfig
+
+from rentsecure_be.type_compat import override
 
 
 class CoreConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'core'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "core"
 
-    def ready(self):
-        import core.signals  
+    @override
+    def ready(self) -> None:
+        if os.environ.get("SKIP_DJANGO_SIGNALS") == "1":
+            return
+        import core.signals  # noqa

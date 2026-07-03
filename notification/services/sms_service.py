@@ -1,16 +1,19 @@
-from twilio.rest import Client
-from django.conf import settings
 import logging
+
+from twilio.rest import Client
+
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-def send_sms(phone, message):
+
+def send_sms(phone: str, message: str) -> bool:
     try:
-        client = Client(settings.TWILIO_SID, settings.TWILIO_TOKEN)
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
         client.messages.create(
             body=message,
             from_=settings.TWILIO_PHONE_NUMBER,  # Store this in settings too
-            to=phone
+            to=phone,
         )
         return True
     except Exception as e:

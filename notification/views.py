@@ -1,16 +1,25 @@
-
+from fcm_django.models import FCMDevice  # type: ignore[import-untyped]
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response
+
+from django.contrib.auth.models import AnonymousUser
+
 from .models import DeviceToken
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def get_notifications(request):
-    data = request.user.notifications.order_by("-created_at").values(
+def get_notifications(request: DRFRequest) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
+    user = request.user
+    data = user.notifications.order_by("-created_at").values(
         "id", "title", "message", "is_read", "created_at"
     )
     return Response(list(data))
+
 
 # Response
 
@@ -26,8 +35,11 @@ def get_notifications(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def mark_notification_read(request, notification_id):
-    note = request.user.notifications.get(id=notification_id)
+def mark_notification_read(request: DRFRequest, notification_id: int) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
+    user = request.user
+    note = user.notifications.get(id=notification_id)
     note.is_read = True
     note.save()
     return Response({"status": "Marked as read"})
@@ -36,10 +48,13 @@ def mark_notification_read(request, notification_id):
 # API to receive from frontend
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def save_device_token(request):
+def save_device_token(request: DRFRequest) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=400)
+    user = request.user
     token = request.data.get("token")
     if token:
-        DeviceToken.objects.update_or_create(user=request.user, defaults={"token": token})
+        DeviceToken.objects.update_or_create(user=user, defaults={"token": token})
     return Response({"status": "saved"})
 
 
@@ -68,24 +83,21 @@ def save_device_token(request):
 # }, []);
 
 
-from fcm_django.models import FCMDevice
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
-
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def register_fcm_token(request):
+def register_fcm_token(request: DRFRequest) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
+    user = request.user
     token = request.data.get("token")
-    device_type = request.data.get("type", "android")  # or "ios", "web"
-    
+    device_type = request.data.get("type", "android")
+
     if not token:
         return Response({"error": "Token required"}, status=400)
 
     FCMDevice.objects.update_or_create(
-        user=request.user,
+        user=user,
         registration_id=token,
-        defaults={"type": device_type, "active": True}
+        defaults={"type": device_type, "active": True},
     )
     return Response({"status": "Token registered"})

@@ -1,10 +1,20 @@
 # services/invoice_service.py
 
-from weasyprint import HTML
-from django.template.loader import render_to_string
 import tempfile
+from typing import TYPE_CHECKING
 
-def generate_final_invoice_pdf(renter, latest_rent):
+from django.template.loader import render_to_string
+
+if TYPE_CHECKING:
+    from properties.models import Renter, RentRecord
+
+
+def generate_final_invoice_pdf(
+    renter: "Renter",
+    latest_rent: "RentRecord",
+) -> str:
+    from weasyprint import HTML
+
     context = {
         "renter": renter,
         "unit": renter.unit,
@@ -21,8 +31,6 @@ def generate_final_invoice_pdf(renter, latest_rent):
 
     return temp_file.name
 
-
-# from services.whatsapp_service import send_whatsapp_message
 
 # send_whatsapp_message(
 #     renter.phone,
