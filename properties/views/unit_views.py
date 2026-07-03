@@ -296,6 +296,7 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
         enforcer.decrement("rent_agreement_drafts")
 
 
+# Webhook endpoint: CSRF exempted to allow external service calls
 @csrf_exempt
 def leegality_webhook(request: HttpRequest) -> JsonResponse:
     """Process Leegality signing-status callbacks.
