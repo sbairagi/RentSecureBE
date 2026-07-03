@@ -15,10 +15,10 @@ except Exception:
 
     class _StubHTML:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
-            pass
+            """Stub constructor for environments without weasyprint."""
 
         def write_pdf(self, *args: Any, **kwargs: Any) -> None:
-            pass
+            """Stub PDF writer for environments without weasyprint."""
 
     _weasyprint_stub.HTML = _StubHTML  # type: ignore[attr-defined]
     sys.modules["weasyprint"] = _weasyprint_stub
