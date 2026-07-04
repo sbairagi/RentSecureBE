@@ -121,7 +121,7 @@ jobs:
             echo "Skipping mutmut reporting because mutation testing was disabled."
             exit 0
           fi
-          python -m mutmut show
+          python -m mutmut results --all
       - name: Check mutation score
         shell: bash
         run: |
@@ -130,7 +130,7 @@ jobs:
             echo "Skipping mutation score check because mutation testing was disabled."
             exit 0
           fi
-          python -m mutmut show 2>&1 | head -60
+          python -m mutmut results --all 2>&1 | head -60
           echo "Mutation score report generated successfully."
       - name: Upload mutmut results artifact
         if: always()
