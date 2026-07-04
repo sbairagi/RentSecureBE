@@ -106,8 +106,15 @@ jobs:
           print('coverage.xml parsed successfully and contains coverage metadata.')
           PY
 
-      - name: Run SonarCloud analysis (master)
-        if: github.ref == 'refs/heads/master'
+      - name: Compute Sonar quality gate args
+        id: sonar-quality-gate-args
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/master" ]]; then
+            echo "quality_gate_args=-Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300" >> $GITHUB_OUTPUT
+          else
+            echo "quality_gate_args=" >> $GITHUB_OUTPUT
+          fi
+      - name: Run SonarCloud analysis
         uses: SonarSource/sonarcloud-github-action@ffc3010689be73b8e5ae0c57ce35968afd7909e8  # v5.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -116,24 +123,7 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.organization=sbairagi
             -Dsonar.projectKey=sbairagi_RentSecureBE
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=300
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.sources=.
-            -Dsonar.exclusions=**/migrations/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/*.pyc,**/db.sqlite3,**/.github/**,**/htmlcov/**,**/coverage.xml,**/*.md,**/requirements*.txt,**/.env.example
-            -Dsonar.tests=.
-            -Dsonar.test.inclusions=**/test_*.py,**/tests.py,**/*_tests.py,**/tests/**/*.py
-            -Dsonar.python.unitTest.source=.
-      - name: Run SonarCloud analysis (non-master)
-        if: github.ref != 'refs/heads/master'
-        uses: SonarSource/sonarcloud-github-action@ffc3010689be73b8e5ae0c57ce35968afd7909e8  # v5.0.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.organization=sbairagi
-            -Dsonar.projectKey=sbairagi_RentSecureBE
+            ${{ steps.sonar-quality-gate-args.outputs.quality_gate_args }}
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.sources=.
             -Dsonar.exclusions=**/migrations/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/*.pyc,**/db.sqlite3,**/.github/**,**/htmlcov/**,**/coverage.xml,**/*.md,**/requirements*.txt,**/.env.example
