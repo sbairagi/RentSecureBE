@@ -49,6 +49,7 @@ jobs:
           cache-key-suffix: "-branch-protection"
 
       - name: Validate required status checks are enforced
+        if: ${{ secrets.repo-access-pat != '' }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.repo-access-pat }}
@@ -146,3 +147,10 @@ jobs:
 
           print("Branch protection validation passed for all checked branches")
           PY
+
+      - name: Branch protection validation - PAT not available
+        if: ${{ secrets.repo-access-pat == '' }}
+        shell: bash
+        run: |
+          echo "WARNING: REPO_ACCESS_PAT is not available. Skipping branch protection validation."
+          echo "Configure a repository secret named REPO_ACCESS_PAT with 'administration' scope to enable this check."

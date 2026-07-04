@@ -106,9 +106,6 @@ class PerformanceBenchmarkBase(TestCase):
                 cls.renters.append(r)
 
 
-@pytest.mark.skip(
-    reason="benchmark fixture not injectable into django.test.TestCase; run separately with pytest-benchmark"
-)
 @pytest.mark.django_db
 class TestPerformanceBenchmarks(PerformanceBenchmarkBase):
     """Benchmark critical business operations."""
