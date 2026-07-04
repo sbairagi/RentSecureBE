@@ -2,9 +2,9 @@ name: CI Pipeline
 
 'on':
   push:
-    branches: [main, master, dev, cleanup/remove-dead-code]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
   merge_group:
 
 jobs:
