@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 1
       - name: Harden Runner
@@ -32,7 +32,12 @@ jobs:
           egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
+            github.com:443
             objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
             api.sonarcloud.io:443
             sonarcloud.io:443
 
@@ -53,6 +58,12 @@ jobs:
         with:
           name: coverage-shard-4
           path: coverage-artifacts
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "coverage"
+          cache-key-suffix: "-quality"
+
       - name: Combine coverage and generate XML
         shell: bash
         run: |
@@ -93,12 +104,6 @@ jobs:
               raise SystemExit('coverage.xml is missing line-rate metadata')
           print('coverage.xml parsed successfully and contains coverage metadata.')
           PY
-
-      - uses: ./.github/actions/setup-python-environment
-        with:
-          python-version: "3.12"
-          extra-packages: "coverage"
-          cache-key-suffix: "-quality"
 
       - name: Run SonarCloud analysis
         uses: SonarSource/sonarcloud-github-action@ffc3010689be73b8e5ae0c57ce35968afd7909e8  # v5.0.0

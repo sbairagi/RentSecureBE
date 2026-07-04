@@ -39,7 +39,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 1
       - name: Initialize CodeQL
@@ -64,7 +64,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 1
       - name: Run OpenSSF Scorecard
@@ -90,7 +90,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 1
       - name: Harden Runner
@@ -101,6 +101,7 @@ jobs:
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
+            api.github.com:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
@@ -125,7 +126,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 1
       - name: Harden Runner
@@ -136,6 +137,9 @@ jobs:
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
+            api.github.com:443
+            ghcr.io:443
+            mirror.gcr.io:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
