@@ -329,7 +329,7 @@ class OwnerBankDetailsFactory(factory.django.DjangoModelFactory):  # type: ignor
     bank_account_number = factory.LazyAttribute(lambda _: fake.bban())
     ifsc_code = factory.LazyAttribute(lambda _: fake.swift11()[:11])
     account_holder_name = factory.LazyAttribute(lambda obj: obj.owner.full_name)
-    beneficiary_id = factory.LazyAttribute(lambda _: f"BENE-{fake.uuid4()}")
+    beneficiary_id = factory.LazyAttribute(lambda _: f"BENE-{str(fake.uuid4())}")
     bank_account_verified = False
 
 
