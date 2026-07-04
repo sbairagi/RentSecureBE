@@ -40,7 +40,7 @@ jobs:
       COVERAGE_FILE: .coverage.${{ inputs.shard }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 1
       - name: Harden Runner
@@ -69,6 +69,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pytest -v --randomly-seed=last \
+            --cov-fail-under=0 \
             --cov=rentsecure_be \
             --cov=ai_assistant \
             --cov=core \
@@ -97,11 +98,22 @@ jobs:
               json.dump(payload, fh, indent=2)
           print(json.dumps(payload, indent=2))
           PY
+      - name: "TEMP: coverage artifact diagnostics"
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PWD=$(pwd)"
+          echo "COVERAGE_FILE=${COVERAGE_FILE:-UNSET}"
+          echo "--- find .coverage* ---"
+          find . -maxdepth 2 -name ".coverage*" -ls 2>/dev/null || true
+          echo "--- ls -la .coverage* ---"
+          ls -la .coverage* 2>/dev/null || echo "No .coverage* files in listing"
       - name: Upload coverage shard
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: coverage-shard-${{ inputs.shard }}
           path: .coverage.${{ inputs.shard }}
+          include-hidden-files: true
           retention-days: 30
       - name: Upload shard metrics artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
