@@ -39,7 +39,7 @@ jobs:
         app: [rentsecure_be, core, properties, ai_assistant, notification, finance, smartbot, referral_and_earn, dashboard, documents]
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Harden Runner
@@ -72,7 +72,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Harden Runner
@@ -104,7 +104,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Harden Runner
@@ -143,7 +143,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Harden Runner
@@ -190,7 +190,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Harden Runner
@@ -235,7 +235,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Harden Runner

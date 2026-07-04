@@ -39,7 +39,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Initialize CodeQL
@@ -64,7 +64,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Run OpenSSF Scorecard
@@ -90,7 +90,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Harden Runner
@@ -125,7 +125,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
       - name: Harden Runner
