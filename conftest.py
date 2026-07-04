@@ -243,9 +243,9 @@ class RentRecordFactory(factory.django.DjangoModelFactory):  # type: ignore[misc
     notes = ""
     transaction_id = factory.LazyAttribute(lambda _: str(fake.uuid4())[:32])
     payout_status = "PENDING"
-    payout_reference = None
-    payment_link = None
-    razorpay_order_id = None
+    payout_reference = ""
+    payment_link = ""
+    razorpay_order_id = ""
     payout_retries = 0
     last_payout_retry = None
     payout_retry_count = 0
@@ -329,7 +329,7 @@ class OwnerBankDetailsFactory(factory.django.DjangoModelFactory):  # type: ignor
     bank_account_number = factory.LazyAttribute(lambda _: fake.bban())
     ifsc_code = factory.LazyAttribute(lambda _: fake.swift11()[:11])
     account_holder_name = factory.LazyAttribute(lambda obj: obj.owner.full_name)
-    beneficiary_id = None
+    beneficiary_id = factory.LazyAttribute(lambda _: f"BENE-{str(fake.uuid4())}")
     bank_account_verified = False
 
 

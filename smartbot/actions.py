@@ -75,8 +75,10 @@ def send_agreement_for_signature(renter_name: str) -> str:
 
             draft = RentAgreementDraft.objects.filter(renter=renter).first()
             if draft is not None:
-                draft.leegality_document_id = result.get("documentId")
-                draft.save(update_fields=["leegality_document_id"])
+                document_id = result.get("documentId")
+                if document_id is not None:
+                    draft.leegality_document_id = str(document_id)
+                    draft.save(update_fields=["leegality_document_id"])
             return f"📨 Signature request sent to {renter.name}!"
         return f"❌ Error: {result}"
     except Exception as e:

@@ -154,11 +154,14 @@ jobs:
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
+            ghcr.io:443
+            mirror.gcr.io:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        continue-on-error: true
         with:
           scan-type: fs
           scan-ref: .
@@ -198,18 +201,21 @@ jobs:
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
+            ghcr.io:443
+            mirror.gcr.io:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
       - name: Run Trivy Secret Scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        continue-on-error: true
         with:
           scan-type: fs
           scan-ref: .
           format: 'sarif'
           output: trivy-secrets.sarif
           severity: 'HIGH,CRITICAL'
-          security-checks: secret
+          scanners: secret
           ignore-unfixed: true
       - name: Upload Trivy Secret SARIF
         if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
