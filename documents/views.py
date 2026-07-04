@@ -1,16 +1,16 @@
 from io import BytesIO
 from typing import Any, cast
 
-from django.http import HttpRequest, HttpResponse
-from django.shortcuts import get_object_or_404
-from django.template.loader import render_to_string
-from django.utils.timezone import now
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from weasyprint import HTML
+
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.utils.timezone import now
 
 from core.models import User
 from properties.models import Renter, RentRecord, Unit
@@ -29,6 +29,8 @@ class GenerateRentAgreementPdfViewSet(viewsets.ViewSet):
     def generate_rent_agreement_pdf(
         self, request: HttpRequest, pk: int
     ) -> HttpResponse:
+        from weasyprint import HTML
+
         try:
             renter = Renter.objects.select_related("unit", "unit__owner").get(pk=pk)
         except Renter.DoesNotExist:
@@ -48,7 +50,7 @@ class GenerateRentAgreementPdfViewSet(viewsets.ViewSet):
 
         pdf_file = HTML(string=html_string).write_pdf()
 
-        response = HttpResponse(pdf_file, content_type="application/pdf")
+        response = HttpResponse(pdf_file, content_type="application/pdf")  # noqa: S1192
         response["Content-Disposition"] = (
             f"inline; filename=rent_agreement_{renter.id}.pdf"
         )
@@ -60,6 +62,8 @@ class GenerateUnitDossierPdfViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=["get"], url_path="generate-dossier-pdf")
     def generate_dossier_pdf(self, request: HttpRequest, pk: int) -> HttpResponse:
+        from weasyprint import HTML
+
         # Get Unit or return 404
         unit_obj = get_object_or_404(Unit, pk=pk)
 
@@ -101,6 +105,8 @@ class GenerateRentReceiptPdfViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="pdf_receipt")
     def pdf_receipt(self, request: HttpRequest, pk: int) -> HttpResponse:
+        from weasyprint import HTML
+
         try:
             rent_record = self.get_object()
         except NotFound:

@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/serializers/rent_record_serializers.py
-# hypothesis_version: 6.136.0
-
-['PAID', '__all__', 'amount_paid', 'created_at', 'date_paid', 'id', 'owner', 'rent_month', 'renter', 'request', 'unit', 'updated_at']

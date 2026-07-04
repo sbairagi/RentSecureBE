@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/models/property_tax_models.py
-# hypothesis_version: 6.136.0
-
-['properties.Building', 'tax_records']

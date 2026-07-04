@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/referral_and_earn/migrations/0001_initial.py
-# hypothesis_version: 6.136.0
-
-[0.0, 'ID', 'Referral', 'bonus_earned', 'id', 'referral_code', 'referral_profile', 'referrals_made', 'referred_by', 'user']

@@ -1,7 +1,3 @@
-# from services.whatsapp_service import send_whatsapp_message
-# from rent.services import process_rent_payout
-# from rent.models import RentRecord, Renter
-# from services.whatsapp_service import send_whatsapp_message
 from typing import Any
 
 from django.core.files.storage import default_storage
@@ -12,8 +8,6 @@ from rentsecure_be.services.cashfree_service import process_rent_payout
 from smartbot.services.agreement_service import generate_agreement_pdf
 
 from .services.leegality_service import initiate_signature
-
-# from .services.agreement_service import generate_agreement_pdf
 from .whatsapp_service import send_agreement_via_whatsapp
 
 
@@ -81,8 +75,10 @@ def send_agreement_for_signature(renter_name: str) -> str:
 
             draft = RentAgreementDraft.objects.filter(renter=renter).first()
             if draft is not None:
-                draft.leegality_document_id = result.get("documentId")
-                draft.save(update_fields=["leegality_document_id"])
+                document_id = result.get("documentId")
+                if document_id is not None:
+                    draft.leegality_document_id = str(document_id)
+                    draft.save(update_fields=["leegality_document_id"])
             return f"📨 Signature request sent to {renter.name}!"
         return f"❌ Error: {result}"
     except Exception as e:

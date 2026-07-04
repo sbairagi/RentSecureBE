@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/models/extra_charge_models.py
-# hypothesis_version: 6.136.0
-
-['DUE', 'Due', 'MISSED', 'Missed', 'PAID', 'Paid', 'due_date', 'extra_charges', 'renter', 'status', 'unit']

@@ -1,0 +1,33 @@
+name: Checkout Diagnostic
+
+'on':
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checkout-diagnostic:
+    name: Checkout Network Diagnostic
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Git diagnostics
+        run: |
+          set -euo pipefail
+          echo "=== Git remote ==="
+          git remote -v
+          echo "=== Git config ==="
+          git config --list --show-origin
+          echo "=== Git ls-remote ==="
+          git ls-remote https://github.com/${{ github.repository }}.git HEAD
+          echo "=== Git fetch (verbose) ==="
+          git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin HEAD || {
+            echo "fetch failed"
+            exit 1
+          }
+          echo "=== Checkout diagnostic passed ==="

@@ -1,22 +1,14 @@
-# from expo_push_notifications import send_expo_notification
-
-# def push_user(user, title, message):
 #     from notifications.models import DeviceToken
 #     token_obj = DeviceToken.objects.filter(user=user).first()
 #     if not token_obj: return
 
-#     send_expo_notification(
-#         token_obj.token,
-#         title=title,
-#         body=message
-#     )
-
 
 from typing import Any
 
-from django.conf import settings
 from fcm_django.models import FCMDevice  # type: ignore[import-untyped]
 from twilio.rest import Client
+
+from django.conf import settings
 
 
 def send_push_notification(user: Any, title: str, body: str) -> None:

@@ -28,6 +28,10 @@ Full index: **[business-rules/README.md](./business-rules/README.md)**
 
 - [rag/](./rag/README.md) — self-contained chunks for RAG indexing (`manifest.json` + 23 topic files)
 
+## CI/CD & Architecture Docs
+
+- [CI/CD Pipeline & UML Overview](./ci-cd-pipeline.md) — pipeline diagram, UML types, class & sequence diagrams
+
 ## Legacy
 
 - `properties/business_rules.md` — original single-file version (superseded by `business-rules/`)

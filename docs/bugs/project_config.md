@@ -8,9 +8,9 @@ Settings, URLs, requirements — cross-cutting.
 
 **File:** `requirements.txt`
 
-- PyPI max version is **3.8**.
+- PyPI max version was **3.8**.
 
-**Impact:** `pip install -r requirements.txt` fails on clean machines.
+**Status:** RESOLVED — `requirements.txt` now pins `python-decouple==3.5`, which installs cleanly on Python 3.12.
 
 ---
 

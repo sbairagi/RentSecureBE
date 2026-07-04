@@ -1,9 +1,10 @@
-from django.contrib.auth.models import AnonymousUser
 from fcm_django.models import FCMDevice  # type: ignore[import-untyped]
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response
+
+from django.contrib.auth.models import AnonymousUser
 
 from .models import DeviceToken
 

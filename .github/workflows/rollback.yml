@@ -1,0 +1,152 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# ROLLBACK: Production Rollback Workflow
+# ═══════════════════════════════════════════════════════════════════════════════
+# Triggered manually via workflow_dispatch with a target SHA to rollback to.
+# Validates the target SHA, re-deploys the previous version, and generates
+# a rollback validation report.
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Rollback
+
+'on':
+  workflow_dispatch:
+    inputs:
+      rollback_sha:
+        description: "Commit SHA to rollback to (target deployment SHA)"
+        required: true
+        type: string
+      reason:
+        description: "Reason for rollback"
+        required: true
+        type: string
+      notify_team:
+        description: "Send notification to team channel"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
+
+concurrency:
+  group: rollback-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-target:
+    name: Validate Rollback Target
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      validated_sha: ${{ steps.validate.outputs.sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Validate target SHA exists
+        id: validate
+        run: |
+          set -euo pipefail
+          INPUT_SHA="${{ github.event.inputs.rollback_sha }}"
+          if ! git cat-file -t "${INPUT_SHA}" >/dev/null 2>&1; then
+            echo "Invalid SHA: ${INPUT_SHA}"
+            exit 1
+          fi
+          CLEAN_SHA="$(git rev-parse --verify "${INPUT_SHA}")"
+          echo "sha=${CLEAN_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "Validated SHA: ${CLEAN_SHA}"
+      - name: Verify deployment artifacts for target
+        run: |
+          echo "Target SHA: ${{ steps.validate.outputs.sha }}"
+          echo "Reason: ${{ github.event.inputs.reason }}"
+          git log --oneline -1 "${{ steps.validate.outputs.sha }}"
+
+  rollback-deploy:
+    name: Execute Rollback Deploy
+    runs-on: ubuntu-latest
+    needs: [validate-target]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout target SHA
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+          ref: ${{ needs.validate-target.outputs.validated_sha }}
+      - name: Deploy rollback to EC2
+        uses: appleboy/ssh-action@d91a1af6f57cd4478ceee14d7705601dafabaa19  # v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /opt/rentsecure
+            git fetch origin
+            git checkout "${{ needs.validate-target.outputs.validated_sha }}"
+            docker compose up -d --build
+      - name: Install Sentry CLI
+        run: |
+          curl -sSL "https://github.com/getsentry/sentry-cli/releases/download/3.6.0/sentry-cli-Linux-x86_64" -o /usr/local/bin/sentry-cli
+          chmod +x /usr/local/bin/sentry-cli
+          sentry-cli --version
+      - name: Create Sentry release for rollback
+        if: always()
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          export RELEASE="${{ needs.validate-target.outputs.validated_sha }}"
+          ./sentry-cli releases new --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE"
+          ./sentry-cli releases set-commits --auto --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE"
+          ./sentry-cli releases finalize --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE"
+          ./sentry-cli releases deploys --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" "$RELEASE" new -e production
+
+  rollback-validation:
+    name: Rollback Validation Report
+    runs-on: ubuntu-latest
+    needs: [rollback-deploy, validate-target]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: '3.12'
+      - name: Validate deployment health
+        run: |
+          curl -f https://${{ secrets.EC2_HOST }}/api/health/ || (echo "Health check failed" && exit 1)
+      - name: Generate rollback report
+        run: |
+           printf '%s\n' \
+             '# Rollback Validation Report' \
+             '' \
+             '| Field | Value |' \
+             '|-------|-------|' \
+            "| Target SHA | \`${{ needs.validate-target.outputs.validated_sha }}\` |" \
+              "| Reason | ${{ github.event.inputs.reason }} |" \
+             "| Triggered By | ${{ github.actor }} |" \
+             "| Timestamp | $(date -u +%Y-%m-%dT%H:%M:%SZ) |" \
+             '| Health Check | Passed |' \
+             '' \
+             '## Rollback Validation Steps' \
+             '' \
+             '- [x] Target SHA validated' \
+             '- [x] Deployment executed' \
+             '- [x] Post-deploy health check passed' \
+             '' \
+             > rollback-report.md
+      - name: Upload rollback report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: rollback-report
+          path: rollback-report.md
+          retention-days: 90
+      - name: Comment rollback result on incident issue (if any)
+        if: always()
+        run: |
+          echo "Rollback completed. See artifacts for details."

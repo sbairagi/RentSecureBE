@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/serializers/caretaker_serializers.py
-# hypothesis_version: 6.136.0
-
-['__all__', 'id_proof', 'request', 'required', 'unit']

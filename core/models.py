@@ -1,10 +1,11 @@
 # mypy: disable-error-code="import-untyped"
 from typing import Any
 
+from simple_history.models import HistoricalRecords
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from simple_history.models import HistoricalRecords
 
 from rentsecure_be.type_compat import override
 
@@ -51,20 +52,19 @@ class NotificationPreference(models.Model):
     def save(self, *args: Any, **kwargs: Any) -> None:
         # Handle upsert for NotificationPreference
         is_new = self.pk is None
-        if is_new:
-            if self.owner_id is not None:
-                existing = NotificationPreference.objects.filter(
-                    owner_id=self.owner_id
-                ).first()
-                if existing:
-                    for field in self._meta.fields:
-                        if field.name in {"id", "owner"}:
-                            continue
-                        setattr(existing, field.attname, getattr(self, field.attname))
-                    existing.save()
-                    self.pk = existing.pk
-                    self.__dict__.update(existing.__dict__)
-                    return
+        if is_new and self.owner_id is not None:
+            existing = NotificationPreference.objects.filter(
+                owner_id=self.owner_id
+            ).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {"id", "owner"}:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
         return super().save(*args, **kwargs)
 
     @override
@@ -91,9 +91,7 @@ class OwnerBankDetails(models.Model):
     bank_account_number = models.CharField(max_length=30)
     ifsc_code = models.CharField(max_length=20)
     account_holder_name = models.CharField(max_length=100, blank=True, default="")
-    beneficiary_id = models.CharField(
-        max_length=100, unique=True, null=True, blank=True
-    )
+    beneficiary_id = models.CharField(max_length=100, unique=True, blank=True)
     bank_account_verified = models.BooleanField(default=False)
 
     @override
@@ -122,18 +120,17 @@ class SubscriptionPlan(models.Model):
     def save(self, *args: Any, **kwargs: Any) -> None:
         # Handle upsert for SubscriptionPlan
         is_new = self.pk is None
-        if is_new:
-            if self.name:
-                existing = SubscriptionPlan.objects.filter(name=self.name).first()
-                if existing:
-                    for field in self._meta.fields:
-                        if field.name in {"id", "name", "created_at", "updated_at"}:
-                            continue
-                        setattr(existing, field.attname, getattr(self, field.attname))
-                    existing.save()
-                    self.pk = existing.pk
-                    self.__dict__.update(existing.__dict__)
-                    return
+        if is_new and self.name:
+            existing = SubscriptionPlan.objects.filter(name=self.name).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {"id", "name", "created_at", "updated_at"}:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
         return super().save(*args, **kwargs)
 
     @override
@@ -164,24 +161,23 @@ class UserSubscription(models.Model):
     def save(self, *args: Any, **kwargs: Any) -> None:
         # Handle upsert for UserSubscription
         is_new = self.pk is None
-        if is_new:
-            if self.user_id is not None:
-                existing = UserSubscription.objects.filter(user_id=self.user_id).first()
-                if existing:
-                    for field in self._meta.fields:
-                        if field.name in {
-                            "id",
-                            "user",
-                            "start_date",
-                            "created_at",
-                            "updated_at",
-                        }:
-                            continue
-                        setattr(existing, field.attname, getattr(self, field.attname))
-                    existing.save()
-                    self.pk = existing.pk
-                    self.__dict__.update(existing.__dict__)
-                    return
+        if is_new and self.user_id is not None:
+            existing = UserSubscription.objects.filter(user_id=self.user_id).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {
+                        "id",
+                        "user",
+                        "start_date",
+                        "created_at",
+                        "updated_at",
+                    }:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
         return super().save(*args, **kwargs)
 
     @override

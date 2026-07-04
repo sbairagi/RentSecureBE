@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/core/utils/export_utils.py
-# hypothesis_version: 6.136.0
-
-['%Y-%m-%d', 'Amount', 'Due Date', 'Payout', 'Property', 'Rent Report', 'Renter', 'Status', 'renter', 'renter__unit']

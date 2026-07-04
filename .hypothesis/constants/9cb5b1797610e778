@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/smartbot/tests.py
-# hypothesis_version: 6.136.0
-
-[b'pdf', 15000, '+911234567890', '.pdf', '/tmp/agreement.pdf', '<html></html>', 'DB Error', 'Error', 'Nonexistent', 'SUCCESS', 'Test', 'Test Building', 'Test Renter', 'builtins.open', 'doc123', 'documentId', 'status', 'success', 'test@test.com', 'weasyprint.HTML', '✅', '❌', '📨']

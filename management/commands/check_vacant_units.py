@@ -2,7 +2,6 @@ import logging
 from datetime import date
 from typing import Any
 
-from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -28,50 +27,60 @@ class Command(BaseCommand):
             return
 
         for unit in units:
-            last_vacated: date | None = unit.last_vacated_at
-            if last_vacated is None:
-                continue
-            days_vacant = (today - last_vacated).days
-            if days_vacant < 30:
-                continue
+            self._process_vacant_unit(unit, today)
 
-            owner = unit.owner
-            building_name = (
-                unit.building.name
-                if unit.building
-                else unit.building_name or "your property"
+    def _process_vacant_unit(self, unit: Unit, today: date) -> None:
+        last_vacated: date | None = unit.last_vacated_at
+        if last_vacated is None:
+            return
+        days_vacant = (today - last_vacated).days
+        if days_vacant < 30:
+            return
+
+        owner = unit.owner
+        building_name = (
+            unit.building.name
+            if unit.building
+            else unit.building_name or "your property"
+        )
+        unit_label = unit.unit
+        message = f"📭 Your unit {unit_label} in {building_name} has been vacant for {days_vacant} days."
+
+        whatsapp_sent = self._send_whatsapp_alert(owner, message)
+        email_sent = self._send_email_alert(owner, unit_label, message)
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Vacancy alert sent for unit {unit_label} ({days_vacant} days): whatsapp={whatsapp_sent}, email={email_sent}"
             )
-            unit_label = unit.unit
-            message = f"📭 Your unit {unit_label} in {building_name} has been vacant for {days_vacant} days."
+        )
 
-            whatsapp_sent = False
-            email_sent = False
+    def _send_whatsapp_alert(self, owner: Any, message: str) -> bool:
+        if not owner.whatsapp_number:
+            return False
+        return send_whatsapp_message(owner.whatsapp_number, message)
 
-            if owner.whatsapp_number:
-                whatsapp_sent = send_whatsapp_message(owner.whatsapp_number, message)
+    def _send_email_alert(self, owner: Any, unit_label: str, message: str) -> bool:
+        if not owner.email:
+            return False
+        try:
+            from django.core.mail import send_mail
 
-            if owner.email:
-                try:
-                    send_mail(
-                        subject="Vacant Unit Alert",
-                        message=message,
-                        from_email="no-reply@rentsecure.in",
-                        recipient_list=[owner.email],
-                        fail_silently=False,
-                    )
-                    email_sent = True
-                except Exception as exc:
-                    logger.warning(
-                        f"Failed to send vacancy email to {owner.email} "
-                        f"for unit {unit_label}: {exc}"
-                    )
-                    self.stderr.write(
-                        f"Failed to send vacancy email to {owner.email} "
-                        f"for unit {unit_label}: {exc}"
-                    )
-
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Vacancy alert sent for unit {unit_label} ({days_vacant} days): whatsapp={whatsapp_sent}, email={email_sent}"
-                )
+            send_mail(
+                subject="Vacant Unit Alert",
+                message=message,
+                from_email="no-reply@rentsecure.in",
+                recipient_list=[owner.email],
+                fail_silently=False,
             )
+            return True
+        except Exception as exc:
+            logger.warning(
+                f"Failed to send vacancy email to {owner.email} "
+                f"for unit {unit_label}: {exc}"
+            )
+            self.stderr.write(
+                f"Failed to send vacancy email to {owner.email} "
+                f"for unit {unit_label}: {exc}"
+            )
+            return False

@@ -1,82 +1,71 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 3c: API Contract Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+# Validates DRF API endpoints match documented contract/schema
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Contract Testing
 
-on:
+'on':
   workflow_call:
   pull_request:
-    paths:
-      - 'properties/**/*.py'
-      - 'core/**/*.py'
-      - 'finance/**/*.py'
-      - 'smartbot/**/*.py'
-      - 'documents/**/*.py'
-      - 'notification/**/*.py'
+    branches: [main, master, dev]
+
+
+permissions:
+  contents: read
 
 concurrency:
-  group: contract-test-${{ github.ref }}
+  group: contract-tests-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   contract-test:
-    name: API Contract Tests
+    name: Stage 3c │ API Contract Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: test-secret-key-contract-test-2026
+      SECRET_KEY: "test-secret-key-contract-test-2026-abcdefghijklmnopqrstuvwxyz1234567890!"
       DEBUG: "False"
       DJANGO_ENV: test
       ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          egress-policy: audit
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
-            api.github.com:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-            docker.io:443
-            registry-1.docker.io:443
-            production.cloudflare.docker.com:443
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-python-environment
         with:
-          python-version: 3.12
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install psycopg2-binary
-
+          python-version: "3.12"
+          extra-packages: "psycopg2-binary schemathesis"
+          cache-key-suffix: "-contract-tests"
       - name: Run migrations
         run: python manage.py migrate --run-syncdb --verbosity=1
-
       - name: Validate DRF API contract (critical endpoints)
         env:
-          SECRET_KEY: test-secret-key-contract-test-2026
+          SECRET_KEY: "test-secret-key-contract-test-2026-abcdefghijklmnopqrstuvwxyz1234567890!"
+        shell: bash
         run: |
-          python manage.py test tests.test_api_contracts --verbosity=2 --no-input --randomly-seed=last 2>&1 || \
-          python -m pytest tests/test_api_contracts.py -v --tb=short --randomly-seed=last 2>&1 || \
-          echo "Contract tests file not yet created — creating minimal smoke test"
-
+          set -euo pipefail
+          if python manage.py test tests.test_api_contracts --verbosity=2 --no-input --randomly-seed=last; then
+            exit 0
+          fi
+          python -m pytest tests/test_api_contracts.py -v --tb=short --randomly-seed=last
       - name: Run contract schema validation
         env:
-          SECRET_KEY: test-secret-key-contract-test-2026
+          SECRET_KEY: "test-secret-key-contract-test-2026-abcdefghijklmnopqrstuvwxyz1234567890!"
+          PYTHONPATH: ${{ github.workspace }}
+          SECURE_SSL_REDIRECT: "False"
+          DEBUG: "True"
         run: python3 scripts/check_api_contracts.py

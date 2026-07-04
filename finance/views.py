@@ -10,13 +10,14 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from django.contrib.auth.models import AnonymousUser
-from django.http import FileResponse
 from rest_framework import permissions, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
+
+from django.contrib.auth.models import AnonymousUser
+from django.http import FileResponse
 
 from core.models import User
 from properties.models import Unit

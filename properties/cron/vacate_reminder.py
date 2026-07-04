@@ -7,9 +7,6 @@ from django.utils import timezone
 from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import Renter
 
-# from renters.models import Renter
-# from services.whatsapp_service import send_whatsapp_message
-
 
 def send_vacate_reminders() -> None:
     cutoff_date = timezone.now() - timedelta(days=3)

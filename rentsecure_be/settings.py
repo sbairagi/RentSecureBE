@@ -15,6 +15,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from decouple import Csv, config  # type: ignore[import-untyped]
+
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -120,6 +121,7 @@ INSTALLED_APPS = [
     "referral_and_earn",
     "documents",
     "smartbot",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [
@@ -151,6 +153,19 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "rentsecure_be.wsgi.application"
+ASGI_APPLICATION = "rentsecure_be.asgi.application"
+
+# Channels
+INSTALLED_APPS += ["channels"]
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [config("REDIS_URL", default="redis://127.0.0.1:6379/0")],
+        },
+    },
+}
 
 
 # Database
@@ -176,7 +191,7 @@ if config("USE_SQLITE", default="False", cast=bool):
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": config("DB_NAME", default=str(BASE_DIR / "db.sqlite3")),
             "USER": "",
-            "PASSWORD": "",
+            "PASSWORD": "",  # nosec B105 - SQLite does not require a password
             "HOST": "",
             "PORT": "",
         }
@@ -191,8 +206,7 @@ AUTH_USER_MODEL = "core.User"
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": (
-            "django.contrib.auth.password_validation."
-            "UserAttributeSimilarityValidator"
+            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
         ),
     },
     {
@@ -250,6 +264,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = config("STATIC_ROOT", default=str(BASE_DIR / "staticfiles"))
 
 # Add this at the end of settings.py
 MEDIA_URL = "/media/"

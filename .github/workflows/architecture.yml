@@ -1,69 +1,49 @@
-name: Architecture & Maintainability
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 5: Architecture & Maintainability
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: import-linter (layered architecture validation)
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Architecture
 
-on:
+'on':
   workflow_call:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: architecture-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  vulture:
-    name: Vulture (Dead Code)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install Vulture
-        run: |
-          python -m pip install --upgrade pip
-          pip install vulture
-
-      - name: Run Vulture (dead code detection)
-        run: |
-          python -m vulture \
-            --exclude .venv,venv,build,dist,migrations,__pycache__,.pytest_cache,.github,.kilo \
-            --exclude properties/_legacy,properties/refactored_models_combined.py,properties/original_models.py \
-            --min-confidence 80 \
-            rentsecure_be core properties finance notification documents smartbot referral_and_earn ai_assistant dashboard
-
   import-linter:
-    name: Import Linter (Architecture)
+    name: Stage 5 │ Import Linter (Architecture)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          python-version: 3.12
-
-      - name: Cache pip
-        uses: actions/cache@v4
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install import-linter
-        run: |
-          python -m pip install --upgrade pip
-          pip install import-linter
-
-      - name: Verify import-linter configuration
-        run: python -m lint_imports --verify
-
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "import-linter"
+          cache-key-suffix: "-architecture"
       - name: Run import-linter
-        run: python -m lint_imports
+        shell: bash
+        run: |
+          set -euo pipefail
+          lint-imports --config import-linter.ini

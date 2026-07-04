@@ -50,7 +50,9 @@ class UnitImageSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         unit = data.get("unit") or getattr(self.instance, "unit", None)
         if unit and unit.owner != user:
-            raise serializers.ValidationError("You do not own the selected unit.")
+            raise serializers.ValidationError(
+                "You do not own the selected unit."
+            )  # noqa: S1192
         return data
 
     @override

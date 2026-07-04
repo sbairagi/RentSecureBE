@@ -1,10 +1,11 @@
 from datetime import date
 from unittest.mock import MagicMock, patch
 
+from rest_framework.test import APIClient, APITestCase
+
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.test import TestCase, override_settings
-from rest_framework.test import APIClient, APITestCase
 
 from rentsecure_be.services.leegality_service import send_agreement_for_signature
 

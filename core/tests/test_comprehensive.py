@@ -2,10 +2,11 @@
 
 from decimal import Decimal
 
+from rest_framework.test import APIClient, APIRequestFactory
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import TestCase, override_settings
-from rest_framework.test import APIClient, APIRequestFactory
 
 from core.models import (
     OTP,

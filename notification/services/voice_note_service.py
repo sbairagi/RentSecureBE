@@ -16,7 +16,7 @@ from notification.services.whatsapp_service import (
     send_whatsapp_audio,
     send_whatsapp_message,
 )
-from properties.models import RentReminderLog
+from properties.models import RentReminderLog  # nosonar
 
 if TYPE_CHECKING:
     from properties.models import RentRecord

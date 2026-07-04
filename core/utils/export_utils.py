@@ -3,10 +3,11 @@ from typing import Any
 
 import xlsxwriter
 
-from properties.models import RentRecord
+from properties.models import RentRecord  # nosonar
 
 
 def generate_owner_rent_report(owner: Any) -> BytesIO:
+
     rents = RentRecord.objects.filter(renter__unit__owner=owner).select_related(
         "renter", "renter__unit"
     )

@@ -31,7 +31,7 @@
 
 ## Dependency note
 
-`requirements.txt` may pin `python-decouple==3.9` which **fails pip install** — use 3.8.
+`python-decouple` `config()` is pinned to a working release in `requirements.txt`.
 
 ## pytest
 

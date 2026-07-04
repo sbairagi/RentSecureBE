@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/receipt_service.py
-# hypothesis_version: 6.136.0
-
-['%B %Y', '%Y%m', 'application/pdf', 'email', 'id', 'owner', 'paid', 'rent', 'renter', 'unit']

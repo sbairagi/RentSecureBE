@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from django.contrib.auth.models import AnonymousUser
-from django.core.cache import cache
 from rest_framework import status, viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
+
+from django.contrib.auth.models import AnonymousUser
+from django.core.cache import cache
 
 from core.models import User
 from rentsecure_be.type_compat import override
@@ -73,7 +74,7 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         """Persist a new renter, enforce ownership, and update unit state."""
         unit: Unit | None = serializer.validated_data.get("unit")
         if unit is None or unit.owner != self.request.user:
-            raise PermissionDenied("You do not own the selected unit.")
+            raise PermissionDenied("You do not own the selected unit.")  # noqa: S1192
 
         enforcer = FeatureEnforcer(self.request.user)
         if not enforcer.can_create("max_renters"):

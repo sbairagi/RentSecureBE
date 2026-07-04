@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/serializers/renter_serializers.py
-# hypothesis_version: 6.136.0
-
-['PAID', '__all__', 'amount', 'amount_paid', 'due_date', 'id_proof', 'invoice_url', 'late_fee', 'payment_status', 'rent_agreement', 'rent_due_date', 'request', 'required', 'unit']

@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/services/unit_service.py
-# hypothesis_version: 6.136.0
-
-[0.0, 100, 'OCCUPIED', 'active', 'is_vacant', 'notice_period', 'occupied_units', 'status', 'total_units', 'updated_at', 'vacant_units']

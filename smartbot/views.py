@@ -1,12 +1,12 @@
-# from rent.models import RentRecord
 from datetime import date
 from typing import Any
 
-from django.contrib.auth.models import AnonymousUser
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response
+
+from django.contrib.auth.models import AnonymousUser
 
 from properties.models import RentRecord
 from smartbot.services.gpt_services import gpt_smart_reply

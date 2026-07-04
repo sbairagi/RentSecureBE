@@ -1,66 +1,57 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 4: Django System & Migration Checks
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: Django system check, deploy check, migration validation, rollback
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Django Check
 
-on:
+'on':
   workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: django-check-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   django-check:
-    name: Django Management Checks
+    name: Stage 4 │ Django System & Migration Check
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: django-check-ci-pipeline-security-validation-2026-production-grade-random-key-XK9mP2vL7qR4wN8jF5tB3nY6hD1zS0aC9eU3iI7oL4pQ2rT8vX5yW6zA1bE4fG9kH2jK5lM8nP0qS3uV6wX9yZ2cD5fG8hJ1kL4mN7oP0qR2sT5u
+      SECRET_KEY: "test-secret-key-django-check-2026-abcdefghijklmnopqrstuvwxyz1234567890"
       DEBUG: "False"
       DJANGO_ENV: test
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          egress-policy: audit
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
-            api.github.com:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-            docker.io:443
-            registry-1.docker.io:443
-            production.cloudflare.docker.com:443
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-python-environment
         with:
-          python-version: 3.12
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install psycopg2-binary
-
+          python-version: "3.12"
+          extra-packages: "psycopg2-binary"
+          cache-key-suffix: "-django-check"
       - name: Django system check
         run: python manage.py check --verbosity=2 --fail-level ERROR
-
       - name: Django deploy check
         run: python manage.py check --deploy --verbosity=2 --fail-level WARNING
-
       - name: Check for missing migrations
         run: python manage.py makemigrations --check --dry-run --verbosity=2
-
       - name: Validate migrations apply on clean database
         run: |
           rm -f db.sqlite3
@@ -68,94 +59,69 @@ jobs:
           echo "All migrations applied successfully on clean database."
 
   migration-rollback:
-    name: Migration Rollback Validation
+    name: Stage 4b │ Migration Rollback Validation
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     needs: django-check
+    timeout-minutes: 15
     env:
       USE_SQLITE: "True"
-      SECRET_KEY: test-secret-key-migration-rollback-2026
+      SECRET_KEY: test-secret-key-migration-rollback-2026-abcdefghijklmnopqrstuvwxyz1234567890
       DEBUG: "False"
       DJANGO_ENV: test
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          egress-policy: audit
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
           disable-sudo: true
           allowed-endpoints: >
             github.com:443
             objects.githubusercontent.com:443
-            api.github.com:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
-            docker.io:443
-            registry-1.docker.io:443
-            production.cloudflare.docker.com:443
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-python-environment
         with:
-          python-version: 3.12
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install psycopg2-binary
-
+          python-version: "3.12"
+          extra-packages: "psycopg2-binary"
+          cache-key-suffix: "-migration-rollback"
       - name: Discover app migrations
         id: discover
         run: |
           echo "=== properties ==="
-          ls -1 properties/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find properties/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== core ==="
-          ls -1 core/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find core/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== finance ==="
-          ls -1 finance/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find finance/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== smartbot ==="
-          ls -1 smartbot/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find smartbot/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== documents ==="
-          ls -1 documents/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find documents/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== notification ==="
-          ls -1 notification/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
+          find notification/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
           echo "=== referral_and_earn ==="
-          ls -1 referral_and_earn/migrations/*.py 2>/dev/null | grep -v __init__ | grep -v __pycache__ | sort
-
+          find referral_and_earn/migrations -name '*.py' ! -name '__init__' ! -name '__pycache__*' | sort
       - name: Run all migrations forward
         run: python manage.py migrate --run-syncdb --verbosity=2
-
       - name: Identify last migration per app and test rollback
         run: |
           python - <<'EOF'
           import subprocess, sys, os
-
           apps = ["properties", "core", "finance", "smartbot", "documents", "notification", "referral_and_earn"]
           os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rentsecure_be.settings")
-
-          # Django setup
           import django
           django.setup()
           from django.core.management import call_command
-
           for app in apps:
               migrations_dir = os.path.join(app, "migrations")
               if not os.path.isdir(migrations_dir):
                   print(f"[SKIP] {app}: no migrations dir")
                   continue
-
               migrations = sorted([
                   f.replace(".py", "")
                   for f in os.listdir(migrations_dir)
@@ -164,24 +130,19 @@ jobs:
               if not migrations:
                   print(f"[SKIP] {app}: no migration files")
                   continue
-
               last_migration = migrations[-1]
               if len(migrations) == 1:
                   print(f"[SKIP] {app}: only one migration ({last_migration}), rollback would be to zero")
                   continue
-
-              # Test rollback to previous migration (one step back)
               target = migrations[-2]
-              print(f"[TEST] {app}: rolling back from {last_migration} → {target}")
+              print(f"[TEST] {app}: rolling back from {last_migration} -> {target}")
               try:
                   call_command("migrate", app, target, verbosity=1)
                   print(f"[PASS] {app}: rollback to {target} succeeded")
-                  # Re-apply forward to restore DB state
                   call_command("migrate", app, verbosity=0)
                   print(f"[RESTORE] {app}: re-applied forward migrations")
               except Exception as e:
-                  print(f"[FAIL] {app}: rollback FAILED — {e}")
+                  print(f"[FAIL] {app}: rollback FAILED - {e}")
                   sys.exit(1)
-
           print("\nAll rollback validations passed.")
           EOF

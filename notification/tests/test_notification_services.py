@@ -59,7 +59,7 @@ class WhatsAppServiceTest(TestCase):
         self.assertFalse(result)
 
     @patch("notification.services.whatsapp_service.boto3")
-    def test_upload_to_s3_success(self, mock_boto3):
+    def test_upload_to_s3_success(self, _mock_boto3):
         with override_settings(AWS_S3_BUCKET_NAME="test-bucket"):
             result = upload_to_s3("/path/to/file.mp3")
             self.assertIn("test-bucket.s3.amazonaws.com", result)
@@ -191,6 +191,22 @@ class LateFeesNotifyServiceTest(TestCase):
         rent.adjustment_reason = "Late payment"
         notify_owner_about_late_fee(rent, 500)
         mock_send.assert_called_once()
+
+    @patch("notification.services.late_fees_notify_service.send_whatsapp_message")
+    def test_notify_renter_about_late_fee_no_renter(self, mock_send):
+        rent = MagicMock()
+        rent.renter = None
+        rent.adjustment_reason = "Late payment"
+        notify_renter_about_late_fee(rent, 500)
+        mock_send.assert_not_called()
+
+    @patch("notification.services.late_fees_notify_service.send_whatsapp_message")
+    def test_notify_owner_about_late_fee_no_renter(self, mock_send):
+        rent = MagicMock()
+        rent.renter = None
+        rent.adjustment_reason = "Late payment"
+        notify_owner_about_late_fee(rent, 500)
+        mock_send.assert_not_called()
 
 
 class NotificationUtilsTest(TestCase):

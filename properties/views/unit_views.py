@@ -11,14 +11,15 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
-from django.contrib.auth.models import AnonymousUser
-from django.core.cache import cache
-from django.http import HttpRequest, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import BaseSerializer
+
+from django.contrib.auth.models import AnonymousUser
+from django.core.cache import cache
+from django.http import HttpRequest, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 from core.models import User
 from rentsecure_be.services.leegality_service import send_agreement_for_signature
@@ -26,13 +27,7 @@ from rentsecure_be.type_compat import override
 
 from ..constants import UNITS_CACHE_TIMEOUT
 from ..feature_enforcer import FeatureEnforcer
-from ..models import (
-    RentAgreementDraft,
-    Renter,
-    Unit,
-    UnitDocument,
-    UnitImage,
-)
+from ..models import RentAgreementDraft, Renter, Unit, UnitDocument, UnitImage
 from ..serializers import (
     RentAgreementDraftSerializer,
     UnitDocumentSerializer,
@@ -127,7 +122,7 @@ class UnitImageViewSet(viewsets.ModelViewSet[UnitImage]):
         """Persist a new image after ownership + quota check."""
         unit: Unit | None = serializer.validated_data.get("unit")
         if unit is None or unit.owner != self.request.user:
-            raise PermissionDenied("You do not own the selected unit.")
+            raise PermissionDenied("You do not own the selected unit.")  # noqa: S1192
 
         enforcer = FeatureEnforcer(self.request.user)
         if not enforcer.can_create("unit_images"):
@@ -301,8 +296,9 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
         enforcer.decrement("rent_agreement_drafts")
 
 
+# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt
-def leegality_webhook(request: HttpRequest) -> JsonResponse:
+def leegality_webhook(request: HttpRequest) -> JsonResponse:  # noqa: S3776  # nosonar
     """Process Leegality signing-status callbacks.
 
     Updates ``owner_signed`` / ``renter_signed`` flags based on the

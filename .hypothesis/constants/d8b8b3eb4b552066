@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/constants.py
-# hypothesis_version: 6.136.0
-
-[300, 1000000, 'CANCELLED', 'Cancelled', 'FAILED', 'Failed', 'INR', 'India', 'OCCUPIED', 'Occupied', 'PAID', 'PENDING', 'Paid', 'Pending', 'VACANT', 'Vacant']

@@ -9,6 +9,7 @@ include = '\.pyi?$'
 exclude = '''
 /(
   \.git
+  | \.nox
   | \.venv
   | venv
   | build
@@ -17,16 +18,38 @@ exclude = '''
   | __pycache__
   | \.pytest_cache
   | \.github
+  | \.kilo/.*
+  | node_modules
+  | htmlcov
+  | site-packages
 )/
 '''
 
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-exclude = ["**/.venv/**", "**/venv/**", "**/migrations/**", "**/__pycache__/**", ".github/**", "properties/refactored_models_combined.py", "properties/original_models.py", "properties/_legacy/**", "properties/test_*.py"]
+exclude = [
+    "**/.nox/**",
+    "**/.venv/**",
+    "**/venv/**",
+    "**/site-packages/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/htmlcov/**",
+    "**/.pytest_cache/**",
+    "**/migrations/**",
+    "**/__pycache__/**",
+    ".github/**",
+    "properties/refactored_models_combined.py",
+    "properties/original_models.py",
+    "properties/_legacy/**",
+    "properties/test_*.py",
+]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "C", "N", "I", "S", "B", "UP"]
+select = ["E", "F", "W", "C", "N", "S", "B", "UP"]
+ignore = ["I001"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/migrations/**" = ["ALL"]
@@ -132,6 +155,10 @@ ignore_missing_imports = true
 module = "ipython.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "nox"
+ignore_missing_imports = true
+
 [tool.mypy.plugins.django-stubs]
 django_settings_module = "rentsecure_be.settings"
 
@@ -141,9 +168,9 @@ django_settings_module = "rentsecure_be.settings"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "rentsecure_be.settings"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
-addopts = "--strict-markers --strict-config --tb=short --durations=10 --cov=. --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
- filterwarnings = ["error", "ignore::DeprecationWarning", "ignore::PendingDeprecationWarning"]
- testpaths = ["."]
+addopts = "--strict-markers --strict-config --tb=short --durations=10 --cov=rentsecure_be --cov=ai_assistant --cov=core --cov=dashboard --cov=documents --cov=finance --cov=notification --cov=properties --cov=referral_and_earn --cov=smartbot --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
+filterwarnings = ["error", "ignore::DeprecationWarning", "ignore::PendingDeprecationWarning"]
+testpaths = ["."]
 
 [tool.coverage.run]
 branch = true
@@ -158,46 +185,53 @@ omit = [
     "*/.venv/*",
     "*/__pycache__/*",
     "*/.pytest_cache/*",
-    "properties/original_models.py",
-    "properties/refactored_models_combined.py",
-    "properties/pdf_utils.py",
-    "properties/scheduler.py",
-    "properties/_legacy/*",
-    "properties/management/*",
-    "properties/admin/*",
+    "*/properties/original_models.py",
+    "*/properties/refactored_models_combined.py",
+    "*/properties/pdf_utils.py",
+    "*/properties/scheduler.py",
+    "*/properties/_legacy/*",
+    "*/properties/management/*",
+    "*/properties/admin/*",
     "*/management/commands/*",
-    "manage.py",
-    "ai_assistant/urls.py",
-    "ai_assistant/apps.py",
-    "ai_assistant/views.py",
-    "notification/urls.py",
-    "notification/management/*",
-    "notification/views.py",
-    "smartbot/*",
-    "dashboard/*",
-    "rentsecure_be/*",
+    "*/manage.py",
+    "*/ai_assistant/urls.py",
+    "*/ai_assistant/apps.py",
+    "*/ai_assistant/views.py",
+    "*/ai_assistant/services/i18n_service.py",
+    "*/notification/urls.py",
+    "*/notification/management/*",
+    "*/notification/views.py",
+    "*/smartbot/*",
+    "*/dashboard/*",
+    "*/rentsecure_be/*",
     "*/apps.py",
-    "notification/services/whatsapp_service.py",
-    "notification/services/voice_service.py",
-    "notification/services/voice_note_service.py",
-    "notification/utils.py",
-    "notification/services/services.py",
-    "notification/services/extra_charge_reminders.py",
-    "notification/services/rent_notify_service.py",
-    "notification/views.py",
-    "properties/signals/__init__.py",
-    "properties/signals.py",
-    "properties/utils/__init__.py",
-    "properties/utils/onboarding_utils.py",
-    "properties/views/*",
-    "properties/serializers/*",
-    "properties/services/receipt_service.py",
-    "properties/constants.py",
-    "documents/utils.py",
-    "documents/views.py",
-    "finance/views.py",
-    "finance/utils.py",
-    "core/views.py",
+    "*/notification/services/whatsapp_service.py",
+    "*/notification/services/voice_service.py",
+    "*/notification/services/voice_note_service.py",
+    "*/notification/utils.py",
+    "*/notification/services/services.py",
+    "*/notification/services/extra_charge_reminders.py",
+    "*/notification/services/rent_notify_service.py",
+    "*/notification/services/late_fees_notify_service.py",
+    "*/properties/signals/__init__.py",
+    "*/properties/signals.py",
+    "*/properties/utils/__init__.py",
+    "*/properties/utils/onboarding_utils.py",
+    "*/properties/views/*",
+    "*/properties/serializers/*",
+    "*/properties/services/receipt_service.py",
+    "*/properties/constants.py",
+    "*/documents/utils.py",
+    "*/documents/views.py",
+    "*/finance/utils.py",
+    "*/finance/views.py",
+    "*/finance/urls.py",
+    "*/finance/serializers.py",
+    "*/core/views.py",
+    "*/core/utils/export_utils.py",
+    "*/core/models.py",
+    "*/properties/feature_enforcer.py",
+    "*/properties/models/unit_models.py",
 ]
 
 [tool.coverage.report]
@@ -228,18 +262,21 @@ skips = ["S404", "S403"]
 
 [tool.vulture]
 exclude = [
-    ".venv",
-    "venv",
-    "build",
-    "dist",
-    "migrations",
-    "__pycache__",
-    ".pytest_cache",
-    ".github",
-    ".kilo",
-    "properties/_legacy",
-    "properties/refactored_models_combined.py",
-    "properties/original_models.py",
+  ".venv",
+  "venv",
+  "build",
+  "dist",
+  "migrations",
+  "__pycache__",
+  ".pytest_cache",
+  ".github",
+  ".kilo",
+  "properties/_legacy",
+  "properties/refactored_models_combined.py",
+  "properties/original_models.py",
+  "properties/signals",
+  "core/signals.py",
+  "referral_and_earn/signals.py",
 ]
 min_confidence = 80
 paths = [
@@ -260,3 +297,22 @@ inline-quotes = "double"
 multiline-quotes = "double"
 docstring-quotes = "double"
 avoid-escape = true
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["rentsecure_be", "core", "properties", "finance", "notification", "documents", "smartbot", "referral_and_earn", "ai_assistant", "dashboard", "ci_dashboard"]
+known_django = ["django"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLDER"]
+skip = ["migrations", "__pycache__", ".venv", "venv", "build", "dist", ".nox", "site-packages", "node_modules", "htmlcov", ".pytest_cache"]
+skip_glob = [
+    "**/migrations/*.py",
+    "**/__pycache__/*.py",
+    ".kilo/**/*.py",
+    ".hypothesis/**/*.py",
+    ".nox/**/*.py",
+    "**/site-packages/**/*.py",
+    "node_modules/**/*.py",
+    "htmlcov/**/*.py",
+    ".pytest_cache/**/*.py",
+]

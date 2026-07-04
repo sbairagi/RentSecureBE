@@ -17,12 +17,14 @@ This test suite covers:
 from datetime import date, timedelta
 from decimal import Decimal
 
+from rest_framework.test import APIClient, APITestCase
+
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
-from rest_framework.test import APIClient, APITestCase
 
 from core.models import (
     AddOnPurchase,
@@ -73,7 +75,7 @@ class BuildingModelTests(TestCase):
             postal_code="10001",
             owner=self.user,
         )
-        with self.assertRaises(Exception):  # IntegrityError
+        with self.assertRaises(IntegrityError):  # IntegrityError
             Building.objects.create(
                 name="Test Building",
                 address_line="123 Main St",
@@ -186,7 +188,7 @@ class UnitModelTests(TestCase):
             unit_type=Unit.UnitType.FLAT,
             status="vacant",
         )
-        with self.assertRaises(Exception):  # IntegrityError
+        with self.assertRaises(IntegrityError):  # IntegrityError
             Unit.objects.create(
                 owner=self.user,
                 building=self.building,
@@ -430,7 +432,7 @@ class CaretakerModelTests(TestCase):
             address="123 Main St, New York, NY, USA, 10001",
             joining_date=date(2025, 1, 1),
         )
-        with self.assertRaises(Exception):
+        with self.assertRaises(IntegrityError):
             Caretaker.objects.create(
                 unit=self.unit,
                 name="Jane Doe",
@@ -531,7 +533,7 @@ class RenterModelTests(TestCase):
             rent_amount=10000,
             start_date=date(2025, 1, 1),
         )
-        with self.assertRaises(Exception):
+        with self.assertRaises(IntegrityError):
             Renter.objects.create(
                 unit=self.unit,
                 name="Bob Smith",
@@ -748,7 +750,7 @@ class RentRecordModelTests(TestCase):
             paid_on=date(2025, 1, 5),
             payment_method=RentRecord.PaymentMethod.CASH,
         )
-        with self.assertRaises(Exception):
+        with self.assertRaises(IntegrityError):
             RentRecord.objects.create(
                 renter=self.renter,
                 unit=self.unit,

@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/smartbot/actions.py
-# hypothesis_version: 6.136.0
-
-['created_at', 'documentId', 'email', 'name', 'phone', 'rb', 'status', 'success', '❌ Renter not found.']

@@ -1,0 +1,57 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 8a: Deploy Readiness Check
+# ═══════════════════════════════════════════════════════════════════════════════
+# Verifies environment configuration and deployment readiness.
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Deploy Readiness
+
+'on':
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-readiness-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-readiness:
+    name: Stage 8a │ Deploy Readiness Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      USE_SQLITE: "True"
+      SECRET_KEY: "test-secret-key-deploy-readiness-2026-abcdefghijklmnopqrstuvwxyz1234567890"
+      DEBUG: "False"
+      DJANGO_ENV: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "psycopg2-binary"
+          cache-key-suffix: "-deploy-readiness"
+      - name: Verify deployment scripts exist
+        run: |
+          test -f scripts/deploy.sh && echo "Deploy script present" || echo "No deploy script found (optional)"
+      - name: Validate environment variables exist
+        run: |
+          grep -q "SECRET_KEY" .env.example || (echo "Missing SECRET_KEY in .env.example" && exit 1)
+          grep -q "DATABASE_URL" .env.example || (echo "Missing DATABASE_URL in .env.example" && exit 1)
+          grep -q "ALLOWED_HOSTS" .env.example || (echo "Missing ALLOWED_HOSTS in .env.example" && exit 1)
+          echo "Environment variable validation passed."

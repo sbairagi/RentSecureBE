@@ -197,12 +197,14 @@ class RenterModelEdgeCasesTest(TestCase):
         )
 
     def test_renter_statuses(self):
-        for status in ["active", "notice_period", "revoked", "deactivated"]:
+        for idx, status in enumerate(
+            ["active", "notice_period", "revoked", "deactivated"]
+        ):
             renter = Renter.objects.create(
                 unit=self.unit,
                 full_name=f"RN {status}",
                 email=f"rn{status}@test.com",
-                phone=f"+9199999999{hash(status) % 100:02d}",
+                phone=f"+9199999999{idx:02d}",
                 rent_amount=Decimal("10000"),
                 status=status,
             )

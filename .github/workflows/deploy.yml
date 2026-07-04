@@ -1,43 +1,55 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 8b: Deploy to Production
+# ═══════════════════════════════════════════════════════════════════════════════
+# Runs: EC2 SSH deploy, Sentry release & deploy tracking
+# NOTE: Disabled temporarily — restore `push` trigger before actual deployment
+# ═══════════════════════════════════════════════════════════════════════════════
 name: Deploy Backend
 
-on:
-  push:
-    branches:
-      - main
+'on':
+  workflow_call:
+    secrets:
+      EC2_HOST:
+        required: false
+      EC2_USER:
+        required: false
+      EC2_SSH_KEY:
+        required: false
+      SENTRY_AUTH_TOKEN:
+        required: false
+      SENTRY_ORG:
+        required: false
+      SENTRY_PROJECT:
+        required: false
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
-    name: Deploy to EC2
+    name: Stage 8b │ Deploy to Production
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v0.1.7
+        uses: appleboy/ssh-action@d91a1af6f57cd4478ceee14d7705601dafabaa19  # v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
+          username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          script: |
-            set -e
-            cd /home/${{ secrets.EC2_USERNAME }}/rentsecure
-            source .venv/bin/activate
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
-            python manage.py migrate --noinput
-            python manage.py collectstatic --noinput
-            sudo systemctl restart gunicorn
-            sudo systemctl restart nginx
-
       - name: Install Sentry CLI
         run: |
-          curl -sL https://sentry.io/get-cli/ | bash
+          curl -sSL "https://github.com/getsentry/sentry-cli/releases/download/3.6.0/sentry-cli-Linux-x86_64" -o /usr/local/bin/sentry-cli
+          chmod +x /usr/local/bin/sentry-cli
+          sentry-cli --version
 
       - name: Create Sentry release
         env:

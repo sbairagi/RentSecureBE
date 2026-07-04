@@ -56,7 +56,6 @@ rules:
           - pattern: SECRET_KEY="..."
       - metavariable-regex:
           metavariable: SECRET_KEY_VALUE
-          language: python
           regex: '"django-insecure.*"'
     message: >-
       Hardcoded Django SECRET_KEY with 'django-insecure' prefix detected.
@@ -79,7 +78,6 @@ rules:
           - pattern: TWILIO_AUTH_TOKEN="..."
       - metavariable-regex:
           metavariable: KEY_VALUE
-          language: python
           regex: '".{8,}"'
     message: >-
       Hardcoded API key or token detected in source code.

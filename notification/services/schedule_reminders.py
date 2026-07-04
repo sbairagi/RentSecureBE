@@ -7,7 +7,7 @@ from django.utils.timezone import now
 
 from notification.services.voice_service import generate_voice_note
 from notification.services.whatsapp_service import send_whatsapp_audio
-from properties.models import PropertyTaxRecord, RentRecord
+from properties.models import PropertyTaxRecord, RentRecord  # nosonar
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def get_upcoming_tax_dues() -> Any:
     return PropertyTaxRecord.objects.filter(due_date=target_date, paid=False)
 
 
-def generate_rent_reminder_msg(rent: RentRecord, lang: str = "hi") -> str:
+def generate_rent_reminder_msg(rent: RentRecord) -> str:
     if rent.renter is None:
         return ""
     name = rent.renter.full_name
@@ -34,7 +34,7 @@ def generate_rent_reminder_msg(rent: RentRecord, lang: str = "hi") -> str:
     )
 
 
-def generate_tax_reminder_msg(tax: PropertyTaxRecord, lang: str = "hi") -> str:
+def generate_tax_reminder_msg(tax: PropertyTaxRecord) -> str:
     amount = tax.amount
     due = tax.due_date.strftime("%d %B")
     return f"Kripya dhyaan dein – property tax ₹{amount} {due} tak jama karna hai."
@@ -60,8 +60,10 @@ def process_rent_reminders() -> None:
             try:
                 audio_path = generate_voice_note(msg, lang)
                 send_whatsapp_audio(phone, audio_path)
-            except Exception as e:
-                logger.error("Failed to send rent reminder for rent %s: %s", rent.id, e)
+            except Exception:
+                logger.exception(
+                    "Failed to send rent reminder for rent %s: %s", rent.id
+                )
 
 
 def process_tax_reminders() -> None:
@@ -77,9 +79,9 @@ def process_tax_reminders() -> None:
             try:
                 audio_path = generate_voice_note(msg, lang)
                 send_whatsapp_audio(phone, audio_path)
-            except Exception as e:
-                logger.error(
-                    "Failed to send tax reminder for tax record %s: %s", tax.id, e
+            except Exception:
+                logger.exception(
+                    "Failed to send tax reminder for tax record %s", tax.id
                 )
 
 

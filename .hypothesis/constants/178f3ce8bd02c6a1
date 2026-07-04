@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/admin/building_admin.py
-# hypothesis_version: 6.136.0
-
-['-created_at', 'address_line', 'city', 'country', 'created_at', 'id', 'name', 'owner', 'owner__username', 'postal_code', 'state']

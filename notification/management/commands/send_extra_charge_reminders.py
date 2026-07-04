@@ -3,7 +3,7 @@ from typing import Any
 from django.core.management.base import BaseCommand
 
 from notification.services.extra_charge_reminders import send_due_extra_charge_reminders
-from rentsecure_be.type_compat import override
+from rentsecure_be.type_compat import override  # nosonar
 
 
 class Command(BaseCommand):

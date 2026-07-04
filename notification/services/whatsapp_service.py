@@ -9,8 +9,9 @@ try:
     import boto3  # type: ignore[import-untyped]
 except ImportError:
     boto3 = None
-from django.conf import settings
 from twilio.rest import Client
+
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +25,8 @@ def send_whatsapp_message(phone: str, text: str) -> bool:
             body=text, from_=settings.TWILIO_WHATSAPP_NUMBER, to=f"whatsapp:{phone}"
         )
         return True
-    except Exception as exc:
-        logger.error("WhatsApp sending failed: %s", exc)
+    except Exception:
+        logger.exception("WhatsApp sending failed: %s")
         return False
 
 
@@ -42,8 +43,8 @@ def send_whatsapp_audio(phone: str, audio_path: str) -> bool:
             to=f"whatsapp:{phone}",
         )
         return True
-    except Exception as exc:
-        logger.error("WhatsApp audio failed: %s", exc)
+    except Exception:
+        logger.exception("WhatsApp audio failed: %s")
         return False
 
 

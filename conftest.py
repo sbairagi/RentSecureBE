@@ -15,10 +15,10 @@ except Exception:
 
     class _StubHTML:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
-            pass
+            """Stub constructor for environments without weasyprint."""
 
         def write_pdf(self, *args: Any, **kwargs: Any) -> None:
-            pass
+            """Stub PDF writer for environments without weasyprint."""
 
     _weasyprint_stub.HTML = _StubHTML  # type: ignore[attr-defined]
     sys.modules["weasyprint"] = _weasyprint_stub
@@ -27,14 +27,15 @@ import os
 from datetime import timedelta
 from decimal import Decimal
 
-import django
 import factory
 import pytest
+from faker import Faker
+
+import django
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.cache import cache
 from django.utils import timezone
-from faker import Faker
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rentsecure_be.settings")
 django.setup()
@@ -44,6 +45,11 @@ from django.conf import settings  # noqa: E402
 settings.SECURE_SSL_REDIRECT = False
 settings.SESSION_COOKIE_SECURE = False
 settings.CSRF_COOKIE_SECURE = False
+
+if len(settings.SECRET_KEY) < 32:
+    settings.SECRET_KEY = (
+        "test-secret-key-rentsecure-be-ci-pipeline-2026!"  # noqa: S105
+    )
 
 from core.models import (  # noqa: E402
     AddOnPurchase,
@@ -230,16 +236,16 @@ class RentRecordFactory(factory.django.DjangoModelFactory):  # type: ignore[misc
     status = factory.Iterator(["pending", "paid", "overdue", "cancelled"])
     paid_on = factory.LazyFunction(lambda: timezone.now().date() - timedelta(days=5))
     due_date = factory.Sequence(
-        lambda n: (timezone.now().date().replace(day=5) - timedelta(days=30 * n))
+        lambda n: timezone.now().date().replace(day=5) - timedelta(days=30 * n)
     )
     late_fee = Decimal("0")
     discount = Decimal("0")
     notes = ""
     transaction_id = factory.LazyAttribute(lambda _: str(fake.uuid4())[:32])
     payout_status = "PENDING"
-    payout_reference = None
-    payment_link = None
-    razorpay_order_id = None
+    payout_reference = ""
+    payment_link = ""
+    razorpay_order_id = ""
     payout_retries = 0
     last_payout_retry = None
     payout_retry_count = 0
@@ -256,7 +262,7 @@ class CaretakerFactory(factory.django.DjangoModelFactory):  # type: ignore[misc]
         model = Caretaker
 
     unit = factory.SubFactory(UnitFactory)
-    owner = factory.SelfAttribute("unit.owner")
+    owner = factory.SelfAttribute("unit.owner")  # noqa: S1192
     name = factory.LazyAttribute(lambda _: fake.name())
     phone = factory.LazyAttribute(lambda _: f"+91{fake.random_number(digits=10)}")
     email = factory.LazyAttribute(lambda _: fake.email())
@@ -323,7 +329,7 @@ class OwnerBankDetailsFactory(factory.django.DjangoModelFactory):  # type: ignor
     bank_account_number = factory.LazyAttribute(lambda _: fake.bban())
     ifsc_code = factory.LazyAttribute(lambda _: fake.swift11()[:11])
     account_holder_name = factory.LazyAttribute(lambda obj: obj.owner.full_name)
-    beneficiary_id = None
+    beneficiary_id = factory.LazyAttribute(lambda _: f"BENE-{str(fake.uuid4())}")
     bank_account_verified = False
 
 

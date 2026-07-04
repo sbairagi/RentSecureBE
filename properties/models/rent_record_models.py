@@ -1,9 +1,10 @@
 from typing import Any
 
+from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
 
 from rentsecure_be.type_compat import override
 
@@ -71,18 +72,18 @@ class RentRecord(models.Model):
     discount = models.DecimalField(
         max_digits=10, decimal_places=2, default=0, help_text="Any discount given"
     )
-    notes = models.TextField(blank=True, null=True)
+    notes = models.TextField(blank=True)
     transaction_id = models.CharField(
-        max_length=100, blank=True, null=True, help_text="Payment gateway / bank ref"
+        max_length=100, blank=True, help_text="Payment gateway / bank ref"
     )
     payout_status = models.CharField(
         max_length=20, default="PENDING", help_text="Payout transfer status"
     )
     payout_reference = models.CharField(
-        max_length=100, blank=True, null=True, help_text="Payout gateway reference"
+        max_length=100, blank=True, help_text="Payout gateway reference"
     )
     payment_link = models.CharField(
-        max_length=500, blank=True, null=True, help_text="Payment gateway link"
+        max_length=500, blank=True, help_text="Payment gateway link"
     )
     invoice_pdf = models.FileField(
         upload_to="invoices/",
@@ -91,7 +92,7 @@ class RentRecord(models.Model):
         help_text="Generated rent receipt PDF",
     )
     razorpay_order_id = models.CharField(
-        max_length=100, blank=True, null=True, help_text="Razorpay order reference"
+        max_length=100, blank=True, help_text="Razorpay order reference"
     )
     payout_retries = models.PositiveIntegerField(
         default=0, help_text="Number of payout retry attempts"
@@ -103,7 +104,7 @@ class RentRecord(models.Model):
         default=0, help_text="Cumulative payout retry count"
     )
     adjustment_reason = models.TextField(
-        blank=True, null=True, help_text="Reason for late fee or adjustment"
+        blank=True, help_text="Reason for late fee or adjustment"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

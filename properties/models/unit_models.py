@@ -5,11 +5,12 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, cast
 
+from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
-from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
 
 # Local Imports
 from core.models import User
@@ -29,6 +30,9 @@ phone_regex = RegexValidator(
         "Up to 15 digits allowed."
     ),
 )
+
+# Repeated model reference (SonarCloud S1192)
+UNIT_MODEL_REF = "properties.Unit"
 
 
 class Unit(models.Model):
@@ -117,7 +121,6 @@ class Unit(models.Model):
     building_name = models.CharField(
         max_length=100,
         blank=True,
-        null=True,
         help_text="Display name of building (cached for performance)",
     )
 
@@ -127,10 +130,7 @@ class Unit(models.Model):
     )
     address_line = models.CharField(max_length=255, help_text="Street address")
     landmark = models.CharField(
-        max_length=255,
-        blank=True,
-        null=True,
-        help_text="Nearby landmark for easy identification",
+        max_length=255, blank=True, help_text="Nearby landmark for easy identification"
     )
     city = models.CharField(max_length=100, help_text="City", db_index=True)
     state = models.CharField(max_length=100, help_text="State/Province")
@@ -184,11 +184,9 @@ class Unit(models.Model):
 
     # Additional Information
     maintenance_notes = models.TextField(
-        blank=True, null=True, help_text="Internal notes about maintenance or issues"
+        blank=True, help_text="Internal notes about maintenance or issues"
     )
-    notes = models.TextField(
-        blank=True, null=True, help_text="Additional notes about the unit"
-    )
+    notes = models.TextField(blank=True, help_text="Additional notes about the unit")
 
     # Tracking
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -336,7 +334,7 @@ class UnitVacancy(models.Model):
         OTHER = "other", "Other Reason"
 
     unit = models.OneToOneField(
-        "properties.Unit", on_delete=models.CASCADE, help_text="Unit that became vacant"
+        UNIT_MODEL_REF, on_delete=models.CASCADE, help_text="Unit that became vacant"
     )
     reason = models.CharField(
         max_length=100, choices=Reason.choices, help_text="Reason for vacancy"
@@ -363,7 +361,7 @@ class UnitDocument(models.Model):
     """
 
     unit = models.ForeignKey(
-        "properties.Unit",
+        UNIT_MODEL_REF,
         on_delete=models.CASCADE,
         db_index=True,
         related_name="documents",
@@ -429,7 +427,7 @@ class UnitImage(models.Model):
     """
 
     unit = models.ForeignKey(
-        "properties.Unit",
+        UNIT_MODEL_REF,
         on_delete=models.CASCADE,
         db_index=True,
         related_name="images",

@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/rentsecure_be/utils/cashfree_payout.py
-# hypothesis_version: 6.136.0
-
-['Authorization', 'IMPS', 'amount', 'beneId', 'data', 'remarks', 'token', 'transferId', 'transferMode']

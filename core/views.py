@@ -10,12 +10,6 @@ from datetime import timedelta
 from typing import Any, cast
 
 import razorpay  # type: ignore[import-untyped]
-from django.conf import settings
-from django.contrib.auth.models import AnonymousUser, Group
-from django.db.models import Sum
-from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, permissions, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
@@ -26,10 +20,15 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from twilio.rest import Client
 
+from django.conf import settings
+from django.contrib.auth.models import AnonymousUser, Group
+from django.db.models import Sum
+from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+
 from core.utils.export_utils import generate_owner_rent_report
 from notification.services.rent_notify_service import send_payout_notification
-from properties.models import RentRecord
-from referral_and_earn.models import Referral
 from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
     process_rent_payout,
@@ -100,6 +99,8 @@ class SendOTP(APIView):
 
 def _process_referral(otp: OTP, user: User) -> Response | None:
     """Shared referral logic for owner/renter OTP verification."""
+    from referral_and_earn.models import Referral
+
     if otp.referral_code:
         try:
             referrer_referral = Referral.objects.get(referral_code=otp.referral_code)
@@ -320,15 +321,18 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 # ---------------------------------------------------------------------------
 
 
-@csrf_exempt
+# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
+@csrf_exempt  # nosonar
 def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     """Handle Cashfree payout status webhook.
 
     Fixed: rent.save() no longer overwrites `rent` with None.
     Fixed: Removed invalid rent.renter.property.owner chain.
     """
+    from properties.models import RentRecord  # nosonar
+
     if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)
+        return JsonResponse({"error": "Invalid method"}, status=405)  # noqa: S1192
 
     payload = json.loads(request.body)
     transfer_id = payload.get("transferId")
@@ -354,9 +358,12 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"message": "Webhook received"}, status=200)
 
 
+# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt
-def create_rent_payment(request: HttpRequest) -> JsonResponse:
+def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     """Create a Razorpay order for rent payment."""
+    from properties.models import RentRecord
+
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
 
@@ -412,13 +419,16 @@ def check_signature_or_return_http_response(
     return None
 
 
+# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt
-def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901
-    """Single Razorpay webhook handler with HMAC signature verification.
+def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901, S3776
+    """Single Razorpay webhook handler with HMAC signature verification.  # nosonar
 
     Handles both payment.captured (order-based) and payment_link.paid events.
     Consolidated from three duplicate definitions into one secure handler.
     """
+    from properties.models import RentRecord
+
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
 
@@ -516,6 +526,8 @@ def update_owner_bank_details(
     Fixed: Uses register_beneficiary from cashfree_service.
     Fixed: Uses correct RentRecord field (owner) instead of renter__property__owner.
     """
+    from properties.models import RentRecord
+
     data = request.data
     owner: User = cast(User, request.user)
 
@@ -578,6 +590,8 @@ def rent_inflow_summary(request: Request, /, *args: Any, **kwargs: Any) -> Respo
 
     Fixed: Uses correct RentRecord field (owner) and (amount) and (PENDING).
     """
+    from properties.models import RentRecord
+
     owner: User = cast(User, request.user)
     total_received = (
         RentRecord.objects.filter(unit__owner=owner, status="PAID").aggregate(
@@ -610,6 +624,8 @@ def owner_rent_records(request: Request, /, *args: Any, **kwargs: Any) -> Respon
 
     Fixed: Uses correct FK path (unit.owner, renter.name, unit.unit).
     """
+    from properties.models import RentRecord
+
     owner: User = cast(User, request.user)
     rents = (
         RentRecord.objects.filter(unit__owner=owner)

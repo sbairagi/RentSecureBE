@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/core/admin.py
-# hypothesis_version: 6.136.0
-
-['amount', 'created_at', 'email', 'end_date', 'feature_key', 'full_name', 'is_active', 'is_investor', 'is_recurring', 'is_staff', 'is_yearly', 'monthly_price', 'name', 'phone', 'plan', 'plan__name', 'purchase_date', 'start_date', 'updated_at', 'usage_count', 'user', 'user__username', 'username', 'value', 'yearly_price']

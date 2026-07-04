@@ -1,4 +1,0 @@
-# file: /Users/sbairagi/Desktop/MVP Project/RentSecureBE/properties/signals/__init__.py
-# hypothesis_version: 6.136.0
-
-['active', 'deactivated', 'final_invoice_path', 'flagged_reason', 'is_flagged', 'last_vacated_at', 'max_buildings', 'max_caretakers', 'max_renters', 'max_unit_images', 'max_units', 'missed_rents', 'notice_period', 'onboarding_token', 'revoked', 'update_fields', 'updated_at', 'userprofile', 'whatsapp_number']

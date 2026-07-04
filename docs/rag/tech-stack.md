@@ -13,7 +13,7 @@
 | django-simple-history | 3.8.0 | Model audit trails |
 | django-celery-beat | 2.9.0 | Scheduled tasks |
 | fcm-django | (see requirements) | Push notifications |
-| python-decouple | 3.8 (pin may say 3.9 — broken) | Environment variables |
+| python-decouple | 3.5 | Environment variables |
 
 ## Payments and communications
 

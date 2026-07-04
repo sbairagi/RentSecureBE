@@ -1,7 +1,8 @@
+from simple_history.admin import SimpleHistoryAdmin  # type: ignore[import-untyped]
+
 from django.contrib import admin
 from django.db.models import QuerySet
 from django.http import HttpRequest
-from simple_history.admin import SimpleHistoryAdmin  # type: ignore[import-untyped]
 
 from ..models import RentRecord
 

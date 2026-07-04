@@ -11,21 +11,16 @@ Run with:
 from datetime import date, timedelta
 from decimal import Decimal
 
-import django
 import pytest
-from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.django import TestCase as HypothesisDjangoTestCase
 
-from properties.models import (
-    Building,
-    ExtraCharge,
-    Renter,
-    RentRecord,
-    Unit,
-)
+import django
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+
+from properties.models import Building, ExtraCharge, Renter, RentRecord, Unit
 
 django.setup()
 

@@ -1,0 +1,41 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# WEEKLY: Exhaustive Validation Pipeline
+# ═══════════════════════════════════════════════════════════════════════════════
+# Schedule: 0 3 * * 0
+# Never blocks PR merges.
+# ═══════════════════════════════════════════════════════════════════════════════
+name: Weekly Exhaustive Validation
+
+'on':
+  schedule:
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  exhaustive-mutation:
+    name: Weekly │ Exhaustive Mutation Testing
+    uses: ./.github/workflows/mutation.yml
+    with:
+      mutation_mode: exhaustive
+    secrets: inherit
+
+  stress-property-testing:
+    name: Weekly │ Stress Property Testing
+    uses: ./.github/workflows/hypothesis.yml
+    with:
+      hypothesis_mode: stress
+    secrets: inherit
+
+  sbom:
+    name: Weekly │ SBOM
+    uses: ./.github/workflows/sbom.yml
+    with:
+      artifact_retention_days: 90
+    secrets: inherit
