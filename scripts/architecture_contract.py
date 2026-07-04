@@ -15,6 +15,10 @@ from typing import Any
 
 import yaml
 
+CI_YAML = ".github/workflows/ci.yml"
+ARCHITECTURE_GUARD_YAML = ".github/workflows/architecture-guard.yml"
+DOCS_CI_CD_PIPELINE = "docs/ci-cd-pipeline.md"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ARCHITECTURE CONTRACT — THE SOURCE OF TRUTH
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -46,7 +50,7 @@ REQUIRED_JOBS: set[str] = {
 
 # Every required workflow file that MUST exist on disk (ERROR severity)
 REQUIRED_WORKFLOW_FILES: set[str] = {
-    ".github/workflows/ci.yml",
+    CI_YAML,
     ".github/workflows/lint.yml",
     ".github/workflows/test.yml",
     ".github/workflows/django-check.yml",
@@ -63,7 +67,7 @@ REQUIRED_WORKFLOW_FILES: set[str] = {
     ".github/workflows/deploy-readiness.yml",
     ".github/workflows/deploy.yml",
     ".github/workflows/nightly.yml",
-    ".github/workflows/architecture-guard.yml",
+    ARCHITECTURE_GUARD_YAML,
     ".github/workflows/benchmark.yml",
     ".github/workflows/load-test.yml",
     ".github/workflows/weekly.yml",
@@ -74,7 +78,7 @@ REQUIRED_WORKFLOW_FILES: set[str] = {
 
 # Protected files that are critical to the governance system itself (CRITICAL severity)
 PROTECTED_FILES: set[str] = {
-    ".github/workflows/ci.yml",
+    CI_YAML,
     ".github/workflows/lint.yml",
     ".github/workflows/test.yml",
     ".github/workflows/security.yml",
@@ -84,18 +88,18 @@ PROTECTED_FILES: set[str] = {
     ".github/workflows/architecture.yml",
     ".github/workflows/deploy-readiness.yml",
     ".github/workflows/nightly.yml",
-    ".github/workflows/architecture-guard.yml",
+    ARCHITECTURE_GUARD_YAML,
     ".github/workflows/sbom.yml",
     "scripts/architecture_contract.py",
     "docs/architecture-contract.md",
-    "docs/ci-cd-pipeline.md",
+    DOCS_CI_CD_PIPELINE,
     "docs/governance.md",
 }
 
 # Contract self-protection files (CRITICAL severity)
 SELF_PROTECTION_FILES: set[str] = {
     "scripts/architecture_contract.py",
-    ".github/workflows/architecture-guard.yml",
+    ARCHITECTURE_GUARD_YAML,
 }
 
 # Approved dependency chain
@@ -225,17 +229,12 @@ class Violation:
     CONTRACT_DELETED = "contract_deleted"
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# VALIDATOR
-# ═══════════════════════════════════════════════════════════════════════════════
-
-
 class ArchitectureContractValidator:
     """Validates the CI/CD pipeline against the approved architecture contract."""
 
     def __init__(
         self,
-        ci_yaml_path: str = ".github/workflows/ci.yml",
+        ci_yaml_path: str = CI_YAML,
         verbose: bool = False,
         repo_root: str | None = None,
     ):
@@ -417,7 +416,7 @@ class ArchitectureContractValidator:
                         ),
                         "details": {
                             "expected_version": PIPELINE_VERSION,
-                            "file": "docs/ci-cd-pipeline.md",
+                            "file": DOCS_CI_CD_PIPELINE,
                         },
                     }
                 )
@@ -462,7 +461,7 @@ class ArchitectureContractValidator:
                         ),
                         "details": {
                             "missing_stage": stage,
-                            "document": "docs/ci-cd-pipeline.md",
+                            "document": DOCS_CI_CD_PIPELINE,
                         },
                     }
                 )
@@ -578,74 +577,79 @@ class ArchitectureContractValidator:
                 continue
 
             actual_needs = self.actual_dependencies[job]
+            self._check_job_dependencies(job, expected_needs, actual_needs)
 
-            if expected_needs is None and actual_needs is None:
-                self.log(f"  {job}: ✓ no dependencies (root)")
-                continue
+    def _check_job_dependencies(
+        self,
+        job: str,
+        expected_needs: list[str] | None,
+        actual_needs: list[str] | None,
+    ) -> None:
+        if expected_needs is None and actual_needs is None:
+            self.log(f"  {job}: ✓ no dependencies (root)")
+            return
 
-            if expected_needs is None and actual_needs is not None:
-                self.violations.append(
-                    {
-                        "type": Violation.MISSING_DEPENDENCY,
-                        "severity": "ERROR",
-                        "message": (
-                            f"Job '{job}' has no dependencies, "
-                            f"but should have: {expected_needs}"
-                        ),
-                        "details": {
-                            "job": job,
-                            "expected": expected_needs,
-                            "actual": None,
-                        },
-                    }
-                )
-                continue
+        if expected_needs is None:
+            self._append_violation(
+                job,
+                Violation.MISSING_DEPENDENCY,
+                f"Job '{job}' has no dependencies, but should have: {expected_needs}",
+                expected=expected_needs,
+                actual=None,
+            )
+            return
 
-            if expected_needs is not None and actual_needs is None:
-                self.violations.append(
-                    {
-                        "type": Violation.MISSING_DEPENDENCY,
-                        "severity": "ERROR",
-                        "message": (
-                            f"Job '{job}' had dependencies removed. "
-                            f"Expected: {sorted(expected_needs)}"
-                        ),
-                        "details": {
-                            "job": job,
-                            "expected": sorted(expected_needs),
-                            "actual": None,
-                        },
-                    }
-                )
-                continue
+        if actual_needs is None:
+            self._append_violation(
+                job,
+                Violation.MISSING_DEPENDENCY,
+                f"Job '{job}' had dependencies removed. "
+                f"Expected: {sorted(expected_needs)}",
+                expected=sorted(expected_needs),
+                actual=None,
+            )
+            return
 
-            if expected_needs is not None and actual_needs is not None:
-                expected_sorted = sorted(expected_needs)
-                actual_sorted = sorted(actual_needs)
+        expected_sorted = sorted(expected_needs)
+        actual_sorted = sorted(actual_needs)
+        if expected_sorted != actual_sorted:
+            violation_type = (
+                Violation.EXTRA_DEPENDENCY
+                if set(actual_sorted) - set(expected_sorted)
+                else Violation.MISSING_DEPENDENCY
+            )
+            self._append_violation(
+                job,
+                violation_type,
+                f"Job '{job}' dependencies changed.\n"
+                f"  Expected: {expected_sorted}\n"
+                f"  Actual:   {actual_sorted}",
+                expected=expected_sorted,
+                actual=actual_sorted,
+            )
+        else:
+            self.log(f"  {job}: ✓ dependencies match: {expected_sorted}")
 
-                if expected_sorted != actual_sorted:
-                    self.violations.append(
-                        {
-                            "type": (
-                                Violation.EXTRA_DEPENDENCY
-                                if set(actual_sorted) - set(expected_sorted)
-                                else Violation.MISSING_DEPENDENCY
-                            ),
-                            "severity": "ERROR",
-                            "message": (
-                                f"Job '{job}' dependencies changed.\n"
-                                f"  Expected: {expected_sorted}\n"
-                                f"  Actual:   {actual_sorted}"
-                            ),
-                            "details": {
-                                "job": job,
-                                "expected": expected_sorted,
-                                "actual": actual_sorted,
-                            },
-                        }
-                    )
-                else:
-                    self.log(f"  {job}: ✓ dependencies match: {expected_sorted}")
+    def _append_violation(
+        self,
+        job: str,
+        violation_type: Violation,
+        message: str,
+        expected: object = None,
+        actual: object = None,
+    ) -> None:
+        self.violations.append(
+            {
+                "type": violation_type,
+                "severity": "ERROR",
+                "message": message,
+                "details": {
+                    "job": job,
+                    "expected": expected,
+                    "actual": actual,
+                },
+            }
+        )
 
     # ═══════════════════════════════════════════════════════════════════════════
     # CHECK 9: Stage Ordering (transitive)
@@ -849,7 +853,7 @@ class ArchitectureContractValidator:
     # COMPLIANCE SCORE
     # ═══════════════════════════════════════════════════════════════════════════
 
-    def _compute_score(self, report: dict[str, Any]) -> dict[str, Any]:
+    def _compute_score(self) -> dict[str, Any]:
         """Compute the Architecture Compliance Score out of 100."""
         violations = self.violations
         categories: dict[str, dict[str, int]] = {
@@ -1133,7 +1137,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--ci-yaml",
-        default=".github/workflows/ci.yml",
+        default=CI_YAML,
         help="Path to ci.yml (default: .github/workflows/ci.yml)",
     )
     parser.add_argument(

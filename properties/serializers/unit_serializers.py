@@ -6,6 +6,8 @@ from rentsecure_be.type_compat import override
 
 from ..models import RentAgreementDraft, Unit, UnitDocument, UnitImage
 
+NOT_UNIT_OWNER = "You do not own the selected unit."
+
 
 class UnitSerializer(serializers.ModelSerializer):
     class Meta:
@@ -50,16 +52,14 @@ class UnitImageSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         unit = data.get("unit") or getattr(self.instance, "unit", None)
         if unit and unit.owner != user:
-            raise serializers.ValidationError(
-                "You do not own the selected unit."
-            )  # noqa: S1192
+            raise serializers.ValidationError(NOT_UNIT_OWNER)  # noqa: S1192
         return data
 
     @override
     def update(self, instance: UnitImage, validated_data: dict[str, Any]) -> UnitImage:
         unit = validated_data.get("unit")
         if unit and unit.owner != self.context["request"].user:
-            raise serializers.ValidationError("You do not own the selected unit.")
+            raise serializers.ValidationError(NOT_UNIT_OWNER)
         return cast(UnitImage, super().update(instance, validated_data))
 
 
@@ -73,7 +73,7 @@ class UnitDocumentSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         unit = data.get("unit") or getattr(self.instance, "unit", None)
         if unit and unit.owner != user:
-            raise serializers.ValidationError("You do not own the selected unit.")
+            raise serializers.ValidationError(NOT_UNIT_OWNER)
         return data
 
     @override
@@ -82,7 +82,7 @@ class UnitDocumentSerializer(serializers.ModelSerializer):
     ) -> UnitDocument:
         unit = validated_data.get("unit")
         if unit and unit.owner != self.context["request"].user:
-            raise serializers.ValidationError("You do not own the selected unit.")
+            raise serializers.ValidationError(NOT_UNIT_OWNER)
         return cast(UnitDocument, super().update(instance, validated_data))
 
 
@@ -100,7 +100,7 @@ class RentAgreementDraftSerializer(serializers.ModelSerializer):
         if not renter or not unit:
             raise serializers.ValidationError("Both renter and unit are required.")
         if unit.owner != request_user:
-            raise serializers.ValidationError("You do not own the selected unit.")
+            raise serializers.ValidationError(NOT_UNIT_OWNER)
         if renter.unit != unit:
             raise serializers.ValidationError(
                 "Renter does not belong to the selected unit."

@@ -74,8 +74,8 @@ PERMISSIONS_OVERRIDE: dict[str, str | None] = {
     "  contents: read\n"
     "  actions: read\n"
     "  pull-requests: write\n",
-    "quality.yml": ("permissions:\n" "  contents: read\n" "  security-events: write\n"),
-    "branch-protection.yml": ("permissions:\n" "  contents: read\n"),
+    "quality.yml": "permissions:\n  contents: read\n  security-events: write\n",
+    "branch-protection.yml": "permissions:\n  contents: read\n",
     "security.yml": None,
     "security-deep.yml": None,
     "architecture-guard.yml": "permissions:\n"
@@ -154,11 +154,11 @@ def action_replacements(content: str) -> str:
 
 
 def has_permissions(content: str) -> bool:
-    return bool(re.search(r"^permissions:\\s*\\n", content, re.MULTILINE))
+    return bool(re.search(r"^permissions:\s*\n", content, re.MULTILINE))
 
 
 def has_concurrency(content: str) -> bool:
-    return bool(re.search(r"^concurrency:\\s*\\n", content, re.MULTILINE))
+    return bool(re.search(r"^concurrency:\s*\n", content, re.MULTILINE))
 
 
 def add_permissions(content: str, workflow_name: str) -> str:
@@ -168,16 +168,16 @@ def add_permissions(content: str, workflow_name: str) -> str:
     if permissions is None:
         return content
     match = re.search(
-        r"(^name:.*?\\n)((?:'on':.*?\\n(?:.*?\\n)*?)(?=\\njobs:))",
+        r"(^name:.*?)(?=\njobs:)",
         content,
         re.DOTALL,
     )
     if match:
-        insert_point = match.end(2)
+        insert_point = match.end(1)
         return (
             content[:insert_point] + "\n" + permissions + "\n" + content[insert_point:]
         )
-    return re.sub(r"(\\njobs:)", "\n" + permissions + r"\1", content, count=1)
+    return re.sub(r"(\njobs:)", "\n" + permissions + r"\1", content, count=1)
 
 
 def add_concurrency(content: str, workflow_name: str) -> str:
@@ -201,7 +201,9 @@ def process_file(path: Path, workflow_name: str) -> None:
 
     if text != original:
         resolved = path.resolve()
-        if not str(resolved).startswith(str(REPO_ROOT)):  # noqa: S108
+        try:
+            resolved.relative_to(REPO_ROOT)
+        except ValueError:
             print(f"Skipped: {path.relative_to(REPO_ROOT)} (outside repo root)")
             return
         resolved.write_text(text, encoding="utf-8")

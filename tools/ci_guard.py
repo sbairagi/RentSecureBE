@@ -17,6 +17,9 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+MANAGE_PY = "manage.py"
+PYTEST_TB_SHORT = "--tb=short"
+
 
 @dataclass
 class CheckResult:
@@ -113,7 +116,7 @@ def run_tests() -> CheckResult:
         "tests",
         "ci_dashboard/tests.py",
         "-v",
-        "--tb=short",
+        PYTEST_TB_SHORT,
     ]
     ok, out, dur = _run(cmd)
     return CheckResult(
@@ -149,7 +152,7 @@ def run_coverage() -> CheckResult:
         "--cov-report=term-missing",
         "--cov-report=xml",
         "--cov-fail-under=90",
-        "--tb=short",
+        PYTEST_TB_SHORT,
     ]
     ok, out, dur = _run(cmd)
     return CheckResult(
@@ -170,10 +173,10 @@ def run_django_checks() -> CheckResult:
         "DJANGO_ENV": "test",
     }
     ok1, out1, d1 = _run(
-        [sys.executable, "manage.py", "check", "--fail-level=ERROR"], env=env
+        [sys.executable, MANAGE_PY, "check", "--fail-level=ERROR"], env=env
     )
     ok2, out2, d2 = _run(
-        [sys.executable, "manage.py", "check", "--deploy", "--fail-level=WARNING"],
+        [sys.executable, MANAGE_PY, "check", "--deploy", "--fail-level=WARNING"],
         env=env,
     )
     ok = ok1 and ok2
@@ -216,7 +219,7 @@ def run_contracts() -> CheckResult:
         "DJANGO_ENV": "test",
     }
     ok1, out1, d1 = _run(
-        [sys.executable, "manage.py", "migrate", "--run-syncdb", "--verbosity=1"],
+        [sys.executable, MANAGE_PY, "migrate", "--run-syncdb", "--verbosity=1"],
         env=env,
     )
     ok2, out2, d2 = _run(
@@ -226,7 +229,7 @@ def run_contracts() -> CheckResult:
             "pytest",
             "tests/test_api_contracts.py",
             "-v",
-            "--tb=short",
+            PYTEST_TB_SHORT,
             "--randomly-seed=last",
         ]
     )
@@ -275,7 +278,7 @@ def run_hypothesis() -> CheckResult:
         "tests/test_core_hypothesis.py",
         "-v",
         "--hypothesis-show-statistics",
-        "--tb=short",
+        PYTEST_TB_SHORT,
         "--randomly-seed=last",
     ]
     ok, out, dur = _run(cmd, env=env)
@@ -306,7 +309,7 @@ def run_benchmark() -> CheckResult:
         "--benchmark-json=benchmark-results.json",
         "--benchmark-sort=mean",
         "--benchmark-columns=min,max,mean,stddev,median,rounds",
-        "--tb=short",
+        PYTEST_TB_SHORT,
     ]
     ok, out, dur = _run(cmd, env=env)
     return CheckResult(
@@ -327,7 +330,7 @@ def run_mutation() -> CheckResult:
         "DJANGO_ENV": "test",
     }
     _run(
-        [sys.executable, "manage.py", "migrate", "--run-syncdb", "--verbosity=1"],
+        [sys.executable, MANAGE_PY, "migrate", "--run-syncdb", "--verbosity=1"],
         env=env,
     )
     cmd = [
@@ -361,18 +364,18 @@ def run_deploy_readiness() -> CheckResult:
         "DJANGO_ENV": "test",
     }
     ok1, out1, d1 = _run(
-        [sys.executable, "manage.py", "check", "--fail-level=ERROR"], env=env
+        [sys.executable, MANAGE_PY, "check", "--fail-level=ERROR"], env=env
     )
     ok2, out2, d2 = _run(
-        [sys.executable, "manage.py", "check", "--deploy", "--fail-level=WARNING"],
+        [sys.executable, MANAGE_PY, "check", "--deploy", "--fail-level=WARNING"],
         env=env,
     )
     ok3, out3, d3 = _run(
-        [sys.executable, "manage.py", "migrate", "--run-syncdb", "--verbosity=2"],
+        [sys.executable, MANAGE_PY, "migrate", "--run-syncdb", "--verbosity=2"],
         env=env,
     )
     ok4, out4, d4 = _run(
-        [sys.executable, "manage.py", "collectstatic", "--noinput", "--verbosity=0"],
+        [sys.executable, MANAGE_PY, "collectstatic", "--noinput", "--verbosity=0"],
         env=env,
     )
     ok = ok1 and ok2 and ok3 and ok4

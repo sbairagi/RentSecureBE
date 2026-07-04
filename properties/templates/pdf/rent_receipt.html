@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>Rent Receipt</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -162,15 +163,15 @@
             <div class="section-title">Renter Information</div>
             <table>
                 <tr>
-                    <td>Name</td>
+                    <th>Name</th>
                     <td>{{ renter.name }}</td>
                 </tr>
                 <tr>
-                    <td>Email</td>
+                    <th>Email</th>
                     <td>{{ renter.email }}</td>
                 </tr>
                 <tr>
-                    <td>Phone</td>
+                    <th>Phone</th>
                     <td>{{ renter.phone }}</td>
                 </tr>
             </table>
@@ -181,15 +182,15 @@
             <div class="section-title">Property Information</div>
             <table>
                 <tr>
-                    <td>Unit</td>
+                    <th>Unit</th>
                     <td>{{ unit.unit }}</td>
                 </tr>
                 <tr>
-                    <td>Building</td>
+                    <th>Building</th>
                     <td>{{ unit.building_name|default:unit.building.name }}</td>
                 </tr>
                 <tr>
-                    <td>Address</td>
+                    <th>Address</th>
                     <td>{{ unit.city }}, {{ unit.state }}</td>
                 </tr>
             </table>
@@ -200,19 +201,19 @@
             <div class="section-title">Payment Information</div>
             <table>
                 <tr>
-                    <td>Month</td>
+                    <th>Month</th>
                     <td>{{ rent.rent_month|date:"F Y" }}</td>
                 </tr>
                 <tr>
-                    <td>Rent Amount</td>
+                    <th>Rent Amount</th>
                     <td>₹{{ rent.amount_paid }}</td>
                 </tr>
                 <tr>
-                    <td>Payment Date</td>
+                    <th>Payment Date</th>
                     <td>{{ rent.date_paid|date:"d M Y" }}</td>
                 </tr>
                 <tr>
-                    <td>Payment Mode</td>
+                    <th>Payment Mode</th>
                     <td>{{ rent.get_payment_mode_display|default:"Not specified" }}</td>
                 </tr>
             </table>
