@@ -168,7 +168,7 @@ def add_permissions(content: str, workflow_name: str) -> str:
     if permissions is None:
         return content
     match = re.search(
-        r"(^name:.*?)(?=\njobs:)",
+        r"(^name:.*)(?=\njobs:)",
         content,
         re.DOTALL,
     )
