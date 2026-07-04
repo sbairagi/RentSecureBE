@@ -49,7 +49,6 @@ jobs:
           cache-key-suffix: "-branch-protection"
 
       - name: Validate required status checks are enforced
-        if: ${{ secrets.repo-access-pat != '' }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.repo-access-pat }}
@@ -58,6 +57,14 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::Repository secret REPO_ACCESS_PAT is missing or empty."
+            echo "::error::Create a Personal Access Token with the 'administration' scope at:"
+            echo "::error::  https://github.com/settings/tokens"
+            echo "::error::Then store it as a repository secret named REPO_ACCESS_PAT in:"
+            echo "::error::  Settings → Secrets and variables → Actions"
+            exit 1
+          fi
           set -euo pipefail
           python - <<'PY'
           import json
@@ -147,10 +154,3 @@ jobs:
 
           print("Branch protection validation passed for all checked branches")
           PY
-
-      - name: Branch protection validation - PAT not available
-        if: ${{ secrets.repo-access-pat == '' }}
-        shell: bash
-        run: |
-          echo "WARNING: REPO_ACCESS_PAT is not available. Skipping branch protection validation."
-          echo "Configure a repository secret named REPO_ACCESS_PAT with 'administration' scope to enable this check."
