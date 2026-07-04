@@ -117,7 +117,6 @@ jobs:
             -Dsonar.projectKey=sbairagi_RentSecureBE
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
-            -Dsonar.coverageReportPaths=coverage.xml
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.sources=.
             -Dsonar.exclusions=**/migrations/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/*.pyc,**/db.sqlite3,**/.github/**,**/htmlcov/**,**/coverage.xml,**/*.md,**/requirements*.txt,**/.env.example
