@@ -69,7 +69,7 @@ jobs:
         run: |
           set -euo pipefail
           cd coverage-artifacts
-          mapfile -t coverage_files < <(find . -path './coverage-shard-*/.coverage.*' -type f | sort)
+          mapfile -t coverage_files < <(find . -name '.coverage.*' -type f | sort)
           if [ ${#coverage_files[@]} -eq 0 ]; then
             echo "ERROR: no coverage shard files found in coverage-artifacts."
             ls -la

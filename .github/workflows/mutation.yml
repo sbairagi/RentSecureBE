@@ -122,20 +122,11 @@ jobs:
           if [ -f setup.cfg ]; then
             ls -la setup.cfg
             grep -A20 '^\[mutmut\]' setup.cfg || true
-            echo "--- ConfigParser read ---"
-            python3 - <<'PY'
-            import os
-            print("Python cwd:", os.getcwd())
-            print("setup.cfg exists:", os.path.exists("setup.cfg"))
-            from configparser import ConfigParser
-            cp = ConfigParser()
-            cp.read("setup.cfg")
-            print("sections:", cp.sections())
-            print("source_paths:", cp.get("mutmut","source_paths",fallback="MISSING"))
-            PY
           else
             echo "setup.cfg MISSING"
           fi
+          echo "--- ConfigParser read ---"
+          python3 -c "import os; from configparser import ConfigParser; cp=ConfigParser(); cp.read('setup.cfg'); print('Python cwd:', os.getcwd()); print('setup.cfg exists:', os.path.exists('setup.cfg')); print('sections:', cp.sections()); print('source_paths:', cp.get('mutmut','source_paths',fallback='MISSING'))"
           echo "--- mutmut load test ---"
           python3 -m mutmut --version 2>&1 || true
           python3 -m mutmut --help 2>&1 | head -20 || true
