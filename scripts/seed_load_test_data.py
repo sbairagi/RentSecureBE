@@ -21,7 +21,7 @@ from core.models import SubscriptionPlan  # noqa: E402
 User = get_user_model()
 
 for i in range(5):
-    password = os.environ["SEED_USER_PASSWORD"]
+    password = os.getenv("SEED_USER_PASSWORD", "LoadTest123!")
     User.objects.get_or_create(
         username=f"loadtest_user_{i}",
         defaults={

@@ -43,6 +43,7 @@ jobs:
 
       - name: Measure CI runtime via GitHub Actions API
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           TARGET_WORKFLOW: ci.yml
         run: |
