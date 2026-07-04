@@ -51,7 +51,7 @@ jobs:
       - name: Validate required status checks are enforced
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.repo-access-pat }}
+          GH_TOKEN: ${{ secrets.repo-access-pat || secrets.REPO_ACCESS_PAT }}
           REPOSITORY: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
