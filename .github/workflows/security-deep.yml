@@ -81,7 +81,8 @@ jobs:
           sarif_file: scorecard-results.sarif
 
   dependency-review:
-    name: Stage 6c │ Dependency Review (Nightly)
+    name: Stage 6c │ Dependency Review (License + Vuln)
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -143,6 +144,11 @@ jobs:
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/trivy
+          key: ${{ runner.os }}-trivy-cache
+          restore-keys: ${{ runner.os }}-trivy-cache
       - name: Run Trivy deep filesystem scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
