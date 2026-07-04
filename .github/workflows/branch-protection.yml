@@ -18,6 +18,7 @@ name: Branch Protection Validation
 
 permissions:
   contents: read
+  metadata: read
 
 concurrency:
   group: branch-protection-${{ github.ref }}
