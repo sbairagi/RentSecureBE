@@ -120,14 +120,23 @@ jobs:
             pypi.python.org:443
             files.pythonhosted.org:443
             semgrep.dev:443
-      - name: Run Semgrep
-        uses: semgrep/semgrep-action@713efdd345f3035192eaa63f56867b88e63e4e5d  # v1
+      - uses: ./.github/actions/setup-python-environment
         with:
-          config: >-
-            p/security-audit
-            p/owasp-top-ten
-            p/django
-          output: semgrep.sarif
+          python-version: "3.12"
+          extra-packages: "semgrep"
+          cache-key-suffix: "-semgrep"
+      - name: Run Semgrep
+        shell: bash
+        run: |
+          set -euo pipefail
+          semgrep scan \
+            --config p/security-audit \
+            --config p/owasp-top-ten \
+            --config p/django \
+            --sarif \
+            --output semgrep.sarif
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN || '' }}
       - name: Upload Semgrep SARIF to GitHub Security
         if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
         uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a  # v4
@@ -159,6 +168,7 @@ jobs:
             api.github.com:443
             ghcr.io:443
             mirror.gcr.io:443
+            pkg-containers.githubusercontent.com:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
@@ -207,6 +217,7 @@ jobs:
             api.github.com:443
             ghcr.io:443
             mirror.gcr.io:443
+            pkg-containers.githubusercontent.com:443
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
