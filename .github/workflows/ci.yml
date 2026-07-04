@@ -4,14 +4,8 @@ name: CI Pipeline
   push:
     branches: [main, master, dev, cleanup/remove-dead-code]
   pull_request:
-    branches: [main, master, dev, cleanup/remove-dead-code]
+    branches: [main]
   merge_group:
-
-permissions:
-  contents: read
-  security-events: write
-  id-token: write
-  actions: read
 
 jobs:
   lint-fast:
@@ -54,6 +48,9 @@ jobs:
   shard-validation:
     name: Stage 2 │ Shard Distribution Validation
     timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
     needs: [test-shard-1, test-shard-2, test-shard-3, test-shard-4]
     runs-on: ubuntu-latest
     steps:

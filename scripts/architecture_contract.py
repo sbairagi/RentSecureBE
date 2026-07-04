@@ -633,7 +633,7 @@ class ArchitectureContractValidator:
     def _append_violation(
         self,
         job: str,
-        violation_type: Violation,
+        violation_type: str,
         message: str,
         expected: object = None,
         actual: object = None,
@@ -985,13 +985,13 @@ class ArchitectureContractValidator:
                 "stage_order": self.actual_stage_order,
                 "dependencies": self.actual_dependencies,
             },
-            "compliance_score": self._compute_score(report={}),
+            "compliance_score": self._compute_score(),
             "protected_files": sorted(PROTECTED_FILES),
             "self_protection_files": sorted(SELF_PROTECTION_FILES),
             "violations": self.violations,
         }
         # Inject compliance score properly
-        report["compliance_score"] = self._compute_score(report)
+        report["compliance_score"] = self._compute_score()
         return report
 
     def print_report(self, report: dict[str, Any]) -> None:
