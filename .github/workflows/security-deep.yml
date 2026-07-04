@@ -82,6 +82,7 @@ jobs:
 
   dependency-review:
     name: Stage 6c │ Dependency Review (Nightly)
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -139,6 +140,7 @@ jobs:
             api.github.com:443
             ghcr.io:443
             mirror.gcr.io:443
+            get.trivy.dev:443
             pkg-containers.githubusercontent.com:443
             pypi.org:443
             pypi.python.org:443
