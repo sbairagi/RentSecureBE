@@ -17,7 +17,6 @@ name: Runtime Measurement
 permissions:
   contents: read
   actions: read
-  metadata: read
   pull-requests: write
 
 concurrency:
