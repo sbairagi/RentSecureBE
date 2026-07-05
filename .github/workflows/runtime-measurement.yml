@@ -17,6 +17,7 @@ name: Runtime Measurement
 permissions:
   contents: read
   actions: read
+  metadata: read
   pull-requests: write
 
 concurrency:
@@ -59,14 +60,23 @@ jobs:
           workflow = os.environ.get("TARGET_WORKFLOW")
 
           if not token:
-              print("::error::GITHUB_TOKEN is unavailable. Runtime measurement is BLOCKED.")
-              print("::group::Exact Commands Required")
-              print("# To measure runtime manually, run:")
-              print("curl -s -H 'Authorization: token <GITHUB_TOKEN>' \\\\")
-              print(f"  'https://api.github.com/repos/{repo}/actions/workflows/{workflow}/runs?per_page=30&status=success' \\\\")
-              print("  | jq '.workflow_runs[] | {run_id: .id, created: .created_at, started: .run_started_at, updated: .updated_at}'")
-              print("::endgroup::")
-              raise SystemExit(2)
+              print("WARNING: GITHUB_TOKEN missing. Skipping runtime measurement.")
+              metrics = {
+                  "run_id": int(os.environ.get("GITHUB_RUN_ID", 0)),
+                  "timestamp": datetime.now(timezone.utc).isoformat(),
+                  "count": 0,
+                  "p50_runtime_seconds": None,
+                  "p95_runtime_seconds": None,
+                  "max_runtime_seconds": None,
+                  "avg_queue_time_seconds": None,
+                  "failure_rate": None,
+                  "status": "NO_DATA",
+              }
+              out_path = "runtime-metrics.json"
+              with open(out_path, "w") as f:
+                  json.dump(metrics, f, indent=2, default=str)
+              print(json.dumps(metrics, indent=2, default=str))
+              raise SystemExit(0)
 
           headers = {
               "Authorization": f"token {token}",
