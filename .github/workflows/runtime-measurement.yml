@@ -12,7 +12,6 @@ name: Runtime Measurement
     workflows: ["CI Pipeline"]
     types:
       - completed
-      - requested
 
 permissions:
   contents: read
