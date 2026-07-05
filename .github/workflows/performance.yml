@@ -35,6 +35,10 @@ jobs:
       DEBUG: "False"
       DJANGO_ENV: test
       ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
+      BASE_URL: "http://127.0.0.1:8000"
+      SECURE_SSL_REDIRECT: "False"
+      SESSION_COOKIE_SECURE: "False"
+      CSRF_COOKIE_SECURE: "False"
       CELERY_TASK_ALWAYS_EAGER: "True"
       CELERY_TASK_EAGER_PROPOGATES: "True"
     steps:
@@ -122,6 +126,9 @@ jobs:
       SECRET_KEY: test-secret-key-perf-bench-2026-abcdefghijklmnopqrstuvwxyz1234567890
       DEBUG: "False"
       DJANGO_ENV: test
+      SECURE_SSL_REDIRECT: "False"
+      SESSION_COOKIE_SECURE: "False"
+      CSRF_COOKIE_SECURE: "False"
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
