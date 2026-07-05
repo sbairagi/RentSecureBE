@@ -168,6 +168,7 @@ jobs:
             api.github.com:443
             ghcr.io:443
             mirror.gcr.io:443
+            get.trivy.dev:443
             pkg-containers.githubusercontent.com:443
             pypi.org:443
             pypi.python.org:443
@@ -226,6 +227,7 @@ jobs:
             api.github.com:443
             ghcr.io:443
             mirror.gcr.io:443
+            get.trivy.dev:443
             pkg-containers.githubusercontent.com:443
             pypi.org:443
             pypi.python.org:443
