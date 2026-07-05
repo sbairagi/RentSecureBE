@@ -140,6 +140,10 @@ jobs:
     name: Dependency Risk Assessment Report
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -156,8 +160,26 @@ jobs:
             pypi.org:443
             pypi.python.org:443
             files.pythonhosted.org:443
+      - name: Verify Dependency Graph is available
+        id: dep-graph-check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          status=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token ${GH_TOKEN}" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/dependency-graph/snapshots")
+          echo "dependency_graph_status=${status}" >> $GITHUB_OUTPUT
+          if [ "${status}" == "404" ]; then
+            echo "Dependency Graph is not available for this repository. Skipping Dependency Review."
+            exit 0
+          elif [ "${status}" != "200" ]; then
+            echo "::warning::Unexpected status ${status} from dependency-graph API. Attempting Dependency Review anyway."
+          fi
       - name: Dependency Review
-        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48  # v4
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294  # v5.0.0
+        if: ${{ steps.dep-graph-check.outputs.dependency_graph_status != '404' }}
         with:
           fail-on-severity: high
           allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, Python-2.0, LGPL-3.0

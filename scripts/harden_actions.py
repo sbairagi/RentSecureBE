@@ -19,8 +19,8 @@ _ACTIONS = [
     ("step-security/harden-runner", "v2", "9af89fc71515a100421586dfdb3dc9c984fbf411"),
     (
         "actions/dependency-review-action",
-        "v4",
-        "2031cfc080254a8a887f58cffee85186f0e49e48",
+        "v5.0.0",
+        "a1d282b36b6f3519aa1f3fc636f609c47dddb294",
     ),  # noqa: E501
     (
         "aquasecurity/trivy-action",
