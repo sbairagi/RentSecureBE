@@ -43,3 +43,7 @@ jobs:
     name: Security Deep Scan — Nightly
     uses: ./.github/workflows/security-deep.yml
     secrets: inherit
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
