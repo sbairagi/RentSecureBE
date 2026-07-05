@@ -101,16 +101,11 @@ def compliant_ci_yaml() -> dict[str, Any]:
                 ],
                 "uses": "./.github/workflows/quality.yml",
             },
-            "branch-protection": {
-                "needs": ["quality", "security-fast", "django-check"],
-                "uses": "./.github/workflows/branch-protection.yml",
-            },
             "deploy-readiness": {
                 "needs": [
                     "quality",
                     "security-fast",
                     "django-check",
-                    "branch-protection",
                 ],
                 "uses": "./.github/workflows/deploy-readiness.yml",
             },
@@ -163,7 +158,6 @@ def write_temp_env(
         "performance.yml",
         "mutation.yml",
         "migration-rollback.yml",
-        "branch-protection.yml",
         "deploy-readiness.yml",
         "deploy.yml",
         "nightly.yml",
@@ -489,7 +483,7 @@ class TestParsing:
         val.repo_root = Path(tmpdir)
         config = val.parse_ci_yaml()
         assert config["name"] == "CI Pipeline"
-        assert len(val.actual_jobs) == 17
+        assert len(val.actual_jobs) == 16
         assert "lint-fast" in val.actual_jobs
         assert "deploy" in val.actual_jobs
 

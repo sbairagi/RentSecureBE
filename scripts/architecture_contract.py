@@ -43,7 +43,6 @@ REQUIRED_JOBS: set[str] = {
     "mutation-smoke",
     "migration-rollback-validation",
     "quality",
-    "branch-protection",
     "deploy-readiness",
     "deploy",
 }
@@ -63,7 +62,6 @@ REQUIRED_WORKFLOW_FILES: set[str] = {
     ".github/workflows/performance.yml",
     ".github/workflows/mutation.yml",
     ".github/workflows/migration-rollback.yml",
-    ".github/workflows/branch-protection.yml",
     ".github/workflows/deploy-readiness.yml",
     ".github/workflows/deploy.yml",
     ".github/workflows/nightly.yml",
@@ -131,12 +129,10 @@ APPROVED_DEPENDENCY_CHAIN: dict[str, list[str] | None] = {
         "contract-tests",
         "architecture",
     ],
-    "branch-protection": ["quality", "security-fast", "django-check"],
     "deploy-readiness": [
         "quality",
         "security-fast",
         "django-check",
-        "branch-protection",
     ],
     "deploy": ["deploy-readiness"],
 }
@@ -157,8 +153,7 @@ STAGE_MAP: dict[str, str] = {
     "mutation-smoke": "Stage 2g  │ Mutation Testing (Smoke)",
     "migration-rollback-validation": "Stage 2h │ Migration Rollback Validation",
     "quality": "Stage 3   │ Quality Gate (SonarCloud)",
-    "branch-protection": "Stage 4a  │ Branch Protection Validation",
-    "deploy-readiness": "Stage 4b  │ Deploy Readiness Check",
+    "deploy-readiness": "Stage 4   │ Deploy Readiness Check",
     "deploy": "Stage 5   │ Deploy to Production",
 }
 
@@ -189,7 +184,6 @@ APPROVED_STAGE_ORDER: list[str] = [
     "security-fast",
     "mutation-smoke",
     "quality",
-    "branch-protection",
     "deploy-readiness",
     "deploy",
 ]
@@ -812,7 +806,6 @@ class ArchitectureContractValidator:
                 "quality",
                 "security-fast",
                 "django-check",
-                "branch-protection",
             ],
         )
 

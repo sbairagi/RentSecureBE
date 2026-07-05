@@ -75,7 +75,6 @@ PERMISSIONS_OVERRIDE: dict[str, str | None] = {
     "  actions: read\n"
     "  pull-requests: write\n",
     "quality.yml": "permissions:\n  contents: read\n  security-events: write\n",
-    "branch-protection.yml": "permissions:\n  contents: read\n",
     "security.yml": None,
     "security-deep.yml": None,
     "architecture-guard.yml": "permissions:\n"
@@ -110,9 +109,6 @@ CONCURRENCY_OVERRIDE: dict[str, str | None] = {
     "  cancel-in-progress: true\n",
     "ci-metrics.yml": "concurrency:\n"
     "  group: ci-metrics-${{ github.ref }}\n"
-    "  cancel-in-progress: true\n",
-    "branch-protection.yml": "concurrency:\n"
-    "  group: branch-protection-${{ github.ref }}\n"
     "  cancel-in-progress: true\n",
     "quality.yml": "concurrency:\n"
     "  group: quality-${{ github.ref }}\n"

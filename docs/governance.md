@@ -8,15 +8,14 @@
 
 ## 1. Overview
 
-This document defines the **enterprise governance controls** for the RentSecureBE CI/CD pipeline. It covers branch protection, status checks, code ownership, and the architecture guard workflow.
+This document defines the **enterprise governance controls** for the RentSecureBE CI/CD pipeline. It covers status checks, code ownership, and the architecture guard workflow.
 
 The governance system follows a **defense-in-depth** approach:
 
 1. **CODEOWNERS** — Who can approve changes to critical paths
-2. **Branch Protection** — What rules protect the main branch
-3. **Required Status Checks** — Which CI checks must pass before merging
-4. **Architecture Guard** — Automated enforcement of the pipeline contract
-5. **Change Approval** — Process for modifying the pipeline architecture
+2. **Required Status Checks** — Which CI checks must pass before merging
+3. **Architecture Guard** — Automated enforcement of the pipeline contract
+4. **Change Approval** — Process for modifying the pipeline architecture
 
 ---
 

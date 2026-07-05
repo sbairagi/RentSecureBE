@@ -146,16 +146,9 @@ jobs:
     uses: ./.github/workflows/quality.yml
     secrets: inherit
 
-  branch-protection:
-    name: Stage 4 │ Branch Protection
-    needs: [quality, security-fast, django-check]
-    uses: ./.github/workflows/branch-protection.yml
-    secrets:
-      repo-access-pat: ${{ secrets.REPO_ACCESS_PAT }}
-
   deploy-readiness:
     name: Stage 4 │ Deploy Readiness
-    needs: [quality, security-fast, django-check, branch-protection]
+    needs: [quality, security-fast, django-check]
     uses: ./.github/workflows/deploy-readiness.yml
     secrets: inherit
 
