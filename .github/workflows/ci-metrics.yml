@@ -13,7 +13,7 @@ name: CI Metrics
     workflows: ["CI Pipeline"]
     types:
       - completed
-  workflow_dispatch:
+      - requested
 
 permissions:
   contents: read
