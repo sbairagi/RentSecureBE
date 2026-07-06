@@ -7,7 +7,7 @@ import logging
 import secrets
 import uuid
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, cast, override
 
 import razorpay  # type: ignore[import-untyped]
 from rest_framework import generics, permissions, viewsets
@@ -33,7 +33,6 @@ from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
     process_rent_payout,
 )
-from rentsecure_be.type_compat import override
 from rentsecure_be.utils.cashfree_payout import add_beneficiary
 
 from .models import (
@@ -494,6 +493,8 @@ def _get_rent_from_event(data: dict, event: str) -> RentRecord | None:
 
 
 def _process_rent_payment(rent: RentRecord) -> None:
+    from properties.models import RentRecord  # nosonar
+
     rent.payment_status = RentRecord.Status.PAID
     rent.date_paid = timezone.now().date()
     rent.save(update_fields=["status", "paid_on", "updated_at"])
