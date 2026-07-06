@@ -18,6 +18,14 @@ name: Architecture Contract Guard
     - cron: '0 0 * * *'
   # Manual trigger for ad-hoc compliance checks
   workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/architecture_contract.py'
+      - 'docs/governance.md'
 
 concurrency:
   group: architecture-guard-${{ github.ref }}

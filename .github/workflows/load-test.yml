@@ -2,14 +2,13 @@
 # LOAD TEST: Scalability Detection
 # ═══════════════════════════════════════════════════════════════════════════════
 # Runs Locust to detect scalability issues.
-# Runs weekly via schedule. Never combined with benchmark.yml.
+# Runs only via weekly.yml workflow_call or manual workflow_dispatch.
+# Never scheduled independently.
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Load Test
 
 'on':
    workflow_call:
-   schedule:
-     - cron: '0 3 * * 0'
    workflow_dispatch:
 
 concurrency:

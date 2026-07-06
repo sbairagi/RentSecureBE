@@ -2,6 +2,7 @@
 # WEEKLY: Exhaustive Validation Pipeline
 # ═══════════════════════════════════════════════════════════════════════════════
 # Schedule: 0 3 * * 0
+# Single weekly orchestrator for mutation, hypothesis, SBOM, benchmark, load-test.
 # Never blocks PR merges.
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Weekly Exhaustive Validation
@@ -38,4 +39,16 @@ jobs:
     uses: ./.github/workflows/sbom.yml
     with:
       artifact_retention_days: 90
+    secrets: inherit
+
+  benchmark:
+    name: Weekly │ Benchmark
+    needs: sbom
+    uses: ./.github/workflows/benchmark.yml
+    secrets: inherit
+
+  load-test:
+    name: Weekly │ Load Test
+    needs: benchmark
+    uses: ./.github/workflows/load-test.yml
     secrets: inherit
