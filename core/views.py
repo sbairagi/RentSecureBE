@@ -7,7 +7,7 @@ import logging
 import secrets
 import uuid
 from datetime import timedelta
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import razorpay  # type: ignore[import-untyped]
 from rest_framework import generics, permissions, viewsets
@@ -53,6 +53,9 @@ from .serializers import (
     UsageLimitSerializer,
     UserSubscriptionSerializer,
 )
+
+if TYPE_CHECKING:
+    from properties.models import RentRecord
 
 logger = logging.getLogger(__name__)
 
@@ -362,7 +365,7 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
 @csrf_exempt  # nosonar
 def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     """Create a Razorpay order for rent payment."""
-    from properties.models import RentRecord
+    from properties.models import RentRecord  # nosonar
 
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
@@ -419,15 +422,13 @@ def check_signature_or_return_http_response(
     return None
 
 
-# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
-@csrf_exempt  # nosonar
-def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901  # nosonar
-    """Single Razorpay webhook handler with HMAC signature verification.  # nosonar
+def razorpay_webhook(request: HttpRequest) -> JsonResponse:
+    """Single Razorpay webhook handler with HMAC signature verification.
 
     Handles both payment.captured (order-based) and payment_link.paid events.
     Consolidated from three duplicate definitions into one secure handler.
     """
-    from properties.models import RentRecord
+    from properties.models import RentRecord  # nosonar
 
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
@@ -448,66 +449,58 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901  # nos
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     event = data.get("event")
+    rent = _get_rent_from_event(data, event)
 
-    # Handle payment_link.paid event (primary flow)
+    if rent is not None:
+        if rent.payment_status == RentRecord.Status.PAID:
+            return JsonResponse({"status": "ok", "message": "Already processed"})
+        _process_rent_payment(rent)
+
+    return JsonResponse({"status": "ok"})
+
+
+def _get_rent_from_event(data: dict, event: str) -> RentRecord | None:
+    from properties.models import RentRecord  # nosonar
+
     if event == "payment_link.paid":
         try:
             ref_id = data["payload"]["payment_link"]["entity"]["reference_id"]
         except (KeyError, TypeError):
             logger.warning("Razorpay webhook: missing reference_id in payload")
-            return JsonResponse({"error": "Invalid payload"}, status=400)
+            return None
 
         try:
-            rent = RentRecord.objects.get(id=ref_id)
+            return RentRecord.objects.get(id=ref_id)
         except RentRecord.DoesNotExist:
             logger.warning(f"Razorpay webhook: RentRecord {ref_id} not found")
-            return JsonResponse({"error": "RentRecord not found"}, status=404)
+            return None
 
-        # Idempotent: only process if not already PAID
-        if rent.payment_status == RentRecord.Status.PAID:
-            return JsonResponse({"status": "ok", "message": "Already processed"})
-
-        rent.payment_status = RentRecord.Status.PAID
-        rent.date_paid = timezone.now().date()
-        rent.save(update_fields=["status", "paid_on", "updated_at"])
-
-        try:
-            process_rent_payout(rent)
-        except Exception as e:
-            logger.exception(f"Failed to process payout for rent {rent.id}: {e}")
-
-        return JsonResponse({"status": "ok"})
-
-    # Handle payment.captured event (order-based flow)
-    elif event == "payment.captured":
+    if event == "payment.captured":
         try:
             razorpay_order_id = data["payload"]["payment"]["entity"]["order_id"]
         except (KeyError, TypeError):
             logger.warning("Razorpay webhook: missing order_id in payload")
-            return JsonResponse({"error": "Invalid payload"}, status=400)
+            return None
 
         try:
-            rent = RentRecord.objects.get(razorpay_order_id=razorpay_order_id)
+            return RentRecord.objects.get(razorpay_order_id=razorpay_order_id)
         except RentRecord.DoesNotExist:
             logger.warning(
                 f"Razorpay webhook: RentRecord for order {razorpay_order_id} not found"
             )
-            return JsonResponse({"error": "RentRecord not found"}, status=404)
+            return None
 
-        # Idempotent: only process if not already PAID
-        if rent.payment_status == RentRecord.Status.PAID:
-            return JsonResponse({"status": "ok", "message": "Already processed"})
+    return None
 
-        rent.payment_status = RentRecord.Status.PAID
-        rent.date_paid = timezone.now().date()
-        rent.save(update_fields=["status", "paid_on", "updated_at"])
 
-        try:
-            process_rent_payout(rent)
-        except Exception as e:
-            logger.exception(f"Failed to process payout for rent {rent.id}: {e}")
-
-    return JsonResponse({"status": "ok"})
+def _process_rent_payment(rent: RentRecord) -> None:
+    rent.payment_status = RentRecord.Status.PAID
+    rent.date_paid = timezone.now().date()
+    rent.save(update_fields=["status", "paid_on", "updated_at"])
+    try:
+        process_rent_payout(rent)
+    except Exception as e:
+        logger.exception(f"Failed to process payout for rent {rent.id}: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -526,7 +519,7 @@ def update_owner_bank_details(
     Fixed: Uses register_beneficiary from cashfree_service.
     Fixed: Uses correct RentRecord field (owner) instead of renter__property__owner.
     """
-    from properties.models import RentRecord
+    from properties.models import RentRecord  # nosonar
 
     data = request.data
     owner: User = cast(User, request.user)
@@ -590,7 +583,7 @@ def rent_inflow_summary(request: Request, /, *args: Any, **kwargs: Any) -> Respo
 
     Fixed: Uses correct RentRecord field (owner) and (amount) and (PENDING).
     """
-    from properties.models import RentRecord
+    from properties.models import RentRecord  # nosonar
 
     owner: User = cast(User, request.user)
     total_received = (
@@ -624,7 +617,7 @@ def owner_rent_records(request: Request, /, *args: Any, **kwargs: Any) -> Respon
 
     Fixed: Uses correct FK path (unit.owner, renter.name, unit.unit).
     """
-    from properties.models import RentRecord
+    from properties.models import RentRecord  # nosonar
 
     owner: User = cast(User, request.user)
     rents = (

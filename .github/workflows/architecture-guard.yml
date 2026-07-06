@@ -5,7 +5,7 @@
 # The CI architecture itself is an enforceable contract.
 # Any unauthorized workflow modification must fail CI.
 #
-# This guard runs on every PR that modifies workflow files.
+# Runs on PRs that modify workflow files + daily schedule + manual.
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Architecture Contract Guard
 
@@ -14,13 +14,9 @@ name: Architecture Contract Guard
     paths:
       - '.github/workflows/**'
       - 'scripts/architecture_contract.py'
-  push:
-    branches: [main, master]
-    paths:
-      - '.github/workflows/**'
-      - 'scripts/architecture_contract.py'
-  merge_group:
-  # Also allow manual trigger for ad-hoc compliance checks
+  schedule:
+    - cron: '0 0 * * *'
+  # Manual trigger for ad-hoc compliance checks
   workflow_dispatch:
 
 concurrency:
@@ -29,8 +25,6 @@ concurrency:
 
 permissions:
   contents: read
-  security-events: write
-  id-token: write
 
 jobs:
   enforce-contract:

@@ -1,8 +1,8 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 3e: Performance & Load Testing
 # ═══════════════════════════════════════════════════════════════════════════════
-# Jobs: load-test (Locust), perf-regression (pytest-benchmark)
-# Mode: smoke (PRs — quick benchmark only), full (nightly/main — load + benchmark)
+# Runs: Load test (Locust) + Benchmark (pytest-benchmark)
+# Reusable workflow. Invoke via nightly schedule or manual workflow_dispatch.
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Load & Performance Regression Testing
 
@@ -13,12 +13,7 @@ name: Load & Performance Regression Testing
         description: "smoke for PRs, full for nightly/main"
         type: string
         default: "smoke"
-  push:
-    branches:
-      - main
-      - master
   workflow_dispatch:
-
 
 permissions:
   contents: read

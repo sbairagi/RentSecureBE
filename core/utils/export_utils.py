@@ -3,7 +3,8 @@ from typing import Any
 
 import xlsxwriter
 
-from properties.models import RentRecord  # nosonar
+# nosonar
+from properties.models import RentRecord
 
 
 def generate_owner_rent_report(owner: Any) -> BytesIO:

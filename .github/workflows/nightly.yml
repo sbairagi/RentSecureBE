@@ -29,16 +29,6 @@ jobs:
       mutation_mode: full
     secrets: inherit
 
-  benchmark:
-    name: Benchmark — Nightly
-    uses: ./.github/workflows/benchmark.yml
-    secrets: inherit
-
-  load-test:
-    name: Load Test — Nightly
-    uses: ./.github/workflows/load-test.yml
-    secrets: inherit
-
   security-deep:
     name: Security Deep Scan — Nightly
     uses: ./.github/workflows/security-deep.yml

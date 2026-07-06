@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # CI METRICS: Collect and summarize GitHub Actions performance data
 # ═══════════════════════════════════════════════════════════════════════════════
-# Triggered after ci.yml completes.
+# Triggered after Runtime Measurement completes.
 # Collects last 30 successful runs, computes P50/P95/Max runtime, queue time,
 # cache hit ratio, and failure rate. Posts summary as workflow artifact and
 # (optional) PR comment.
@@ -10,7 +10,7 @@ name: CI Metrics
 
 'on':
   workflow_run:
-    workflows: ["CI Pipeline"]
+    workflows: ["Runtime Measurement"]
     types:
       - completed
 

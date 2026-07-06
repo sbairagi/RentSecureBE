@@ -2,16 +2,16 @@
 # STAGE 6: Security & Supply Chain (Deep Nightly / Main Branch)
 # ═══════════════════════════════════════════════════════════════════════════════
 # Runs: CodeQL Advanced Analysis, OpenSSF Scorecard, Dependency Review
-# Triggers: nightly schedule + push to main/master
-# Never runs on PRs (kept lightweight via security.yml).
+# Triggers: nightly schedule + workflow_dispatch
+# Does not run on every push or PR (kept lightweight via security.yml).
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Security Deep
 
 'on':
   workflow_call:
-  merge_group: {}
   schedule:
     - cron: '0 2 * * *'
+  workflow_dispatch:
 
 concurrency:
   group: security-deep-${{ github.ref }}

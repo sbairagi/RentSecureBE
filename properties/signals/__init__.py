@@ -18,6 +18,7 @@ from properties.models import (
     UnitImage,
 )
 from properties.scheduler import cancel_reminder_job
+from properties.signals.renter_signals import renter_archived, renter_exited
 from properties.utils import update_usage_count
 from properties.utils.onboarding_utils import generate_onboarding_token
 
@@ -238,20 +239,11 @@ def _generate_final_invoice_if_needed(instance: Renter) -> None:
     latest_rent = RentRecord.objects.filter(renter=instance).last()
     if not latest_rent:
         return
-    from ai_assistant.services.invoice_service import (  # nosonar
-        generate_final_invoice_pdf,
-    )
 
-    pdf_path = generate_final_invoice_pdf(instance, latest_rent)
-    instance.final_invoice_path = pdf_path
-    instance.save(update_fields=["final_invoice_path"])
+    renter_exited.send(sender=Renter, instance=instance, latest_rent=latest_rent)
 
 
 def _archive_renter_if_needed(instance: Renter) -> None:
     if ArchivedRenter.objects.filter(renter=instance).exists():
         return
-    try:
-        from ai_assistant.services.archive_service import archive_renter_data  # nosonar
-    except ImportError:
-        return
-    archive_renter_data(instance)
+    renter_archived.send(sender=Renter, instance=instance)

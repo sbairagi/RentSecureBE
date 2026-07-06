@@ -7,7 +7,9 @@ from django.utils.timezone import now
 
 from notification.services.voice_service import generate_voice_note
 from notification.services.whatsapp_service import send_whatsapp_audio
-from properties.models import PropertyTaxRecord, RentRecord  # nosonar
+
+# nosonar
+from properties.models import PropertyTaxRecord, RentRecord
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from notification.services.whatsapp_service import send_whatsapp_message
-from properties.models import RentRecord  # nosonar
+
+# nosonar
+from properties.models import RentRecord
 
 
 def notify_renter_about_late_fee(rent: RentRecord, late_fee: int | float) -> None:

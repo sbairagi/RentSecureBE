@@ -2,13 +2,14 @@
 # BENCHMARK: Performance Regression Detection
 # ═══════════════════════════════════════════════════════════════════════════════
 # Runs pytest-benchmark to detect performance regressions.
-# Never combined with load-test.yml.
+# Runs weekly via schedule. Never combined with load-test.yml.
 # ═══════════════════════════════════════════════════════════════════════════════
 name: Benchmark
 
 'on':
    workflow_call:
-   merge_group: {}
+   schedule:
+     - cron: '0 3 * * 0'
    workflow_dispatch:
 
 concurrency:

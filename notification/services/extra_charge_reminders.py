@@ -3,7 +3,8 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from ai_assistant.services.i18n_service import translate_msg  # nosonar
+# nosonar
+from ai_assistant.services.i18n_service import translate_msg
 from notification.services.voice_service import generate_voice_note
 from notification.services.whatsapp_service import (
     send_whatsapp_audio,
