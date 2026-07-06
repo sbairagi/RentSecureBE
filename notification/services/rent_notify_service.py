@@ -53,21 +53,21 @@ def notify_renter(renter: Any, message: str) -> None:
     try:
         translated_text = translate_msg(message, lang)
     except Exception as e:
-        logger.error(f"Translation failed for user {renter.id}: {e}")
+        logger.exception(f"Translation failed for user {renter.id}: {e}")
         translated_text = message  # fallback to original
 
     try:
         if phone:
             send_whatsapp_message(phone, translated_text)
     except Exception as e:
-        logger.error(f"WhatsApp text message failed for user {renter.id}: {e}")
+        logger.exception(f"WhatsApp text message failed for user {renter.id}: {e}")
 
     try:
         audio_path = generate_voice_note(translated_text, lang)
         if audio_path and phone:
             send_whatsapp_audio(phone, audio_path)
     except Exception as e:
-        logger.error(f"WhatsApp voice note failed for user {renter.id}: {e}")
+        logger.exception(f"WhatsApp voice note failed for user {renter.id}: {e}")
 
 
 def notify_owner(owner: Any, message: str) -> None:
@@ -81,21 +81,21 @@ def notify_owner(owner: Any, message: str) -> None:
     try:
         translated_text = translate_msg(message, lang)
     except Exception as e:
-        logger.error(f"Translation failed for user {owner.id}: {e}")
+        logger.exception(f"Translation failed for user {owner.id}: {e}")
         translated_text = message  # fallback to original
 
     try:
         if phone:
             send_whatsapp_message(phone, translated_text)
     except Exception as e:
-        logger.error(f"WhatsApp text message failed for user {owner.id}: {e}")
+        logger.exception(f"WhatsApp text message failed for user {owner.id}: {e}")
 
     try:
         audio_path = generate_voice_note(translated_text, lang)
         if audio_path and phone:
             send_whatsapp_audio(phone, audio_path)
     except Exception as e:
-        logger.error(f"WhatsApp voice note failed for user {owner.id}: {e}")
+        logger.exception(f"WhatsApp voice note failed for user {owner.id}: {e}")
 
 
 def send_payout_notification(rent: Any) -> None:

@@ -1,4 +1,75 @@
 {
   "$schema": "https://app.kilo.ai/config.json",
-  "snapshot": false
+  "snapshot": false,
+  "instructions": [
+    ".kilo/instructions/README.md",
+    ".kilo/instructions/universal.md",
+    ".kilo/instructions/architecture.md",
+    ".kilo/instructions/backend.md",
+    ".kilo/instructions/security.md",
+    ".kilo/instructions/testing.md",
+    ".kilo/instructions/frontend.md",
+    ".kilo/instructions/notifications.md",
+    ".kilo/instructions/finance.md",
+    ".kilo/instructions/smartbot.md",
+    ".kilo/instructions/onboarding.md"
+  ],
+  "command": {
+    "review-sec": {
+      "template": "Run security review on changed files",
+      "description": "Execute security-focused code review",
+      "agent": "plan",
+      "subtask": true
+    },
+    "test-shard": {
+      "template": "Run test shard {shard}",
+      "description": "Run pytest shard with coverage",
+      "agent": "build"
+    }
+  },
+  "agent": {
+    "backend-architect": {
+      "model": "anthropic/claude-opus-4.1",
+      "variant": "primary",
+      "mode": "subagent",
+      "description": "Django/DRF architecture specialist",
+      "prompt": ".kilo/prompts/backend-architecture.md",
+      "permission": {
+        "read": "allow",
+        "edit": {
+          "core/": "allow",
+          "tests/": "allow"
+        },
+        "bash": {
+          "python manage.py": "allow",
+          "pytest": "allow"
+        }
+      }
+    }
+  },
+  "permission": {
+    "read": "allow",
+    "edit": {
+      "*": "allow",
+      ".env": "deny",
+      "secrets": "deny",
+      "keys": "deny"
+    },
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "lsp": "allow",
+    "repo_overview": "allow",
+    "bash": {
+      "python": "allow",
+      "pytest": "allow",
+      "uv": "allow",
+      "git": "allow"
+    },
+    "task": "ask",
+    "webfetch": "deny",
+    "websearch": "deny",
+    "external_directory": "deny",
+    "repo_clone": "deny"
+  }
 }

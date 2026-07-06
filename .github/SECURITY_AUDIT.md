@@ -7,7 +7,7 @@ Generated: 2026-07-02
 - ✅ **Harden Runner** — `step-security/harden-runner` with `egress-policy: block` in every job across all workflows.
 - ✅ **SARIF upload gating** — Security scan results only uploaded for same-repo PRs in `security.yml`, `security-deep.yml`.
 - ✅ **Concurrency** — `ci.yml`, `architecture-guard.yml`, `security-deep.yml`, `nightly.yml`, `weekly.yml`, `load-test.yml`, `benchmark.yml` have concurrency groups.
-- ✅ **Top-level permissions** — `ci.yml`, `rollback.yml`, `runtime-measurement.yml`, `ci-metrics.yml`, `architecture-guard.yml`, `branch-protection.yml`, `quality.yml` have explicit `permissions:` blocks.
+- ✅ **Top-level permissions** — `ci.yml`, `rollback.yml`, `runtime-measurement.yml`, `ci-metrics.yml`, `architecture-guard.yml`, `quality.yml` have explicit `permissions:` blocks.
 - ✅ **Least-privilege per-job permissions** — `security.yml` and `security-deep.yml` apply `security-events: write`, `contents: read`, `actions: read` to scan jobs.
 - ✅ **OIDC readiness** — `id-token: write` declared in `ci.yml` and `security-deep.yml`.
 - ✅ **Dependabot** — `.github/dependabot.yml` configured for `github-actions` ecosystem, `direct` dependencies only, weekly schedule.
@@ -15,7 +15,6 @@ Generated: 2026-07-02
 - ✅ **Checkout fetch-depth** — Most workflows use `fetch-depth: 1`.
 - ✅ **Timeout limits** — Every job defines `timeout-minutes`.
 - ✅ **Security scanning stack** — Bandit, pip-audit, Semgrep, Trivy, Gitleaks, CodeQL, Scorecard, Dependency Review, SBOM (Syft, Grype, OSV Scanner).
-- ✅ **Branch protection validation workflow** — `branch-protection.yml` enforces required status checks.
 - ✅ **Pre-commit hooks** — `.pre-commit-config.yaml` and `lint.yml` job.
 
 ## Missing
@@ -46,9 +45,7 @@ Generated: 2026-07-02
 | 10 | **`dependency-review` jobs lack permissions blocks** | Medium | `.github/workflows/security.yml`, `.github/workflows/security-deep.yml` | Inherits default token permissions instead of explicit minimal set. |
 | 11 | **`GITHUB_TOKEN` leaked in error output** | Medium | `.github/workflows/runtime-measurement.yml` | If token unavailable, error prints exact `curl -H 'Authorization: token ${{ secrets.GITHUB_TOKEN }}' ...` command to log. |
 | 12 | **`SONAR_TOKEN` exposed at job-level env** | Medium | `.github/workflows/quality.yml` | Token visible in job-level environment variables. |
-| 13 | **Full clone in branch-protection workflow** | Medium | `.github/workflows/branch-protection.yml` | `actions/checkout@v4` without `fetch-depth` clones full history. |
-| 14 | **Unused Node.js legacy env override** | Medium | `.github/workflows/ci.yml` | `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"` set at workflow env level. |
-| 15 | **`setup-django/action.yml` defined but never used** | Medium | `.github/actions/setup-django/action.yml` | Dead code increases maintenance surface. |
+| 13 | **`setup-django/action.yml` defined but never used** | Medium | `.github/actions/setup-django/action.yml` | Dead code increases maintenance surface. |
 
 ### Low
 
@@ -84,11 +81,10 @@ All **Critical**, **High**, and **Medium** findings have been remediated:
 | 10 | ✅ Fixed | Added `permissions:` blocks to `dependency-review` jobs in `security.yml` and `security-deep.yml`. Top-level permissions added to both workflow files. |
 | 11 | ✅ Fixed | `runtime-measurement.yml` — removed `GITHUB_TOKEN` from job-level `env:` and redacted token from error diagnostic output. |
 | 12 | ✅ Fixed | `quality.yml` — `SONAR_TOKEN` removed from job-level `env:`; scoped to step-level `env:` on the SonarCloud and quality-gate steps only. |
-| 13 | ✅ Fixed | `branch-protection.yml` — added `fetch-depth: 1` to `actions/checkout` step. |
-| 14 | ✅ Fixed | `ci.yml` — removed `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"` env override. |
-| 15 | ℹ️ Noted | `setup-django/action.yml` is unused but preserved to avoid breaking any external references. |
-| 16 | ✅ Fixed | `.github/dependabot.yml` — added `pip` ecosystem monitoring for `requirements.txt`. |
-| 17 | ℹ️ Accepted | Test SECRET keys remain as allowlisted hardcoded strings (consistent with `.gitleaks.toml`). |
+| 13 | ✅ Fixed | `ci.yml` — removed `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"` env override. |
+| 14 | ℹ️ Noted | `setup-django/action.yml` is unused but preserved to avoid breaking any external references. |
+| 15 | ✅ Fixed | `.github/dependabot.yml` — added `pip` ecosystem monitoring for `requirements.txt`. |
+| 16 | ℹ️ Accepted | Test SECRET keys remain as allowlisted hardcoded strings (consistent with `.gitleaks.toml`). |
 
 ## Risk Level
 

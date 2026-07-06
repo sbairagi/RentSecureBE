@@ -98,27 +98,62 @@ lint-fast (root)
 │   ├── shard-validation
 │   ├── contract-tests
 │   └── architecture
-├── branch-protection
-│   ├── quality
-│   ├── security-fast
-│   └── django-check
 ├── deploy-readiness
 │   ├── quality
 │   ├── security-fast
-│   ├── django-check
-│   └── branch-protection
+│   └── django-check
 └── deploy
     └── deploy-readiness
 ```
 
-**Delta:** No structural dependency changes. `weekly.yml` now delegates SBOM to `sbom.yml` (no new edge added to `ci.yml`). All existing gates preserved.
+**Delta:** `branch-protection` job removed. `deploy-readiness` now depends directly on `quality`, `security-fast`, and `django-check`.
+
+---
+
+## 3. Dependency Graph After
+
+```text
+lint-fast (root)
+├── test-shard-1
+├── test-shard-2
+├── test-shard-3
+├── test-shard-4
+├── contract-tests
+├── django-check
+├── hypothesis-fast
+├── architecture
+├── security-fast
+├── mutation-smoke
+├── migration-rollback-validation
+├── shard-validation
+│   ├── test-shard-1
+│   ├── test-shard-2
+│   ├── test-shard-3
+│   └── test-shard-4
+├── quality
+│   ├── test-shard-1
+│   ├── test-shard-2
+│   ├── test-shard-3
+│   ├── test-shard-4
+│   ├── shard-validation
+│   ├── contract-tests
+│   └── architecture
+├── deploy-readiness
+│   ├── quality
+│   ├── security-fast
+│   └── django-check
+└── deploy
+    └── deploy-readiness
+```
+
+**Delta:** `branch-protection` removed from pipeline. `deploy-readiness` dependencies updated. All existing gates preserved.
 
 ---
 
 ## 4. Critical Path Before
 
 ```
-lint-fast → test-shard-1/2/3/4 → shard-validation → quality → branch-protection → deploy-readiness → deploy
+lint-fast → test-shard-1/2/3/4 → shard-validation → quality → deploy-readiness → deploy
 ```
 
 ---
@@ -126,7 +161,7 @@ lint-fast → test-shard-1/2/3/4 → shard-validation → quality → branch-pro
 ## 5. Critical Path After
 
 ```
-lint-fast → test-shard-1/2/3/4 → shard-validation → quality → branch-protection → deploy-readiness → deploy
+lint-fast → test-shard-1/2/3/4 → shard-validation → quality → deploy-readiness → deploy
 ```
 
 **Delta:** Critical path unchanged.

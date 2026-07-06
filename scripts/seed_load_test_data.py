@@ -3,6 +3,10 @@
 # pylint: disable=wrong-import-position
 
 import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rentsecure_be.settings")
 
@@ -17,7 +21,7 @@ from core.models import SubscriptionPlan  # noqa: E402
 User = get_user_model()
 
 for i in range(5):
-    password = os.environ.get("SEED_USER_PASSWORD", "testpass123")
+    password = os.getenv("SEED_USER_PASSWORD", "LoadTest123!")
     User.objects.get_or_create(
         username=f"loadtest_user_{i}",
         defaults={

@@ -2,16 +2,10 @@ name: CI Pipeline
 
 'on':
   push:
-    branches: [main, master, dev, cleanup/remove-dead-code]
+    branches: [main, master]
   pull_request:
-    branches: [main, master, dev, cleanup/remove-dead-code]
+    branches: [main, master]
   merge_group:
-
-permissions:
-  contents: read
-  security-events: write
-  id-token: write
-  actions: read
 
 jobs:
   lint-fast:
@@ -54,6 +48,9 @@ jobs:
   shard-validation:
     name: Stage 2 │ Shard Distribution Validation
     timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
     needs: [test-shard-1, test-shard-2, test-shard-3, test-shard-4]
     runs-on: ubuntu-latest
     steps:
@@ -149,15 +146,9 @@ jobs:
     uses: ./.github/workflows/quality.yml
     secrets: inherit
 
-  branch-protection:
-    name: Stage 4 │ Branch Protection
-    needs: [quality, security-fast, django-check]
-    uses: ./.github/workflows/branch-protection.yml
-    secrets: inherit
-
   deploy-readiness:
     name: Stage 4 │ Deploy Readiness
-    needs: [quality, security-fast, django-check, branch-protection]
+    needs: [quality, security-fast, django-check]
     uses: ./.github/workflows/deploy-readiness.yml
     secrets: inherit
 

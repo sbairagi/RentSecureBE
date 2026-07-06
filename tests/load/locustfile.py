@@ -7,12 +7,18 @@ Tests the API under simulated concurrent load to detect:
 - Memory/CPU pressure
 
 Run with:
-    locust -f tests/load/locustfile.py --headless --users=20 \
-      --spawn-rate=2 --run-time=2m --host=http://localhost:8000
+    BASE_URL=http://localhost:8000 locust -f tests/load/locustfile.py --headless \
+      --users=20 --spawn-rate=2 --run-time=2m
+
+The target host is resolved in this order:
+  1. --host CLI flag
+  2. BASE_URL environment variable
+  3. Class-level default (http://127.0.0.1:8000)
 
 For CI:
-    locust -f tests/load/locustfile.py --headless --users=20 \
-      --spawn-rate=2 --run-time=2m --host=http://localhost:8000 \
+    locust -f tests/load/locustfile.py --headless \
+      --host=http://127.0.0.1:8000 \
+      --users=20 --spawn-rate=2 --run-time=2m \
       --exit-code-on-error 1
 """
 
@@ -27,7 +33,7 @@ from django.contrib.auth import get_user_model  # noqa: E402
 
 django.setup()
 
-from locust import HttpUser, TaskSet, between, task  # noqa: E402
+from locust import HttpUser, between, task  # noqa: E402
 from rest_framework_simplejwt.tokens import RefreshToken  # noqa: E402
 
 User = get_user_model()
@@ -39,8 +45,19 @@ def get_auth_header(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
 
-class AuthenticatedUserBehavior(TaskSet):
-    """Simulates a logged-in property owner performing typical CRUD operations."""
+def _get_base_url() -> str:
+    base_url = os.environ.get("BASE_URL", "").strip()
+    if base_url:
+        return base_url.rstrip("/")
+    return "http://127.0.0.1:8000"
+
+
+class RentSecureAPIUser(HttpUser):
+    """Main Locust user class — simulates authenticated property owner traffic."""
+
+    wait_time = between(0.5, 3.0)
+    weight = 9
+    host: str = _get_base_url()
 
     _user: User | None = None
     _headers: dict[str, str] | None = None
@@ -61,59 +78,57 @@ class AuthenticatedUserBehavior(TaskSet):
         self._user.save()
         self._headers = get_auth_header(self._user)
 
+    def _safe_get(self, path: str, name: str) -> None:
+        with self.client.get(
+            path,
+            headers=self._headers,
+            name=name,
+            catch_response=True,
+        ) as response:
+            if response.status_code >= 400:
+                response.failure(f"{name} failed with status {response.status_code}")
+
     @task(3)
     def list_buildings(self) -> None:
-        self.client.get("/api/properties/buildings/", headers=self._headers)
+        self._safe_get("/api/properties/buildings/", "list_buildings")
 
     @task(3)
     def list_units(self) -> None:
-        self.client.get("/api/properties/units/", headers=self._headers)
+        self._safe_get("/api/properties/units/", "list_units")
 
     @task(2)
     def list_renters(self) -> None:
-        self.client.get("/api/properties/renters/", headers=self._headers)
+        self._safe_get("/api/properties/renters/", "list_renters")
 
     @task(2)
     def list_rent_records(self) -> None:
-        self.client.get("/api/properties/rent-records/", headers=self._headers)
+        self._safe_get("/api/properties/rent-records/", "list_rent_records")
 
     @task(1)
     def building_analytics(self) -> None:
         if self._building_id is None:
             return
-        self.client.get(
+        self._safe_get(
             f"/api/properties/buildings/{self._building_id}/analytics/",
-            headers=self._headers,
+            "building_analytics",
         )
-
-
-class AnonymousUserBehavior(TaskSet):
-    """Simulates unauthenticated endpoints (public API discovery)."""
-
-    @task(1)
-    def discover_api_root(self) -> None:
-        self.client.get("/api/", name="api_root_anonymous")
-
-
-class RentSecureAPIUser(HttpUser):
-    """MainLocust user class — simulates authenticated property owner traffic."""
-
-    tasks = [AuthenticatedUserBehavior]
-    wait_time = between(0.5, 3.0)  # Median 1.5s between requests
-    weight = 9  # 90% authenticated traffic
-
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        super().__init__(*args, **kwargs)
-        self.host = os.environ.get("LOCUST_HOST", "http://127.0.0.1:8000")
 
 
 class AnonymousAPIUser(HttpUser):
     """Simulates occasional unauthenticated traffic."""
 
-    tasks = [AnonymousUserBehavior]
     wait_time = between(1.0, 5.0)
-    weight = 1  # 10% anonymous traffic
+    weight = 1
+    host: str = _get_base_url()
 
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        super().__init__(*args, **kwargs)
-        self.host = os.environ.get("LOCUST_HOST", "http://127.0.0.1:8000")
+    @task(1)
+    def discover_api_root(self) -> None:
+        with self.client.get(
+            "/api/",
+            name="api_root_anonymous",
+            catch_response=True,
+        ) as response:
+            if response.status_code >= 400:
+                response.failure(
+                    f"api_root_anonymous failed with status {response.status_code}"
+                )

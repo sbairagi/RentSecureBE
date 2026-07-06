@@ -363,7 +363,6 @@ class AdminImportCoverageTest(TestCase):
                 __import__(m)
             except (ImportError, Exception) as e:
                 logger.debug(f"Failed to import admin module {m}: {e}")
-        self.assertTrue(True)
 
 
 class SerializerImportTest(TestCase):
@@ -381,4 +380,3 @@ class SerializerImportTest(TestCase):
                 __import__(path)
             except Exception as e:
                 logger.debug(f"Failed to import serializer module {path}: {e}")
-        self.assertTrue(True)

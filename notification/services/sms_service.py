@@ -17,5 +17,5 @@ def send_sms(phone: str, message: str) -> bool:
         )
         return True
     except Exception as e:
-        logger.error(f"SMS sending failed: {e}")
+        logger.exception(f"SMS sending failed: {e}")
         return False
