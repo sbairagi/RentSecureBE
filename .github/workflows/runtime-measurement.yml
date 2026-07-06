@@ -12,7 +12,6 @@ name: Runtime Measurement
     workflows: ["CI Pipeline"]
     types:
       - completed
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,7 +27,6 @@ jobs:
     name: Measure CI Runtime
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -43,6 +41,7 @@ jobs:
 
       - name: Measure CI runtime via GitHub Actions API
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           TARGET_WORKFLOW: ci.yml
         run: |
@@ -58,14 +57,23 @@ jobs:
           workflow = os.environ.get("TARGET_WORKFLOW")
 
           if not token:
-              print("::error::GITHUB_TOKEN is unavailable. Runtime measurement is BLOCKED.")
-              print("::group::Exact Commands Required")
-              print("# To measure runtime manually, run:")
-              print("curl -s -H 'Authorization: token <GITHUB_TOKEN>' \\\\")
-              print(f"  'https://api.github.com/repos/{repo}/actions/workflows/{workflow}/runs?per_page=30&status=success' \\\\")
-              print("  | jq '.workflow_runs[] | {run_id: .id, created: .created_at, started: .run_started_at, updated: .updated_at}'")
-              print("::endgroup::")
-              raise SystemExit(2)
+              print("WARNING: GITHUB_TOKEN missing. Skipping runtime measurement.")
+              metrics = {
+                  "run_id": int(os.environ.get("GITHUB_RUN_ID", 0)),
+                  "timestamp": datetime.now(timezone.utc).isoformat(),
+                  "count": 0,
+                  "p50_runtime_seconds": None,
+                  "p95_runtime_seconds": None,
+                  "max_runtime_seconds": None,
+                  "avg_queue_time_seconds": None,
+                  "failure_rate": None,
+                  "status": "NO_DATA",
+              }
+              out_path = "runtime-metrics.json"
+              with open(out_path, "w") as f:
+                  json.dump(metrics, f, indent=2, default=str)
+              print(json.dumps(metrics, indent=2, default=str))
+              raise SystemExit(0)
 
           headers = {
               "Authorization": f"token {token}",

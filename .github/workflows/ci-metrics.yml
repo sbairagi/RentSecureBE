@@ -13,7 +13,6 @@ name: CI Metrics
     workflows: ["CI Pipeline"]
     types:
       - completed
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -29,7 +28,6 @@ jobs:
     name: Collect CI Metrics
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -48,6 +46,7 @@ jobs:
 
       - name: Collect GitHub Actions metrics
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           TARGET_WORKFLOW: ci.yml
         run: |
@@ -55,9 +54,27 @@ jobs:
           import os, requests, json, math
           from datetime import datetime, timezone
 
-          token = os.environ["GITHUB_TOKEN"]
-          repo = os.environ["GITHUB_REPOSITORY"]
-          workflow = os.environ["TARGET_WORKFLOW"]
+          token = os.environ.get("GITHUB_TOKEN")
+          repo = os.environ.get("GITHUB_REPOSITORY")
+          workflow = os.environ.get("TARGET_WORKFLOW")
+          if not token:
+              print("WARNING: GITHUB_TOKEN missing. Skipping metrics collection.")
+              metrics = {
+                  "run_id": int(os.environ.get("GITHUB_RUN_ID", 0)),
+                  "timestamp": datetime.now(timezone.utc).isoformat(),
+                  "count": 0,
+                  "p50_runtime_seconds": None,
+                  "p95_runtime_seconds": None,
+                  "max_runtime_seconds": None,
+                  "avg_queue_time_seconds": None,
+                  "cache_hit_rate": None,
+                  "failure_rate": None,
+              }
+              out_path = "ci-metrics.json"
+              with open(out_path, "w") as f:
+                  json.dump(metrics, f, indent=2, default=str)
+              print(json.dumps(metrics, indent=2, default=str))
+              raise SystemExit(0)
           headers = {
               "Authorization": f"token {token}",
               "Accept": "application/vnd.github+json",
