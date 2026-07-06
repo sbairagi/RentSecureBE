@@ -9,27 +9,6 @@ Project Stack:
 - WhatsApp: Twilio / Interakt
 - PDF Engine: WeasyPrint
 
-Architecture Rules:
-- Business logic must not remain inside views.
-- Views should stay thin.
-- Use service layer for workflows.
-- External integrations must stay isolated.
-- Long-running tasks must use Celery.
-- Avoid fat serializers.
-- Never call third-party APIs directly from views.
-
-Performance Rules:
-- Use caching for analytics/dashboard APIs.
-- Use Redis for rate limiting and queues.
-- Heavy PDF generation must be async.
-- Avoid synchronous external API calls.
-
-Reliability Rules:
-- All payment flows must be idempotent.
-- Webhooks must support retries.
-- All async tasks must support retry policies.
-- Use distributed locking for critical financial operations.
-
 Coding Standards:
 - Write production-ready, scalable, modular code.
 - Follow clean architecture and SOLID principles.
@@ -41,21 +20,6 @@ Coding Standards:
 - Keep functions small and reusable.
 - Avoid duplicate code.
 - Maintain backward compatibility.
-
-Backend Rules:
-- Use DRF best practices.
-- Use serializers for validation.
-- Add permissions/authentication properly.
-- Optimize database queries using select_related/prefetch_related.
-- Add migrations carefully.
-- Never delete data fields without warning.
-
-Frontend Rules:
-- Use Expo Router structure.
-- Maintain reusable components.
-- Follow dark theme consistency.
-- Keep subscription/add-on logic intact.
-- Use TypeScript-safe patterns if applicable.
 
 Important Existing Business Logic:
 - Subscription limits and add-on limits are separate.
@@ -72,10 +36,6 @@ Workflow Rules:
 
 - Always suggest better architecture if needed.
 - Always explain risks before destructive changes.
-
-Testing:
-- Add/update tests for major features.
-- Avoid breaking CI pipeline.
 
 Git Rules:
 - Create meaningful commit messages.

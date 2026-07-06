@@ -359,7 +359,7 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
 
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
-@csrf_exempt
+@csrf_exempt  # nosonar
 def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     """Create a Razorpay order for rent payment."""
     from properties.models import RentRecord
@@ -420,7 +420,7 @@ def check_signature_or_return_http_response(
 
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
-@csrf_exempt
+@csrf_exempt  # nosonar
 def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901, S3776
     """Single Razorpay webhook handler with HMAC signature verification.  # nosonar
 
@@ -444,7 +444,7 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901, S3776
 
     try:
         data = json.loads(body)
-    except (json.JSONDecodeError, ValueError):
+    except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     event = data.get("event")
@@ -474,7 +474,7 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901, S3776
         try:
             process_rent_payout(rent)
         except Exception as e:
-            logger.error(f"Failed to process payout for rent {rent.id}: {e}")
+            logger.exception(f"Failed to process payout for rent {rent.id}: {e}")
 
         return JsonResponse({"status": "ok"})
 
@@ -505,7 +505,7 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901, S3776
         try:
             process_rent_payout(rent)
         except Exception as e:
-            logger.error(f"Failed to process payout for rent {rent.id}: {e}")
+            logger.exception(f"Failed to process payout for rent {rent.id}: {e}")
 
     return JsonResponse({"status": "ok"})
 

@@ -35,6 +35,10 @@ jobs:
       DEBUG: "False"
       DJANGO_ENV: test
       ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
+      BASE_URL: "http://127.0.0.1:8000"
+      SECURE_SSL_REDIRECT: "False"
+      SESSION_COOKIE_SECURE: "False"
+      CSRF_COOKIE_SECURE: "False"
       CELERY_TASK_ALWAYS_EAGER: "True"
       CELERY_TASK_EAGER_PROPOGATES: "True"
     steps:

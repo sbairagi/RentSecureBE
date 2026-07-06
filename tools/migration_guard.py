@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+MANAGE_PY = "manage.py"
 DJANGO_APPS = [
     "core",
     "properties",
@@ -56,7 +58,7 @@ def check_missing_migrations() -> MigrationResult:
         "DEBUG": "False",
         "DJANGO_ENV": "test",
     }
-    cmd = [sys.executable, "manage.py", "makemigrations", "--check", "--dry-run"]
+    cmd = [sys.executable, MANAGE_PY, "makemigrations", "--check", "--dry-run"]
     ok, out = _run(cmd, env={**dict(os.environ), **env})
     return MigrationResult(
         name="missing-migrations",
@@ -74,7 +76,7 @@ def check_migration_graph() -> MigrationResult:
         "DEBUG": "False",
         "DJANGO_ENV": "test",
     }
-    cmd = [sys.executable, "manage.py", "showmigrations", "--plan"]
+    cmd = [sys.executable, MANAGE_PY, "showmigrations", "--plan"]
     ok, out = _run(cmd, env={**dict(os.environ), **env})
     return MigrationResult(
         name="migration-graph",
@@ -93,8 +95,8 @@ def check_rollback_safety() -> MigrationResult:
         "DJANGO_ENV": "test",
     }
     # Apply migrations and verify database is in a clean state
-    apply = subprocess.run(
-        [sys.executable, "manage.py", "migrate", "--run-syncdb", "--verbosity=0"],
+    apply = subprocess.run(  # noqa: S603
+        [sys.executable, MANAGE_PY, "migrate", "--run-syncdb", "--verbosity=0"],
         cwd=REPO_ROOT,
         env={**dict(os.environ), **env},
     )

@@ -54,6 +54,7 @@ Every one of these jobs **must** appear in `.github/workflows/ci.yml`:
 | `architecture` | 2e | Architecture & Contracts |
 | `security-fast` | 2f | Security Fast-Track |
 | `mutation-smoke` | 2g | Mutation Testing (Smoke) |
+| `migration-rollback-validation` | 2h | Migration Rollback Validation |
 | `quality` | 3 | Quality Gate (SonarCloud) |
 | `deploy-readiness` | 4 | Deploy Readiness Check |
 | `deploy` | 5 | Deploy to Production |
@@ -74,6 +75,7 @@ Every one of these files **must** exist in `.github/workflows/`:
 - `quality.yml`
 - `performance.yml`
 - `mutation.yml`
+- `migration-rollback.yml`
 - `deploy-readiness.yml`
 - `deploy.yml`
 - `nightly.yml`
@@ -81,6 +83,7 @@ Every one of these files **must** exist in `.github/workflows/`:
 - `load-test.yml`
 - `weekly.yml`
 - `ci-metrics.yml`
+- `sbom.yml`
 - `rollback.yml`
 - `architecture-guard.yml`
 
@@ -93,13 +96,15 @@ Every one of these files **must** exist in `.github/workflows/`:
 | `test-shard-2` | `lint-fast` |
 | `test-shard-3` | `lint-fast` |
 | `test-shard-4` | `lint-fast` |
+| `shard-validation` | `test-shard-1`, `test-shard-2`, `test-shard-3`, `test-shard-4` |
 | `contract-tests` | `lint-fast` |
 | `django-check` | `lint-fast` |
 | `hypothesis-fast` | `lint-fast` |
 | `architecture` | `lint-fast` |
 | `security-fast` | `lint-fast` |
 | `mutation-smoke` | `lint-fast` |
-| `quality` | `test-shard-1`, `test-shard-2`, `test-shard-3`, `test-shard-4`, `contract-tests`, `architecture` |
+| `migration-rollback-validation` | `lint-fast` |
+| `quality` | `test-shard-1`, `test-shard-2`, `test-shard-3`, `test-shard-4`, `shard-validation`, `contract-tests`, `architecture` |
 | `deploy-readiness` | `quality`, `security-fast`, `django-check` |
 | `deploy` | `deploy-readiness` |
 
@@ -108,7 +113,7 @@ Every one of these files **must** exist in `.github/workflows/`:
 | Path | Protected By | Risk If Bypassed |
 |------|-------------|------------------|
 | Security | `security-fast` must depend on `lint-fast` | Vulnerabilities deployed to production |
-| Quality Gate | `quality` must depend on all test shards + contract-tests + architecture | Low-quality code merged |
+| Quality Gate | `quality` must depend on all test shards + `shard-validation` + `contract-tests` + `architecture` | Low-quality code merged |
 | Deploy Readiness | `deploy-readiness` must depend on `security-fast`, `quality`, `django-check` | Broken deployments |
 | Deploy Trigger | `deploy` must be restricted to push events | Accidental deployment from PR |
 
@@ -211,6 +216,17 @@ python scripts/architecture_contract.py --strict
 # Run tests
 python -m pytest tests/test_architecture_contract/ -v
 ```
+
+---
+
+## Workflows Outside the Contract
+
+The following workflow files exist on disk in `.github/workflows/` but are **not** included in the architecture contract:
+
+- `.github/workflows/checkout-diagnostic.yml`
+- `.github/workflows/runtime-measurement.yml`
+
+**Intent could not be verified.** They may be diagnostic, experimental, deprecated, or otherwise intentionally excluded. Do not treat their omission as an error until this status is confirmed.
 
 ---
 
