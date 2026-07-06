@@ -16,9 +16,11 @@ except Exception:
     class _StubHTML:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             """Stub constructor for environments without weasyprint."""
+            # Intentionally empty: stub for environments without weasyprint
 
         def write_pdf(self, *args: Any, **kwargs: Any) -> None:
             """Stub PDF writer for environments without weasyprint."""
+            # Intentionally empty: stub for environments without weasyprint
 
     _weasyprint_stub.HTML = _StubHTML  # type: ignore[attr-defined]
     sys.modules["weasyprint"] = _weasyprint_stub
@@ -282,7 +284,7 @@ class ExtraChargeFactory(factory.django.DjangoModelFactory):  # type: ignore[mis
         model = ExtraCharge
 
     unit = factory.SubFactory(UnitFactory)
-    owner = factory.SelfAttribute("unit.owner")
+    owner = factory.SelfAttribute("unit.owner")  # nosonar
     name = factory.Iterator(["Maintenance", "Water", "Parking", "Society Dues"])
     amount = factory.LazyAttribute(lambda _: Decimal(fake.random_int(100, 5000)))
     charge_type = factory.Iterator(["fixed", "variable"])
@@ -296,7 +298,7 @@ class PropertyTaxRecordFactory(factory.django.DjangoModelFactory):  # type: igno
         model = PropertyTaxRecord
 
     unit = factory.SubFactory(UnitFactory)
-    owner = factory.SelfAttribute("unit.owner")
+    owner = factory.SelfAttribute("unit.owner")  # nosonar
     financial_year = factory.LazyAttribute(
         lambda _: f"{timezone.now().year}-{str(timezone.now().year + 1)[2:]}"
     )

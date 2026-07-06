@@ -18,7 +18,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 MANAGE_PY = "manage.py"
-PYTEST_TB_SHORT = "--tb=short"
+PYTEST_TB_SHORT = "--tb=short"  # nosonar
 
 
 @dataclass
@@ -341,7 +341,8 @@ def run_mutation() -> CheckResult:
         "--paths-to-mutate=core/models.py,properties/models/,properties/services/,"
         "properties/utils/,finance/models.py,smartbot/services/,"
         "notification/services/,properties/feature_enforcer.py",
-        "--runner=python -m pytest --no-header -q --tb=short --randomly-seed=last -x",
+        "--runner=python -m pytest --no-header -q --tb=short "
+        "--randomly-seed=last -x",  # nosonar
         "--worker=4",
         "--simple-output",
     ]

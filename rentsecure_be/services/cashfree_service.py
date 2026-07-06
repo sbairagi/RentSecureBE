@@ -201,12 +201,12 @@ def process_rent_payout(rent: RentRecord) -> dict[str, Any]:
     try:
         notify_owner_post_payout(rent)
     except Exception as e:
-        logger.warning(f"Failed to notify owner after payout for rent {rent.id}: {e}")
+        logger.exception(f"Failed to notify owner after payout for rent {rent.id}: {e}")
 
     try:
         send_payout_notification(rent)
     except Exception as e:
-        logger.warning(f"Failed to send payout notification for rent {rent.id}: {e}")
+        logger.exception(f"Failed to send payout notification for rent {rent.id}: {e}")
 
     return response
 

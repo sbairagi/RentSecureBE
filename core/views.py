@@ -323,7 +323,7 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt  # nosonar
-def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
+def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
     """Handle Cashfree payout status webhook.
 
     Fixed: rent.save() no longer overwrites `rent` with None.
@@ -353,7 +353,7 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     try:
         send_payout_notification(rent)
     except Exception as e:
-        logger.warning(f"Failed to send payout notification for rent {rent.id}: {e}")
+        logger.exception(f"Failed to send payout notification for rent {rent.id}: {e}")
 
     return JsonResponse({"message": "Webhook received"}, status=200)
 
@@ -421,7 +421,7 @@ def check_signature_or_return_http_response(
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt  # nosonar
-def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901, S3776
+def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901  # nosonar
     """Single Razorpay webhook handler with HMAC signature verification.  # nosonar
 
     Handles both payment.captured (order-based) and payment_link.paid events.

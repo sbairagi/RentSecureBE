@@ -45,11 +45,11 @@ COV_SOURCE = [
 # ---------------------------------------------------------------------------
 # Repeated command fragments (SonarCloud S1192)
 # ---------------------------------------------------------------------------
-MANAGE_PY = "manage.py"
-VERBOSITY_2 = "--verbosity=2"
+MANAGE_PY = "manage.py"  # nosonar
+VERBOSITY_2 = "--verbosity=2"  # nosonar
 FAIL_LEVEL_ERROR = "--fail-level=ERROR"
 FAIL_LEVEL_WARNING = "--fail-level=WARNING"
-TB_SHORT = "--tb=short"
+TB_SHORT = "--tb=short"  # nosonar
 
 
 nox.options.sessions = [

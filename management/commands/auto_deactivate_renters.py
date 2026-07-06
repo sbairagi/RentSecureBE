@@ -1,5 +1,3 @@
-# tasks.py or management/commands/auto_deactivate_renters.py
-
 from datetime import date, timedelta
 from typing import Any
 
@@ -34,5 +32,3 @@ def auto_deactivate_notice_period_renters() -> None:
             renter.unit.owner.whatsapp_number,
             f"ℹ️ Your renter {renter.name} has been auto-deactivated after 1-month notice period.",
         )
-
-        # Optional: notify owner via WhatsApp or push

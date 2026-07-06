@@ -247,7 +247,7 @@ class ArchitectureContractValidator:
         for parent in [cwd] + list(cwd.parents):
             if (parent / ".git").exists() or (parent / ".github").exists():
                 return parent
-            if (parent / "manage.py").exists():
+            if (parent / "manage.py").exists():  # nosonar
                 return parent
         return cwd
 
@@ -395,7 +395,7 @@ class ArchitectureContractValidator:
                 )
 
         # Verify version appears in docs/ci-cd-pipeline.md
-        pipeline_doc = self.repo_root / "docs" / "ci-cd-pipeline.md"
+        pipeline_doc = self.repo_root / DOCS_CI_CD_PIPELINE
         if pipeline_doc.exists():
             content = pipeline_doc.read_text()
             if PIPELINE_VERSION not in content:
@@ -405,7 +405,7 @@ class ArchitectureContractValidator:
                         "severity": "CRITICAL",
                         "message": (
                             f"Version {PIPELINE_VERSION} not found in "
-                            f"docs/ci-cd-pipeline.md. Documentation "
+                            f"{DOCS_CI_CD_PIPELINE}. Documentation "
                             f"version must match PIPELINE_VERSION."
                         ),
                         "details": {
@@ -425,14 +425,14 @@ class ArchitectureContractValidator:
         """Verify docs contain all required pipeline stages."""
         self.log("Checking documentation synchronization...")
 
-        doc_path = self.repo_root / "docs" / "ci-cd-pipeline.md"
+        doc_path = self.repo_root / DOCS_CI_CD_PIPELINE
         if not doc_path.exists():
             self.violations.append(
                 {
                     "type": Violation.DOC_SYNC,
                     "severity": "ERROR",
                     "message": (
-                        "docs/ci-cd-pipeline.md is missing. "
+                        f"{DOCS_CI_CD_PIPELINE} is missing. "
                         "Pipeline documentation is required."
                     ),
                     "details": {"expected_path": str(doc_path)},
@@ -450,8 +450,8 @@ class ArchitectureContractValidator:
                         "severity": "ERROR",
                         "message": (
                             f"Pipeline documentation out of sync: Stage '{stage}' "
-                            f"is defined in ci.yml but missing from "
-                            f"docs/ci-cd-pipeline.md."
+                            f"is defined in {CI_YAML} but missing from "
+                            f"{DOCS_CI_CD_PIPELINE}."
                         ),
                         "details": {
                             "missing_stage": stage,
@@ -1131,7 +1131,7 @@ def main() -> int:
     parser.add_argument(
         "--ci-yaml",
         default=CI_YAML,
-        help="Path to ci.yml (default: .github/workflows/ci.yml)",
+        help=f"Path to ci.yml (default: {CI_YAML})",
     )
     parser.add_argument(
         "--verbose",

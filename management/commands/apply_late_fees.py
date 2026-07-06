@@ -58,6 +58,3 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(f"Late fees applied to {processed} rent records.")
         )
-
-
-# 0 2 * * * /path/to/venv/bin/python /path/to/manage.py apply_late_fees
