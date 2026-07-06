@@ -31,7 +31,7 @@ def banner(title: str) -> None:
 
 def step_autofix() -> bool:
     banner("STEP 1 / 5 — AUTO FIX")
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         [sys.executable, "tools/autofix.py"],
         cwd=REPO_ROOT,
     )  # noqa: S603
@@ -40,7 +40,7 @@ def step_autofix() -> bool:
 
 def step_full_ci() -> bool:
     banner("STEP 2 / 5 — FULL LOCAL CI")
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         [sys.executable, "-m", "nox", "-s", "ci"],
         cwd=REPO_ROOT,
     )  # noqa: S603
