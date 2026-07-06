@@ -54,7 +54,9 @@ class Renter(models.Model):
     )
     name = models.CharField(max_length=100, help_text="Renter's full name")
     email = models.EmailField(
-        blank=True, help_text="Renter's email for receipts and notifications"
+        default="",
+        blank=True,
+        help_text="Renter's email for receipts and notifications",
     )
     phone = models.CharField(
         validators=[phone_regex], max_length=15, help_text="Primary phone number"

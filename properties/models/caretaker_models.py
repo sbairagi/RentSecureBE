@@ -35,7 +35,7 @@ class CareTaker(models.Model):
         related_name="caretaker_profile",
     )
     name = models.CharField(max_length=100, help_text="Caretaker full name")
-    email = models.EmailField(blank=True)
+    email = models.EmailField(default="", blank=True)
     phone = models.CharField(
         validators=[phone_regex], max_length=15, help_text="Primary phone"
     )
