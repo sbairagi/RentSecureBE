@@ -13,12 +13,6 @@ name: Security
         description: "Run dependency-review job (true for PRs)"
         type: boolean
         default: false
-  push:
-    branches:
-      - main
-      - master
-  pull_request:
-    branches: [main, master, dev]
 
 concurrency:
   group: security-${{ github.ref }}

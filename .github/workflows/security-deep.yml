@@ -9,12 +9,6 @@ name: Security Deep
 
 'on':
   workflow_call:
-  push:
-    branches:
-      - main
-      - master
-  pull_request:
-    branches: [main, master, dev]
   merge_group: {}
   schedule:
     - cron: '0 2 * * *'

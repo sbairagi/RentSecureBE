@@ -14,10 +14,6 @@ name: Mutation Testing
         description: "smoke for PRs, full for nightly/main"
         type: string
         default: "smoke"
-  push:
-    branches:
-      - main
-      - master
 
 
 permissions:
