@@ -22,7 +22,7 @@ class GenerateRentAgreementPdfViewSetTest(TestCase):
         )
 
     @patch("documents.views.render_to_string")
-    @patch("documents.views.HTML")
+    @patch("weasyprint.HTML")
     def test_generate_rent_agreement_pdf_not_found(self, mock_html, mock_render):
         viewset = GenerateRentAgreementPdfViewSet()
         viewset.request = MagicMock()
@@ -33,7 +33,7 @@ class GenerateRentAgreementPdfViewSetTest(TestCase):
 
     @patch("documents.views.Renter")
     @patch("documents.views.render_to_string")
-    @patch("documents.views.HTML")
+    @patch("weasyprint.HTML")
     def test_generate_rent_agreement_pdf_success(
         self, mock_html, mock_render, mock_renter
     ):
@@ -56,9 +56,9 @@ class GenerateRentAgreementPdfViewSetTest(TestCase):
 
 class GenerateUnitHistoryPdfTest(TestCase):
     @patch("documents.utils.render_to_string")
-    @patch("documents.utils.HTML")
-    @patch("documents.utils.PdfMerger")
-    def test_generate_unit_history_pdf(self, _mock_merger, mock_html, mock_render):
+    @patch("weasyprint.HTML")
+    @patch("documents.utils.PdfWriter")
+    def test_generate_unit_history_pdf(self, _mock_writer, mock_html, mock_render):
         mock_unit = MagicMock()
         mock_unit.renters.all.return_value = []
         mock_render.return_value = "<html></html>"

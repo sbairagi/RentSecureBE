@@ -54,6 +54,8 @@ def has_remaining_usage(user: User | AnonymousUser, feature_key: str) -> bool:
     plan_limit = get_plan_limit(runtime_user, feature_key)
     if plan_limit in ("unlimited", "yes"):
         return True
+    if plan_limit is None:
+        return False
     try:
         allowed: int = int(plan_limit)
         used: int = UsageLimit.objects.get(
@@ -168,20 +170,22 @@ def apply_late_fee_if_needed(rent: RentRecord) -> None:
     notify_owner_about_late_fee(rent, late_fee)
 
 
-def _normalize_feature_limit_value(value: str):
+def _normalize_feature_limit_value(value: str) -> int | str:
     if value.lower() in {"unlimited", "yes"}:
         return "unlimited"
     return int(value)
 
 
-def check_feature_limit(user: User, feature_key: str):
+def check_feature_limit(
+    user: User, feature_key: str
+) -> tuple[bool, int, int | str, int]:
     from django.contrib.auth import get_user_model
 
     runtime_user = get_user_model().objects.get(pk=int(user.pk))
 
-    subscription_limit = 0
-    add_on_limit = 0
-    current_usage = 0
+    subscription_limit: int | str = 0
+    add_on_limit: int = 0
+    current_usage: int = 0
 
     try:
         subscription: UserSubscription = runtime_user.usersubscription
