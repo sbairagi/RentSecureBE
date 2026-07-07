@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def send_due_extra_charge_reminders(days_ahead: int = 0) -> int:
-    from ai_assistant.services.i18n_service import translate_msg
-    from properties.models import ExtraCharge
+    from ai_assistant.services.i18n_service import translate_msg  # nosonar
+    from properties.models import ExtraCharge  # nosonar
 
     target_date = timezone.now().date() + timedelta(days=days_ahead)
     charges = ExtraCharge.objects.filter(

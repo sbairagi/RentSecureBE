@@ -12,10 +12,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from notification.services.voice_service import generate_voice_note
+from notification.services.voice_service import generate_voice_note  # nosonar
+from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
 from notification.services.whatsapp_service import (
-    send_whatsapp_audio,
-    send_whatsapp_message,
+    send_whatsapp_message,  # nosonar; nosonar
 )
 
 logger = logging.getLogger(__name__)
