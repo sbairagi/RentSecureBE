@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
+from twilio.base.exceptions import TwilioRestException
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 
@@ -38,7 +40,9 @@ class WhatsAppServiceTest(TestCase):
 
     @patch("notification.services.whatsapp_service.Client")
     def test_send_whatsapp_message_failure(self, mock_client):
-        mock_client.return_value.messages.create.side_effect = Exception("API Error")
+        mock_client.return_value.messages.create.side_effect = TwilioRestException(
+            status=400, msg="API Error", uri="http://example.com"
+        )
         result = send_whatsapp_message("+911234567890", "Test message")
         self.assertFalse(result)
 
@@ -54,7 +58,9 @@ class WhatsAppServiceTest(TestCase):
     @patch("notification.services.whatsapp_service.upload_to_s3")
     def test_send_whatsapp_audio_failure(self, mock_upload, mock_client):
         mock_upload.return_value = "https://bucket.s3.amazonaws.com/audio.mp3"
-        mock_client.return_value.messages.create.side_effect = Exception("API Error")
+        mock_client.return_value.messages.create.side_effect = TwilioRestException(
+            status=400, msg="API Error", uri="http://example.com"
+        )
         result = send_whatsapp_audio("+911234567890", "/path/to/audio.mp3")
         self.assertFalse(result)
 
@@ -153,10 +159,14 @@ class RentNotifyServiceTest(TestCase):
         send_payout_notification(rent)
         mock_notify.assert_not_called()
 
+    @patch("notification.services.whatsapp_service.upload_to_s3")
+    @patch("notification.services.whatsapp_service.send_whatsapp_audio")
     @patch("notification.services.whatsapp_service.send_whatsapp_message")
     @patch("notification.services.voice_service.generate_voice_note")
     @patch("rentsecure_be.services.i18n_service.translate_msg")
-    def test_notify_owner_post_payout(self, mock_translate, mock_voice, mock_whatsapp):
+    def test_notify_owner_post_payout(
+        self, mock_translate, mock_voice, mock_whatsapp, mock_audio, mock_upload
+    ):
         mock_translate.return_value = "Translated message"
         mock_voice.return_value = "/tmp/audio.mp3"
         rent = MagicMock()

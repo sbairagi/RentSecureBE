@@ -871,7 +871,7 @@ class ArchitectureContractValidator:
         """Compute the Architecture Compliance Score out of 100."""
         violations = self.violations
         categories: dict[str, dict[str, int]] = {
-            "Workflow Structure": {
+            CATEGORY_WORKFLOW_STRUCTURE: {
                 "pass": 0,
                 "fail": sum(
                     1
@@ -884,7 +884,7 @@ class ArchitectureContractValidator:
                     )
                 ),
             },
-            "Dependency Graph": {
+            CATEGORY_DEPENDENCY_GRAPH: {
                 "pass": 0,
                 "fail": sum(
                     1
@@ -897,13 +897,13 @@ class ArchitectureContractValidator:
                     )
                 ),
             },
-            "Security Controls": {
+            CATEGORY_SECURITY_CONTROLS: {
                 "pass": 0,
                 "fail": sum(
                     1 for v in violations if v["type"] == Violation.SECURITY_BYPASSED
                 ),
             },
-            "Quality Gates": {
+            CATEGORY_QUALITY_GATES: {
                 "pass": 0,
                 "fail": sum(
                     1
@@ -911,11 +911,11 @@ class ArchitectureContractValidator:
                     if v["type"] == Violation.QUALITY_GATE_BYPASSED
                 ),
             },
-            "Documentation Sync": {
+            CATEGORY_DOCUMENTATION_SYNC: {
                 "pass": 0,
                 "fail": sum(1 for v in violations if v["type"] == Violation.DOC_SYNC),
             },
-            "Protected Files": {
+            CATEGORY_PROTECTED_FILES: {
                 "pass": 0,
                 "fail": sum(
                     1
@@ -928,7 +928,7 @@ class ArchitectureContractValidator:
                     )
                 ),
             },
-            "Version Alignment": {
+            CATEGORY_VERSION_ALIGNMENT: {
                 "pass": 0,
                 "fail": sum(
                     1 for v in violations if v["type"] == Violation.VERSION_MISMATCH
@@ -1104,13 +1104,25 @@ class ArchitectureContractValidator:
         summary = report["summary"]
         score = report["compliance_score"]
         categories = {
-            "Workflow Structure": score["categories"].get("Workflow Structure", {}),
-            "Dependency Graph": score["categories"].get("Dependency Graph", {}),
-            "Security Controls": score["categories"].get("Security Controls", {}),
-            "Quality Gates": score["categories"].get("Quality Gates", {}),
-            "Documentation Sync": score["categories"].get("Documentation Sync", {}),
-            "Protected Files": score["categories"].get("Protected Files", {}),
-            "Version Alignment": score["categories"].get("Version Alignment", {}),
+            CATEGORY_WORKFLOW_STRUCTURE: score["categories"].get(
+                CATEGORY_WORKFLOW_STRUCTURE, {}
+            ),
+            CATEGORY_DEPENDENCY_GRAPH: score["categories"].get(
+                CATEGORY_DEPENDENCY_GRAPH, {}
+            ),
+            CATEGORY_SECURITY_CONTROLS: score["categories"].get(
+                CATEGORY_SECURITY_CONTROLS, {}
+            ),
+            CATEGORY_QUALITY_GATES: score["categories"].get(CATEGORY_QUALITY_GATES, {}),
+            CATEGORY_DOCUMENTATION_SYNC: score["categories"].get(
+                CATEGORY_DOCUMENTATION_SYNC, {}
+            ),
+            CATEGORY_PROTECTED_FILES: score["categories"].get(
+                CATEGORY_PROTECTED_FILES, {}
+            ),
+            CATEGORY_VERSION_ALIGNMENT: score["categories"].get(
+                CATEGORY_VERSION_ALIGNMENT, {}
+            ),
         }
         category_scores = {
             name: data.get("score", 0) for name, data in categories.items()
@@ -1126,13 +1138,13 @@ class ArchitectureContractValidator:
                 "error": summary.get("errors", 0),
                 "warning": summary.get("warnings", 0),
             },
-            "workflow_structure": category_scores.get("Workflow Structure", {}),
-            "dependency_graph": category_scores.get("Dependency Graph", {}),
-            "security_controls": category_scores.get("Security Controls", {}),
-            "quality_gates": category_scores.get("Quality Gates", {}),
-            "documentation_sync": category_scores.get("Documentation Sync", {}),
-            "protected_files": category_scores.get("Protected Files", {}),
-            "version_alignment": category_scores.get("Version Alignment", {}),
+            "workflow_structure": category_scores.get(CATEGORY_WORKFLOW_STRUCTURE, {}),
+            "dependency_graph": category_scores.get(CATEGORY_DEPENDENCY_GRAPH, {}),
+            "security_controls": category_scores.get(CATEGORY_SECURITY_CONTROLS, {}),
+            "quality_gates": category_scores.get(CATEGORY_QUALITY_GATES, {}),
+            "documentation_sync": category_scores.get(CATEGORY_DOCUMENTATION_SYNC, {}),
+            "protected_files": category_scores.get(CATEGORY_PROTECTED_FILES, {}),
+            "version_alignment": category_scores.get(CATEGORY_VERSION_ALIGNMENT, {}),
             "expected_graph": report.get("expected_graph", {}),
             "actual_graph": report.get("actual_graph", {}),
         }

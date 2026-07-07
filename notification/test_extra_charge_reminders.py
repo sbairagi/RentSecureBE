@@ -56,10 +56,10 @@ class ExtraChargeReminderTests(TestCase):
             start_date=date.today(),
         )
 
-    @patch("notification.services.whatsapp_service.send_whatsapp_audio")
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
-    @patch("notification.services.voice_service.generate_voice_note")
-    @patch("ai_assistant.services.i18n_service.translate_msg")
+    @patch("notification.services.extra_charge_reminders.send_whatsapp_audio")
+    @patch("notification.services.extra_charge_reminders.send_whatsapp_message")
+    @patch("notification.services.extra_charge_reminders.generate_voice_note")
+    @patch("rentsecure_be.services.i18n_service.translate_msg")
     def test_send_due_extra_charge_reminders_sends_text_and_audio(
         self,
         mock_translate,
@@ -93,7 +93,7 @@ class ExtraChargeReminderTests(TestCase):
             "/tmp/fake.mp3",
         )
 
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.extra_charge_reminders.send_whatsapp_message")
     def test_send_due_extra_charge_reminders_skips_paid_and_non_due_charges(
         self, mock_send_whatsapp_message
     ):

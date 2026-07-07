@@ -21,7 +21,7 @@ class GenerateOwnerRentReportTest(TestCase):
             phone="+1",
         )
 
-    @patch("core.utils.export_utils.RentRecord")
+    @patch("properties.models.rent_record_models.RentRecord")
     def test_generate_report_returns_bytesio(self, mock_rent_record):
         mock_rent_record.objects.filter.return_value.select_related.return_value = []
         result = generate_owner_rent_report(self.owner)
@@ -29,7 +29,7 @@ class GenerateOwnerRentReportTest(TestCase):
         data = result.read()
         self.assertTrue(len(data) > 0)
 
-    @patch("core.utils.export_utils.RentRecord")
+    @patch("properties.models.rent_record_models.RentRecord")
     def test_generate_report_with_data(self, mock_rent_record):
         mock_rent = MagicMock()
         mock_rent.renter.property.title = "Test Building"
@@ -46,7 +46,7 @@ class GenerateOwnerRentReportTest(TestCase):
         data = result.read()
         self.assertTrue(b"Test Building" in data or len(data) > 0)
 
-    @patch("core.utils.export_utils.RentRecord")
+    @patch("properties.models.rent_record_models.RentRecord")
     def test_generate_report_empty(self, mock_rent_record):
         mock_rent_record.objects.filter.return_value.select_related.return_value = []
         result = generate_owner_rent_report(self.owner)

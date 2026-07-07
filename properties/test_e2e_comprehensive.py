@@ -291,7 +291,7 @@ class UnitModelTests(TestCase):
             owner=self.user,
             building=self.building,
             unit="106",
-            building_name=None,
+            building_name="",
             address_line="123 Main St",
             city="New York",
             state="NY",

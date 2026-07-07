@@ -123,7 +123,7 @@ class I18nServiceTest(TestCase):
 
 class InvoiceServiceTest(TestCase):
     @patch("ai_assistant.services.invoice_service.render_to_string")
-    @patch("ai_assistant.services.invoice_service.HTML")
+    @patch("weasyprint.HTML")
     def test_generate_final_invoice_pdf(self, mock_html, mock_render):
         mock_render.return_value = "<html></html>"
         mock_html_instance = MagicMock()
