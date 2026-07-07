@@ -76,9 +76,7 @@ def _current_targets(app_label: str) -> set[str]:
 
     return {
         row[0]
-        for row in MigrationRecorder.Migration.objects.filter(  # type: ignore[attr-defined]
-            app=app_label
-        )
+        for row in MigrationRecorder.Migration.objects.filter(app=app_label)
         .order_by("name")
         .values_list("name", flat=True)
     }
