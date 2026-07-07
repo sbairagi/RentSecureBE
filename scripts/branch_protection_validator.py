@@ -8,7 +8,7 @@ import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, override
+from typing import Any
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -83,8 +83,6 @@ def _mask_token(token: str) -> str:
 
 
 def _create_session() -> Any:
-    if requests is None:
-        return None
     session = requests.Session()
     retry_strategy = Retry(
         total=MAX_RETRIES,
@@ -130,7 +128,6 @@ def _respect_rate_limit(response: Any) -> None:
             pass
 
 
-@override
 def api_get(
     url: str, token: str | None, params: dict[str, Any] | None = None
 ) -> tuple[int, dict[str, Any] | list[Any] | None]:
@@ -215,12 +212,12 @@ def validate_repo_info(owner: str, repo: str, token: str | None) -> dict[str, An
         return results
 
     results["default_branch"] = data.get("default_branch")
-    protection = data.get("branch_protection") if isinstance(data, dict) else None
+    protection = data.get("branch_protection")
     if isinstance(protection, list):
         results["protected_branches"] = [
             b.get("name") for b in protection if isinstance(b, dict) and b.get("name")
         ]
-    permissions = data.get("permissions") if isinstance(data, dict) else None
+    permissions = data.get("permissions")
     if isinstance(permissions, dict):
         results["permissions"] = permissions
     return results
