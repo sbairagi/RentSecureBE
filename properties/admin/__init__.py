@@ -1,10 +1,12 @@
-from .building_admin import BuildingAdmin as BuildingAdmin
-from .caretaker_admin import CaretakerAdmin as CaretakerAdmin
-from .rent_record_admin import RentRecordAdmin as RentRecordAdmin
-from .renter_admin import RenterAdmin as RenterAdmin
-from .unit_admin import CaretakerInline as CaretakerInline
-from .unit_admin import RentAgreementDraftAdmin as RentAgreementDraftAdmin
-from .unit_admin import RenterInline as RenterInline
-from .unit_admin import UnitAdmin as UnitAdmin
-from .unit_admin import UnitDocumentAdmin as UnitDocumentAdmin
-from .unit_admin import UnitImageAdmin as UnitImageAdmin
+from .building_admin import BuildingAdmin  # noqa: F401
+from .caretaker_admin import CaretakerAdmin  # noqa: F401
+from .rent_record_admin import RentRecordAdmin  # noqa: F401
+from .renter_admin import RenterAdmin  # noqa: F401
+from .unit_admin import (  # noqa: F401
+    CaretakerInline,
+    RentAgreementDraftAdmin,
+    RenterInline,
+    UnitAdmin,
+    UnitDocumentAdmin,
+    UnitImageAdmin,
+)
