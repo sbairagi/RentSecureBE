@@ -5,7 +5,7 @@ import xlsxwriter
 
 
 def generate_owner_rent_report(owner: Any) -> BytesIO:
-    from rentsecure_be.rent_record_models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
     rents = RentRecord.objects.filter(renter__unit__owner=owner).select_related(
         "renter", "renter__unit"

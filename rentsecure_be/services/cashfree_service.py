@@ -15,7 +15,7 @@ from rentsecure_be.utils.cashfree_payout import (
 
 if TYPE_CHECKING:
     from core.models import OwnerBankDetails
-    from rentsecure_be.rent_record_models import RentRecord
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_upcoming_rent_dues() -> Any:
-    from rentsecure_be.rent_record_models import RentRecord
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
     target_date = now().date() + timedelta(days=3)
     return RentRecord.objects.filter(due_date=target_date)
