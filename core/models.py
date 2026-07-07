@@ -22,7 +22,9 @@ class UpsertMixin:
                 field: getattr(self, field) for field in self._upsert_filter_fields
             }
             if all(value is not None for value in filter_kwargs.values()):
-                existing = type(self).objects.filter(**filter_kwargs).first()  # type: ignore[attr-defined]
+                existing = (
+                    type(self).objects.filter(**filter_kwargs).first()
+                )  # type: ignore[attr-defined]
                 if existing:
                     for field in self._meta.fields:  # type: ignore[attr-defined]
                         if field.name in self._upsert_skip_fields:

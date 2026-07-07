@@ -80,8 +80,6 @@ def _send_whatsapp_payout_alert(rent: Any) -> None:
     if rent.renter is None:
         return
     owner = rent.renter.unit.owner
-    if owner is None:
-        return
     profile = getattr(owner, "profile", None)
     phone = getattr(profile, "whatsapp_number", None)
     if phone:
