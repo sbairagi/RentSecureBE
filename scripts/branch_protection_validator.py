@@ -92,7 +92,6 @@ def _create_session() -> Any:
     )
     adapter = HTTPAdapter(max_retries=retry_strategy)
     session.mount("https://", adapter)
-    session.mount("http://", adapter)
     return session
 
 
@@ -1081,6 +1080,16 @@ def _build_json_payload(
     }
 
 
+def _validate_safe_path(path: Path, base: Path) -> Path:
+    resolved = path.resolve()
+    base_resolved = base.resolve()
+    try:
+        resolved.relative_to(base_resolved)
+    except ValueError:
+        raise ValueError(f"Path escapes allowed directory: {path}") from None
+    return resolved
+
+
 def _write_reports(
     output_dir: str,
     owner: str,
@@ -1097,7 +1106,7 @@ def _write_reports(
     execution_duration: float,
     report: str,
 ) -> None:
-    out = Path(output_dir)
+    out = _validate_safe_path(Path(output_dir), Path.cwd())
     out.mkdir(parents=True, exist_ok=True)
 
     json_payload = _build_json_payload(
@@ -1120,12 +1129,15 @@ def _write_reports(
 
 
 def _atomic_write(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".tmp-", suffix=path.suffix)
+    resolved_path = _validate_safe_path(path, Path.cwd())
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(
+        dir=str(resolved_path.parent), prefix=".tmp-", suffix=path.suffix
+    )
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(content)
-        os.replace(tmp, str(path))
+        os.replace(tmp, str(resolved_path))
     except Exception:
         try:
             os.unlink(tmp)

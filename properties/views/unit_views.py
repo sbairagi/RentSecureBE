@@ -297,7 +297,8 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
 
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
-@csrf_exempt  # nosonar
+# nosonar
+@csrf_exempt
 def leegality_webhook(request: HttpRequest) -> JsonResponse:  # noqa: S3776  # nosonar
     """Process Leegality signing-status callbacks.
 
@@ -310,7 +311,7 @@ def leegality_webhook(request: HttpRequest) -> JsonResponse:  # noqa: S3776  # n
 
     try:
         payload: dict[str, Any] = json.loads(request.body.decode("utf-8"))
-    except Exception:
+    except (json.JSONDecodeError, ValueError, TypeError):
         return JsonResponse({"error": "Invalid payload"}, status=400)
 
     doc_id: str | None = (

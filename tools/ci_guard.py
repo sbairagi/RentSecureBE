@@ -7,6 +7,7 @@ Designed to be imported by ``ship.py`` or run standalone.
 
 from __future__ import annotations
 
+import secrets
 import subprocess
 import sys
 import time
@@ -16,6 +17,11 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _ci_secret_key(suffix: str = "") -> str:
+    return f"ci-guard-{suffix}{secrets.token_urlsafe(16)}"
+
 
 MANAGE_PY = "manage.py"
 PYTEST_TB_SHORT = "--tb=short"  # nosonar
@@ -168,7 +174,7 @@ def run_django_checks() -> CheckResult:
     print("[ci] django-checks ...")
     env = {
         "USE_SQLITE": "True",
-        "SECRET_KEY": "ci-guard-django-2026!",
+        "SECRET_KEY": _ci_secret_key("django-"),
         "DEBUG": "False",
         "DJANGO_ENV": "test",
     }
@@ -214,7 +220,7 @@ def run_contracts() -> CheckResult:
     print("[ci] contracts ...")
     env = {
         "USE_SQLITE": "True",
-        "SECRET_KEY": "ci-guard-contracts-2026!",
+        "SECRET_KEY": _ci_secret_key("contracts-"),
         "DEBUG": "False",
         "DJANGO_ENV": "test",
     }
@@ -265,7 +271,7 @@ def run_hypothesis() -> CheckResult:
     print("[ci] hypothesis ...")
     env = {
         "USE_SQLITE": "True",
-        "SECRET_KEY": "ci-guard-hypothesis-2026!",
+        "SECRET_KEY": _ci_secret_key("hypothesis-"),
         "DEBUG": "False",
         "DJANGO_ENV": "test",
         "HYPOTHESIS_MAX_EXAMPLES": "200",
@@ -295,7 +301,7 @@ def run_benchmark() -> CheckResult:
     print("[ci] benchmark ...")
     env = {
         "USE_SQLITE": "True",
-        "SECRET_KEY": "ci-guard-bench-2026!",
+        "SECRET_KEY": _ci_secret_key("bench-"),
         "DEBUG": "False",
         "DJANGO_ENV": "test",
     }
@@ -325,7 +331,7 @@ def run_mutation() -> CheckResult:
     print("[ci] mutation ...")
     env = {
         "USE_SQLITE": "True",
-        "SECRET_KEY": "ci-guard-mutation-2026!",
+        "SECRET_KEY": _ci_secret_key("mutation-"),
         "DEBUG": "False",
         "DJANGO_ENV": "test",
     }
@@ -360,7 +366,7 @@ def run_deploy_readiness() -> CheckResult:
     print("[ci] deploy-readiness ...")
     env = {
         "USE_SQLITE": "True",
-        "SECRET_KEY": "ci-guard-deploy-2026!",
+        "SECRET_KEY": _ci_secret_key("deploy-"),
         "DEBUG": "False",
         "DJANGO_ENV": "test",
     }

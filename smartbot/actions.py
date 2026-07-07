@@ -31,7 +31,7 @@ def retry_payout(renter_name: str) -> str:
         )
         result = process_rent_payout(rent)
         return f"✅ Payout retried: {result.get('status')}"
-    except Exception:
+    except (Renter.DoesNotExist, RentRecord.DoesNotExist, ValueError):
         return "❌ Could not retry payout."
 
 
@@ -50,7 +50,7 @@ def send_rent_agreement(renter_name: str) -> str:
 
         send_agreement_via_whatsapp(renter, file_url)
         return f"✅ Agreement PDF sent to {renter.name} on WhatsApp."
-    except Exception as e:
+    except (Renter.DoesNotExist, RentRecord.DoesNotExist, OSError, ValueError) as e:
         return f"❌ Failed to send agreement: {str(e)}"
 
 
@@ -81,5 +81,11 @@ def send_agreement_for_signature(renter_name: str) -> str:
                     draft.save(update_fields=["leegality_document_id"])
             return f"📨 Signature request sent to {renter.name}!"
         return f"❌ Error: {result}"
-    except Exception as e:
+    except (
+        Renter.DoesNotExist,
+        RentRecord.DoesNotExist,
+        OSError,
+        ValueError,
+        TypeError,
+    ) as e:
         return f"❌ Signature flow failed: {str(e)}"

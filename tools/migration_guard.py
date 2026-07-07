@@ -11,6 +11,7 @@ Validates:
 from __future__ import annotations
 
 import os
+import secrets
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -18,6 +19,11 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _ci_secret_key(suffix: str = "") -> str:
+    return f"migration-guard-{suffix}{secrets.token_urlsafe(16)}"
+
 
 MANAGE_PY = "manage.py"
 DJANGO_APPS = [
@@ -54,7 +60,7 @@ def check_missing_migrations() -> MigrationResult:
     print("[migrations] checking for missing migrations ...")
     env = {
         "USE_SQLITE": "True",
-        "SECRET_KEY": "migration-guard-2026!",
+        "SECRET_KEY": _ci_secret_key(),
         "DEBUG": "False",
         "DJANGO_ENV": "test",
     }
@@ -72,7 +78,7 @@ def check_migration_graph() -> MigrationResult:
     print("[migrations] validating migration graph ...")
     env = {
         "USE_SQLITE": "True",
-        "SECRET_KEY": "migration-guard-graph-2026!",
+        "SECRET_KEY": _ci_secret_key("graph-"),
         "DEBUG": "False",
         "DJANGO_ENV": "test",
     }
@@ -90,7 +96,7 @@ def check_rollback_safety() -> MigrationResult:
     print("[migrations] validating rollback safety ...")
     env = {
         "USE_SQLITE": "True",
-        "SECRET_KEY": "migration-guard-rollback-2026!",
+        "SECRET_KEY": _ci_secret_key("rollback-"),
         "DEBUG": "False",
         "DJANGO_ENV": "test",
     }

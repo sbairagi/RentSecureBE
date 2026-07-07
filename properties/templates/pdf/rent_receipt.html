@@ -163,15 +163,15 @@
             <div class="section-title">Renter Information</div>
             <table>
                 <tr>
-                    <th>Name</th>
+                    <th scope="row">Name</th>
                     <td>{{ renter.name }}</td>
                 </tr>
                 <tr>
-                    <th>Email</th>
+                    <th scope="row">Email</th>
                     <td>{{ renter.email }}</td>
                 </tr>
                 <tr>
-                    <th>Phone</th>
+                    <th scope="row">Phone</th>
                     <td>{{ renter.phone }}</td>
                 </tr>
             </table>
@@ -182,15 +182,15 @@
             <div class="section-title">Property Information</div>
             <table>
                 <tr>
-                    <th>Unit</th>
+                    <th scope="row">Unit</th>
                     <td>{{ unit.unit }}</td>
                 </tr>
                 <tr>
-                    <th>Building</th>
+                    <th scope="row">Building</th>
                     <td>{{ unit.building_name|default:unit.building.name }}</td>
                 </tr>
                 <tr>
-                    <th>Address</th>
+                    <th scope="row">Address</th>
                     <td>{{ unit.city }}, {{ unit.state }}</td>
                 </tr>
             </table>
@@ -201,19 +201,19 @@
             <div class="section-title">Payment Information</div>
             <table>
                 <tr>
-                    <th>Month</th>
+                    <th scope="row">Month</th>
                     <td>{{ rent.rent_month|date:"F Y" }}</td>
                 </tr>
                 <tr>
-                    <th>Rent Amount</th>
+                    <th scope="row">Rent Amount</th>
                     <td>₹{{ rent.amount_paid }}</td>
                 </tr>
                 <tr>
-                    <th>Payment Date</th>
+                    <th scope="row">Payment Date</th>
                     <td>{{ rent.date_paid|date:"d M Y" }}</td>
                 </tr>
                 <tr>
-                    <th>Payment Mode</th>
+                    <th scope="row">Payment Mode</th>
                     <td>{{ rent.get_payment_mode_display|default:"Not specified" }}</td>
                 </tr>
             </table>

@@ -72,14 +72,14 @@ def _migrate_all_once() -> None:
 
 def _current_targets(app_label: str) -> set[str]:
     """Return the set of applied migration names for an app."""
-    from django.db import connection
+    from django.db.migrations.recorder import MigrationRecorder
 
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT name FROM django_migrations WHERE app = %s ORDER BY name",
-            [app_label],
-        )
-        return {row[0] for row in cursor.fetchall()}
+    return {
+        row["name"]
+        for row in MigrationRecorder.objects.filter(app=app_label)
+        .order_by("name")
+        .values("name")
+    }
 
 
 def _print_error(msg: str) -> None:

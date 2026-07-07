@@ -12,6 +12,7 @@ Applies safe, automated fixes for:
 from __future__ import annotations
 
 import os
+import secrets
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -19,6 +20,12 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _ci_secret_key(suffix: str = "") -> str:
+    return f"autofix-{suffix}{secrets.token_urlsafe(16)}"
+
+
 SOURCE_DIRS = [
     "rentsecure_be",
     "ai_assistant",
@@ -141,7 +148,7 @@ def step_migrations() -> bool:
     print("[autofix] checking for missing migrations ...")
     env = {
         "USE_SQLITE": "True",
-        "SECRET_KEY": "autofix-migration-guard-2026!",
+        "SECRET_KEY": _ci_secret_key("migration-guard-"),
         "DEBUG": "False",
         "DJANGO_ENV": "test",
     }

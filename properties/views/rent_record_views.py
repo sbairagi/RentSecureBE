@@ -85,7 +85,7 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         instance = serializer.instance
         user = self.request.user
-        if instance is None or instance.unit.owner != user:
+        if instance is None or instance.unit is None or instance.unit.owner != user:
             raise PermissionDenied("You do not own this rent record.")
 
         new_unit: Unit | None = serializer.validated_data.get("unit") or (

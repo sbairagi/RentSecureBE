@@ -9,7 +9,8 @@ attempts to set non-existent fields on ``RentRecord``.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import logging
+from typing import Any
 
 from notification.services.voice_service import generate_voice_note
 from notification.services.whatsapp_service import (
@@ -17,15 +18,11 @@ from notification.services.whatsapp_service import (
     send_whatsapp_message,
 )
 
-# nosonar
-from properties.models import RentReminderLog
-
-if TYPE_CHECKING:
-    from properties.models import RentRecord
+logger = logging.getLogger(__name__)
 
 
-def send_thank_you_voice_note(rent: RentRecord) -> None:
-    """Send a thank-you voice note to a renter after a successful payment."""
+def send_thank_you_voice_note(rent: Any) -> None:
+
     if rent.renter is None:
         return
     name: str = rent.renter.full_name
@@ -41,12 +38,14 @@ def send_thank_you_voice_note(rent: RentRecord) -> None:
         send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)
 
 
-def send_late_rent_reminder(rent: RentRecord) -> None:
+def send_late_rent_reminder(rent: Any) -> None:
     """Send a Hindi voice-note reminder to a renter with overdue rent.
 
     Records the reminder in :class:`RentReminderLog` so we never spam
     the same renter with the same reminder type on the same day.
     """
+    from properties.models import RentReminderLog
+
     if rent.renter is None:
         return
     name: str = rent.renter.full_name
@@ -68,8 +67,9 @@ def send_late_rent_reminder(rent: RentRecord) -> None:
     )
 
 
-def alert_owner_about_delay(rent: RentRecord) -> None:
+def alert_owner_about_delay(rent: Any) -> None:
     """Send a WhatsApp text alert to the owner about a delayed rent."""
+
     if rent.renter is None:
         return
     owner = rent.renter.unit.owner

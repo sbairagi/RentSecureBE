@@ -18,7 +18,7 @@ def notify_renter_about_late_fee(rent: RentRecord, late_fee: int | float) -> Non
 
 # Notify Owner
 def notify_owner_about_late_fee(rent: RentRecord, late_fee: int | float) -> None:
-    if rent.renter is None:
+    if rent.renter is None or rent.renter.unit is None:
         return
     msg = (
         f"ℹ️ Your renter paid rent late by ₹{late_fee} "

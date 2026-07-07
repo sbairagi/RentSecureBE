@@ -9,6 +9,9 @@ import uuid
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, cast, override
 
+if TYPE_CHECKING:
+    from properties.models import RentRecord
+
 import razorpay  # type: ignore[import-untyped]
 from rest_framework import generics, permissions, viewsets
 from rest_framework.decorators import api_view, permission_classes
@@ -52,9 +55,6 @@ from .serializers import (
     UsageLimitSerializer,
     UserSubscriptionSerializer,
 )
-
-if TYPE_CHECKING:
-    from properties.models import RentRecord
 
 logger = logging.getLogger(__name__)
 
@@ -324,7 +324,8 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
-@csrf_exempt  # nosonar
+# nosonar
+@csrf_exempt
 def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
     """Handle Cashfree payout status webhook.
 
@@ -361,7 +362,8 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
 
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
-@csrf_exempt  # nosonar
+# nosonar
+@csrf_exempt
 def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     """Create a Razorpay order for rent payment."""
     from properties.models import RentRecord  # nosonar

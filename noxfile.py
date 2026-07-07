@@ -6,7 +6,14 @@ can be validated locally with ``nox -s ci``.
 
 from __future__ import annotations
 
+import secrets
+
 import nox
+
+
+def _nox_secret_key(suffix: str = "") -> str:
+    return f"nox-{suffix}{secrets.token_urlsafe(16)}"
+
 
 # ---------------------------------------------------------------------------
 # Shared options
@@ -211,7 +218,7 @@ def autofix(session: nox.Session) -> None:
     session.run("python", "-m", "isort", *targets)
 
     session.env["USE_SQLITE"] = "True"
-    session.env["SECRET_KEY"] = "nox-autofix-migrations-2026!"  # noqa: S105
+    session.env["SECRET_KEY"] = _nox_secret_key("autofix-migrations-")  # noqa: S105
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 
@@ -293,7 +300,7 @@ def django_checks(session: nox.Session) -> None:
     """Run Django system checks and deploy validation."""
     _install_test_deps(session)
     session.env["USE_SQLITE"] = "True"
-    session.env["SECRET_KEY"] = "nox-django-checks-2026!"  # noqa: S105
+    session.env["SECRET_KEY"] = _nox_secret_key("django-checks-")  # noqa: S105
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 
@@ -319,7 +326,7 @@ def migrations(session: nox.Session) -> None:
     """Validate Django system checks, deploy checks, and migrations."""
     _install_test_deps(session)
     session.env["USE_SQLITE"] = "True"
-    session.env["SECRET_KEY"] = "nox-migration-check-2026!"  # noqa: S105
+    session.env["SECRET_KEY"] = _nox_secret_key("migration-check-")  # noqa: S105
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 
@@ -384,7 +391,7 @@ def contracts(session: nox.Session) -> None:
     """Run API contract tests and schema validation."""
     _install_test_deps(session)
     session.env["USE_SQLITE"] = "True"
-    session.env["SECRET_KEY"] = "nox-contract-test-2026!"  # noqa: S105
+    session.env["SECRET_KEY"] = _nox_secret_key("contract-test-")  # noqa: S105
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 
@@ -425,7 +432,7 @@ def hypothesis(session: nox.Session) -> None:
     """Run Hypothesis property-based tests."""
     _install_test_deps(session)
     session.env["USE_SQLITE"] = "True"
-    session.env["SECRET_KEY"] = "nox-hypothesis-2026!"  # noqa: S105
+    session.env["SECRET_KEY"] = _nox_secret_key("hypothesis-")  # noqa: S105
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
     session.env["HYPOTHESIS_MAX_EXAMPLES"] = "200"
@@ -454,7 +461,7 @@ def mutation(session: nox.Session) -> None:
     _install_test_deps(session)
     session.install("mutmut")
     session.env["USE_SQLITE"] = "True"
-    session.env["SECRET_KEY"] = "nox-mutation-2026!"  # noqa: S105
+    session.env["SECRET_KEY"] = _nox_secret_key("mutation-")  # noqa: S105
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 
@@ -485,7 +492,7 @@ def benchmark(session: nox.Session) -> None:
     _install_test_deps(session)
     session.install("pytest-benchmark")
     session.env["USE_SQLITE"] = "True"
-    session.env["SECRET_KEY"] = "nox-bench-2026!"  # noqa: S105
+    session.env["SECRET_KEY"] = _nox_secret_key("bench-")  # noqa: S105
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 
@@ -513,7 +520,7 @@ def deploy_readiness(session: nox.Session) -> None:
     """Validate Django deploy readiness: system checks, migrations, collectstatic."""
     _install_test_deps(session)
     session.env["USE_SQLITE"] = "True"
-    session.env["SECRET_KEY"] = "nox-deploy-readiness-2026!"  # noqa: S105
+    session.env["SECRET_KEY"] = _nox_secret_key("deploy-readiness-")  # noqa: S105
     session.env["DEBUG"] = "False"
     session.env["DJANGO_ENV"] = "test"
 

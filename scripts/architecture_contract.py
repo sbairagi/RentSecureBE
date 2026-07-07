@@ -18,6 +18,16 @@ import yaml
 # pylint: disable=too-many-lines
 
 
+def _validate_safe_path(path: Path, base: Path) -> Path:
+    resolved = path.resolve()
+    base_resolved = base.resolve()
+    try:
+        resolved.relative_to(base_resolved)
+    except ValueError:
+        raise ValueError(f"Path escapes allowed directory: {path}") from None
+    return resolved
+
+
 CI_YAML = ".github/workflows/ci.yml"
 ARCHITECTURE_GUARD_YAML = ".github/workflows/architecture-guard.yml"
 DOCS_CI_CD_PIPELINE = "docs/ci-cd-pipeline.md"
@@ -1076,8 +1086,9 @@ class ArchitectureContractValidator:
         print(border)
 
     def _write_file(self, path: Path, content: str) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
+        safe_path = _validate_safe_path(path, Path.cwd())
+        safe_path.parent.mkdir(parents=True, exist_ok=True)
+        safe_path.write_text(content, encoding="utf-8")
         self.log(f"Wrote report: {path}")
 
     def _build_structured_report(self) -> dict[str, Any]:
@@ -1239,27 +1250,28 @@ class ArchitectureContractValidator:
         return "\n".join(lines)
 
     def write_all_reports(self, output_dir: Path) -> None:
-        output_dir.mkdir(parents=True, exist_ok=True)
+        safe_dir = _validate_safe_path(output_dir, Path.cwd())
+        safe_dir.mkdir(parents=True, exist_ok=True)
         report = self.generate_report()
 
         self._write_file(
-            output_dir / "architecture-compliance-report.json",
+            safe_dir / "architecture-compliance-report.json",
             json.dumps(self._build_structured_report(), indent=2, default=str),
         )
         self._write_file(
-            output_dir / "architecture-compliance-report.md",
+            safe_dir / "architecture-compliance-report.md",
             self._build_markdown_report(report),
         )
         self._write_file(
-            output_dir / "architecture-summary.txt",
+            safe_dir / "architecture-summary.txt",
             self._build_summary(report),
         )
         self._write_file(
-            output_dir / "architecture-dependency-graph.dot",
+            safe_dir / "architecture-dependency-graph.dot",
             self._build_dot_graph(),
         )
         self._write_file(
-            output_dir / "architecture-dependency-graph.mmd",
+            safe_dir / "architecture-dependency-graph.mmd",
             self._build_mermaid_graph(),
         )
 

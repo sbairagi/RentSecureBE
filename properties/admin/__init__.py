@@ -1,8 +1,10 @@
-from .building_admin import *
-from .caretaker_admin import *
-from .property_tax_admin import *
-from .rent_record_admin import *
-from .renter_admin import *
-from .subscription_admin import *
-from .unit_admin import *
-from .usage_limit_admin import *
+from .building_admin import BuildingAdmin as BuildingAdmin
+from .caretaker_admin import CaretakerAdmin as CaretakerAdmin
+from .rent_record_admin import RentRecordAdmin as RentRecordAdmin
+from .renter_admin import RenterAdmin as RenterAdmin
+from .unit_admin import CaretakerInline as CaretakerInline
+from .unit_admin import RentAgreementDraftAdmin as RentAgreementDraftAdmin
+from .unit_admin import RenterInline as RenterInline
+from .unit_admin import UnitAdmin as UnitAdmin
+from .unit_admin import UnitDocumentAdmin as UnitDocumentAdmin
+from .unit_admin import UnitImageAdmin as UnitImageAdmin

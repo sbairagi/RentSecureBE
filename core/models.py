@@ -10,6 +10,32 @@ from django.db import models
 from rentsecure_be.type_compat import override
 
 
+class UpsertMixin:
+    """Reusable upsert logic for models with a unique business key."""
+
+    _upsert_filter_fields: tuple[str, ...] = ()
+    _upsert_skip_fields: frozenset[str] = frozenset()
+
+    @override
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if self.pk is None and self._upsert_filter_fields:
+            filter_kwargs = {
+                field: getattr(self, field) for field in self._upsert_filter_fields
+            }
+            if all(value is not None for value in filter_kwargs.values()):
+                existing = type(self).objects.filter(**filter_kwargs).first()
+                if existing:
+                    for field in self._meta.fields:
+                        if field.name in self._upsert_skip_fields:
+                            continue
+                        setattr(existing, field.attname, getattr(self, field.attname))
+                    existing.save()
+                    self.pk = existing.pk
+                    self.__dict__.update(existing.__dict__)
+                    return
+        return super().save(*args, **kwargs)
+
+
 # User Models
 class User(AbstractUser):
     full_name = models.CharField(max_length=100)
@@ -37,7 +63,7 @@ class UserProfile(models.Model):
     )
 
 
-class NotificationPreference(models.Model):
+class NotificationPreference(UpsertMixin, models.Model):
     owner = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="notification_preference"
     )
@@ -48,24 +74,8 @@ class NotificationPreference(models.Model):
     payout_alerts_whatsapp = models.BooleanField(default=True)
     payout_alerts_email = models.BooleanField(default=False)
 
-    @override
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        # Handle upsert for NotificationPreference
-        is_new = self.pk is None
-        if is_new and self.owner_id is not None:
-            existing = NotificationPreference.objects.filter(
-                owner_id=self.owner_id
-            ).first()
-            if existing:
-                for field in self._meta.fields:
-                    if field.name in {"id", "owner"}:
-                        continue
-                    setattr(existing, field.attname, getattr(self, field.attname))
-                existing.save()
-                self.pk = existing.pk
-                self.__dict__.update(existing.__dict__)
-                return
-        return super().save(*args, **kwargs)
+    _upsert_filter_fields = ("owner",)
+    _upsert_skip_fields = frozenset({"id", "owner"})
 
     @override
     def __str__(self) -> str:
@@ -100,7 +110,7 @@ class OwnerBankDetails(models.Model):
 
 
 #  Subscription Models
-class SubscriptionPlan(models.Model):
+class SubscriptionPlan(UpsertMixin, models.Model):
     PLAN_CHOICES = [
         ("free", "Free"),
         ("pro", "Pro"),
@@ -116,29 +126,15 @@ class SubscriptionPlan(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    @override
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        # Handle upsert for SubscriptionPlan
-        is_new = self.pk is None
-        if is_new and self.name:
-            existing = SubscriptionPlan.objects.filter(name=self.name).first()
-            if existing:
-                for field in self._meta.fields:
-                    if field.name in {"id", "name", "created_at", "updated_at"}:
-                        continue
-                    setattr(existing, field.attname, getattr(self, field.attname))
-                existing.save()
-                self.pk = existing.pk
-                self.__dict__.update(existing.__dict__)
-                return
-        return super().save(*args, **kwargs)
+    _upsert_filter_fields = ("name",)
+    _upsert_skip_fields = frozenset({"id", "name", "created_at", "updated_at"})
 
     @override
     def __str__(self) -> str:
         return self.name.capitalize()
 
 
-class UserSubscription(models.Model):
+class UserSubscription(UpsertMixin, models.Model):
     id = models.AutoField(primary_key=True)
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="usersubscription"
@@ -157,28 +153,10 @@ class UserSubscription(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    @override
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        # Handle upsert for UserSubscription
-        is_new = self.pk is None
-        if is_new and self.user_id is not None:
-            existing = UserSubscription.objects.filter(user_id=self.user_id).first()
-            if existing:
-                for field in self._meta.fields:
-                    if field.name in {
-                        "id",
-                        "user",
-                        "start_date",
-                        "created_at",
-                        "updated_at",
-                    }:
-                        continue
-                    setattr(existing, field.attname, getattr(self, field.attname))
-                existing.save()
-                self.pk = existing.pk
-                self.__dict__.update(existing.__dict__)
-                return
-        return super().save(*args, **kwargs)
+    _upsert_filter_fields = ("user",)
+    _upsert_skip_fields = frozenset(
+        {"id", "user", "start_date", "created_at", "updated_at"}
+    )
 
     @override
     def __str__(self) -> str:
@@ -210,7 +188,7 @@ class AddOnPurchase(models.Model):
         return f"{self.name} - {self.user.username}"
 
 
-class PlanFeatureLimit(models.Model):
+class PlanFeatureLimit(UpsertMixin, models.Model):
     id = models.AutoField(primary_key=True)
     plan = models.ForeignKey(
         SubscriptionPlan, on_delete=models.CASCADE, related_name="limits"
@@ -221,24 +199,8 @@ class PlanFeatureLimit(models.Model):
     class Meta:
         unique_together = ("plan", "feature_key")
 
-    @override
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        if (
-            self.pk is None  # type: ignore[unreachable]
-            and self.plan_id is not None
-            and self.feature_key
-        ):
-            existing = PlanFeatureLimit.objects.filter(  # type: ignore[unreachable]
-                plan_id=self.plan_id,
-                feature_key=self.feature_key,
-            ).first()
-            if existing:
-                existing.value = self.value
-                existing.save()
-                self.pk = existing.pk
-                self.__dict__.update(existing.__dict__)
-                return
-        return super().save(*args, **kwargs)
+    _upsert_filter_fields = ("plan", "feature_key")
+    _upsert_skip_fields = frozenset({"id", "plan", "feature_key"})
 
     @override
     def __str__(self) -> str:

@@ -198,11 +198,12 @@ def process_file(path: Path, workflow_name: str) -> None:
     if text != original:
         resolved = path.resolve()
         try:
-            resolved.relative_to(REPO_ROOT)
+            rel_path = resolved.relative_to(REPO_ROOT)
         except ValueError:
             print(f"Skipped: {path.relative_to(REPO_ROOT)} (outside repo root)")
             return
-        resolved.write_text(text, encoding="utf-8")
+        write_path = REPO_ROOT / rel_path
+        write_path.write_text(text, encoding="utf-8")
         print(f"Updated: {path.relative_to(REPO_ROOT)}")
     else:
         print(f"Unchanged: {path.relative_to(REPO_ROOT)}")
