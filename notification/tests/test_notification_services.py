@@ -107,9 +107,9 @@ class RentNotifyServiceTest(TestCase):
         self.owner.profile.whatsapp_number = "+919876543210"
         self.owner.profile.language_preference = "hi"
 
-    @patch("notification.services.rent_notify_service.translate_msg")
-    @patch("notification.services.rent_notify_service.send_whatsapp_message")
-    @patch("notification.services.rent_notify_service.generate_voice_note")
+    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.voice_service.generate_voice_note")
     def test_notify_renter(self, mock_voice, mock_whatsapp, mock_translate):
         mock_translate.return_value = "Translated message"
         mock_voice.return_value = "/tmp/audio.mp3"
@@ -117,9 +117,9 @@ class RentNotifyServiceTest(TestCase):
         mock_whatsapp.assert_called()
         mock_translate.assert_called_once()
 
-    @patch("notification.services.rent_notify_service.translate_msg")
-    @patch("notification.services.rent_notify_service.send_whatsapp_message")
-    @patch("notification.services.rent_notify_service.generate_voice_note")
+    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.voice_service.generate_voice_note")
     def test_notify_owner(self, mock_voice, mock_whatsapp, mock_translate):
         mock_translate.return_value = "Translated message"
         mock_voice.return_value = "/tmp/audio.mp3"
@@ -153,9 +153,9 @@ class RentNotifyServiceTest(TestCase):
         send_payout_notification(rent)
         mock_notify.assert_not_called()
 
-    @patch("notification.services.rent_notify_service.send_whatsapp_message")
-    @patch("notification.services.rent_notify_service.generate_voice_note")
-    @patch("notification.services.rent_notify_service.translate_msg")
+    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.voice_service.generate_voice_note")
+    @patch("rentsecure_be.services.i18n_service.translate_msg")
     def test_notify_owner_post_payout(self, mock_translate, mock_voice, mock_whatsapp):
         mock_translate.return_value = "Translated message"
         mock_voice.return_value = "/tmp/audio.mp3"
@@ -168,7 +168,7 @@ class RentNotifyServiceTest(TestCase):
 
 
 class ExtraChargeRemindersTest(TestCase):
-    @patch("notification.services.extra_charge_reminders.ExtraCharge")
+    @patch("properties.models.ExtraCharge")
     def test_send_due_extra_charge_reminders(self, mock_extra_charge):
         mock_extra_charge.objects.filter.return_value.select_related.return_value = []
         result = send_due_extra_charge_reminders(days_ahead=0)

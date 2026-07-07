@@ -24,7 +24,7 @@ from rentsecure_be.type_compat import override
 from ..feature_enforcer import FeatureEnforcer
 from ..models import Renter, RentRecord, Unit
 from ..serializers import RentRecordSerializer
-from ..utils import generate_rent_invoice_pdf
+from ..utils.utils import generate_rent_invoice_pdf
 
 logger = logging.getLogger(__name__)
 

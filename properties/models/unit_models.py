@@ -401,7 +401,7 @@ class UnitDocument(models.Model):
     def clean(self) -> None:
         """Validate and hash document to prevent duplicates."""
         if self.document:
-            from properties.utils import generate_file_hash
+            from properties.utils.utils import generate_file_hash
 
             hash_value = generate_file_hash(cast("UploadedFile", self.document))
             self.file_hash = hash_value
@@ -465,7 +465,7 @@ class UnitImage(models.Model):
     def clean(self) -> None:
         """Validate and hash image to prevent duplicate uploads."""
         if self.image:
-            from properties.utils import generate_file_hash
+            from properties.utils.utils import generate_file_hash
 
             hash_value = generate_file_hash(cast("UploadedFile", self.image))
             self.image_hash = hash_value

@@ -19,8 +19,8 @@ from properties.models import (
 )
 from properties.scheduler import cancel_reminder_job
 from properties.signals.renter_signals import renter_archived, renter_exited
-from properties.utils import update_usage_count
 from properties.utils.onboarding_utils import generate_onboarding_token
+from properties.utils.utils import update_usage_count
 
 from ..services.unit_service import update_unit_status
 

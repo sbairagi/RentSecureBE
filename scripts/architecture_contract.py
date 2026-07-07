@@ -202,14 +202,22 @@ APPROVED_STAGE_ORDER: list[str] = [
 ]
 
 # Compliance score categories
+CATEGORY_WORKFLOW_STRUCTURE = "Workflow Structure"
+CATEGORY_DEPENDENCY_GRAPH = "Dependency Graph"
+CATEGORY_SECURITY_CONTROLS = "Security Controls"
+CATEGORY_QUALITY_GATES = "Quality Gates"
+CATEGORY_DOCUMENTATION_SYNC = "Documentation Sync"
+CATEGORY_PROTECTED_FILES = "Protected Files"
+CATEGORY_VERSION_ALIGNMENT = "Version Alignment"
+
 SCORE_CATEGORIES: list[str] = [
-    "Workflow Structure",
-    "Dependency Graph",
-    "Security Controls",
-    "Quality Gates",
-    "Documentation Sync",
-    "Protected Files",
-    "Version Alignment",
+    CATEGORY_WORKFLOW_STRUCTURE,
+    CATEGORY_DEPENDENCY_GRAPH,
+    CATEGORY_SECURITY_CONTROLS,
+    CATEGORY_QUALITY_GATES,
+    CATEGORY_DOCUMENTATION_SYNC,
+    CATEGORY_PROTECTED_FILES,
+    CATEGORY_VERSION_ALIGNMENT,
 ]
 
 

@@ -48,6 +48,7 @@ class SmartBotActionsTest(TestCase):
 
     @patch("smartbot.actions.RentRecord")
     def test_retry_payout_failure(self, mock_rent_record):
+        mock_rent_record.DoesNotExist = Exception
         mock_rent_record.objects.filter.side_effect = Exception("DB Error")
         result = retry_payout("Test Renter")
         self.assertIn("❌", result)
@@ -75,6 +76,7 @@ class SmartBotActionsTest(TestCase):
 
     @patch("smartbot.actions.Renter")
     def test_send_rent_agreement_failure(self, mock_renter):
+        mock_renter.DoesNotExist = Exception
         mock_renter.objects.get.side_effect = Exception("Error")
         result = send_rent_agreement("Test")
         self.assertIn("❌", result)
@@ -101,6 +103,7 @@ class SmartBotActionsTest(TestCase):
 
     @patch("smartbot.actions.Renter")
     def test_send_agreement_for_signature_failure(self, mock_renter):
+        mock_renter.DoesNotExist = Exception
         mock_renter.objects.get.side_effect = Exception("Error")
         result = send_agreement_for_signature("Test")
         self.assertIn("❌", result)

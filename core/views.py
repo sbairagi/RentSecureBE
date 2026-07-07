@@ -54,7 +54,7 @@ from .serializers import (
 )
 
 if TYPE_CHECKING:
-    from properties.models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
 logger = logging.getLogger(__name__)
 
@@ -323,7 +323,9 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 # ---------------------------------------------------------------------------
 
 
-# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
+# Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
+# from external payment/webhook providers. Those callers do not have browser
+# sessions and therefore cannot supply a CSRF token.
 # nosonar
 @csrf_exempt  # nosonar
 def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
@@ -332,7 +334,7 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
     Fixed: rent.save() no longer overwrites `rent` with None.
     Fixed: Removed invalid rent.renter.property.owner chain.
     """
-    from properties.models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)  # noqa: S1192
@@ -361,12 +363,14 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
     return JsonResponse({"message": "Webhook received"}, status=200)
 
 
-# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
+# Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
+# from external payment/webhook providers. Those callers do not have browser
+# sessions and therefore cannot supply a CSRF token.
 # nosonar
 @csrf_exempt  # nosonar
 def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     """Create a Razorpay order for rent payment."""
-    from properties.models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
@@ -429,7 +433,7 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:
     Handles both payment.captured (order-based) and payment_link.paid events.
     Consolidated from three duplicate definitions into one secure handler.
     """
-    from properties.models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
@@ -461,7 +465,7 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:
 
 
 def _get_rent_from_event(data: dict, event: str) -> RentRecord | None:
-    from properties.models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
     if event == "payment_link.paid":
         try:
@@ -495,7 +499,7 @@ def _get_rent_from_event(data: dict, event: str) -> RentRecord | None:
 
 
 def _process_rent_payment(rent: RentRecord) -> None:
-    from properties.models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
     rent.payment_status = RentRecord.Status.PAID
     rent.date_paid = timezone.now().date()
@@ -522,7 +526,7 @@ def update_owner_bank_details(
     Fixed: Uses register_beneficiary from cashfree_service.
     Fixed: Uses correct RentRecord field (owner) instead of renter__property__owner.
     """
-    from properties.models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
     data = request.data
     owner: User = cast(User, request.user)
@@ -586,7 +590,7 @@ def rent_inflow_summary(request: Request, /, *args: Any, **kwargs: Any) -> Respo
 
     Fixed: Uses correct RentRecord field (owner) and (amount) and (PENDING).
     """
-    from properties.models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
     owner: User = cast(User, request.user)
     total_received = (
@@ -620,7 +624,7 @@ def owner_rent_records(request: Request, /, *args: Any, **kwargs: Any) -> Respon
 
     Fixed: Uses correct FK path (unit.owner, renter.name, unit.unit).
     """
-    from properties.models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord  # nosonar
 
     owner: User = cast(User, request.user)
     rents = (

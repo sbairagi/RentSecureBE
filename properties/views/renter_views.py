@@ -19,7 +19,7 @@ from ..feature_enforcer import FeatureEnforcer
 from ..models import Renter, Unit
 from ..serializers import RenterSerializer
 from ..services.unit_service import update_unit_status
-from ..utils import check_feature_limit
+from ..utils.utils import check_feature_limit
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet

@@ -44,7 +44,7 @@ def send_late_rent_reminder(rent: Any) -> None:
     Records the reminder in :class:`RentReminderLog` so we never spam
     the same renter with the same reminder type on the same day.
     """
-    from properties.models import RentReminderLog
+    from properties.models.renter_models import RentReminderLog
 
     if rent.renter is None:
         return

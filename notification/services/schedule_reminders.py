@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 def get_upcoming_rent_dues() -> Any:
-    from properties.models import RentRecord
+    from properties.models.rent_record_models import RentRecord
 
     target_date = now().date() + timedelta(days=3)
     return RentRecord.objects.filter(due_date=target_date)
 
 
 def get_upcoming_tax_dues() -> Any:
-    from properties.models import PropertyTaxRecord
+    from properties.models.property_tax_models import PropertyTaxRecord
 
     target_date = now().date() + timedelta(days=3)
     return PropertyTaxRecord.objects.filter(due_date=target_date, paid=False)

@@ -1,29 +1,30 @@
-# services/cashfree_service.py
+from __future__ import annotations
+
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import requests
 
 from django.conf import settings
 
-from core.models import OwnerBankDetails  # nosonar
-from notification.services.rent_notify_service import (  # nosonar
-    notify_owner,
-    notify_owner_post_payout,
-    notify_renter,
-    send_payout_notification,
-)
-from properties.models import RentRecord  # nosonar
-from rentsecure_be.utils.cashfree_payout import (  # nosonar
+from rentsecure_be.utils.cashfree_payout import (
     add_beneficiary,
     get_auth_token,
     make_payout,
 )
 
+if TYPE_CHECKING:
+    from core.models import OwnerBankDetails
+    from properties.models.rent_record_models import RentRecord
+
 logger = logging.getLogger(__name__)
 
 
 def register_owner_with_cashfree(owner: OwnerBankDetails) -> None:
+    from core.models import OwnerBankDetails
+
+    if not isinstance(owner, OwnerBankDetails):
+        raise TypeError("owner must be an OwnerBankDetails instance")
     bene_id = f"owner_{owner.id}"
 
     data = {
@@ -44,6 +45,9 @@ def register_owner_with_cashfree(owner: OwnerBankDetails) -> None:
 
 
 def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
+    from core.models import OwnerBankDetails
+    from notification.services.rent_notify_service import notify_owner, notify_renter
+
     if rent.payout_status == "SUCCESS":
         return {"status": "ALREADY_PAID", "message": "Payout already completed"}
 
@@ -99,6 +103,8 @@ def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
 
 
 def _send_whatsapp_payout_alert(rent: RentRecord) -> None:
+    from notification.services.rent_notify_service import send_payout_notification
+
     if rent.renter is None:
         return
     owner = rent.renter.unit.owner
@@ -109,15 +115,16 @@ def _send_whatsapp_payout_alert(rent: RentRecord) -> None:
 
 
 def register_cashfree_beneficiary(bank_details: OwnerBankDetails) -> dict[str, Any]:
+    from core.models import OwnerBankDetails
+
+    if not isinstance(bank_details, OwnerBankDetails):
+        raise TypeError("bank_details must be an OwnerBankDetails instance")
     bene_id = f"owner_{bank_details.owner.id}"
 
     payload = {
         "beneId": bene_id,
         "name": bank_details.owner.get_full_name(),
         "email": bank_details.owner.email,
-        # ``UserProfile`` does not have ``phone_number``; the canonical
-        # field is ``whatsapp_number``. Fall back to the User's phone
-        # if the profile has none.
         "phone": (
             getattr(
                 getattr(bank_details.owner, "profile", None), "whatsapp_number", None
@@ -140,21 +147,30 @@ def register_cashfree_beneficiary(bank_details: OwnerBankDetails) -> dict[str, A
 
 
 def process_rent_payout(rent: RentRecord) -> dict[str, Any]:
-    """Process payout to owner via Cashfree after rent is marked PAID."""
+    from core.models import OwnerBankDetails
+    from notification.services.rent_notify_service import (
+        notify_owner_post_payout,
+        send_payout_notification,
+    )
+
+    if not isinstance(rent, RentRecord):
+        raise TypeError("rent must be a RentRecord instance")
+    owner = rent.renter.unit.owner if rent.renter else None
+    if owner is None:
+        rent.payout_status = "FAILED"
+        rent.save(update_fields=["payout_status"])
+        return {"status": "FAILED", "message": "Owner not found for rent"}
+
     try:
-        bank_details = OwnerBankDetails.objects.get(owner=rent.unit.owner)
+        bank_details = OwnerBankDetails.objects.get(owner=owner)
     except OwnerBankDetails.DoesNotExist:
-        logger.warning(
-            f"No bank details found for owner {rent.unit.owner.id} (rent {rent.id})"
-        )
+        logger.warning(f"No bank details found for owner {owner.id} (rent {rent.id})")
         rent.payout_status = "FAILED"
         rent.save(update_fields=["payout_status"])
         return {"status": "FAILED", "message": "Owner bank details not found"}
 
     if not bank_details.beneficiary_id:
-        logger.warning(
-            f"No beneficiary_id for owner {rent.unit.owner.id} (rent {rent.id})"
-        )
+        logger.warning(f"No beneficiary_id for owner {owner.id} (rent {rent.id})")
         rent.payout_status = "FAILED"
         rent.save(update_fields=["payout_status"])
         return {
@@ -166,19 +182,16 @@ def process_rent_payout(rent: RentRecord) -> dict[str, Any]:
     try:
         response = make_payout(
             transfer_id=transfer_id,
-            # ``RentRecord`` exposes the canonical amount as
-            # ``amount_paid``; ``rent.amount`` is a read-only @property.
             amount=rent.amount_paid,
             remarks="Monthly rent payout",
             bene_id=bank_details.beneficiary_id,
         )
     except Exception as e:
-        logger.error(f"Cashfree payout API error for rent {rent.id}: {e}")
+        logger.exception(f"Cashfree payout API error for rent {rent.id}: {e}")
         rent.payout_status = "FAILED"
         rent.save(update_fields=["payout_status"])
         return {"status": "FAILED", "message": str(e)}
 
-    # Set payout status based on response
     if response.get("status") == "SUCCESS":
         rent.payout_status = "SUCCESS"
         rent.payout_reference = transfer_id
@@ -187,7 +200,6 @@ def process_rent_payout(rent: RentRecord) -> dict[str, Any]:
 
     rent.save(update_fields=["payout_status", "payout_reference"])
 
-    # Send notifications
     try:
         notify_owner_post_payout(rent)
     except Exception as e:
