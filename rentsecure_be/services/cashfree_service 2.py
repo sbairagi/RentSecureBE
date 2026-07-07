@@ -46,7 +46,7 @@ def _notify_payout_success(rent: Any, owner: Any) -> None:
         notify_owner,
         notify_renter,
     )
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    from rentsecure_be.rent_record_models import RentRecord  # nosonar
 
     if not isinstance(rent, RentRecord):
         raise TypeError(RENT_TYPE_ERROR)
@@ -65,7 +65,7 @@ def _notify_payout_success(rent: Any, owner: Any) -> None:
 
 def _notify_payout_failed(rent: Any) -> None:
     from notification.services.rent_notify_service import notify_renter  # nosonar
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    from rentsecure_be.rent_record_models import RentRecord  # nosonar
 
     if not isinstance(rent, RentRecord):
         raise TypeError(RENT_TYPE_ERROR)
@@ -80,7 +80,7 @@ def _send_whatsapp_payout_alert(rent: Any) -> None:
     from notification.services.rent_notify_service import (  # nosonar
         send_payout_notification,
     )
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    from rentsecure_be.rent_record_models import RentRecord  # nosonar
 
     if not isinstance(rent, RentRecord):
         raise TypeError(RENT_TYPE_ERROR)
@@ -95,7 +95,7 @@ def _send_whatsapp_payout_alert(rent: Any) -> None:
 
 def pay_owner_after_rent(rent: Any) -> dict[str, Any]:
     from core.models import OwnerBankDetails  # nosonar
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    from rentsecure_be.rent_record_models import RentRecord  # nosonar
 
     if not isinstance(rent, RentRecord):
         raise TypeError(RENT_TYPE_ERROR)
@@ -181,7 +181,7 @@ def process_rent_payout(rent: Any) -> dict[str, Any]:
         notify_owner_post_payout,
         send_payout_notification,
     )
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    from rentsecure_be.rent_record_models import RentRecord  # nosonar
 
     if not isinstance(rent, RentRecord):
         raise TypeError(RENT_TYPE_ERROR)
