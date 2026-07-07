@@ -4,7 +4,7 @@ import os
 import tempfile
 from typing import Any
 
-from PyPDF2 import PdfMerger
+from pypdf import PdfWriter
 
 from django.conf import settings
 from django.template.loader import render_to_string
@@ -103,10 +103,10 @@ def _get_renter_agreement_paths(renter: Any) -> list[str]:
 
 def _merge_pdfs(base_pdf_path: str, agreement_paths: list[str], tmpdir: str) -> bytes:
     merged_pdf_path = os.path.join(tmpdir, "unit_history_full.pdf")
-    merger = PdfMerger()
-    merger.append(base_pdf_path)
+    writer = PdfWriter()
+    writer.append(base_pdf_path)
     for agreement_path in agreement_paths:
-        merger.append(agreement_path)
-    merger.write(merged_pdf_path)
-    merger.close()
+        writer.append(agreement_path)
+    with open(merged_pdf_path, "wb") as merged_file:
+        writer.write(merged_file)
     return _read_pdf_if_exists(merged_pdf_path)
