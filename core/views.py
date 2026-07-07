@@ -9,9 +9,6 @@ import uuid
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, cast, override
 
-if TYPE_CHECKING:
-    from properties.models import RentRecord
-
 import razorpay  # type: ignore[import-untyped]
 from rest_framework import generics, permissions, viewsets
 from rest_framework.decorators import api_view, permission_classes
