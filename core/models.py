@@ -17,26 +17,34 @@ class UpsertMixin:
     _upsert_skip_fields: frozenset[str] = frozenset()
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        if self.pk is None and self._upsert_filter_fields:  # type: ignore[has-type]
-            filter_kwargs = {
-                field: getattr(self, field) for field in self._upsert_filter_fields
-            }
-            if all(value is not None for value in filter_kwargs.values()):
-                existing = (
-                    type(self)
-                    .objects.filter(**filter_kwargs)  # type: ignore[attr-defined]
-                    .first()
-                )
-                if existing:
-                    for field in self._meta.fields:  # type: ignore[attr-defined]
-                        if field.name in self._upsert_skip_fields:
-                            continue
-                        setattr(existing, field.attname, getattr(self, field.attname))
-                    existing.save()
-                    self.pk = existing.pk
-                    self.__dict__.update(existing.__dict__)
-                    return
+        existing = self._find_existing_upsert_target()
+        if existing is not None:
+            self._copy_fields_to_existing(existing)
+            existing.save()
+            self.pk = existing.pk
+            self.__dict__.update(existing.__dict__)
+            return
         return super().save(*args, **kwargs)  # type: ignore[misc, no-any-return]
+
+    def _find_existing_upsert_target(self) -> Any | None:
+        if self.pk is not None or not self._upsert_filter_fields:
+            return None
+        filter_kwargs = {
+            field: getattr(self, field) for field in self._upsert_filter_fields
+        }
+        if not all(value is not None for value in filter_kwargs.values()):
+            return None
+        return (
+            type(self)
+            .objects.filter(**filter_kwargs)  # type: ignore[attr-defined]
+            .first()
+        )
+
+    def _copy_fields_to_existing(self, existing: Any) -> None:
+        for field in self._meta.fields:  # type: ignore[attr-defined]
+            if field.name in self._upsert_skip_fields:
+                continue
+            setattr(existing, field.attname, getattr(self, field.attname))
 
 
 # User Models

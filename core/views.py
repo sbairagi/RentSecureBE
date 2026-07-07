@@ -54,7 +54,7 @@ from .serializers import (
 )
 
 if TYPE_CHECKING:
-    from properties.models import RentRecord
+    from properties.models import RentRecord  # nosonar
 
 logger = logging.getLogger(__name__)
 
@@ -325,7 +325,7 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 # nosonar
-@csrf_exempt
+@csrf_exempt  # nosonar
 def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
     """Handle Cashfree payout status webhook.
 
@@ -363,7 +363,7 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
 
 # Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 # nosonar
-@csrf_exempt
+@csrf_exempt  # nosonar
 def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     """Create a Razorpay order for rent payment."""
     from properties.models import RentRecord  # nosonar
