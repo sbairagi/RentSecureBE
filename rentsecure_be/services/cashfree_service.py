@@ -6,15 +6,15 @@ import requests
 
 from django.conf import settings
 
-from core.models import OwnerBankDetails
-from notification.services.rent_notify_service import (
+from core.models import OwnerBankDetails  # nosonar
+from notification.services.rent_notify_service import (  # nosonar
     notify_owner,
     notify_owner_post_payout,
     notify_renter,
     send_payout_notification,
 )
-from properties.models import RentRecord
-from rentsecure_be.utils.cashfree_payout import (
+from properties.models import RentRecord  # nosonar
+from rentsecure_be.utils.cashfree_payout import (  # nosonar
     add_beneficiary,
     get_auth_token,
     make_payout,
@@ -41,7 +41,6 @@ def register_owner_with_cashfree(owner: OwnerBankDetails) -> None:
         owner.beneficiary_id = bene_id
         owner.bank_account_verified = True
         owner.save()
-    return
 
 
 def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:

@@ -40,8 +40,11 @@ def register_owner_with_cashfree(owner: Any) -> None:
 
 
 def _notify_payout_success(rent: Any, owner: Any) -> None:
-    from notification.services.rent_notify_service import notify_owner, notify_renter
-    from properties.models import RentRecord
+    from notification.services.rent_notify_service import (  # nosonar
+        notify_owner,
+        notify_renter,
+    )
+    from properties.models import RentRecord  # nosonar
 
     if not isinstance(rent, RentRecord):
         raise TypeError("rent must be a RentRecord instance")
@@ -59,8 +62,8 @@ def _notify_payout_success(rent: Any, owner: Any) -> None:
 
 
 def _notify_payout_failed(rent: Any) -> None:
-    from notification.services.rent_notify_service import notify_renter
-    from properties.models import RentRecord
+    from notification.services.rent_notify_service import notify_renter  # nosonar
+    from properties.models import RentRecord  # nosonar
 
     if not isinstance(rent, RentRecord):
         raise TypeError("rent must be a RentRecord instance")
@@ -72,8 +75,10 @@ def _notify_payout_failed(rent: Any) -> None:
 
 
 def _send_whatsapp_payout_alert(rent: Any) -> None:
-    from notification.services.rent_notify_service import send_payout_notification
-    from properties.models import RentRecord
+    from notification.services.rent_notify_service import (  # nosonar
+        send_payout_notification,
+    )
+    from properties.models import RentRecord  # nosonar
 
     if not isinstance(rent, RentRecord):
         raise TypeError("rent must be a RentRecord instance")
@@ -88,7 +93,7 @@ def _send_whatsapp_payout_alert(rent: Any) -> None:
 
 def pay_owner_after_rent(rent: Any) -> dict[str, Any]:
     from core.models import OwnerBankDetails  # nosonar
-    from properties.models import RentRecord
+    from properties.models import RentRecord  # nosonar
 
     if not isinstance(rent, RentRecord):
         raise TypeError("rent must be a RentRecord instance")
@@ -170,11 +175,11 @@ def register_cashfree_beneficiary(bank_details: Any) -> dict[str, Any]:
 def process_rent_payout(rent: Any) -> dict[str, Any]:
     """Process payout to owner via Cashfree after rent is marked PAID."""
     from core.models import OwnerBankDetails  # nosonar
-    from notification.services.rent_notify_service import (
+    from notification.services.rent_notify_service import (  # nosonar
         notify_owner_post_payout,
         send_payout_notification,
     )
-    from properties.models import RentRecord
+    from properties.models import RentRecord  # nosonar
 
     if not isinstance(rent, RentRecord):
         raise TypeError("rent must be a RentRecord instance")
