@@ -4,7 +4,7 @@ Architecture Contract Validator v2.0
 ...
 """
 
-# pylint: disable=too-many-lines
+from __future__ import annotations
 
 import argparse
 import json
@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+# pylint: disable=too-many-lines
+
 
 CI_YAML = ".github/workflows/ci.yml"
 ARCHITECTURE_GUARD_YAML = ".github/workflows/architecture-guard.yml"
@@ -1072,9 +1075,197 @@ class ArchitectureContractValidator:
         print()
         print(border)
 
+    def _write_file(self, path: Path, content: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        self.log(f"Wrote report: {path}")
+
+    def _build_structured_report(self) -> dict[str, Any]:
+        report = self.generate_report()
+        summary = report["summary"]
+        score = report["compliance_score"]
+        categories = {
+            "Workflow Structure": score["categories"].get("Workflow Structure", {}),
+            "Dependency Graph": score["categories"].get("Dependency Graph", {}),
+            "Security Controls": score["categories"].get("Security Controls", {}),
+            "Quality Gates": score["categories"].get("Quality Gates", {}),
+            "Documentation Sync": score["categories"].get("Documentation Sync", {}),
+            "Protected Files": score["categories"].get("Protected Files", {}),
+            "Version Alignment": score["categories"].get("Version Alignment", {}),
+        }
+        category_scores = {
+            name: data.get("score", 0) for name, data in categories.items()
+        }
+        return {
+            "version": CONTRACT_VERSION,
+            "timestamp": report["timestamp"],
+            "repository": str(self.repo_root),
+            "score": score["total"],
+            "status": "COMPLIANT" if summary["compliant"] else "VIOLATIONS_DETECTED",
+            "violations": {
+                "critical": summary.get("critical", 0),
+                "error": summary.get("errors", 0),
+                "warning": summary.get("warnings", 0),
+            },
+            "workflow_structure": category_scores.get("Workflow Structure", {}),
+            "dependency_graph": category_scores.get("Dependency Graph", {}),
+            "security_controls": category_scores.get("Security Controls", {}),
+            "quality_gates": category_scores.get("Quality Gates", {}),
+            "documentation_sync": category_scores.get("Documentation Sync", {}),
+            "protected_files": category_scores.get("Protected Files", {}),
+            "version_alignment": category_scores.get("Version Alignment", {}),
+            "expected_graph": report.get("expected_graph", {}),
+            "actual_graph": report.get("actual_graph", {}),
+        }
+
+    def _build_markdown_report(self, report: dict[str, Any]) -> str:
+        summary = report["summary"]
+        score = report["compliance_score"]
+        lines: list[str] = []
+        lines.append("# Architecture Compliance Report")
+        lines.append("")
+        lines.append(f"- **Repository:** `{self.repo_root}`")
+        lines.append(f"- **Version:** {CONTRACT_VERSION}")
+        lines.append(f"- **Architecture:** {ARCHITECTURE_VERSION}")
+        lines.append(f"- **Pipeline:** {PIPELINE_VERSION}")
+        lines.append(f"- **Timestamp:** {report['timestamp']}")
+        lines.append(
+            f"- **Score:** {score['total']}/{score['max']} ({score['percentage']})"
+        )
+        status_label = (
+            "✅ COMPLIANT" if summary["compliant"] else "❌ VIOLATIONS_DETECTED"
+        )
+        lines.append(f"- **Status:** {status_label}")
+        lines.append("")
+        lines.append("## Summary")
+        lines.append("")
+        lines.append(
+            f"Violations: {summary['total_violations']} "
+            f"(CRITICAL: {summary['critical']}, "
+            f"ERROR: {summary['errors']}, "
+            f"WARNING: {summary['warnings']})"
+        )
+        lines.append("")
+        lines.append("## Category Breakdown")
+        lines.append("")
+        lines.append("| Category | Score | Status |")
+        lines.append("|----------|-------|--------|")
+        for cat_name, cat_data in score["categories"].items():
+            status = cat_data.get("status", "FAIL")
+            score_part = f"{cat_data.get('score', 0)}/{cat_data.get('max', 0)}"
+            lines.append(f"| {cat_name} | {score_part} | {status} |")
+        lines.append("")
+        lines.append("## Expected Graph")
+        lines.append("")
+        for job in APPROVED_STAGE_ORDER:
+            needs = APPROVED_DEPENDENCY_CHAIN.get(job)
+            stage_label = STAGE_MAP.get(job, job)
+            if needs:
+                lines.append(f"- {stage_label} ← {', '.join(needs)}")
+            else:
+                lines.append(f"- {stage_label} (root)")
+        lines.append("")
+        lines.append("## Actual Graph")
+        lines.append("")
+        for job in self.actual_stage_order:
+            needs = self.actual_dependencies.get(job)
+            stage_label = STAGE_MAP.get(job, job)
+            if needs:
+                lines.append(f"- {stage_label} ← {', '.join(needs)}")
+            else:
+                lines.append(f"- {stage_label} (root)")
+        lines.append("")
+        if self.violations:
+            lines.append(f"## Violations ({len(self.violations)})")
+            lines.append("")
+            for i, v in enumerate(self.violations, 1):
+                severity_tag = {
+                    "CRITICAL": "🔴",
+                    "ERROR": "🟠",
+                    "WARNING": "🟡",
+                }.get(v["severity"], "⚪")
+                lines.append(f"### #{i} {severity_tag} [{v['severity']}] {v['type']}")
+                lines.append("")
+                lines.append(f"{v['message']}")
+                lines.append("")
+        lines.append("")
+        lines.append("---")
+        lines.append("*Generated by architecture contract validator.*")
+        return "\n".join(lines)
+
+    def _build_summary(self, report: dict[str, Any]) -> str:
+        summary = report["summary"]
+        score = report["compliance_score"]
+        lines: list[str] = []
+        score_text = f"{score['total']}/{score['max']} ({score['percentage']})"
+        lines.append(f"Architecture Compliance: {score_text}")
+        status_label = "COMPLIANT" if summary["compliant"] else "VIOLATIONS_DETECTED"
+        lines.append(f"Status: {status_label}")
+        lines.append(
+            f"Violations: {summary['total_violations']} "
+            f"(CRITICAL: {summary['critical']}, "
+            f"ERROR: {summary['errors']}, "
+            f"WARNING: {summary['warnings']})"
+        )
+        return "\n".join(lines)
+
+    def _build_dot_graph(self) -> str:
+        lines: list[str] = ["digraph architecture {"]
+        lines.append("  rankdir=TB;")
+        lines.append("  node [shape=box];")
+        for job in APPROVED_STAGE_ORDER:
+            stage_label = STAGE_MAP.get(job, job).split(" │ ", 1)[-1].strip()
+            lines.append(f'  "{stage_label}";')
+        for job, needs in APPROVED_DEPENDENCY_CHAIN.items():
+            if not needs:
+                continue
+            stage_label = STAGE_MAP.get(job, job).split(" │ ", 1)[-1].strip()
+            for dep in needs:
+                dep_label = STAGE_MAP.get(dep, dep).split(" │ ", 1)[-1].strip()
+                lines.append(f'  "{stage_label}" -> "{dep_label}";')
+        lines.append("}")
+        return "\n".join(lines)
+
+    def _build_mermaid_graph(self) -> str:
+        lines: list[str] = ["graph TD"]
+        for job in APPROVED_STAGE_ORDER:
+            stage_label = STAGE_MAP.get(job, job).split(" │ ", 1)[-1].strip()
+            lines.append(f'  {job}["{stage_label}"]')
+        for job, needs in APPROVED_DEPENDENCY_CHAIN.items():
+            if not needs:
+                continue
+            for dep in needs:
+                lines.append(f"  {dep} --> {job}")
+        return "\n".join(lines)
+
+    def write_all_reports(self, output_dir: Path) -> None:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        report = self.generate_report()
+
+        self._write_file(
+            output_dir / "architecture-compliance-report.json",
+            json.dumps(self._build_structured_report(), indent=2, default=str),
+        )
+        self._write_file(
+            output_dir / "architecture-compliance-report.md",
+            self._build_markdown_report(report),
+        )
+        self._write_file(
+            output_dir / "architecture-summary.txt",
+            self._build_summary(report),
+        )
+        self._write_file(
+            output_dir / "architecture-dependency-graph.dot",
+            self._build_dot_graph(),
+        )
+        self._write_file(
+            output_dir / "architecture-dependency-graph.mmd",
+            self._build_mermaid_graph(),
+        )
+
     # ── Main Validate ─────────────────────────────────────────────────────────
 
-    def validate(self) -> int:
+    def validate(self, output_dir: str | None = None) -> int:
         """
         Run all validation checks.
         Returns exit code: 0 = compliant, 1 = violations found.
@@ -1102,6 +1293,9 @@ class ArchitectureContractValidator:
 
         report = self.generate_report()
         self.print_report(report)
+
+        if output_dir:
+            self.write_all_reports(Path(output_dir))
 
         summary = report["summary"]
         if summary["critical"] > 0 or summary["errors"] > 0:
@@ -1149,6 +1343,11 @@ def main() -> int:
         action="store_true",
         help="Treat WARNING-level violations as failures",
     )
+    parser.add_argument(
+        "--output-dir",
+        default=".",
+        help="Directory to write report artifacts",
+    )
 
     args = parser.parse_args()
 
@@ -1157,7 +1356,7 @@ def main() -> int:
         verbose=args.verbose,
     )
 
-    exit_code = validator.validate()
+    exit_code = validator.validate(output_dir=args.output_dir)
 
     if args.json:
         report = validator.generate_report()

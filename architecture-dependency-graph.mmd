@@ -1,0 +1,42 @@
+graph TD
+  lint-fast["Lint Fast"]
+  test-shard-1["Pytest + Coverage (Shard 1/4)"]
+  test-shard-2["Pytest + Coverage (Shard 2/4)"]
+  test-shard-3["Pytest + Coverage (Shard 3/4)"]
+  test-shard-4["Pytest + Coverage (Shard 4/4)"]
+  shard-validation["Shard Distribution Validation"]
+  contract-tests["API Contract Tests"]
+  django-check["Django System & Migration Checks"]
+  hypothesis-fast["Hypothesis Property Tests (Fast)"]
+  architecture["Architecture & Contracts"]
+  security-fast["Security Fast-Track"]
+  mutation-smoke["Mutation Testing (Smoke)"]
+  quality["Quality Gate (SonarCloud)"]
+  deploy-readiness["Deploy Readiness Check"]
+  deploy["Deploy to Production"]
+  lint-fast --> test-shard-1
+  lint-fast --> test-shard-2
+  lint-fast --> test-shard-3
+  lint-fast --> test-shard-4
+  test-shard-1 --> shard-validation
+  test-shard-2 --> shard-validation
+  test-shard-3 --> shard-validation
+  test-shard-4 --> shard-validation
+  lint-fast --> contract-tests
+  lint-fast --> django-check
+  lint-fast --> hypothesis-fast
+  lint-fast --> architecture
+  lint-fast --> security-fast
+  lint-fast --> mutation-smoke
+  lint-fast --> migration-rollback-validation
+  test-shard-1 --> quality
+  test-shard-2 --> quality
+  test-shard-3 --> quality
+  test-shard-4 --> quality
+  shard-validation --> quality
+  contract-tests --> quality
+  architecture --> quality
+  quality --> deploy-readiness
+  security-fast --> deploy-readiness
+  django-check --> deploy-readiness
+  deploy-readiness --> deploy

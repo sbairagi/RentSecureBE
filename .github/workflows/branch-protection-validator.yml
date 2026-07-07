@@ -45,7 +45,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          python scripts/branch_protection_validator.py | tee branch-protection-report.txt
+          python scripts/branch_protection_validator.py --output-dir .
 
       - name: Upload validation report
         if: always()
@@ -53,4 +53,12 @@ jobs:
         with:
           name: branch-protection-report
           path: branch-protection-report.txt
+          retention-days: 30
+
+      - name: Upload validation JSON report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: branch-protection-report-json
+          path: branch-protection-report.json
           retention-days: 30

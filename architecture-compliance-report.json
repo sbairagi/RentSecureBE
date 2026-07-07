@@ -1,0 +1,237 @@
+{
+  "version": "2.3.0",
+  "timestamp": "2026-07-07T05:44:47.977025",
+  "repository": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE",
+  "score": 100,
+  "status": "COMPLIANT",
+  "violations": {
+    "critical": 0,
+    "error": 0,
+    "warning": 0
+  },
+  "workflow_structure": 15,
+  "dependency_graph": 15,
+  "security_controls": 14,
+  "quality_gates": 14,
+  "documentation_sync": 14,
+  "protected_files": 14,
+  "version_alignment": 14,
+  "expected_graph": {
+    "jobs": [
+      "architecture",
+      "contract-tests",
+      "deploy",
+      "deploy-readiness",
+      "django-check",
+      "hypothesis-fast",
+      "lint-fast",
+      "migration-rollback-validation",
+      "mutation-smoke",
+      "quality",
+      "security-fast",
+      "shard-validation",
+      "test-shard-1",
+      "test-shard-2",
+      "test-shard-3",
+      "test-shard-4"
+    ],
+    "stage_order": [
+      "lint-fast",
+      "test-shard-1",
+      "test-shard-2",
+      "test-shard-3",
+      "test-shard-4",
+      "shard-validation",
+      "contract-tests",
+      "django-check",
+      "hypothesis-fast",
+      "architecture",
+      "security-fast",
+      "mutation-smoke",
+      "quality",
+      "deploy-readiness",
+      "deploy"
+    ],
+    "dependencies": {
+      "lint-fast": null,
+      "test-shard-1": [
+        "lint-fast"
+      ],
+      "test-shard-2": [
+        "lint-fast"
+      ],
+      "test-shard-3": [
+        "lint-fast"
+      ],
+      "test-shard-4": [
+        "lint-fast"
+      ],
+      "shard-validation": [
+        "test-shard-1",
+        "test-shard-2",
+        "test-shard-3",
+        "test-shard-4"
+      ],
+      "contract-tests": [
+        "lint-fast"
+      ],
+      "django-check": [
+        "lint-fast"
+      ],
+      "hypothesis-fast": [
+        "lint-fast"
+      ],
+      "architecture": [
+        "lint-fast"
+      ],
+      "security-fast": [
+        "lint-fast"
+      ],
+      "mutation-smoke": [
+        "lint-fast"
+      ],
+      "migration-rollback-validation": [
+        "lint-fast"
+      ],
+      "quality": [
+        "test-shard-1",
+        "test-shard-2",
+        "test-shard-3",
+        "test-shard-4",
+        "shard-validation",
+        "contract-tests",
+        "architecture"
+      ],
+      "deploy-readiness": [
+        "quality",
+        "security-fast",
+        "django-check"
+      ],
+      "deploy": [
+        "deploy-readiness"
+      ]
+    },
+    "workflow_files": [
+      ".github/workflows/architecture-guard.yml",
+      ".github/workflows/architecture.yml",
+      ".github/workflows/benchmark.yml",
+      ".github/workflows/ci-metrics.yml",
+      ".github/workflows/ci.yml",
+      ".github/workflows/contract-tests.yml",
+      ".github/workflows/deploy-readiness.yml",
+      ".github/workflows/deploy.yml",
+      ".github/workflows/django-check.yml",
+      ".github/workflows/hypothesis.yml",
+      ".github/workflows/lint.yml",
+      ".github/workflows/load-test.yml",
+      ".github/workflows/migration-rollback.yml",
+      ".github/workflows/mutation.yml",
+      ".github/workflows/nightly.yml",
+      ".github/workflows/performance.yml",
+      ".github/workflows/quality.yml",
+      ".github/workflows/rollback.yml",
+      ".github/workflows/sbom.yml",
+      ".github/workflows/security-deep.yml",
+      ".github/workflows/security.yml",
+      ".github/workflows/test.yml",
+      ".github/workflows/weekly.yml"
+    ]
+  },
+  "actual_graph": {
+    "jobs": [
+      "architecture",
+      "contract-tests",
+      "deploy",
+      "deploy-readiness",
+      "django-check",
+      "hypothesis-fast",
+      "lint-fast",
+      "migration-rollback-validation",
+      "mutation-smoke",
+      "quality",
+      "security-fast",
+      "shard-validation",
+      "test-shard-1",
+      "test-shard-2",
+      "test-shard-3",
+      "test-shard-4"
+    ],
+    "stage_order": [
+      "lint-fast",
+      "test-shard-1",
+      "test-shard-2",
+      "test-shard-3",
+      "test-shard-4",
+      "shard-validation",
+      "contract-tests",
+      "django-check",
+      "architecture",
+      "security-fast",
+      "mutation-smoke",
+      "migration-rollback-validation",
+      "hypothesis-fast",
+      "quality",
+      "deploy-readiness",
+      "deploy"
+    ],
+    "dependencies": {
+      "lint-fast": null,
+      "test-shard-1": [
+        "lint-fast"
+      ],
+      "test-shard-2": [
+        "lint-fast"
+      ],
+      "test-shard-3": [
+        "lint-fast"
+      ],
+      "test-shard-4": [
+        "lint-fast"
+      ],
+      "shard-validation": [
+        "test-shard-1",
+        "test-shard-2",
+        "test-shard-3",
+        "test-shard-4"
+      ],
+      "contract-tests": [
+        "lint-fast"
+      ],
+      "django-check": [
+        "lint-fast"
+      ],
+      "architecture": [
+        "lint-fast"
+      ],
+      "security-fast": [
+        "lint-fast"
+      ],
+      "mutation-smoke": [
+        "lint-fast"
+      ],
+      "migration-rollback-validation": [
+        "lint-fast"
+      ],
+      "hypothesis-fast": [
+        "lint-fast"
+      ],
+      "quality": [
+        "test-shard-1",
+        "test-shard-2",
+        "test-shard-3",
+        "test-shard-4",
+        "shard-validation",
+        "contract-tests",
+        "architecture"
+      ],
+      "deploy-readiness": [
+        "quality",
+        "security-fast",
+        "django-check"
+      ],
+      "deploy": [
+        "deploy-readiness"
+      ]
+    }
+  }
+}
