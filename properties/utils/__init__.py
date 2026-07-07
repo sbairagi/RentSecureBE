@@ -234,7 +234,7 @@ def check_feature_limit(user: User, feature_key: str) -> FeatureCheckResult:
     ).first()
     current_usage = usage.usage_count if usage else 0
 
-    if subscription_limit == "unlimited":
+    if isinstance(subscription_limit, str) and subscription_limit == "unlimited":
         return True, current_usage, subscription_limit, add_on_limit
 
     total_allowed: int = int(subscription_limit) + add_on_limit

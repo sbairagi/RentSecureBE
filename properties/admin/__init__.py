@@ -7,7 +7,7 @@ from .unit_admin import RentAgreementDraftAdmin  # noqa: F401
 from .unit_admin import RenterInline  # noqa: F401
 from .unit_admin import UnitAdmin  # noqa: F401
 from .unit_admin import UnitDocumentAdmin  # noqa: F401
-from .unit_admin import UnitImageAdmin  # noqa: F401; noqa: F401
+from .unit_admin import UnitImageAdmin  # noqa: F401
 
 __all__ = [
     "BuildingAdmin",

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def register_owner_with_cashfree(owner: Any) -> None:
-    from core.models import OwnerBankDetails
+    from core.models import OwnerBankDetails  # nosonar
 
     if not isinstance(owner, OwnerBankDetails):
         raise TypeError("owner must be an OwnerBankDetails instance")
@@ -87,7 +87,7 @@ def _send_whatsapp_payout_alert(rent: Any) -> None:
 
 
 def pay_owner_after_rent(rent: Any) -> dict[str, Any]:
-    from core.models import OwnerBankDetails
+    from core.models import OwnerBankDetails  # nosonar
     from properties.models import RentRecord
 
     if not isinstance(rent, RentRecord):
@@ -133,7 +133,7 @@ def pay_owner_after_rent(rent: Any) -> dict[str, Any]:
 
 
 def register_cashfree_beneficiary(bank_details: Any) -> dict[str, Any]:
-    from core.models import OwnerBankDetails
+    from core.models import OwnerBankDetails  # nosonar
 
     if not isinstance(bank_details, OwnerBankDetails):
         raise TypeError("bank_details must be an OwnerBankDetails instance")
@@ -169,7 +169,7 @@ def register_cashfree_beneficiary(bank_details: Any) -> dict[str, Any]:
 
 def process_rent_payout(rent: Any) -> dict[str, Any]:
     """Process payout to owner via Cashfree after rent is marked PAID."""
-    from core.models import OwnerBankDetails
+    from core.models import OwnerBankDetails  # nosonar
     from notification.services.rent_notify_service import (
         notify_owner_post_payout,
         send_payout_notification,
