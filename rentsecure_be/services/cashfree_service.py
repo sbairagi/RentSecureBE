@@ -1,5 +1,6 @@
 # services/cashfree_service.py
 import logging
+from typing import Any
 
 import requests
 
@@ -13,7 +14,11 @@ from notification.services.rent_notify_service import (
     send_payout_notification,
 )
 from properties.models import RentRecord
-from rentsecure_be.utils.cashfree_payout import add_beneficiary, make_payout
+from rentsecure_be.utils.cashfree_payout import (
+    add_beneficiary,
+    get_auth_token,
+    make_payout,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +28,9 @@ def register_owner_with_cashfree(owner: OwnerBankDetails) -> None:
 
     data = {
         "beneId": bene_id,
-        "name": owner.user.get_full_name(),
-        "email": owner.user.email,
-        # ``User`` has a single ``phone`` field (no ``phone_number``).
-        "phone": owner.user.phone,
+        "name": owner.owner.get_full_name(),
+        "email": owner.owner.email,
+        "phone": owner.owner.phone,
         "bankAccount": owner.bank_account_number,
         "ifsc": owner.ifsc_code,
         "address1": "India",  # optional
@@ -40,36 +44,39 @@ def register_owner_with_cashfree(owner: OwnerBankDetails) -> None:
     return
 
 
-def pay_owner_after_rent(rent: RentRecord):
+def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
     if rent.payout_status == "SUCCESS":
         return {"status": "ALREADY_PAID", "message": "Payout already completed"}
 
-    if not rent.owner.beneficiary_id:
-        raise Exception("Owner not registered with Cashfree")
+    owner = rent.renter.unit.owner if rent.renter else None
+    if owner is None:
+        raise ValueError("Owner not found for rent")
+
+    try:
+        bank_details = OwnerBankDetails.objects.get(owner=owner)
+    except OwnerBankDetails.DoesNotExist:
+        raise ValueError("Owner not registered with Cashfree") from None
+
+    if not bank_details.beneficiary_id:
+        raise ValueError("Owner not registered with Cashfree")
 
     transfer_id = f"rent_{rent.id}"
     response = make_payout(
         transfer_id=transfer_id,
         amount=rent.amount_paid,
-        # ``RentRecord`` has no ``property`` field; the unit is
-        # accessed via ``rent.unit``.
         remarks=f"Rent for property {rent.unit.id}",
-        bene_id=rent.owner.beneficiary_id,
+        bene_id=bank_details.beneficiary_id,
     )
 
-    # Save result
     if response.get("status") == "SUCCESS":
         rent.payout_status = "SUCCESS"
         rent.payout_reference = transfer_id
     else:
         rent.payout_status = "FAILED"
 
+    rent.save()
+
     if rent.payout_status == "SUCCESS":
-        # msg = (
-        #     f"Namaste! Aapka ₹{rent.amount_paid} rent "
-        #     f"{rent.updated_at.date()} ko jama hua hai."
-        # )
-        # notify_renter(rent.renter, msg)
         msg_renter = (
             f"✅ Aapka ₹{rent.amount_paid} rent {rent.updated_at.date()} "
             "ko jama ho gaya hai."
@@ -80,8 +87,7 @@ def pay_owner_after_rent(rent: RentRecord):
             f"🎉 ₹{rent.amount_paid} rent {rent.updated_at.date()} "
             "ko aapke account mein transfer ho gaya hai."
         )
-        notify_owner(rent.owner, msg_owner)
-
+        notify_owner(owner, msg_owner)
     elif rent.payout_status == "FAILED":
         msg = (
             f"⚠️ ₹{rent.amount_paid} rent ka transfer fail ho gaya hai. "
@@ -89,24 +95,21 @@ def pay_owner_after_rent(rent: RentRecord):
         )
         notify_renter(rent.renter, msg)
 
-    rent.save()
-
-    # 🔔 WhatsApp Alert After Saving
-    # ``Renter.property`` is a @property returning self.unit. We
-    # chain to the unit's owner directly to avoid the deprecated
-    # indirection and to make the relationship explicit.
-    owner = rent.renter.unit.owner
-    profile = getattr(owner, "profile", None)
-    phone = getattr(
-        profile, "whatsapp_number", None
-    )  # Make sure this is stored in +91 format
-
-    if phone:
-        send_payout_notification(rent)
+    _send_whatsapp_payout_alert(rent)
     return response
 
 
-def register_cashfree_beneficiary(bank_details: OwnerBankDetails):
+def _send_whatsapp_payout_alert(rent: RentRecord) -> None:
+    if rent.renter is None:
+        return
+    owner = rent.renter.unit.owner
+    profile = getattr(owner, "profile", None)
+    phone = getattr(profile, "whatsapp_number", None)
+    if phone:
+        send_payout_notification(rent)
+
+
+def register_cashfree_beneficiary(bank_details: OwnerBankDetails) -> dict[str, Any]:
     bene_id = f"owner_{bank_details.owner.id}"
 
     payload = {
@@ -137,20 +140,22 @@ def register_cashfree_beneficiary(bank_details: OwnerBankDetails):
     return response
 
 
-def process_rent_payout(rent: RentRecord):
+def process_rent_payout(rent: RentRecord) -> dict[str, Any]:
     """Process payout to owner via Cashfree after rent is marked PAID."""
     try:
-        bank_details = OwnerBankDetails.objects.get(owner=rent.owner)
+        bank_details = OwnerBankDetails.objects.get(owner=rent.unit.owner)
     except OwnerBankDetails.DoesNotExist:
         logger.warning(
-            f"No bank details found for owner {rent.owner.id} (rent {rent.id})"
+            f"No bank details found for owner {rent.unit.owner.id} (rent {rent.id})"
         )
         rent.payout_status = "FAILED"
         rent.save(update_fields=["payout_status"])
         return {"status": "FAILED", "message": "Owner bank details not found"}
 
     if not bank_details.beneficiary_id:
-        logger.warning(f"No beneficiary_id for owner {rent.owner.id} (rent {rent.id})")
+        logger.warning(
+            f"No beneficiary_id for owner {rent.unit.owner.id} (rent {rent.id})"
+        )
         rent.payout_status = "FAILED"
         rent.save(update_fields=["payout_status"])
         return {
@@ -200,10 +205,7 @@ def process_rent_payout(rent: RentRecord):
 BASE_URL = ""
 
 
-# cashfree_service.py
-def delete_beneficiary(beneficiary_id: str):
-    from .cashfree_service import get_auth_token
-
+def delete_beneficiary(beneficiary_id: str) -> dict[str, Any]:
     url = f"{settings.CASHFREE_PAYOUT_BASE_TEST_URL}/payout/v1/deleteBeneficiary"
     payload = {"beneId": beneficiary_id}
     headers = {
@@ -211,4 +213,5 @@ def delete_beneficiary(beneficiary_id: str):
         "Content-Type": "application/json",
     }
     response = requests.post(url, headers=headers, json=payload, timeout=10)
-    return response.json()
+    data: dict[str, Any] = response.json()
+    return data

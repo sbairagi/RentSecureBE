@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import logging
+from typing import Any
+
 from notification.services.whatsapp_service import send_whatsapp_message
 
-# nosonar
-from properties.models import RentRecord
+logger = logging.getLogger(__name__)
 
 
-def notify_renter_about_late_fee(rent: RentRecord, late_fee: int | float) -> None:
+def notify_renter_about_late_fee(rent: Any, late_fee: int | float) -> None:
+
     if rent.renter is None:
         return
     msg = (
@@ -17,7 +20,8 @@ def notify_renter_about_late_fee(rent: RentRecord, late_fee: int | float) -> Non
 
 
 # Notify Owner
-def notify_owner_about_late_fee(rent: RentRecord, late_fee: int | float) -> None:
+def notify_owner_about_late_fee(rent: Any, late_fee: int | float) -> None:
+
     if rent.renter is None or rent.renter.unit is None:
         return
     msg = (

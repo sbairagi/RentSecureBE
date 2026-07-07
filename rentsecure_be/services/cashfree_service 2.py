@@ -6,19 +6,6 @@ import requests
 
 from django.conf import settings
 
-# nosonar
-from core.models import OwnerBankDetails
-
-# nosonar
-from notification.services.rent_notify_service import (
-    notify_owner,
-    notify_owner_post_payout,
-    notify_renter,
-    send_payout_notification,
-)
-
-# nosonar
-from properties.models import RentRecord
 from rentsecure_be.utils.cashfree_payout import (
     add_beneficiary,
     get_auth_token,
@@ -28,7 +15,11 @@ from rentsecure_be.utils.cashfree_payout import (
 logger = logging.getLogger(__name__)
 
 
-def register_owner_with_cashfree(owner: OwnerBankDetails) -> None:
+def register_owner_with_cashfree(owner: Any) -> None:
+    from core.models import OwnerBankDetails
+
+    if not isinstance(owner, OwnerBankDetails):
+        raise TypeError("owner must be an OwnerBankDetails instance")
     bene_id = f"owner_{owner.id}"
 
     data = {
@@ -48,8 +39,12 @@ def register_owner_with_cashfree(owner: OwnerBankDetails) -> None:
         owner.save()
 
 
-def _notify_payout_success(rent: RentRecord, owner: Any) -> None:
-    """Send success notifications to renter and owner after payout."""
+def _notify_payout_success(rent: Any, owner: Any) -> None:
+    from notification.services.rent_notify_service import notify_owner, notify_renter
+    from properties.models import RentRecord
+
+    if not isinstance(rent, RentRecord):
+        raise TypeError("rent must be a RentRecord instance")
     msg_renter = (
         f"✅ Aapka ₹{rent.amount_paid} rent {rent.updated_at.date()} "
         "ko jama ho gaya hai."
@@ -63,8 +58,12 @@ def _notify_payout_success(rent: RentRecord, owner: Any) -> None:
     notify_owner(owner, msg_owner)
 
 
-def _notify_payout_failed(rent: RentRecord) -> None:
-    """Send failure notification to renter after payout failure."""
+def _notify_payout_failed(rent: Any) -> None:
+    from notification.services.rent_notify_service import notify_renter
+    from properties.models import RentRecord
+
+    if not isinstance(rent, RentRecord):
+        raise TypeError("rent must be a RentRecord instance")
     msg = (
         f"⚠️ ₹{rent.amount_paid} rent ka transfer fail ho gaya hai. "
         f"Kripya apna bank detail verify karein."
@@ -72,9 +71,13 @@ def _notify_payout_failed(rent: RentRecord) -> None:
     notify_renter(rent.renter, msg)
 
 
-def _send_whatsapp_payout_alert(rent: RentRecord) -> None:
-    """Send WhatsApp payout notification after saving."""
-    if rent.renter is None or getattr(rent.renter, "unit", None) is None:
+def _send_whatsapp_payout_alert(rent: Any) -> None:
+    from notification.services.rent_notify_service import send_payout_notification
+    from properties.models import RentRecord
+
+    if not isinstance(rent, RentRecord):
+        raise TypeError("rent must be a RentRecord instance")
+    if rent.renter is None:
         return
     owner = rent.renter.unit.owner
     if owner is None:
@@ -85,7 +88,12 @@ def _send_whatsapp_payout_alert(rent: RentRecord) -> None:
         send_payout_notification(rent)
 
 
-def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
+def pay_owner_after_rent(rent: Any) -> dict[str, Any]:
+    from core.models import OwnerBankDetails
+    from properties.models import RentRecord
+
+    if not isinstance(rent, RentRecord):
+        raise TypeError("rent must be a RentRecord instance")
     if rent.payout_status == "SUCCESS":
         return {"status": "ALREADY_PAID", "message": "Payout already completed"}
 
@@ -126,7 +134,11 @@ def pay_owner_after_rent(rent: RentRecord) -> dict[str, Any]:
     return response
 
 
-def register_cashfree_beneficiary(bank_details: OwnerBankDetails) -> dict[str, Any]:
+def register_cashfree_beneficiary(bank_details: Any) -> dict[str, Any]:
+    from core.models import OwnerBankDetails
+
+    if not isinstance(bank_details, OwnerBankDetails):
+        raise TypeError("bank_details must be an OwnerBankDetails instance")
     bene_id = f"owner_{bank_details.owner.id}"
 
     payload = {
@@ -157,8 +169,17 @@ def register_cashfree_beneficiary(bank_details: OwnerBankDetails) -> dict[str, A
     return response
 
 
-def process_rent_payout(rent: RentRecord) -> dict[str, Any]:
+def process_rent_payout(rent: Any) -> dict[str, Any]:
     """Process payout to owner via Cashfree after rent is marked PAID."""
+    from core.models import OwnerBankDetails
+    from notification.services.rent_notify_service import (
+        notify_owner_post_payout,
+        send_payout_notification,
+    )
+    from properties.models import RentRecord
+
+    if not isinstance(rent, RentRecord):
+        raise TypeError("rent must be a RentRecord instance")
     owner = rent.renter.unit.owner if rent.renter else None
     if owner is None:
         rent.payout_status = "FAILED"

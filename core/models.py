@@ -16,16 +16,15 @@ class UpsertMixin:
     _upsert_filter_fields: tuple[str, ...] = ()
     _upsert_skip_fields: frozenset[str] = frozenset()
 
-    @override
     def save(self, *args: Any, **kwargs: Any) -> None:
-        if self.pk is None and self._upsert_filter_fields:
+        if self.pk is None and self._upsert_filter_fields:  # type: ignore[has-type]
             filter_kwargs = {
                 field: getattr(self, field) for field in self._upsert_filter_fields
             }
             if all(value is not None for value in filter_kwargs.values()):
-                existing = type(self).objects.filter(**filter_kwargs).first()
+                existing = type(self).objects.filter(**filter_kwargs).first()  # type: ignore[attr-defined]
                 if existing:
-                    for field in self._meta.fields:
+                    for field in self._meta.fields:  # type: ignore[attr-defined]
                         if field.name in self._upsert_skip_fields:
                             continue
                         setattr(existing, field.attname, getattr(self, field.attname))
@@ -33,7 +32,7 @@ class UpsertMixin:
                     self.pk = existing.pk
                     self.__dict__.update(existing.__dict__)
                     return
-        return super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)  # type: ignore[misc, no-any-return]
 
 
 # User Models
