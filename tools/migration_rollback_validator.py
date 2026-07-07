@@ -25,10 +25,14 @@ if str(REPO_ROOT) not in sys.path:
 
 django.setup()
 
-from django.apps import apps as django_apps  # noqa: E402
-from django.core.management import call_command  # noqa: E402
-from django.db.migrations.exceptions import IrreversibleError  # noqa: E402
-from django.db.migrations.loader import MigrationLoader  # noqa: E402
+from django.apps import apps as django_apps  # noqa: E402  # pylint: disable=C0413
+from django.core.management import call_command  # noqa: E402  # pylint: disable=C0413
+from django.db.migrations.exceptions import (  # noqa: E402  # pylint: disable=C0413
+    IrreversibleError,
+)
+from django.db.migrations.loader import (  # noqa: E402  # pylint: disable=C0413
+    MigrationLoader,
+)
 
 
 def _project_apps() -> list[str]:
@@ -47,9 +51,12 @@ def _project_apps() -> list[str]:
 
 
 def _graph_info(
-    app_label: str, loader: MigrationLoader
+    app_label: str,
 ) -> tuple[tuple[str, str], tuple[str, str]]:
     """Return ((app_label, latest_name), (app_label, previous_name)) from graph."""
+    from django.db import connection
+
+    loader = MigrationLoader(connection=connection)
     graph = loader.graph
     app_nodes = sorted(node for node in graph.nodes if node[0] == app_label)
     if len(app_nodes) < 2:
@@ -99,8 +106,11 @@ def _validate_latest_applied(
 
 
 def _validate_previous_in_graph(
-    previous_node: tuple[str, str], loader: MigrationLoader
+    previous_node: tuple[str, str],
 ) -> bool:
+    from django.db import connection
+
+    loader = MigrationLoader(connection=connection)
     if previous_node not in loader.graph.nodes:
         previous_name = previous_node[1]
         _print_error(
@@ -195,8 +205,6 @@ def main() -> int:
     project_apps = _project_apps()
     print(f"Discovered project apps with migrations: {project_apps}\n")
 
-    loader = MigrationLoader(connection=None)
-
     _migrate_all_once()
 
     tested = 0
@@ -205,7 +213,7 @@ def main() -> int:
 
     for app in project_apps:
         try:
-            latest_node, previous_node = _graph_info(app, loader)
+            latest_node, previous_node = _graph_info(app)
         except ValueError as exc:
             print(f"SKIP: {app} — {exc}")
             skipped += 1
@@ -226,7 +234,7 @@ def main() -> int:
         if not _validate_latest_applied(app, latest_name, before_rollback):
             failed += 1
             continue
-        if not _validate_previous_in_graph(previous_node, loader):
+        if not _validate_previous_in_graph(previous_node):
             failed += 1
             continue
 
