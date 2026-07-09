@@ -172,67 +172,24 @@ addopts = "--strict-markers --strict-config --tb=short --durations=10 --cov=rent
 filterwarnings = ["error", "ignore::DeprecationWarning", "ignore::PendingDeprecationWarning"]
 testpaths = ["."]
 
-[tool.coverage.run]
-branch = true
-source = ["rentsecure_be", "ai_assistant", "core", "dashboard", "documents", "finance", "notification", "properties", "referral_and_earn", "smartbot"]
-omit = [
-    "*/tests/*",
-    "*/test_*.py",
-    "*/tests.py",
-    "*/migrations/*",
-    "*/conftest.py",
-    "*/venv/*",
-    "*/.venv/*",
-    "*/__pycache__/*",
-    "*/.pytest_cache/*",
-    "*/properties/original_models.py",
-    "*/properties/refactored_models_combined.py",
-    "*/properties/pdf_utils.py",
-    "*/properties/scheduler.py",
-    "*/properties/_legacy/*",
-    "*/properties/management/*",
-    "*/properties/admin/*",
-    "*/management/commands/*",
-    "*/manage.py",
-    "*/ai_assistant/urls.py",
-    "*/ai_assistant/apps.py",
-    "*/ai_assistant/views.py",
-    "*/ai_assistant/services/i18n_service.py",
-    "*/notification/urls.py",
-    "*/notification/management/*",
-    "*/notification/views.py",
-    "*/smartbot/*",
-    "*/dashboard/*",
-    "*/rentsecure_be/*",
-    "*/apps.py",
-    "*/notification/services/whatsapp_service.py",
-    "*/notification/services/voice_service.py",
-    "*/notification/services/voice_note_service.py",
-    "*/notification/utils.py",
-    "*/notification/services/services.py",
-    "*/notification/services/extra_charge_reminders.py",
-    "*/notification/services/rent_notify_service.py",
-    "*/notification/services/late_fees_notify_service.py",
-    "*/properties/signals/__init__.py",
-    "*/properties/signals.py",
-    "*/properties/utils/__init__.py",
-    "*/properties/utils/onboarding_utils.py",
-    "*/properties/views/*",
-    "*/properties/serializers/*",
-    "*/properties/services/receipt_service.py",
-    "*/properties/constants.py",
-    "*/documents/utils.py",
-    "*/documents/views.py",
-    "*/finance/utils.py",
-    "*/finance/views.py",
-    "*/finance/urls.py",
-    "*/finance/serializers.py",
-    "*/core/views.py",
-    "*/core/utils/export_utils.py",
-    "*/core/models.py",
-    "*/properties/feature_enforcer.py",
-    "*/properties/models/unit_models.py",
-]
+ [tool.coverage.run]
+ branch = true
+ source = ["rentsecure_be", "ai_assistant", "core", "dashboard", "documents", "finance", "notification", "properties", "referral_and_earn", "smartbot"]
+ omit = [
+     "*/tests/*",
+     "*/test_*.py",
+     "*/tests.py",
+     "*/migrations/*",
+     "*/conftest.py",
+     "*/venv/*",
+     "*/.venv/*",
+     "*/__pycache__/*",
+     "*/.pytest_cache/*",
+     "*/properties/original_models.py",
+     "*/properties/refactored_models_combined.py",
+     "*/properties/_legacy/*",
+     "*/manage.py",
+ ]
 
 [tool.coverage.report]
 show_missing = true

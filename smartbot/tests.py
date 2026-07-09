@@ -1,4 +1,4 @@
-"""Tests for smartbot app actions and services"""
+"""Tests for smartbot app actions, services, views, and utilities."""
 
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -11,8 +11,11 @@ from smartbot.actions import (
     send_rent_agreement,
     send_rent_reminder,
 )
+from smartbot.intents import extract_intent
 from smartbot.services.agreement_service import generate_agreement_pdf
+from smartbot.services.gpt_services import gpt_smart_reply
 from smartbot.services.leegality_service import initiate_signature
+from smartbot.views import smart_bot_reply
 from smartbot.whatsapp_service import send_agreement_via_whatsapp
 
 User = get_user_model()
@@ -145,3 +148,73 @@ class SmartBotLeegalityServiceTest(TestCase):
         with patch("builtins.open", MagicMock()):
             result = initiate_signature(renter, "/tmp/agreement.pdf")
             self.assertEqual(result, {"status": "success"})
+
+
+class SmartBotIntentsTest(TestCase):
+    def test_extract_rent_reminder_intent(self):
+        self.assertEqual(
+            extract_intent("send a reminder to John for rent"), "send_rent_reminder"
+        )
+
+    def test_extract_retry_payout_intent(self):
+        self.assertEqual(extract_intent("retry payout for John"), "retry_payout")
+
+    def test_extract_send_agreement_intent(self):
+        self.assertEqual(
+            extract_intent("send agreement to John"), "send_rent_agreement"
+        )
+
+    def test_extract_signature_intent(self):
+        self.assertEqual(
+            extract_intent("esign the agreement"), "send_agreement_for_signature"
+        )
+
+    def test_extract_no_intent(self):
+        self.assertIsNone(extract_intent("hello there"))
+
+
+class SmartBotGptServiceTest(TestCase):
+    @patch("smartbot.services.gpt_services.openai")
+    def test_gpt_smart_reply(self, mock_openai):
+        mock_openai.api_key = "test-key"
+        mock_message = MagicMock()
+        mock_message.__getitem__ = MagicMock(return_value="Hello!")
+        choice_mock = MagicMock()
+        choice_mock.__getitem__ = MagicMock(return_value=mock_message)
+        choices_mock = [choice_mock]
+        response_mock = MagicMock()
+        response_mock.__getitem__ = MagicMock(return_value=choices_mock)
+        mock_openai.ChatCompletion.create.return_value = response_mock
+        user = MagicMock(username="testuser")
+        result = gpt_smart_reply(user, "What is my rent?", "No context")
+        self.assertIn("Hello!", result)
+
+
+class SmartBotViewTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="bot_user",
+            email="bot@test.com",
+            password="testpass123",
+            full_name="Bot User",
+            phone="+919999999999",
+        )
+
+    def test_smart_bot_reply_anonymous(self):
+        """Test that anonymous users get 401 response."""
+        from django.contrib.auth.models import AnonymousUser
+        from django.http import HttpRequest
+
+        request = HttpRequest()
+        request.method = "POST"
+        request.user = AnonymousUser()
+        response = smart_bot_reply(request)
+        self.assertEqual(response.status_code, 401)
+
+
+class SmartBotTasksTest(TestCase):
+    def test_poll_signature_status_noop(self):
+        from smartbot.tasks import poll_signature_status
+
+        result = poll_signature_status()
+        self.assertIsNone(result)

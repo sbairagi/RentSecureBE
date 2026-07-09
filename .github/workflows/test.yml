@@ -80,7 +80,6 @@ jobs:
             --cov=properties \
             --cov=referral_and_earn \
             --cov=smartbot \
-            tests/
       - name: Generate shard metrics
         shell: bash
         run: |
