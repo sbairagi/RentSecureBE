@@ -8,7 +8,7 @@ from typing import Any
 from django.core.management.base import BaseCommand
 
 from properties.models import RentRecord
-from properties.services.cashfree_service import process_rent_payout
+from rentsecure_be.services.cashfree_service import process_rent_payout
 from rentsecure_be.type_compat import override
 
 

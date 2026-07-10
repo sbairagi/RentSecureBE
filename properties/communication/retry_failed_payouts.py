@@ -4,7 +4,7 @@ from django.utils.timezone import now
 
 from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import RentRecord
-from properties.services.cashfree_service import process_rent_payout
+from rentsecure_be.services.cashfree_service import process_rent_payout
 
 
 def retry_failed_payouts() -> None:

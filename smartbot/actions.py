@@ -4,7 +4,7 @@ from django.core.files.storage import default_storage
 
 from notification.utils import send_whatsapp_message
 from properties.models import Renter, RentRecord
-from properties.services.cashfree_service import process_rent_payout
+from rentsecure_be.services.cashfree_service import process_rent_payout
 from smartbot.services.agreement_service import generate_agreement_pdf
 
 from .services.leegality_service import initiate_signature
