@@ -265,15 +265,10 @@ def get_used_units(
 
     runtime_user = get_user_model().objects.get(pk=user.pk)
 
-    filters: dict[str, object] = {"user": runtime_user, "feature_key": feature_key}
-    if isinstance(source, UserSubscription):
-        filters["user_subscription"] = source
-    else:
-        filters["addon_purchase"] = source
     used: int = (
-        UsageLimit.objects.filter(**filters).aggregate(total=Sum("usage_count"))[
-            "total"
-        ]
+        UsageLimit.objects.filter(user=runtime_user, feature_key=feature_key).aggregate(
+            total=Sum("usage_count")
+        )["total"]
         or 0
     )
     return int(used)

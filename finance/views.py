@@ -37,6 +37,10 @@ class CAProfileViewSet(viewsets.ModelViewSet[CAProfile]):
         permissions.IsAuthenticated
     ]
 
+    @override
+    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
+        serializer.save(user=self.request.user)
+
 
 class TaxSubmissionToCAViewSet(viewsets.ModelViewSet[TaxSubmissionToCA]):
     """CRUD for tax submissions belonging to the authenticated user only."""
@@ -57,7 +61,7 @@ class TaxSubmissionToCAViewSet(viewsets.ModelViewSet[TaxSubmissionToCA]):
     @override
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         """Persist the submission; ownership is bound by the related tax summary."""
-        serializer.save()
+        serializer.save(user=self.request.user)
 
 
 class DownloadTaxFilesView(APIView):
