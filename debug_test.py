@@ -24,7 +24,7 @@ User = get_user_model()
 
 @override_settings(ALLOWED_HOSTS=["*"])
 class DebugTest(TestCase):
-    def test_debug(self):
+    def test_debug(self) -> None:
         owner = User.objects.create_user(
             username="img_test",
             password="testpass123",  # noqa: S106
