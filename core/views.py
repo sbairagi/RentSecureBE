@@ -29,10 +29,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from core.utils.export_utils import generate_owner_rent_report
 from notification.services.rent_notify_service import send_payout_notification
-from rentsecure_be.services.cashfree_service import (
-    delete_beneficiary,
-    process_rent_payout,
-)
+from properties.services.cashfree_service import delete_beneficiary, process_rent_payout
 from rentsecure_be.utils.cashfree_payout import add_beneficiary
 
 from .models import (

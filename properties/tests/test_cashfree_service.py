@@ -8,7 +8,7 @@ from django.test import TestCase
 
 from core.models import OwnerBankDetails
 from properties.models import Building, Renter, RentRecord, Unit
-from rentsecure_be.services.cashfree_service import (
+from properties.services.cashfree_service import (
     delete_beneficiary,
     pay_owner_after_rent,
     process_rent_payout,
@@ -33,9 +33,7 @@ class RegisterOwnerWithCashfreeTest(TestCase):
             bank_account_number="1234567890",
             ifsc_code="HDFC0001234",
         )
-        with patch(
-            "rentsecure_be.services.cashfree_service.add_beneficiary"
-        ) as mock_add:
+        with patch("properties.services.cashfree_service.add_beneficiary") as mock_add:
             mock_add.return_value = {"status": "SUCCESS"}
             register_owner_with_cashfree(bank_details)
             bank_details.refresh_from_db()
@@ -61,9 +59,7 @@ class RegisterCashfreeBeneficiaryTest(TestCase):
             bank_account_number="9876543210",
             ifsc_code="ICIC0005678",
         )
-        with patch(
-            "rentsecure_be.services.cashfree_service.add_beneficiary"
-        ) as mock_add:
+        with patch("properties.services.cashfree_service.add_beneficiary") as mock_add:
             mock_add.return_value = {"status": "SUCCESS"}
             result = register_cashfree_beneficiary(bank_details)
             self.assertEqual(result["status"], "SUCCESS")
@@ -148,9 +144,7 @@ class PayOwnerAfterRentTest(TestCase):
             pay_owner_after_rent(self.rent)
 
     def test_pay_owner_after_rent_no_bank_details(self):
-        with patch(
-            "rentsecure_be.services.cashfree_service.make_payout"
-        ) as mock_payout:
+        with patch("properties.services.cashfree_service.make_payout") as mock_payout:
             mock_payout.return_value = {"status": "SUCCESS"}
             with self.assertRaises(ValueError):
                 pay_owner_after_rent(self.rent)
@@ -223,9 +217,7 @@ class ProcessRentPayoutTest(TestCase):
             ifsc_code="HDFC0001234",
             beneficiary_id="bene_123",
         )
-        with patch(
-            "rentsecure_be.services.cashfree_service.make_payout"
-        ) as mock_payout:
+        with patch("properties.services.cashfree_service.make_payout") as mock_payout:
             mock_payout.return_value = {"status": "SUCCESS"}
             import notification.services.rent_notify_service as rns_module
 
@@ -234,7 +226,7 @@ class ProcessRentPayoutTest(TestCase):
             rns_module.notify_owner_post_payout = lambda rent: None
             rns_module.send_payout_notification = lambda rent: None
             try:
-                import rentsecure_be.services.cashfree_service as cs_module
+                import properties.services.cashfree_service as cs_module
 
                 cs_module.RentRecord = RentRecord
                 try:
@@ -250,11 +242,9 @@ class ProcessRentPayoutTest(TestCase):
                 rns_module.send_payout_notification = original_send
 
     def test_process_payout_no_bank_details(self):
-        with patch(
-            "rentsecure_be.services.cashfree_service.make_payout"
-        ) as mock_payout:
+        with patch("properties.services.cashfree_service.make_payout") as mock_payout:
             mock_payout.return_value = {"status": "SUCCESS"}
-            import rentsecure_be.services.cashfree_service as cs_module
+            import properties.services.cashfree_service as cs_module
 
             cs_module.RentRecord = RentRecord
             try:
@@ -266,8 +256,8 @@ class ProcessRentPayoutTest(TestCase):
 
 
 class DeleteBeneficiaryTest(TestCase):
-    @patch("rentsecure_be.services.cashfree_service.requests")
-    @patch("rentsecure_be.services.cashfree_service.get_auth_token")
+    @patch("properties.services.cashfree_service.requests")
+    @patch("properties.services.cashfree_service.get_auth_token")
     def test_delete_beneficiary(self, mock_token, mock_requests):
         mock_token.return_value = "test-token"
         mock_response = MagicMock()

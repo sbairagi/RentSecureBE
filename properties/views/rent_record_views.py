@@ -17,7 +17,7 @@ from django.shortcuts import get_object_or_404
 from core.models import User
 from notification.services.rent_notify_service import send_payout_notification
 from notification.utils import send_whatsapp_message
-from rentsecure_be.services.cashfree_service import process_rent_payout
+from properties.services.cashfree_service import process_rent_payout
 from rentsecure_be.services.razorpay_service import create_payment_link
 from rentsecure_be.type_compat import override
 
