@@ -13,6 +13,8 @@ from notification.services.late_fees_notify_service import (
     notify_renter_about_late_fee,
 )
 from notification.services.rent_notify_service import (
+    _renter_lang,
+    _renter_phone,
     notify_owner,
     notify_owner_post_payout,
     notify_renter,
@@ -243,3 +245,219 @@ class NotificationUtilsTest(TestCase):
             mock_client.return_value.messages.create.return_value.sid = "SM123"
             result = utils_send_whatsapp("+911234567890", "Test message")
             self.assertEqual(result, "SM123")
+
+
+class RentNotifyServiceEdgeTests(TestCase):
+    def test_renter_phone_with_profile(self):
+        renter = MagicMock()
+        profile = MagicMock()
+        profile.whatsapp_number = "+919876543210"
+        renter.user = MagicMock()
+        renter.user.profile = profile
+        self.assertEqual(_renter_phone(renter), "+919876543210")
+
+    def test_renter_phone_without_profile(self):
+        renter = MagicMock()
+        renter.user = None
+        renter.whatsapp_number = "+912222222222"
+        self.assertEqual(_renter_phone(renter), "+912222222222")
+
+    def test_renter_phone_returns_empty(self):
+        renter = MagicMock()
+        renter.user = None
+        renter.whatsapp_number = ""
+        renter.phone = ""
+        self.assertEqual(_renter_phone(renter), "")
+
+    def test_renter_lang_with_profile(self):
+        renter = MagicMock()
+        profile = MagicMock()
+        profile.language_preference = "hi"
+        renter.user = MagicMock()
+        renter.user.profile = profile
+        self.assertEqual(_renter_lang(renter, default="en"), "hi")
+
+    def test_renter_lang_without_profile(self):
+        renter = MagicMock()
+        renter.user = None
+        self.assertEqual(_renter_lang(renter, default="en"), "en")
+
+    @patch(
+        "rentsecure_be.services.i18n_service.translate_msg",
+        side_effect=Exception("translation failed"),
+    )
+    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.voice_service.generate_voice_note")
+    def test_notify_renter_translation_exception(
+        self, mock_voice, mock_whatsapp, mock_translate
+    ):
+        renter = MagicMock()
+        renter.id = 1
+        renter.user.profile.whatsapp_number = "+911234567890"
+        renter.user.profile.language_preference = "en"
+        renter.whatsapp_number = ""
+        notify_renter(renter, "Test message")
+        mock_translate.assert_called_once()
+
+    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch(
+        "notification.services.whatsapp_service.send_whatsapp_message",
+        side_effect=Exception("send failed"),
+    )
+    @patch("notification.services.voice_service.generate_voice_note")
+    def test_notify_renter_whatsapp_exception(
+        self, mock_voice, mock_whatsapp, mock_translate
+    ):
+        renter = MagicMock()
+        renter.id = 1
+        renter.user.profile.whatsapp_number = "+911234567890"
+        renter.user.profile.language_preference = "en"
+        renter.whatsapp_number = ""
+        mock_translate.return_value = "Test"
+        notify_renter(renter, "Test message")
+        mock_translate.assert_called_once()
+
+    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.voice_service.generate_voice_note", return_value=None)
+    def test_notify_renter_skips_audio_when_none(
+        self, mock_voice, mock_whatsapp, mock_translate
+    ):
+        renter = MagicMock()
+        renter.id = 1
+        renter.user.profile.whatsapp_number = "+911234567890"
+        renter.user.profile.language_preference = "en"
+        renter.whatsapp_number = ""
+        mock_translate.return_value = "Test"
+        notify_renter(renter, "Test message")
+        mock_whatsapp.assert_called_once()
+        mock_voice.assert_called_once()
+
+    @patch(
+        "rentsecure_be.services.i18n_service.translate_msg",
+        side_effect=Exception("translation failed"),
+    )
+    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.voice_service.generate_voice_note")
+    def test_notify_owner_translation_exception(
+        self, mock_voice, mock_whatsapp, mock_translate
+    ):
+        owner = MagicMock()
+        owner.id = 1
+        owner.profile = MagicMock()
+        owner.profile.whatsapp_number = "+919876543210"
+        owner.profile.language_preference = "hi"
+        owner.phone = "+911111111111"
+        notify_owner(owner, "Test message")
+        mock_translate.assert_called_once()
+
+    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch(
+        "notification.services.whatsapp_service.send_whatsapp_message",
+        side_effect=Exception("send failed"),
+    )
+    @patch("notification.services.voice_service.generate_voice_note")
+    def test_notify_owner_whatsapp_exception(
+        self, mock_voice, mock_whatsapp, mock_translate
+    ):
+        owner = MagicMock()
+        owner.id = 1
+        owner.profile = MagicMock()
+        owner.profile.whatsapp_number = "+919876543210"
+        owner.profile.language_preference = "hi"
+        owner.phone = "+911111111111"
+        mock_translate.return_value = "Test"
+        notify_owner(owner, "Test message")
+        mock_translate.assert_called_once()
+
+    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.voice_service.generate_voice_note", return_value=None)
+    def test_notify_owner_skips_audio_when_none(
+        self, mock_voice, mock_whatsapp, mock_translate
+    ):
+        owner = MagicMock()
+        owner.id = 1
+        owner.profile = MagicMock()
+        owner.profile.whatsapp_number = "+919876543210"
+        owner.profile.language_preference = "hi"
+        owner.phone = "+911111111111"
+        mock_translate.return_value = "Test"
+        notify_owner(owner, "Test message")
+        mock_whatsapp.assert_called_once()
+        mock_voice.assert_called_once()
+
+    @patch("notification.services.rent_notify_service.notify_renter")
+    def test_send_payout_notification_exception(self, mock_notify):
+        mock_notify.side_effect = Exception("notify failed")
+        rent = MagicMock()
+        rent.payout_status = "SUCCESS"
+        rent.amount = 15000
+        rent.renter = MagicMock()
+        rent.id = 1
+        send_payout_notification(rent)
+        mock_notify.assert_called_once()
+
+    @patch("notification.services.whatsapp_service.upload_to_s3")
+    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.voice_service.generate_voice_note")
+    def test_notify_owner_post_payout_failed_status(
+        self, mock_voice, mock_whatsapp, mock_translate, mock_upload
+    ):
+        mock_upload.return_value = "https://test-bucket.s3.amazonaws.com/audio.mp3"
+        owner = MagicMock()
+        owner.id = 1
+        owner.profile = MagicMock()
+        owner.profile.whatsapp_number = "+919876543210"
+        owner.profile.language_preference = "hi"
+        owner.phone = "+911111111111"
+        mock_translate.return_value = "Translated"
+        rent = MagicMock()
+        rent.payout_status = "FAILED"
+        rent.amount = 15000
+        rent.renter.unit.owner = owner
+        notify_owner_post_payout(rent)
+        mock_translate.assert_called_once()
+
+    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.voice_service.generate_voice_note")
+    def test_notify_owner_post_payout_no_phone(
+        self, mock_voice, mock_whatsapp, mock_translate
+    ):
+        owner = MagicMock()
+        owner.id = 1
+        owner.profile = MagicMock()
+        owner.profile.whatsapp_number = ""
+        owner.profile.language_preference = "hi"
+        owner.phone = ""
+        mock_translate.return_value = "Translated"
+        rent = MagicMock()
+        rent.payout_status = "SUCCESS"
+        rent.amount = 15000
+        rent.renter.unit.owner = owner
+        notify_owner_post_payout(rent)
+        mock_translate.assert_called_once()
+        mock_whatsapp.assert_not_called()
+
+    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.voice_service.generate_voice_note", return_value=None)
+    def test_notify_owner_post_payout_skips_audio(
+        self, mock_voice, mock_whatsapp, mock_translate
+    ):
+        owner = MagicMock()
+        owner.id = 1
+        owner.profile = MagicMock()
+        owner.profile.whatsapp_number = "+919876543210"
+        owner.profile.language_preference = "hi"
+        owner.phone = "+911111111111"
+        mock_translate.return_value = "Translated"
+        rent = MagicMock()
+        rent.payout_status = "SUCCESS"
+        rent.amount = 15000
+        rent.renter.unit.owner = owner
+        notify_owner_post_payout(rent)
+        mock_whatsapp.assert_called_once()
+        mock_voice.assert_called_once()

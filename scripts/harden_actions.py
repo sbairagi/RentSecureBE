@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-REPO_ROOT = Path("/Users/sbairagi/Desktop/MVP Project/RentSecureBE")
+REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 ACTIONS_DIR = REPO_ROOT / ".github" / "actions"
 
@@ -186,7 +186,25 @@ def add_concurrency(content: str, workflow_name: str) -> str:
 
 
 def process_file(path: Path, workflow_name: str) -> None:
-    text = path.read_text(encoding="utf-8")
+    resolved = path.resolve()
+    try:
+        rel_path = resolved.relative_to(REPO_ROOT)
+    except ValueError:
+        print(f"Skipped: {resolved} (outside repo root)")
+        return
+
+    # Harden: reject any symbolic links or path traversal that bypasses
+    # the relative_to() containment check above. This is an explicit
+    # runtime defence-in-depth measure; do not remove without a security review.
+    write_path = (REPO_ROOT / rel_path).resolve()
+    if not (
+        write_path == REPO_ROOT.resolve()
+        or str(write_path).startswith(str(REPO_ROOT.resolve()) + "/")
+    ):
+        print(f"Skipped: {rel_path} (path escape attempt)")
+        return
+
+    text = resolved.read_text(encoding="utf-8")
     original = text
 
     text = action_replacements(text)
@@ -196,17 +214,10 @@ def process_file(path: Path, workflow_name: str) -> None:
         text = add_concurrency(text, workflow_name)
 
     if text != original:
-        resolved = path.resolve()
-        try:
-            rel_path = resolved.relative_to(REPO_ROOT)
-        except ValueError:
-            print(f"Skipped: {path.relative_to(REPO_ROOT)} (outside repo root)")
-            return
-        write_path = REPO_ROOT / rel_path
         write_path.write_text(text, encoding="utf-8")
-        print(f"Updated: {path.relative_to(REPO_ROOT)}")
+        print(f"Updated: {rel_path}")
     else:
-        print(f"Unchanged: {path.relative_to(REPO_ROOT)}")
+        print(f"Unchanged: {rel_path}")
 
 
 def main() -> None:

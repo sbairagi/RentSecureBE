@@ -363,11 +363,6 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
     return JsonResponse({"message": "Webhook received"}, status=200)
 
 
-# Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
-# from external payment/webhook providers. Those callers do not have browser
-# sessions and therefore cannot supply a CSRF token.
-# nosonar
-@csrf_exempt  # nosonar
 def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     """Create a Razorpay order for rent payment."""
     from properties.models.rent_record_models import RentRecord  # nosonar
@@ -427,6 +422,11 @@ def check_signature_or_return_http_response(
     return None
 
 
+# Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
+# from external payment/webhook providers. Those callers do not have browser
+# sessions and therefore cannot supply a CSRF token.
+# nosonar
+@csrf_exempt  # nosonar
 def razorpay_webhook(request: HttpRequest) -> JsonResponse:
     """Single Razorpay webhook handler with HMAC signature verification.
 
