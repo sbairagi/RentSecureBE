@@ -151,11 +151,6 @@ jobs:
             -Dsonar.projectKey=sbairagi_RentSecureBE
             ${{ steps.sonar-quality-gate-args.outputs.quality_gate_args }}
             -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.sources=.
-            -Dsonar.exclusions=**/migrations/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/*.pyc,**/db.sqlite3,**/.github/**,**/htmlcov/**,**/coverage.xml,**/tests/**,**/*_tests.py,**/test_*.py,**/*.html,**/properties/_legacy/**,**/properties/original_models.py,**/properties/refactored_models_combined.py,**/scripts/**,**/tools/**
-            -Dsonar.tests=.
-            -Dsonar.test.inclusions=**/test_*.py,**/tests.py,**/*_tests.py,**/tests/**/*.py
-            -Dsonar.python.unitTest.source=.
       - name: Enforce SonarCloud quality gate result
         if: ${{ github.ref == 'refs/heads/master' }}
         shell: bash
