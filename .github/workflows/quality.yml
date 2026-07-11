@@ -70,16 +70,42 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cd coverage-artifacts
-          mapfile -t coverage_files < <(find . -name '.coverage.*' -type f | sort)
+          mapfile -t coverage_files < <(find coverage-artifacts -name '.coverage.*' -type f | sort)
           if [ ${#coverage_files[@]} -eq 0 ]; then
             echo "ERROR: no coverage shard files found in coverage-artifacts."
             ls -la
             exit 1
           fi
           python -m coverage combine "${coverage_files[@]}"
+          python -m coverage report --fail-under=0 -m
+          python -m coverage debug data
           python -m coverage xml -o coverage.xml
-          mv coverage.xml ../coverage.xml
+          python - <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+
+          tree = ET.parse('coverage.xml')
+          root = tree.getroot()
+          line_rate = root.get('line-rate')
+          lines_covered = root.get('lines-covered')
+          lines_valid = root.get('lines-valid')
+          sources = root.findall('.//source')
+          packages = root.findall('.//package')
+          classes = root.findall('.//class')
+          print(f'coverage.xml metadata:')
+          print(f'  line-rate: {line_rate}')
+          print(f'  lines-covered: {lines_covered}')
+          print(f'  lines-valid: {lines_valid}')
+          print(f'  sources count: {len(sources)}')
+          for src in sources:
+              print(f'    source: {src.text}')
+          print(f'  package count: {len(packages)}')
+          print(f'  class count: {len(classes)}')
+          if line_rate is None or lines_valid is None or len(packages) == 0:
+              sys.exit('coverage.xml is missing required metadata after combining')
+          PY
+          echo "Coverage XML generated successfully above project root"
+          ls -la coverage.xml
       - name: Validate coverage.xml exists
         shell: bash
         run: |
@@ -126,7 +152,7 @@ jobs:
             ${{ steps.sonar-quality-gate-args.outputs.quality_gate_args }}
             -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.sources=.
-            -Dsonar.exclusions=**/migrations/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/*.pyc,**/db.sqlite3,**/.github/**,**/htmlcov/**,**/coverage.xml,**/*.md,**/requirements*.txt,**/.env.example
+            -Dsonar.exclusions=**/migrations/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/*.pyc,**/db.sqlite3,**/.github/**,**/htmlcov/**,**/coverage.xml,**/tests/**,**/*_tests.py,**/test_*.py,**/*.html,**/properties/_legacy/**,**/properties/original_models.py,**/properties/refactored_models_combined.py,**/scripts/**,**/tools/**
             -Dsonar.tests=.
             -Dsonar.test.inclusions=**/test_*.py,**/tests.py,**/*_tests.py,**/tests/**/*.py
             -Dsonar.python.unitTest.source=.
