@@ -174,7 +174,7 @@ testpaths = ["."]
 
  [tool.coverage.run]
  branch = true
- source = ["rentsecure_be", "ai_assistant", "core", "dashboard", "documents", "finance", "notification", "properties", "referral_and_earn", "smartbot"]
+ source = ["."]
  omit = [
      "*/tests/*",
      "*/test_*.py",

@@ -132,6 +132,12 @@ jobs:
           print('coverage.xml parsed successfully and contains coverage metadata.')
           PY
 
+      - name: Validate coverage completeness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/validate_coverage_xml.py
+
       - name: Compute Sonar quality gate args
         id: sonar-quality-gate-args
         run: |
