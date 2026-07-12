@@ -233,21 +233,22 @@ class ProcessRentPayoutTest(TestCase):
             original_send = rns_module.send_payout_notification
             rns_module.notify_owner_post_payout = lambda rent: None
             rns_module.send_payout_notification = lambda rent: None
-            try:
-                import rentsecure_be.services.cashfree_service as cs_module
+            import rentsecure_be.services.cashfree_service as cs_module
 
-                cs_module.RentRecord = RentRecord
-                try:
-                    result = process_rent_payout(self.rent)
-                    self.assertEqual(result["status"], "SUCCESS")
-                    self.rent.refresh_from_db()
-                    self.assertEqual(self.rent.payout_status, "SUCCESS")
-                finally:
-                    if hasattr(cs_module, "RentRecord"):
-                        delattr(cs_module, "RentRecord")
+            original_rent_record = getattr(cs_module, "RentRecord", None)
+            cs_module.RentRecord = RentRecord
+            try:
+                result = process_rent_payout(self.rent)
+                self.assertEqual(result["status"], "SUCCESS")
+                self.rent.refresh_from_db()
+                self.assertEqual(self.rent.payout_status, "SUCCESS")
             finally:
-                rns_module.notify_owner_post_payout = original_notify
-                rns_module.send_payout_notification = original_send
+                if original_rent_record is not None:
+                    cs_module.RentRecord = original_rent_record
+                elif hasattr(cs_module, "RentRecord"):
+                    delattr(cs_module, "RentRecord")
+            rns_module.notify_owner_post_payout = original_notify
+            rns_module.send_payout_notification = original_send
 
     def test_process_payout_no_bank_details(self):
         with patch(
@@ -256,12 +257,15 @@ class ProcessRentPayoutTest(TestCase):
             mock_payout.return_value = {"status": "SUCCESS"}
             import rentsecure_be.services.cashfree_service as cs_module
 
+            original_rent_record = getattr(cs_module, "RentRecord", None)
             cs_module.RentRecord = RentRecord
             try:
                 result = process_rent_payout(self.rent)
                 self.assertEqual(result["status"], "FAILED")
             finally:
-                if hasattr(cs_module, "RentRecord"):
+                if original_rent_record is not None:
+                    cs_module.RentRecord = original_rent_record
+                elif hasattr(cs_module, "RentRecord"):
                     delattr(cs_module, "RentRecord")
 
 

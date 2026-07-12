@@ -1,12 +1,19 @@
 """Tests for properties/serializers/extra_charge_serializers.py."""
 
 from datetime import date
+from unittest.mock import MagicMock
+
+from rest_framework import serializers
 
 from django.test import TestCase
 
 from core.models import User
 from properties.models import Building, ExtraCharge, Renter, Unit
 from properties.serializers.extra_charge_serializers import ExtraChargeSerializer
+
+
+class _FakeExtraCharge:
+    """Bare stand-in for ExtraCharge used when bypassing field-level DRF validation."""
 
 
 class ExtraChargeSerializerTests(TestCase):
@@ -62,20 +69,47 @@ class ExtraChargeSerializerTests(TestCase):
         self.assertEqual(data["amount"], "500.00")
         self.assertEqual(data["status"], "DUE")
 
-    def test_validate_missing_renter_and_unit(self):
-        data = {
-            "renter": None,
-            "unit": None,
-            "name": "Maintenance",
-            "amount": 500,
-            "due_date": "2024-02-01",
-            "status": "DUE",
-        }
+    def test_validate_missing_renter_and_unit_fields(self):
         request = type("Req", (), {"user": self.owner})()
-        serializer = ExtraChargeSerializer(data=data, context={"request": request})
+        bare = MagicMock(spec=ExtraCharge)
+        bare.renter = None
+        bare.unit = None
+        serializer = ExtraChargeSerializer(bare, context={"request": request})
+        with self.assertRaises(serializers.ValidationError):
+            serializer.validate({})
+
+    def test_validate_missing_renter_only(self):
+        request = type("Req", (), {"user": self.owner})()
+        bare = MagicMock(spec=ExtraCharge)
+        bare.renter = None
+        bare.unit = self.unit
+        serializer = ExtraChargeSerializer(bare, context={"request": request})
+        with self.assertRaises(serializers.ValidationError):
+            serializer.validate({})
+
+    def test_validate_missing_unit_only(self):
+        request = type("Req", (), {"user": self.owner})()
+        bare = MagicMock(spec=ExtraCharge)
+        bare.renter = self.renter
+        bare.unit = None
+        serializer = ExtraChargeSerializer(bare, context={"request": request})
+        with self.assertRaises(serializers.ValidationError):
+            serializer.validate({})
+
+    def test_validate_missing_renter_and_unit(self):
+        request = type("Req", (), {"user": self.owner})()
+        serializer = ExtraChargeSerializer(
+            data={
+                "renter": None,
+                "unit": None,
+                "name": "Maintenance",
+                "amount": 500,
+                "due_date": "2024-02-01",
+                "status": "DUE",
+            },
+            context={"request": request},
+        )
         self.assertFalse(serializer.is_valid())
-        self.assertIn("renter", serializer.errors)
-        self.assertIn("unit", serializer.errors)
 
     def test_validate_renter_unit_mismatch(self):
         other_owner = User.objects.create_user(
@@ -159,3 +193,60 @@ class ExtraChargeSerializerTests(TestCase):
         self.assertEqual(instance.name, "Electricity")
         self.assertEqual(instance.amount, 750)
         self.assertEqual(instance.status, "PAID")
+
+    def test_update_owner_mismatch(self):
+        attacker = User.objects.create_user(
+            username="update_attacker", password="p", full_name="Attacker", phone="+94"
+        )
+        data = {
+            "name": "Hacked",
+            "amount": 99999,
+        }
+        request = type("Req", (), {"user": attacker})()
+        serializer = ExtraChargeSerializer(
+            self.extra, data=data, context={"request": request}, partial=True
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("non_field_errors", serializer.errors)
+        self.assertIn(
+            "You do not own the selected unit.",
+            str(serializer.errors["non_field_errors"]),
+        )
+
+    def test_update_renter_unit_mismatch(self):
+        other_owner = User.objects.create_user(
+            username="mismatch_owner", password="p", full_name="Mismatch", phone="+95"
+        )
+        other_building = Building.objects.create(
+            name="MismatchB",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+            owner=other_owner,
+        )
+        other_unit = Unit.objects.create(
+            owner=other_owner,
+            building=other_building,
+            unit="M1",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        data = {
+            "unit": other_unit.id,
+        }
+        request = type("Req", (), {"user": self.owner})()
+        serializer = ExtraChargeSerializer(
+            self.extra, data=data, context={"request": request}, partial=True
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("non_field_errors", serializer.errors)
+        self.assertIn(
+            "Renter does not belong to the selected unit.",
+            str(serializer.errors["non_field_errors"]),
+        )

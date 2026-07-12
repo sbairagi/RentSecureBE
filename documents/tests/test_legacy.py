@@ -1,4 +1,9 @@
-"""Tests for documents app"""
+"""Legacy tests migrated from documents/tests.py → pytest style.
+
+These tests were originally written as Django TestCase classes and
+kept for historical compatibility. New coverage-focused tests are in
+test_views.py in this same package.
+"""
 
 from unittest.mock import MagicMock, patch
 
@@ -15,7 +20,7 @@ from documents.views import (
 User = get_user_model()
 
 
-class GenerateRentAgreementPdfViewSetTest(TestCase):
+class LegacyGenerateRentAgreementPdfViewSetTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="doc_user",
@@ -58,7 +63,7 @@ class GenerateRentAgreementPdfViewSetTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class GenerateUnitHistoryPdfTest(TestCase):
+class LegacyGenerateUnitHistoryPdfTest(TestCase):
     @patch("documents.utils.render_to_string")
     @patch("weasyprint.HTML")
     @patch("documents.utils.PdfWriter")
@@ -72,7 +77,7 @@ class GenerateUnitHistoryPdfTest(TestCase):
         self.assertIsNotNone(result)
 
 
-class GenerateUnitDossierPdfViewSetTest(TestCase):
+class LegacyGenerateUnitDossierPdfViewSetTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="dossier_user",
@@ -103,7 +108,7 @@ class GenerateUnitDossierPdfViewSetTest(TestCase):
             self.assertEqual(response.status_code, 200)
 
 
-class DownloadUnitHistoryTest(TestCase):
+class LegacyDownloadUnitHistoryTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="hist_user",

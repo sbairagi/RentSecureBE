@@ -1,314 +1,316 @@
-"""Tests for properties/views/property_views.py — property rent and analytics views."""
+"""Tests for properties/views/property_views.py — full branch coverage."""
 
-import json
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser
-from django.test import TestCase
+import pytest
+from rest_framework.test import APIClient
 
-from core.models import SubscriptionPlan, UserSubscription
-from properties.models import Building, Renter, RentRecord, Unit
-from properties.views.property_views import (
-    my_rent_records,
-    revoke_rent_agreement,
-    unit_analytics,
-    update_late_fee_policy,
-)
+from django.contrib.auth import get_user_model
+
+from core.models import UserSubscription
+from properties.models import Renter, RentRecord
 
 User = get_user_model()
 
 
-def _jwt_request(user, method="GET", data=None, path="/test"):
-    from rest_framework_simplejwt.tokens import RefreshToken
-
-    from django.test import RequestFactory
-
-    factory = RequestFactory()
-    token = RefreshToken.for_user(user).access_token
-    if data and method in ("POST", "PATCH", "PUT"):
-        req = getattr(factory, method.lower())(
-            path,
-            data=json.dumps(data),
-            content_type="application/json",
-            HTTP_AUTHORIZATION=f"Bearer {token}",
-        )
-    else:
-        req = getattr(factory, method.lower())(
-            path, HTTP_AUTHORIZATION=f"Bearer {token}"
-        )
-    return req
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def _auth_client(user):
+    client = APIClient()
+    client.force_authenticate(user=user)
+    return client
 
 
-def _anon_request(method="GET", data=None, path="/test"):
-    from django.test import RequestFactory
-
-    factory = RequestFactory()
-    if data and method in ("POST", "PATCH", "PUT"):
-        req = getattr(factory, method.lower())(
-            path,
-            data=json.dumps(data),
-            content_type="application/json",
-        )
-    else:
-        req = getattr(factory, method.lower())(path)
-    req.user = AnonymousUser()
-    return req
-
-
-class MyRentRecordsTests(TestCase):
-    def setUp(self):
-        self.owner = User.objects.create_user(
-            username="myrr_owner", password="p", full_name="MyRROwner", phone="+1"
-        )
-        self.renter_user = User.objects.create_user(
-            username="myrr_renter", password="p", full_name="MyRRRenter", phone="+2"
-        )
-        self.plan = SubscriptionPlan.objects.create(
-            name="myrr_pro",
-            monthly_price=Decimal("29.99"),
-            yearly_price=Decimal("299.99"),
-        )
-        UserSubscription.objects.create(user=self.owner, plan=self.plan, is_active=True)
-        self.building = Building.objects.create(
-            owner=self.owner,
-            name="MRRB",
-            address_line="1 St",
-            city="C",
-            state="S",
-            country="CO",
-            postal_code="1",
-        )
-        self.unit = Unit.objects.create(
-            owner=self.owner,
-            building=self.building,
-            unit="MRR101",
-            unit_type="flat",
-            address_line="1 St",
-            city="C",
-            state="S",
-            country="CO",
-            postal_code="1",
-        )
-        self.renter = Renter.objects.create(
-            unit=self.unit,
-            name="MRR Renter",
+# ---------------------------------------------------------------------------
+# my_rent_records
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestMyRentRecords:
+    def test_owner_gets_own_rent_records(
+        self, settings, owner, subscription, building, unit
+    ):
+        settings.ROOT_URLCONF = "properties.tests.test_property_views_urls"
+        renter = Renter.objects.create(
+            unit=unit,
+            name="Test Renter",
             phone="+911234567890",
-            email="mrr@test.com",
+            email="renter@test.com",
             rent_amount=Decimal("10000"),
             start_date=date.today(),
-            user=self.renter_user,
         )
-        self.rent = RentRecord.objects.create(
-            unit=self.unit,
-            renter=self.renter,
+        RentRecord.objects.create(
+            unit=unit,
+            renter=renter,
             amount=Decimal("10000"),
             payment_method="upi",
             status="PENDING",
-            due_date=date.today() + timedelta(days=7),
+            due_date=date.today(),
         )
+        client = _auth_client(owner)
+        response = client.get("/my-rent-records/")
+        assert response.status_code == 200
+        assert len(response.data) == 1
 
-    def test_renter_gets_empty_for_non_owner(self):
-        response = my_rent_records(_jwt_request(self.renter_user))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 0)
-
-    def test_owner_gets_own_rent_records(self):
-        response = my_rent_records(_jwt_request(self.owner))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 1)
-
-    def test_anonymous_returns_401(self):
-        response = my_rent_records(_anon_request())
-        self.assertEqual(response.status_code, 401)
-
-
-class UpdateLateFeePolicyTests(TestCase):
-    def setUp(self):
-        self.owner = User.objects.create_user(
-            username="late_owner", password="p", full_name="LateOwner", phone="+1"
+    def test_non_owner_gets_empty(self, settings, owner, subscription, building, unit):
+        settings.ROOT_URLCONF = "properties.tests.test_property_views_urls"
+        other = User.objects.create_user(
+            username="myrr_other", password="p", full_name="Other", phone="+19999999999"
         )
-        self.plan = SubscriptionPlan.objects.create(
-            name="late_pro",
-            monthly_price=Decimal("29.99"),
-            yearly_price=Decimal("299.99"),
+        UserSubscription.objects.create(
+            user=other, plan=subscription.plan, is_active=True
         )
-        UserSubscription.objects.create(user=self.owner, plan=self.plan, is_active=True)
-        self.building = Building.objects.create(
-            owner=self.owner,
-            name="LFB",
-            address_line="1 St",
-            city="C",
-            state="S",
-            country="CO",
-            postal_code="1",
+        renter = Renter.objects.create(
+            unit=unit,
+            name="Test Renter",
+            phone="+911234567890",
+            email="renter@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=date.today(),
         )
-        self.unit = Unit.objects.create(
-            owner=self.owner,
-            building=self.building,
-            unit="LF101",
-            unit_type="flat",
-            address_line="1 St",
-            city="C",
-            state="S",
-            country="CO",
-            postal_code="1",
+        RentRecord.objects.create(
+            unit=unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="upi",
+            status="PENDING",
+            due_date=date.today(),
         )
-        self.renter = Renter.objects.create(
-            unit=self.unit,
+        client = _auth_client(other)
+        response = client.get("/my-rent-records/")
+        assert response.status_code == 200
+        assert len(response.data) == 0
+
+    def test_anonymous_returns_401_from_view_body(self, settings):
+        settings.ROOT_URLCONF = "properties.tests.test_property_views_urls"
+        with patch(
+            "rest_framework.permissions.IsAuthenticated.has_permission",
+            return_value=True,
+        ):
+            client = APIClient()
+            response = client.get("/my-rent-records/")
+        assert response.status_code == 401
+        assert response.data == {"error": "Unauthorized"}
+
+
+# ---------------------------------------------------------------------------
+# update_late_fee_policy
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestUpdateLateFeePolicy:
+    def test_owner_updates_late_fee(
+        self, settings, owner, subscription, building, unit
+    ):
+        settings.ROOT_URLCONF = "properties.tests.test_property_views_urls"
+        renter = Renter.objects.create(
+            unit=unit,
             name="LF Renter",
             phone="+911234567890",
             email="lf@test.com",
             rent_amount=Decimal("10000"),
             start_date=date.today(),
         )
-        self.rent = RentRecord.objects.create(
-            unit=self.unit,
-            renter=self.renter,
+        rent = RentRecord.objects.create(
+            unit=unit,
+            renter=renter,
             amount=Decimal("1000"),
             payment_method="upi",
             status="PENDING",
             due_date=date.today(),
             late_fee=Decimal("0"),
         )
+        client = _auth_client(owner)
+        response = client.patch(
+            f"/update-late-fee/{rent.id}/",
+            {"late_fee_amount": "500"},
+            format="json",
+        )
+        assert response.status_code == 200
+        rent.refresh_from_db()
+        assert rent.late_fee == Decimal("500")
 
-    def test_update_late_fee_policy(self):
-        response = update_late_fee_policy(
-            _jwt_request(self.owner, method="PATCH", data={"late_fee_amount": "500"}),
-            property_id=self.rent.id,
+    def test_anonymous_returns_401_from_view_body(
+        self, settings, owner, subscription, building, unit
+    ):
+        settings.ROOT_URLCONF = "properties.tests.test_property_views_urls"
+        renter = Renter.objects.create(
+            unit=unit,
+            name="LF Renter",
+            phone="+911234567890",
+            email="lf@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=date.today(),
         )
-        self.assertEqual(response.status_code, 200)
-        self.rent.refresh_from_db()
-        self.assertEqual(self.rent.late_fee, Decimal("500"))
+        rent = RentRecord.objects.create(
+            unit=unit,
+            renter=renter,
+            amount=Decimal("1000"),
+            payment_method="upi",
+            status="PENDING",
+            due_date=date.today(),
+            late_fee=Decimal("0"),
+        )
+        with patch(
+            "rest_framework.permissions.IsAuthenticated.has_permission",
+            return_value=True,
+        ):
+            client = APIClient()
+            response = client.patch(
+                f"/update-late-fee/{rent.id}/",
+                {"late_fee_amount": "100"},
+                format="json",
+            )
+        assert response.status_code == 401
+        assert response.data == {"error": "Unauthorized"}
 
-    def test_update_late_fee_policy_anonymous_returns_401(self):
-        response = update_late_fee_policy(
-            _anon_request(method="PATCH"), property_id=self.rent.id
-        )
-        self.assertEqual(response.status_code, 401)
 
-
-class RevokeRentAgreementTests(TestCase):
-    def setUp(self):
-        self.owner = User.objects.create_user(
-            username="revoke_owner", password="p", full_name="RevokeOwner", phone="+1"
-        )
-        self.plan = SubscriptionPlan.objects.create(
-            name="revoke_pro",
-            monthly_price=Decimal("29.99"),
-            yearly_price=Decimal("299.99"),
-        )
-        UserSubscription.objects.create(user=self.owner, plan=self.plan, is_active=True)
-        self.building = Building.objects.create(
-            owner=self.owner,
-            name="RevB",
-            address_line="1 St",
-            city="C",
-            state="S",
-            country="CO",
-            postal_code="1",
-        )
-        self.unit = Unit.objects.create(
-            owner=self.owner,
-            building=self.building,
-            unit="Rev101",
-            unit_type="flat",
-            address_line="1 St",
-            city="C",
-            state="S",
-            country="CO",
-            postal_code="1",
-        )
-        self.renter = Renter.objects.create(
-            unit=self.unit,
+# ---------------------------------------------------------------------------
+# revoke_rent_agreement
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestRevokeRentAgreement:
+    def test_owner_revokes_agreement(
+        self, settings, owner, subscription, building, unit
+    ):
+        settings.ROOT_URLCONF = "properties.tests.test_property_views_urls"
+        renter = Renter.objects.create(
+            unit=unit,
             name="Rev Renter",
             phone="+911234567890",
             email="rev@test.com",
             rent_amount=Decimal("10000"),
             start_date=date.today(),
         )
-
-    def test_revoke_rent_agreement(self):
-        with patch(
-            "properties.views.property_views.send_whatsapp_message"
-        ) as mock_send:
-            response = revoke_rent_agreement(
-                _jwt_request(
-                    self.owner, method="POST", data={"reason": "Owner request"}
-                ),
-                renter_id=self.renter.id,
+        client = _auth_client(owner)
+        with (
+            patch("properties.views.property_views.send_whatsapp_message") as mock_send,
+            patch("properties.views.property_views.update_unit_status") as mock_status,
+        ):
+            response = client.post(
+                f"/revoke-agreement/{renter.id}/",
+                {"reason": "Owner request"},
+                format="json",
             )
-        self.assertEqual(response.status_code, 200)
-        self.renter.refresh_from_db()
-        self.assertTrue(self.renter.is_agreement_revoked)
-        self.assertEqual(self.renter.revocation_reason, "Owner request")
+        assert response.status_code == 200
+        assert response.data["success"] is True
+        renter.refresh_from_db()
+        assert renter.is_agreement_revoked is True
+        assert renter.revocation_reason == "Owner request"
         mock_send.assert_called_once()
+        mock_status.assert_called_once_with(unit)
 
-    def test_revoke_rent_agreement_anonymous_returns_401(self):
-        response = revoke_rent_agreement(
-            _anon_request(method="POST"), renter_id=self.renter.id
+    def test_revoke_with_active_agreement_sets_none(
+        self, monkeypatch, settings, owner, subscription, building, unit
+    ):
+        settings.ROOT_URLCONF = "properties.tests.test_property_views_urls"
+        renter = Renter.objects.create(
+            unit=unit,
+            name="Rev Renter",
+            phone="+911234567890",
+            email="rev@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=date.today(),
         )
-        self.assertEqual(response.status_code, 401)
+        monkeypatch.setattr(Renter, "active_agreement", object(), raising=False)
+        client = _auth_client(owner)
+        with (
+            patch("properties.views.property_views.send_whatsapp_message") as mock_send,
+            patch("properties.views.property_views.update_unit_status") as mock_status,
+        ):
+            response = client.post(
+                f"/revoke-agreement/{renter.id}/",
+                {"reason": "Owner request"},
+                format="json",
+            )
+        assert response.status_code == 200
+        renter.refresh_from_db()
+        assert renter.is_agreement_revoked is True
+        mock_send.assert_called_once()
+        mock_status.assert_called_once_with(unit)
+
+    def test_anonymous_returns_401_from_view_body(
+        self, settings, owner, subscription, building, unit
+    ):
+        settings.ROOT_URLCONF = "properties.tests.test_property_views_urls"
+        renter = Renter.objects.create(
+            unit=unit,
+            name="Rev Renter",
+            phone="+911234567890",
+            email="rev@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=date.today(),
+        )
+        with patch(
+            "rest_framework.permissions.IsAuthenticated.has_permission",
+            return_value=True,
+        ):
+            client = APIClient()
+            response = client.post(
+                f"/revoke-agreement/{renter.id}/",
+                {"reason": "Owner request"},
+                format="json",
+            )
+        assert response.status_code == 401
+        assert response.data == {"error": "Unauthorized"}
 
 
-class UnitAnalyticsTests(TestCase):
-    def setUp(self):
-        self.owner = User.objects.create_user(
-            username="analytics_owner",
-            password="p",
-            full_name="AnalyticsOwner",
-            phone="+1",
-        )
-        self.plan = SubscriptionPlan.objects.create(
-            name="analytics_pro",
-            monthly_price=Decimal("29.99"),
-            yearly_price=Decimal("299.99"),
-        )
-        UserSubscription.objects.create(user=self.owner, plan=self.plan, is_active=True)
-        self.building = Building.objects.create(
-            owner=self.owner,
-            name="AnB",
-            address_line="1 St",
-            city="C",
-            state="S",
-            country="CO",
-            postal_code="1",
-        )
-        self.unit = Unit.objects.create(
-            owner=self.owner,
-            building=self.building,
-            unit="An101",
-            unit_type="flat",
-            address_line="1 St",
-            city="C",
-            state="S",
-            country="CO",
-            postal_code="1",
-            is_vacant=False,
-        )
-
-    def test_unit_analytics_returns_data(self):
+# ---------------------------------------------------------------------------
+# unit_analytics
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestUnitAnalytics:
+    def test_owner_analytics_returns_data(
+        self, settings, owner, subscription, building, unit
+    ):
+        settings.ROOT_URLCONF = "properties.tests.test_property_views_urls"
+        client = _auth_client(owner)
         with patch(
             "properties.views.property_views.get_owner_analytics"
         ) as mock_analytics:
-            mock_analytics.return_value = {"total_units": 1, "occupied": 1, "vacant": 0}
-            response = unit_analytics(_jwt_request(self.owner))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["total_units"], 1)
+            mock_analytics.return_value = {
+                "owner_id": owner.id,
+                "total_buildings": 1,
+                "buildings": [],
+                "aggregate": {
+                    "total_units": 1,
+                    "occupied": 1,
+                    "vacant": 0,
+                    "overall_occupancy_rate": 100.0,
+                },
+            }
+            response = client.get("/unit-analytics/")
+        assert response.status_code == 200
+        assert response.data["owner_id"] == owner.id
 
-    def test_unit_analytics_by_building(self):
+    def test_owner_analytics_by_building(
+        self, settings, owner, subscription, building, unit
+    ):
+        settings.ROOT_URLCONF = "properties.tests.test_property_views_urls"
+        client = _auth_client(owner)
         with patch(
             "properties.services.unit_service.get_building_analytics"
         ) as mock_building:
-            mock_building.return_value = {"building": "AnB", "units": 1}
-            response = unit_analytics(
-                _jwt_request(self.owner, path=f"/test?building_id={self.building.id}")
-            )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["data"]["building"], "AnB")
+            mock_building.return_value = {
+                "building_id": building.id,
+                "building_name": building.name,
+                "total_units": 1,
+                "occupied_units": 1,
+                "vacant_units": 0,
+                "occupancy_rate": 100.0,
+            }
+            response = client.get(f"/unit-analytics/?building_id={building.id}")
+        assert response.status_code == 200
+        assert response.data["data"]["building_id"] == building.id
 
-    def test_unit_analytics_anonymous_returns_401(self):
-        response = unit_analytics(_anon_request())
-        self.assertEqual(response.status_code, 401)
+    def test_anonymous_returns_401_from_view_body(self, settings):
+        settings.ROOT_URLCONF = "properties.tests.test_property_views_urls"
+        with patch(
+            "rest_framework.permissions.IsAuthenticated.has_permission",
+            return_value=True,
+        ):
+            client = APIClient()
+            response = client.get("/unit-analytics/")
+        assert response.status_code == 401
+        assert response.data == {"error": "Unauthorized"}

@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 from decimal import Decimal
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
@@ -22,6 +22,8 @@ from properties.utils.utils import (
     check_feature_limit,
     deduct_feature_usage_with_priority,
     enforce_limit,
+    generate_file_hash,
+    generate_rent_invoice_pdf,
     get_feature_limit,
     get_limit_for_source,
     get_plan_limit,
@@ -516,3 +518,241 @@ class ApplyLateFeeIfNeededTests(TestCase):
         self.assertEqual(rent.late_fee, Decimal("300"))
         self.assertEqual(mock_notify_renter.call_count, 2)
         self.assertEqual(mock_notify_owner.call_count, 2)
+
+
+# ---------------------------------------------------------------------------
+# Additional edge-case tests to reach ≥95% coverage of properties/utils/utils.py
+# ---------------------------------------------------------------------------
+
+
+class TestHasRemainingUsageEdgeCases(TestCase):
+    """Cover lines 64-65: TypeError/ValueError and UsageLimit.DoesNotExist."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="hasusage_edge", password="p", full_name="HasUsageEdge", phone="+1"
+        )
+
+    def test_non_numeric_plan_limit_returns_false(self):
+        plan = SubscriptionPlan.objects.create(
+            name="hasusage_invalid",
+            monthly_price=Decimal("0"),
+            yearly_price=Decimal("0"),
+        )
+        UserSubscription.objects.create(user=self.user, plan=plan, is_active=True)
+        PlanFeatureLimit.objects.create(plan=plan, feature_key="max_units", value="abc")
+        self.assertFalse(has_remaining_usage(self.user, "max_units"))
+
+    def test_numeric_plan_limit_no_usage_limit_returns_false(self):
+        plan = SubscriptionPlan.objects.create(
+            name="hasusage_numeric_nousage",
+            monthly_price=Decimal("0"),
+            yearly_price=Decimal("0"),
+        )
+        UserSubscription.objects.create(user=self.user, plan=plan, is_active=True)
+        PlanFeatureLimit.objects.create(plan=plan, feature_key="max_units", value="5")
+        self.assertFalse(has_remaining_usage(self.user, "max_units"))
+
+
+class TestEnforceLimitEdgeCases(TestCase):
+    """Cover line 127 ('no' value) and line 131->exit (non-numeric int() failure)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="enforce_edge", password="p", full_name="EnforceEdge", phone="+1"
+        )
+
+    def test_feature_disabled_raises_permission_denied(self):
+        plan = SubscriptionPlan.objects.create(
+            name="enforce_no",
+            monthly_price=Decimal("0"),
+            yearly_price=Decimal("0"),
+        )
+        UserSubscription.objects.create(user=self.user, plan=plan, is_active=True)
+        PlanFeatureLimit.objects.create(plan=plan, feature_key="max_units", value="no")
+        with self.assertRaises(PermissionDenied):
+            enforce_limit(self.user, "max_units")
+
+    def test_non_numeric_limit_propagates_value_error(self):
+        plan = SubscriptionPlan.objects.create(
+            name="enforce_invalid",
+            monthly_price=Decimal("0"),
+            yearly_price=Decimal("0"),
+        )
+        UserSubscription.objects.create(user=self.user, plan=plan, is_active=True)
+        PlanFeatureLimit.objects.create(plan=plan, feature_key="max_units", value="abc")
+        with self.assertRaises(ValueError):
+            enforce_limit(self.user, "max_units")
+
+
+class TestGenerateFileHash(TestCase):
+    """Cover lines 139-142: generate_file_hash body."""
+
+    def test_returns_sha256_hex(self):
+        mock_file = MagicMock()
+        mock_file.chunks.return_value = [b"hello world"]
+        result = generate_file_hash(mock_file)
+        self.assertEqual(len(result), 64)
+        self.assertTrue(all(c in "0123456789abcdef" for c in result))
+
+
+class TestGenerateRentInvoicePdf(TestCase):
+    """Cover lines 146-153: generate_rent_invoice_pdf body."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.owner = User.objects.create_user(
+            username="pdf_owner", password="p", full_name="PdfOwner", phone="+1"
+        )
+        cls.building = Building.objects.create(
+            owner=cls.owner,
+            name="PDFB",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        cls.unit = Unit.objects.create(
+            owner=cls.owner,
+            building=cls.building,
+            unit="PDF1",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        cls.renter = Renter.objects.create(
+            unit=cls.unit,
+            name="PDF Renter",
+            phone="+911234567890",
+            email="pdf@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=date.today(),
+        )
+        cls.rent = RentRecord.objects.create(
+            unit=cls.unit,
+            renter=cls.renter,
+            amount=Decimal("1000"),
+            payment_method="upi",
+            status="PENDING",
+            due_date=date.today(),
+            late_fee=Decimal("0"),
+            discount=Decimal("0"),
+        )
+
+    @patch("properties.utils.utils.render_to_string")
+    @patch("weasyprint.HTML")
+    def test_returns_pdf_path(self, mock_html_cls, mock_render):
+        mock_render.return_value = "<html>invoice</html>"
+        mock_html = MagicMock()
+        mock_html_cls.return_value = mock_html
+
+        mock_tmp_file = MagicMock()
+        mock_tmp_file.name = "/tmp/test_invoice.pdf"
+
+        with patch("tempfile.NamedTemporaryFile") as mock_tmp:
+            mock_tmp.return_value = mock_tmp_file
+            result = generate_rent_invoice_pdf(self.rent)
+
+        self.assertTrue(result.endswith(".pdf"))
+        mock_html.write_pdf.assert_called_once_with(target=result)
+
+
+class TestCheckFeatureLimitEdgeCases(TestCase):
+    """Cover line 195->200: plan_limit is None (subscription exists, no PlanFeatureLimit)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="check_edge", password="p", full_name="CheckEdge", phone="+1"
+        )
+
+    def test_subscription_without_plan_limit_returns_zero(self):
+        plan = SubscriptionPlan.objects.create(
+            name="check_nolimit",
+            monthly_price=Decimal("0"),
+            yearly_price=Decimal("0"),
+        )
+        UserSubscription.objects.create(user=self.user, plan=plan, is_active=True)
+        # No PlanFeatureLimit for this feature
+        allowed, current, sub_limit, addon = check_feature_limit(self.user, "max_units")
+        self.assertEqual(sub_limit, 0)
+        self.assertFalse(allowed)
+
+
+class TestGetFeatureLimitEdgeCases(TestCase):
+    """Cover lines 229 and 236 in get_feature_limit."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="getlimit_edge", password="p", full_name="GetLimitEdge", phone="+1"
+        )
+
+    def test_usage_limit_exists_returns_count(self):
+        plan = SubscriptionPlan.objects.create(
+            name="getlimit_usage",
+            monthly_price=Decimal("0"),
+            yearly_price=Decimal("0"),
+        )
+        UserSubscription.objects.create(user=self.user, plan=plan, is_active=True)
+        UsageLimit.objects.create(
+            user=self.user, feature_key="max_units", usage_count=7
+        )
+        result = get_feature_limit(self.user, "max_units")
+        self.assertEqual(result, 7)
+
+    def test_no_usage_limit_no_plan_limit_returns_zero(self):
+        plan = SubscriptionPlan.objects.create(
+            name="getlimit_none",
+            monthly_price=Decimal("0"),
+            yearly_price=Decimal("0"),
+        )
+        UserSubscription.objects.create(user=self.user, plan=plan, is_active=True)
+        # No UsageLimit and no PlanFeatureLimit
+        result = get_feature_limit(self.user, "max_units")
+        self.assertEqual(result, 0)
+
+
+class TestGetLimitForSourceEdgeCases(TestCase):
+    """Cover lines 252->254: addon_value is not int or str."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="getlimit_user_edge",
+            password="p",
+            full_name="GetLimitUserEdge",
+            phone="+1",
+        )
+
+    def test_addon_with_non_int_str_feature_returns_zero(self):
+        addon = AddOnPurchase.objects.create(
+            user=self.user, name="max_units", amount=Decimal("5")
+        )
+        addon.features = {"max_units": [1, 2, 3]}
+        result = get_limit_for_source(addon, "max_units")
+        self.assertEqual(result, 0)
+
+
+class TestDeductFeatureUsageWithPriorityEdgeCases(TestCase):
+    """Cover line 288: ValidationError raised inside the for-loop on second iteration."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="deduct_edge", password="p", full_name="DeductEdge", phone="+1"
+        )
+
+    def test_deduct_more_than_available_raises(self):
+        plan = SubscriptionPlan.objects.create(
+            name="deduct_insufficient",
+            monthly_price=Decimal("0"),
+            yearly_price=Decimal("0"),
+        )
+        UserSubscription.objects.create(user=self.user, plan=plan, is_active=True)
+        PlanFeatureLimit.objects.create(plan=plan, feature_key="max_units", value="1")
+        with self.assertRaises(ValidationError):
+            deduct_feature_usage_with_priority(
+                self.user, "max_units", units_to_deduct=2
+            )

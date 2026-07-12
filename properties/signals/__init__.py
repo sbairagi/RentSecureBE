@@ -195,11 +195,10 @@ def notify_owner_if_unit_vacant(
         if not Renter.objects.filter(unit=unit, status="active").exists():
             from notification.services.whatsapp_service import send_whatsapp_message
 
-            phone = getattr(
-                getattr(owner, "userprofile", None),
-                "whatsapp_number",
-                getattr(owner, "whatsapp_number", ""),
-            )
+            profile = getattr(owner, "userprofile", None)
+            phone = (
+                getattr(profile, "whatsapp_number", None) if profile else None
+            ) or getattr(owner, "whatsapp_number", "")
             if phone:
                 send_whatsapp_message(
                     phone,
