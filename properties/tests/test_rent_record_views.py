@@ -475,6 +475,9 @@ class TestGetLatestDueRentAPI:
     def test_no_pending_rent_returns_message(self, db):
         """Renter with no pending rent gets a message."""
         owner = UserFactory()
+        building = BuildingFactory(owner=owner)
+        unit = UnitFactory(owner=owner, building=building)
+        _renter = RenterFactory(unit=unit, user=owner)
 
         c = _make_client(owner)
         response = c.get("/properties/renter/rent-due/")
