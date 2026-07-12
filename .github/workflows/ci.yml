@@ -110,6 +110,20 @@ jobs:
     uses: ./.github/workflows/architecture.yml
     secrets: inherit
 
+  uml:
+    name: Stage 2 │ UML Generation
+    needs: [lint-fast]
+    uses: ./.github/workflows/uml.yml
+    with:
+      commit_changes: ${{ github.event_name == 'push' }}
+    secrets: inherit
+
+  uml-validation:
+    name: Stage 2 │ UML Validation
+    needs: [lint-fast]
+    uses: ./.github/workflows/uml-validation.yml
+    secrets: inherit
+
   security-fast:
     name: Stage 2 │ Security Fast
     needs: [lint-fast]
@@ -142,7 +156,7 @@ jobs:
 
   quality:
     name: Stage 3 │ Quality
-    needs: [test-shard-1, test-shard-2, test-shard-3, test-shard-4, shard-validation, contract-tests, architecture]
+    needs: [test-shard-1, test-shard-2, test-shard-3, test-shard-4, shard-validation, contract-tests, architecture, uml, uml-validation]
     uses: ./.github/workflows/quality.yml
     secrets: inherit
 

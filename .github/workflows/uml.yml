@@ -1,34 +1,29 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# STAGE 5: Architecture & Maintainability
+# STAGE 6: UML Automation System
 # ═══════════════════════════════════════════════════════════════════════════════
-# Runs: import-linter, dependency graph generation, architecture metrics
+# Runs: PlantUML, Mermaid, C4 diagrams, domain flows, deployment diagrams
 # ═══════════════════════════════════════════════════════════════════════════════
-name: Architecture
+name: UML Generation
 
 'on':
   workflow_call:
     inputs:
-      generate_uml:
-        description: "Generate UML diagrams as part of architecture stage"
-        required: false
-        type: boolean
-        default: false
       commit_changes:
-        description: "Commit generated architecture artifacts back to repo"
+        description: "Commit generated UML diagrams back to repo"
         required: false
         type: boolean
         default: false
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: architecture-${{ github.ref }}
+  group: uml-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   scan-architecture:
-    name: Stage 5a │ Scan Repository Architecture
+    name: Scan Repository Architecture
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -53,7 +48,7 @@ jobs:
       - uses: ./.github/actions/setup-python-environment
         with:
           python-version: "3.12"
-          cache-key-suffix: "-architecture"
+          cache-key-suffix: "-uml"
       - name: Scan repository architecture
         id: scan
         shell: bash
@@ -64,42 +59,10 @@ jobs:
             --output architecture/generated/architecture.json
           echo "metadata-path=architecture/generated/architecture.json" >> "$GITHUB_OUTPUT"
 
-  import-linter:
-    name: Stage 5a │ Import Linter (Architecture)
+  generate-plantuml:
+    name: Generate PlantUML Diagrams
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          fetch-depth: 1
-      - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
-        with:
-          egress-policy: block
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            api.github.com:443
-            pypi.org:443
-            pypi.pythonhosted.org:443
-            files.pythonhosted.org:443
-      - uses: ./.github/actions/setup-python-environment
-        with:
-          python-version: "3.12"
-          extra-packages: "import-linter"
-          cache-key-suffix: "-architecture"
-      - name: Run import-linter
-        shell: bash
-        run: |
-          set -euo pipefail
-          lint-imports --config import-linter.ini
-
-  dependency-graph:
-    name: Stage 5b │ Dependency Graph
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     needs: [scan-architecture]
     steps:
       - name: Checkout code
@@ -121,127 +84,33 @@ jobs:
       - uses: ./.github/actions/setup-python-environment
         with:
           python-version: "3.12"
-          extra-packages: "pydeps"
-          cache-key-suffix: "-architecture"
-      - name: Generate dependency graph
+          extra-packages: "plantuml"
+          cache-key-suffix: "-uml"
+      - name: Install PlantUML
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/diagrams/generate_dependency_graph.py \
-            --output architecture/generated/dependency-graph \
-            --format dot mmd puml \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
-
-  module-dependency:
-    name: Stage 5c │ Module Dependency Graph
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [scan-architecture]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          fetch-depth: 1
-      - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
-        with:
-          egress-policy: block
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            api.github.com:443
-            pypi.org:443
-            pypi.pythonhosted.org:443
-            files.pythonhosted.org:443
-      - uses: ./.github/actions/setup-python-environment
-        with:
-          python-version: "3.12"
-          extra-packages: "pydeps"
-          cache-key-suffix: "-architecture"
-      - name: Generate module dependency graph
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq graphviz default-jre-headless
+      - name: Generate PlantUML diagrams
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/diagrams/generate_dependency_graph.py \
-            --output architecture/generated/module-dependency-graph \
-            --format dot mmd \
-            --type module \
+          python scripts/diagrams/generate_plantuml.py \
+            --output docs/uml/generated/plantuml \
+            --all \
             --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
-
-  architecture-metrics:
-    name: Stage 5d │ Architecture Metrics
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [scan-architecture]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          fetch-depth: 1
-      - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
-        with:
-          egress-policy: block
-          disable-sudo: true
-          allowed-endpoints: >
-            github.com:443
-            objects.githubusercontent.com:443
-            api.github.com:443
-            pypi.org:443
-            pypi.pythonhosted.org:443
-            files.pythonhosted.org:443
-      - uses: ./.github/actions/setup-python-environment
-        with:
-          python-version: "3.12"
-          cache-key-suffix: "-architecture"
-      - name: Generate architecture metrics
-        shell: bash
-        run: |
-          set -euo pipefail
-          python scripts/diagrams/generate_architecture_metrics.py \
-            --output architecture/generated/architecture-metrics.json \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
-      - name: Upload metrics artifact
+      - name: Upload PlantUML artifacts
         uses: actions/upload-artifact@5d5d22a31266ced268874a74ed47e6c27a02e914 # v4
         with:
-          name: architecture-metrics
-          path: architecture/generated/architecture-metrics.json
+          name: uml-plantuml
+          path: docs/uml/generated/plantuml/**
           retention-days: 30
 
-  architecture-summary:
-    name: Stage 5e │ Architecture Summary
+  generate-mermaid:
+    name: Generate Mermaid Diagrams
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [scan-architecture, architecture-metrics]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          fetch-depth: 1
-      - name: Download artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: architecture-metrics
-          path: architecture/
-      - name: Generate architecture summary
-        shell: bash
-        run: |
-          set -euo pipefail
-          python scripts/diagrams/generate_architecture_summary.py \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }} \
-            --output architecture/generated/architecture-summary.md
-      - name: Upload summary
-        uses: actions/upload-artifact@5d5d22a31266ced268874a74ed47e6c27a02e914 # v4
-        with:
-          name: architecture-summary
-          path: architecture/generated/architecture-summary.md
-          retention-days: 30
-
-  component-dependency:
-    name: Stage 5f │ Component Dependency Graph
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     needs: [scan-architecture]
     steps:
       - name: Checkout code
@@ -263,16 +132,233 @@ jobs:
       - uses: ./.github/actions/setup-python-environment
         with:
           python-version: "3.12"
-          extra-packages: "pydeps"
-          cache-key-suffix: "-architecture"
-      - name: Generate component dependency graph
+          cache-key-suffix: "-uml"
+      - name: Generate Mermaid diagrams
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/diagrams/generate_dependency_graph.py \
-            --output architecture/generated/component-dependency-graph \
-            --format dot mmd puml \
-            --type component \
+          python scripts/diagrams/generate_mermaid.py \
+            --output docs/uml/generated/mermaid \
+            --all \
             --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+      - name: Upload Mermaid artifacts
+        uses: actions/upload-artifact@5d5d22a31266ced268874a74ed47e6c27a02e914 # v4
+        with:
+          name: uml-mermaid
+          path: docs/uml/generated/mermaid/**
+          retention-days: 30
 
+  generate-c4:
+    name: Generate C4 Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml"
+      - name: Generate C4 diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_c4.py \
+            --output docs/diagrams/generated/c4 \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+      - name: Upload C4 artifacts
+        uses: actions/upload-artifact@5d5d22a31266ced268874a74ed47e6c27a02e914 # v4
+        with:
+          name: uml-c4
+          path: docs/diagrams/generated/c4/**
+          retention-days: 30
+
+  generate-domain:
+    name: Generate Domain Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml"
+      - name: Generate domain diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_domain_diagrams.py \
+            --output docs/uml/generated/domain \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+      - name: Upload domain artifacts
+        uses: actions/upload-artifact@5d5d22a31266ced268874a74ed47e6c27a02e914 # v4
+        with:
+          name: uml-domain
+          path: docs/uml/generated/domain/**
+          retention-days: 30
+
+  generate-flows:
+    name: Generate Flow Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml"
+      - name: Generate flow diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_flow_diagrams.py \
+            --output docs/diagrams/generated/flows \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+      - name: Upload flow artifacts
+        uses: actions/upload-artifact@5d5d22a31266ced268874a74ed47e6c27a02e914 # v4
+        with:
+          name: uml-flows
+          path: docs/diagrams/generated/flows/**
+          retention-days: 30
+
+  generate-infrastructure:
+    name: Generate Infrastructure Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml"
+      - name: Generate infrastructure diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_infrastructure_diagrams.py \
+            --output docs/diagrams/generated/infrastructure \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+      - name: Upload infrastructure artifacts
+        uses: actions/upload-artifact@5d5d22a31266ced268874a74ed47e6c27a02e914 # v4
+        with:
+          name: uml-infrastructure
+          path: docs/diagrams/generated/infrastructure/**
+          retention-days: 30
+
+  generate-ddd:
+    name: Generate DDD Bounded Context Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml"
+      - name: Generate DDD bounded context diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_ddd_diagrams.py \
+            --output docs/uml/generated/ddd \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+      - name: Upload DDD artifacts
+        uses: actions/upload-artifact@5d5d22a31266ced268874a74ed47e6c27a02e914 # v4
+        with:
+          name: uml-ddd
+          path: docs/uml/generated/ddd/**
+          retention-days: 30
+
+  commit-uml:
+    name: Commit UML Artifacts
     if: ${{ false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [scan-architecture, generate-plantuml, generate-mermaid, generate-c4, generate-domain, generate-flows, generate-infrastructure, generate-ddd]
+    steps:
+      - name: Disabled - use artifacts instead
+        run: echo "UML artifacts are uploaded as workflow artifacts. Use ghpulls or release workflow to publish."

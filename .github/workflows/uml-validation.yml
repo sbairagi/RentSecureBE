@@ -1,38 +1,29 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# STAGE 5: Architecture & Maintainability
+# STAGE 7: UML Validation
 # ═══════════════════════════════════════════════════════════════════════════════
-# Runs: import-linter, dependency graph generation, architecture metrics
+# Runs: PlantUML syntax, Mermaid syntax, broken links, missing diagrams
 # ═══════════════════════════════════════════════════════════════════════════════
-name: Architecture
+name: UML Validation
 
 'on':
   workflow_call:
-    inputs:
-      generate_uml:
-        description: "Generate UML diagrams as part of architecture stage"
-        required: false
-        type: boolean
-        default: false
-      commit_changes:
-        description: "Commit generated architecture artifacts back to repo"
-        required: false
-        type: boolean
-        default: false
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
 
 permissions:
   contents: read
 
 concurrency:
-  group: architecture-${{ github.ref }}
+  group: uml-validation-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  scan-architecture:
-    name: Stage 5a │ Scan Repository Architecture
+  validate-metadata:
+    name: Validate Architecture Metadata
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      metadata-path: ${{ steps.scan.outputs.metadata-path }}
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -53,19 +44,50 @@ jobs:
       - uses: ./.github/actions/setup-python-environment
         with:
           python-version: "3.12"
-          cache-key-suffix: "-architecture"
-      - name: Scan repository architecture
-        id: scan
-        shell: bash
+          cache-key-suffix: "-uml-validation"
+      - name: Generate architecture metadata
         run: |
           set -euo pipefail
-          mkdir -p architecture/generated
           python scripts/diagrams/generate_uml_from_ast.py \
             --output architecture/generated/architecture.json
-          echo "metadata-path=architecture/generated/architecture.json" >> "$GITHUB_OUTPUT"
+      - name: Validate metadata schema
+        shell: bash
+        run: |
+           set -euo pipefail
+           python -c "
+             import json, sys
+             from pathlib import Path
 
-  import-linter:
-    name: Stage 5a │ Import Linter (Architecture)
+             path = Path('architecture/generated/architecture.json')
+             if not path.exists():
+                 print('ERROR: architecture.json not found')
+                 sys.exit(1)
+
+             data = json.loads(path.read_text())
+             required_keys = ['generated_at', 'root', 'django_apps', 'installed_apps', 'feature_flags', 'apps', 'urls', 'dependencies', 'celery', 'infrastructure']
+             missing = [k for k in required_keys if k not in data]
+             if missing:
+                 print(f'ERROR: Missing required keys: {missing}')
+                 sys.exit(1)
+
+             if not isinstance(data['apps'], dict) or len(data['apps']) == 0:
+                 print('ERROR: apps must be a non-empty dict')
+                 sys.exit(1)
+
+             for app_name, app_data in data['apps'].items():
+                 if not isinstance(app_data, dict):
+                     print(f'ERROR: app {app_name} must be a dict')
+                     sys.exit(1)
+                 for key in ['models', 'views', 'serializers', 'urls', 'services', 'files']:
+                     if key not in app_data:
+                         print(f'ERROR: app {app_name} missing key: {key}')
+                         sys.exit(1)
+
+             print('Architecture metadata validation passed')
+           "
+
+  validate-plantuml:
+    name: Validate PlantUML Syntax
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -83,24 +105,32 @@ jobs:
             objects.githubusercontent.com:443
             api.github.com:443
             pypi.org:443
-            pypi.pythonhosted.org:443
+            pypi.python.org:443
             files.pythonhosted.org:443
       - uses: ./.github/actions/setup-python-environment
         with:
           python-version: "3.12"
-          extra-packages: "import-linter"
-          cache-key-suffix: "-architecture"
-      - name: Run import-linter
+          extra-packages: "plantuml"
+          cache-key-suffix: "-uml-validation"
+      - name: Install PlantUML
         shell: bash
         run: |
           set -euo pipefail
-          lint-imports --config import-linter.ini
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq graphviz default-jre-headless
+      - name: Validate PlantUML diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/validate_diagrams.py \
+            --type plantuml \
+            --path docs/uml/generated/plantuml \
+            --fail-on-error
 
-  dependency-graph:
-    name: Stage 5b │ Dependency Graph
+  validate-mermaid:
+    name: Validate Mermaid Syntax
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [scan-architecture]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -116,27 +146,25 @@ jobs:
             objects.githubusercontent.com:443
             api.github.com:443
             pypi.org:443
-            pypi.pythonhosted.org:443
+            pypi.python.org:443
             files.pythonhosted.org:443
       - uses: ./.github/actions/setup-python-environment
         with:
           python-version: "3.12"
-          extra-packages: "pydeps"
-          cache-key-suffix: "-architecture"
-      - name: Generate dependency graph
+          cache-key-suffix: "-uml-validation"
+      - name: Validate Mermaid diagrams
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/diagrams/generate_dependency_graph.py \
-            --output architecture/generated/dependency-graph \
-            --format dot mmd puml \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+          python scripts/diagrams/validate_diagrams.py \
+            --type mermaid \
+            --path docs/uml/generated/mermaid \
+            --fail-on-error
 
-  module-dependency:
-    name: Stage 5c │ Module Dependency Graph
+  validate-c4:
+    name: Validate C4 Diagrams
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [scan-architecture]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -152,28 +180,25 @@ jobs:
             objects.githubusercontent.com:443
             api.github.com:443
             pypi.org:443
-            pypi.pythonhosted.org:443
+            pypi.python.org:443
             files.pythonhosted.org:443
       - uses: ./.github/actions/setup-python-environment
         with:
           python-version: "3.12"
-          extra-packages: "pydeps"
-          cache-key-suffix: "-architecture"
-      - name: Generate module dependency graph
+          cache-key-suffix: "-uml-validation"
+      - name: Validate C4 diagrams
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/diagrams/generate_dependency_graph.py \
-            --output architecture/generated/module-dependency-graph \
-            --format dot mmd \
-            --type module \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+          python scripts/diagrams/validate_diagrams.py \
+            --type c4 \
+            --path docs/diagrams/generated/c4 \
+            --fail-on-error
 
-  architecture-metrics:
-    name: Stage 5d │ Architecture Metrics
+  validate-links:
+    name: Validate Diagram Links
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [scan-architecture]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -189,60 +214,24 @@ jobs:
             objects.githubusercontent.com:443
             api.github.com:443
             pypi.org:443
-            pypi.pythonhosted.org:443
+            pypi.python.org:443
             files.pythonhosted.org:443
       - uses: ./.github/actions/setup-python-environment
         with:
           python-version: "3.12"
-          cache-key-suffix: "-architecture"
-      - name: Generate architecture metrics
+          cache-key-suffix: "-uml-validation"
+      - name: Validate diagram links
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/diagrams/generate_architecture_metrics.py \
-            --output architecture/generated/architecture-metrics.json \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
-      - name: Upload metrics artifact
-        uses: actions/upload-artifact@5d5d22a31266ced268874a74ed47e6c27a02e914 # v4
-        with:
-          name: architecture-metrics
-          path: architecture/generated/architecture-metrics.json
-          retention-days: 30
+          python scripts/diagrams/validate_diagram_links.py \
+            --docs-dir docs/uml \
+            --fail-on-broken
 
-  architecture-summary:
-    name: Stage 5e │ Architecture Summary
+  check-missing-diagrams:
+    name: Check Missing Diagrams
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [scan-architecture, architecture-metrics]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          fetch-depth: 1
-      - name: Download artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: architecture-metrics
-          path: architecture/
-      - name: Generate architecture summary
-        shell: bash
-        run: |
-          set -euo pipefail
-          python scripts/diagrams/generate_architecture_summary.py \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }} \
-            --output architecture/generated/architecture-summary.md
-      - name: Upload summary
-        uses: actions/upload-artifact@5d5d22a31266ced268874a74ed47e6c27a02e914 # v4
-        with:
-          name: architecture-summary
-          path: architecture/generated/architecture-summary.md
-          retention-days: 30
-
-  component-dependency:
-    name: Stage 5f │ Component Dependency Graph
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [scan-architecture]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -258,21 +247,51 @@ jobs:
             objects.githubusercontent.com:443
             api.github.com:443
             pypi.org:443
-            pypi.pythonhosted.org:443
+            pypi.python.org:443
             files.pythonhosted.org:443
       - uses: ./.github/actions/setup-python-environment
         with:
           python-version: "3.12"
-          extra-packages: "pydeps"
-          cache-key-suffix: "-architecture"
-      - name: Generate component dependency graph
+          cache-key-suffix: "-uml-validation"
+      - name: Check for missing diagrams
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/diagrams/generate_dependency_graph.py \
-            --output architecture/generated/component-dependency-graph \
-            --format dot mmd puml \
-            --type component \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+          python scripts/diagrams/check_missing_diagrams.py \
+            --docs-dir docs \
+            --required-diagrams scripts/diagrams/required_diagrams.txt \
+            --fail-on-missing
 
-    if: ${{ false }}
+  check-outdated:
+    name: Check Outdated Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml-validation"
+      - name: Check for outdated diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/check_outdated_diagrams.py \
+            --source-dir . \
+            --diagram-dir docs/uml \
+            --fail-on-outdated

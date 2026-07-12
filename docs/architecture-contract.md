@@ -1,6 +1,6 @@
 # Architecture Contract
 
-> **Version:** 2.3.0
+> **Version:** 2.4.0
 > **Purpose:** Enforce the approved CI/CD pipeline architecture as a machine-verifiable contract.
 > **File:** `scripts/architecture_contract.py`
 > **Workflow:** `.github/workflows/architecture-guard.yml`
@@ -52,9 +52,11 @@ Every one of these jobs **must** appear in `.github/workflows/ci.yml`:
 | `django-check` | 2c | Django System & Migration Checks |
 | `hypothesis-fast` | 2d | Hypothesis Property Tests (Fast) |
 | `architecture` | 2e | Architecture & Contracts |
-| `security-fast` | 2f | Security Fast-Track |
-| `mutation-smoke` | 2g | Mutation Testing (Smoke) |
-| `migration-rollback-validation` | 2h | Migration Rollback Validation |
+| `uml` | 2f | UML Generation |
+| `uml-validation` | 2g | UML Validation |
+| `security-fast` | 2h | Security Fast-Track |
+| `mutation-smoke` | 2i | Mutation Testing (Smoke) |
+| `migration-rollback-validation` | 2j | Migration Rollback Validation |
 | `quality` | 3 | Quality Gate (SonarCloud) |
 | `deploy-readiness` | 4 | Deploy Readiness Check |
 | `deploy` | 5 | Deploy to Production |
@@ -70,6 +72,8 @@ Every one of these files **must** exist in `.github/workflows/`:
 - `hypothesis.yml`
 - `contract-tests.yml`
 - `architecture.yml`
+- `uml.yml`
+- `uml-validation.yml`
 - `security.yml`
 - `security-deep.yml`
 - `quality.yml`
@@ -101,10 +105,12 @@ Every one of these files **must** exist in `.github/workflows/`:
 | `django-check` | `lint-fast` |
 | `hypothesis-fast` | `lint-fast` |
 | `architecture` | `lint-fast` |
+| `uml` | `lint-fast` |
+| `uml-validation` | `lint-fast` |
 | `security-fast` | `lint-fast` |
 | `mutation-smoke` | `lint-fast` |
 | `migration-rollback-validation` | `lint-fast` |
-| `quality` | `test-shard-1`, `test-shard-2`, `test-shard-3`, `test-shard-4`, `shard-validation`, `contract-tests`, `architecture` |
+| `quality` | `test-shard-1`, `test-shard-2`, `test-shard-3`, `test-shard-4`, `shard-validation`, `contract-tests`, `architecture`, `uml`, `uml-validation` |
 | `deploy-readiness` | `quality`, `security-fast`, `django-check` |
 | `deploy` | `deploy-readiness` |
 

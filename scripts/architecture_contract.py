@@ -36,9 +36,9 @@ DOCS_CI_CD_PIPELINE = "docs/ci-cd-pipeline.md"
 # ARCHITECTURE CONTRACT — THE SOURCE OF TRUTH
 # ═══════════════════════════════════════════════════════════════════════════════
 
-ARCHITECTURE_VERSION = "2.3.0"
-PIPELINE_VERSION = "2.3.0"
-CONTRACT_VERSION = "2.3.0"
+ARCHITECTURE_VERSION = "2.4.0"
+PIPELINE_VERSION = "2.4.0"
+CONTRACT_VERSION = "2.4.0"
 
 # Every required job that MUST exist in ci.yml
 REQUIRED_JOBS: set[str] = {
@@ -52,6 +52,8 @@ REQUIRED_JOBS: set[str] = {
     "django-check",
     "hypothesis-fast",
     "architecture",
+    "uml",
+    "uml-validation",
     "security-fast",
     "mutation-smoke",
     "migration-rollback-validation",
@@ -69,6 +71,8 @@ REQUIRED_WORKFLOW_FILES: set[str] = {
     ".github/workflows/hypothesis.yml",
     ".github/workflows/contract-tests.yml",
     ".github/workflows/architecture.yml",
+    ".github/workflows/uml.yml",
+    ".github/workflows/uml-validation.yml",
     ".github/workflows/security.yml",
     ".github/workflows/security-deep.yml",
     ".github/workflows/quality.yml",
@@ -97,6 +101,8 @@ PROTECTED_FILES: set[str] = {
     ".github/workflows/quality.yml",
     ".github/workflows/deploy.yml",
     ".github/workflows/architecture.yml",
+    ".github/workflows/uml.yml",
+    ".github/workflows/uml-validation.yml",
     ".github/workflows/deploy-readiness.yml",
     ".github/workflows/nightly.yml",
     ARCHITECTURE_GUARD_YAML,
@@ -130,6 +136,8 @@ APPROVED_DEPENDENCY_CHAIN: dict[str, list[str] | None] = {
     "django-check": ["lint-fast"],
     "hypothesis-fast": ["lint-fast"],
     "architecture": ["lint-fast"],
+    "uml": ["lint-fast"],
+    "uml-validation": ["lint-fast"],
     "security-fast": ["lint-fast"],
     "mutation-smoke": ["lint-fast"],
     "migration-rollback-validation": ["lint-fast"],
@@ -141,6 +149,8 @@ APPROVED_DEPENDENCY_CHAIN: dict[str, list[str] | None] = {
         "shard-validation",
         "contract-tests",
         "architecture",
+        "uml",
+        "uml-validation",
     ],
     "deploy-readiness": [
         "quality",
@@ -162,9 +172,11 @@ STAGE_MAP: dict[str, str] = {
     "django-check": "Stage 2c  │ Django System & Migration Checks",
     "hypothesis-fast": "Stage 2d  │ Hypothesis Property Tests (Fast)",
     "architecture": "Stage 2e  │ Architecture & Contracts",
-    "security-fast": "Stage 2f  │ Security Fast-Track",
-    "mutation-smoke": "Stage 2g  │ Mutation Testing (Smoke)",
-    "migration-rollback-validation": "Stage 2h │ Migration Rollback Validation",
+    "uml": "Stage 2f  │ UML Generation",
+    "uml-validation": "Stage 2g  │ UML Validation",
+    "security-fast": "Stage 2h  │ Security Fast-Track",
+    "mutation-smoke": "Stage 2i  │ Mutation Testing (Smoke)",
+    "migration-rollback-validation": "Stage 2j │ Migration Rollback Validation",
     "quality": "Stage 3   │ Quality Gate (SonarCloud)",
     "deploy-readiness": "Stage 4   │ Deploy Readiness Check",
     "deploy": "Stage 5   │ Deploy to Production",
@@ -177,8 +189,11 @@ REQUIRED_DOC_STAGES: list[str] = [
     "Tests",
     "Django Checks",
     "Architecture",
+    "UML Generation",
+    "UML Validation",
     "Security",
     "Quality Gate",
+    "Deploy Readiness",
     "Deploy",
 ]
 

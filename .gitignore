@@ -36,18 +36,51 @@ dist/
 htmlcov/
 .coverage
 .coverage.*
-
-# Unit test / coverage reports
-nosetests.xml
-coverage.xml
+coverage*
 *.cover
 *.py,cover
+
+# pytest cache
+.pytest_cache/
 
 # mypy type checker
 .mypy_cache/
 
+# ruff cache
+.ruff_cache/
+
 # pytype static type analyzer
 .pytype/
+
+# pyre type checker
+.pyre/
+
+# nox
+.nox/
+
+# tox
+.tox/
+
+# mutmut mutation testing
+.mutmut-cache/
+mutants/
+
+# Benchmark results
+benchmark-results.json
+
+# Profiling output
+*.prof
+
+# Generated architecture artifacts
+architecture/generated/
+
+# Generated UML artifacts
+docs/uml/generated/
+docs/diagrams/generated/
+
+# Generated history artifacts
+docs/history/generated/
+docs/history/generated-reports/
 
 # Django migrations (optional: you may want to include them if you track migrations)
 # migrations/

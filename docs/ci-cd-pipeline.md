@@ -2,7 +2,7 @@
 
 > **Project:** RentSecureBE — Production-Grade Django Backend
 > **Stack:** Django 5.2 / DRF / PostgreSQL / AWS EC2 / Cashfree
-> **Pipeline Version:** 2.3.0
+> **Pipeline Version:** 2.4.0
 
 ---
 
@@ -16,13 +16,17 @@ flowchart LR
 
     S2["<b>🧪  Tests</b><br/><br/>• Pytest + Coverage (≥90%, 4-way sharded)<br/>• API Contract Tests<br/>• Django System & Migration Checks"]
 
-    S3["<b>📐  Architecture</b><br/><br/>• Import Linter Validation<br/>• Layered Architecture Check"]
+    S3["<b>📐  Architecture</b><br/><br/>• Import Linter Validation<br/>• Dependency Graph Generation<br/>• Architecture Metrics<br/>• Module Dependency Graph"]
 
-    S4["<b>🔒  Security Fast</b><br/><br/>• Bandit (matrix per app)<br/>• Semgrep (OWASP + Django)<br/>• Pip-audit Dependencies<br/>• Trivy FS Vulnerability<br/>• Gitleaks Secret Scan"]
+    S4["<b>📊  UML Generation</b><br/><br/>• PlantUML Diagrams<br/>• Mermaid Diagrams<br/>• C4 Diagrams<br/>• Domain Diagrams<br/>• Flow Diagrams<br/>• Infrastructure Diagrams<br/>• DDD Bounded Context"]
 
-    S5["<b>📊  Quality Gate</b><br/><br/>• SonarCloud Analysis<br/>• Quality Gate Check<br/>• Wait for Gate Status<br/>• Coverage Report Upload"]
+    S5["<b>✅  UML Validation</b><br/><br/>• PlantUML Syntax<br/>• Mermaid Syntax<br/>• Broken Links<br/>• Missing Diagrams<br/>• Outdated Diagrams"]
 
-    S6["<b>🚀  Deploy Readiness</b><br/><br/>• Environment Variable Validation<br/>• Deployment Script Verification"]
+    S6["<b>🔒  Security Fast</b><br/><br/>• Bandit (matrix per app)<br/>• Semgrep (OWASP + Django)<br/>• Pip-audit Dependencies<br/>• Trivy FS Vulnerability<br/>• Gitleaks Secret Scan"]
+
+    S7["<b>📊  Quality Gate</b><br/><br/>• SonarCloud Analysis<br/>• Quality Gate Check<br/>• Wait for Gate Status<br/>• Coverage Report Upload"]
+
+    S8["<b>🚀  Deploy Readiness</b><br/><br/>• Environment Variable Validation<br/>• Deployment Script Verification"]
 
     D["<b>🚀  Deploy</b><br/><br/>• Build Docker Image<br/>• Push to Container Registry<br/>• Deploy to AWS EC2<br/>• Sentry Release & Deploy"]
 
@@ -30,26 +34,33 @@ flowchart LR
     S1 --> S2
     S1 --> S3
     S1 --> S4
-    S2 --> S5
-    S3 --> S5
-    S5 --> S6
-    S6 --> D
+    S1 --> S5
+    S1 --> S6
+    S2 --> S7
+    S3 --> S7
+    S4 --> S7
+    S5 --> S7
+    S6 --> S8
+    S7 --> S8
+    S8 --> D
 
     %% ─── Styling ───────────────────────────────────────────────────────────────
     classDef setup     fill:#E3F2FD,stroke:#1565C0,stroke-width:3px,color:#0D47A1,rx:12px,ry:12px
-    classDef quality   fill:#FFF3E0,stroke:#E65100,stroke-width:3px,color:#BF360C,rx:12px,ry:12px
     classDef test      fill:#E8F5E9,stroke:#2E7D32,stroke-width:3px,color:#1B5E20,rx:12px,ry:12px
     classDef arch      fill:#E0F7FA,stroke:#00838F,stroke-width:3px,color:#006064,rx:12px,ry:12px
+    classDef uml       fill:#F3E5F5,stroke:#6A1B9A,stroke-width:3px,color:#4A148C,rx:12px,ry:12px
+    classDef validate  fill:#E8F5E9,stroke:#388E3C,stroke-width:3px,color:#1B5E20,rx:12px,ry:12px
     classDef security  fill:#FFEBEE,stroke:#C62828,stroke-width:3px,color:#B71C1C,rx:12px,ry:12px
     classDef gate      fill:#FCE4EC,stroke:#AD1457,stroke-width:3px,color:#880E4F,rx:12px,ry:12px
     classDef deploy    fill:#E8F5E9,stroke:#1B5E20,stroke-width:3px,color:#0D47A1,rx:12px,ry:12px
 
     class S1 setup
-    class S2,S3 test
-    class S4 security
-    class S5 gate
-    class S6 deploy
-    class D deploy
+    class S2 test
+    class S3 arch
+    class S4,S5 uml
+    class S6 security
+    class S7 gate
+    class S8,D deploy
 ```
 
 ### Pipeline Summary (from `.github/workflows/ci.yml`)
@@ -58,11 +69,13 @@ flowchart LR
 |---|-------|----------|----------------|
 | 1 | **Setup & Code Quality** | `pre-commit, black, ruff, pylint, mypy, vulture` | Measured by CI Metrics (`ci-metrics.yml`) |
 | 2 | **Tests** | `pytest + coverage (4-way sharded)`, `API contract tests`, `Django checks` | Measured by CI Metrics |
-| 3 | **Architecture** | `import-linter` | Measured by CI Metrics |
-| 4 | **Security Fast** | `bandit (matrix)`, `semgrep`, `pip-audit`, `trivy`, `gitleaks`, `dependency-review` | Measured by CI Metrics |
-| 5 | **Quality Gate** | `sonarcloud` analysis + quality gate wait | Measured by CI Metrics |
-| 6 | **Deploy Readiness** | `env validation`, `script verification` | Measured by CI Metrics |
-| 7 | **Deploy** | `deploy.yml`: EC2 SSH, Docker, Sentry release | Measured by CI Metrics |
+| 3 | **Architecture** | `import-linter`, dependency graphs, architecture metrics` | Measured by CI Metrics |
+| 4 | **UML Generation** | `PlantUML, Mermaid, C4, domain, flow, infrastructure, DDD diagrams` | Measured by CI Metrics |
+| 5 | **UML Validation** | `PlantUML syntax, Mermaid syntax, broken links, missing diagrams` | Measured by CI Metrics |
+| 6 | **Security Fast** | `bandit (matrix)`, `semgrep`, `pip-audit`, `trivy`, `gitleaks`, `dependency-review` | Measured by CI Metrics |
+| 7 | **Quality Gate** | `sonarcloud` analysis + quality gate wait | Measured by CI Metrics |
+| 8 | **Deploy Readiness** | `env validation`, `script verification` | Measured by CI Metrics |
+| 9 | **Deploy** | `deploy.yml`: EC2 SSH, Docker, Sentry release | Measured by CI Metrics |
 
 > **Note:** Runtimes are collected automatically via `.github/workflows/ci-metrics.yml` using the GitHub Actions API (last 30 successful runs). PR pipeline target is ≤15 minutes. Deep validation (hypothesis, mutation, load testing, codeql, scorecard, SBOM scanning) runs nightly/weekly.
 

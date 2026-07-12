@@ -1,0 +1,37 @@
+# Required Diagrams
+# This file lists all diagrams that must be present in docs/uml/generated/ and docs/diagrams/generated/
+# Used by check_missing_diagrams.py
+
+# PlantUML diagrams
+uml/generated/plantuml/class-diagram.puml
+uml/generated/plantuml/component-diagram.puml
+uml/generated/plantuml/package-diagram.puml
+
+# Mermaid diagrams
+uml/generated/mermaid/class-diagram.mmd
+uml/generated/mermaid/ci-flow.mmd
+uml/generated/mermaid/dependency-graph.mmd
+
+# C4 diagrams
+diagrams/generated/c4/c4-context.puml
+diagrams/generated/c4/c4-container.puml
+
+# Domain diagrams
+uml/generated/domain/er-diagram.puml
+
+# Flow diagrams
+diagrams/generated/flows/authentication-flow.puml
+diagrams/generated/flows/payment-flow.puml
+diagrams/generated/flows/notification-flow.puml
+
+# Infrastructure diagrams
+diagrams/generated/infrastructure/aws-deployment.puml
+diagrams/generated/infrastructure/cicd-pipeline.puml
+diagrams/generated/infrastructure/runtime.puml
+
+# DDD diagrams
+uml/generated/ddd/ddd-bounded-contexts.puml
+uml/generated/ddd/repository-dependency.puml
+uml/generated/ddd/drf-lifecycle.puml
+uml/generated/ddd/celery-task-flow.puml
+uml/generated/ddd/rent-lifecycle.puml

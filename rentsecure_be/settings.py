@@ -84,6 +84,16 @@ LEEGALITY_TEMPLATE_ID = config("LEEGALITY_TEMPLATE_ID", default="")
 AWS_S3_BUCKET_NAME = config("AWS_S3_BUCKET_NAME", default="")
 AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="")
 
+# Feature flags for optional integrations
+ENABLE_RAZORPAY = config("ENABLE_RAZORPAY", default=False, cast=bool)
+ENABLE_CASHFREE = config("ENABLE_CASHFREE", default=False, cast=bool)
+ENABLE_WHATSAPP = config("ENABLE_WHATSAPP", default=False, cast=bool)
+ENABLE_VOICE = config("ENABLE_VOICE", default=False, cast=bool)
+ENABLE_OPENAI = config("ENABLE_OPENAI", default=False, cast=bool)
+ENABLE_LEEGALITY = config("ENABLE_LEEGALITY", default=False, cast=bool)
+ENABLE_EMAIL = config("ENABLE_EMAIL", default=True, cast=bool)
+ENABLE_PUSH_NOTIFICATION = config("ENABLE_PUSH_NOTIFICATION", default=True, cast=bool)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
