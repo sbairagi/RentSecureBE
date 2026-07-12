@@ -55,7 +55,7 @@ def _xml_classes(xml_path: str) -> tuple[list[dict], int, int]:
         )
     )
     root = tree.getroot()
-    sources = [s.text for s in root.findall(".//source")]
+    sources = [s.text for s in root.findall(".//source") if s.text is not None]
 
     classes: list[dict] = []
     for cls in root.iter("class"):
