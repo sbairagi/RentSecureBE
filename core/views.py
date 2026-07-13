@@ -4,9 +4,7 @@ import hashlib
 import hmac
 import json
 import logging
-import secrets
 import uuid
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any, cast, override
 
 import razorpay  # type: ignore[import-untyped]
@@ -17,17 +15,18 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 from twilio.rest import Client
 
 from django.conf import settings
-from django.contrib.auth.models import AnonymousUser, Group
+from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+from core.services.auth_service import AuthService
+from core.services.otp_service import OTPService
 from notification.services.rent_notify_service import send_payout_notification
 from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
@@ -35,6 +34,7 @@ from rentsecure_be.services.cashfree_service import (
 )
 from rentsecure_be.utils.cashfree_payout import add_beneficiary
 from rentsecure_be.utils.export_utils import generate_owner_rent_report
+from shared.exceptions import ValidationError
 
 from .models import (
     OTP,
@@ -87,17 +87,10 @@ class SendOTP(APIView):
         if not phone:
             return Response({"error": "Phone number required"}, status=400)
 
-        # Prevent spamming (resend OTP limit: 60 seconds)
-        recent_otp = (
-            OTP.objects.filter(phone_number=phone).order_by("-created_at").first()
-        )
-        if recent_otp and (timezone.now() - recent_otp.created_at).seconds < 60:
-            return Response({"error": "Wait before requesting another OTP"}, status=429)
-
-        code = str(secrets.randbelow(900000) + 100000)
-
-        OTP.objects.create(phone_number=phone, code=code, referral_code=referral_code)
-        send_otp(phone, code)
+        try:
+            OTPService.send_otp(phone, referral_code)
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=429)
 
         return Response({"message": "OTP sent"}, status=200)
 
@@ -132,24 +125,12 @@ def _verify_otp_and_login(
     if not phone or not code:
         return {"error": "Phone and OTP required"}, 400
 
-    otp = (
-        OTP.objects.filter(phone_number=phone, code=code, is_verified=False)
-        .order_by("-created_at")
-        .first()
-    )
+    try:
+        otp = OTPService.verify(phone, code)
+    except ValidationError as e:
+        return {"error": str(e)}, 400
 
-    if not (otp and (timezone.now() - otp.created_at) < timedelta(minutes=5)):
-        return {"error": "Invalid or expired OTP"}, 400
-
-    otp.is_verified = True
-    otp.save()
-
-    user, _ = User.objects.get_or_create(phone=phone, defaults={"username": phone})
-    user.is_phone_verified = True
-    user.save()
-
-    group, _ = Group.objects.get_or_create(name=group_name)
-    user.groups.add(group)
+    user, tokens = AuthService.login_with_otp(phone, group_name)
 
     # Referral logic
     error_response = _process_referral(otp, user)
@@ -159,12 +140,7 @@ def _verify_otp_and_login(
     # Delete old OTPs
     OTP.objects.filter(phone_number=phone).exclude(pk=otp.pk).delete()
 
-    refresh = RefreshToken.for_user(user)
-    return {
-        "refresh": str(refresh),
-        "access": str(refresh.access_token),
-        "user": {"id": user.pk, "phone": user.phone},
-    }, 200
+    return tokens, 200
 
 
 class OwnerVerifyOTP(APIView):

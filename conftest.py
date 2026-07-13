@@ -378,6 +378,7 @@ def _rentsecure_test_defaults(db, monkeypatch):  # type: ignore[no-untyped-def]
             self.messages = _FakeMessages()
 
     monkeypatch.setattr("core.views.Client", _FakeTwilioClient)
+    monkeypatch.setattr("core.services.otp_service.Client", _FakeTwilioClient)
     monkeypatch.setattr("notification.utils.Client", _FakeTwilioClient)
     monkeypatch.setattr(
         "notification.services.whatsapp_service.Client", _FakeTwilioClient

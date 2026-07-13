@@ -1,0 +1,13 @@
+from __future__ import annotations
+
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 100
+DEFAULT_TIMEOUT_SECONDS = 30
+EMPTY_STRING = ""
+
+__all__ = [
+    "DEFAULT_PAGE_SIZE",
+    "MAX_PAGE_SIZE",
+    "DEFAULT_TIMEOUT_SECONDS",
+    "EMPTY_STRING",
+]
