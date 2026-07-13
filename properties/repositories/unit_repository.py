@@ -68,3 +68,12 @@ class UnitRepository:
             unit.save(update_fields=list(fields))
         else:
             unit.save()
+
+    @staticmethod
+    def has_active_renter(unit: Unit) -> bool:
+        """Return True if the unit has an active or notice-period renter."""
+        from ..models import Renter
+
+        return Renter.objects.filter(
+            unit=unit, status__in=["active", "notice_period"]
+        ).exists()

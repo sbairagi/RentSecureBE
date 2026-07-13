@@ -21,7 +21,7 @@ from rest_framework import serializers
 from core.models import User
 
 from ..constants import UNITS_CACHE_TIMEOUT
-from ..models import Renter, Unit
+from ..models import Unit
 from ..models.building_models import Building
 from ..policies.unit_policy import UnitPolicy
 from ..repositories.unit_repository import UnitRepository
@@ -182,9 +182,7 @@ def update_unit_status(unit: Unit) -> None:
         - Updates ``unit.is_vacant`` denormalized field.
         - Persists changes to the database.
     """
-    active_renter: bool = Renter.objects.filter(
-        unit=unit, status__in=["active", "notice_period"]
-    ).exists()
+    active_renter: bool = UnitRepository.has_active_renter(unit)
 
     new_status: str = (
         Unit.VacancyStatus.OCCUPIED if active_renter else Unit.VacancyStatus.VACANT
