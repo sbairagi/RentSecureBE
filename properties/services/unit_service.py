@@ -113,12 +113,11 @@ class UnitService:
         from django.core.cache import cache
 
         from ..feature_enforcer import FeatureEnforcer
-        from ..models import Unit
 
         cache_key = UnitService.get_unit_cache_key(user.id)
         units = cache.get(cache_key)
         if units is None:
-            units = Unit.objects.filter(owner=user)
+            units = UnitRepository.owned_by(user)
             cache.set(cache_key, units, timeout=UnitService.UNIT_CACHE_TIMEOUT)
 
         enforcer = FeatureEnforcer(user)
