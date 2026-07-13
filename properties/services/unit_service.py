@@ -20,6 +20,7 @@ from rest_framework import serializers
 
 from core.models import User
 
+from ..constants import UNITS_CACHE_TIMEOUT
 from ..models import Renter, Unit
 from ..models.building_models import Building
 
@@ -80,6 +81,84 @@ def prepare_unit_creation(validated_data: dict[str, Any], user: User) -> dict[st
     """Inject the owner into ``validated_data`` for unit creation."""
     validated_data["owner"] = user
     return validated_data
+
+
+# ---------------------------------------------------------------------------
+# UnitService
+# ---------------------------------------------------------------------------
+
+
+class UnitService:
+    """Service for unit business workflows.
+
+    Expected responsibilities:
+    - Unit queryset building with caching and free-plan enforcement
+    - Unit ownership validation
+    - Unit creation/deletion quota enforcement
+    - Cache key management for unit queries
+    """
+
+    UNIT_CACHE_KEY = "units_user_{user_id}"
+    UNIT_CACHE_TIMEOUT = UNITS_CACHE_TIMEOUT
+
+    @staticmethod
+    def get_unit_cache_key(user_id: int) -> str:
+        """Return the cache key for a user's unit queryset."""
+        return f"units_user_{user_id}"
+
+    @staticmethod
+    def get_unit_queryset(user: Any) -> Any:
+        """Build unit queryset with caching and free-plan enforcement."""
+        from django.core.cache import cache
+
+        from ..feature_enforcer import FeatureEnforcer
+        from ..models import Unit
+
+        cache_key = UnitService.get_unit_cache_key(user.id)
+        units = cache.get(cache_key)
+        if units is None:
+            units = Unit.objects.filter(owner=user)
+            cache.set(cache_key, units, timeout=UnitService.UNIT_CACHE_TIMEOUT)
+
+        enforcer = FeatureEnforcer(user)
+        if enforcer.is_expired() and enforcer.is_past_grace_period():
+            free_limit = enforcer.get_free_plan_limit("max_units")
+            active_units = units.filter(is_archived=False)
+            if free_limit == "unlimited":
+                return active_units
+            return active_units[:free_limit]
+
+        return units
+
+    @staticmethod
+    def validate_unit_access(unit: Any, user: Any) -> None:
+        """Raise ``ValueError`` when the user does not own the unit."""
+        if unit is None or unit.owner != user:
+            raise ValueError("You do not have permission to access this unit.")
+
+    @staticmethod
+    def can_create_unit(user: Any) -> bool:
+        """Check if the user can create a unit based on plan limits."""
+        from ..feature_enforcer import FeatureEnforcer
+
+        enforcer = FeatureEnforcer(user)
+        return enforcer.can_create("max_units")
+
+    @staticmethod
+    def increment_unit_quota(user: Any) -> None:
+        """Increment the user's unit creation quota."""
+        from ..feature_enforcer import FeatureEnforcer
+
+        enforcer = FeatureEnforcer(user)
+        enforcer.increment("max_units")
+
+    @staticmethod
+    def decrement_unit_quota(user: Any) -> None:
+        """Decrement the user's unit creation quota."""
+        from ..feature_enforcer import FeatureEnforcer
+
+        enforcer = FeatureEnforcer(user)
+        enforcer.decrement("max_units")
 
 
 # ---------------------------------------------------------------------------

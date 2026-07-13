@@ -29,7 +29,6 @@ from core.models import User
 from rentsecure_be.services.leegality_service import send_agreement_for_signature
 from rentsecure_be.type_compat import override
 
-from ..constants import UNITS_CACHE_TIMEOUT
 from ..feature_enforcer import FeatureEnforcer
 from ..models import RentAgreementDraft, Renter, Unit, UnitDocument, UnitImage
 from ..serializers import (
@@ -38,6 +37,7 @@ from ..serializers import (
     UnitImageSerializer,
     UnitSerializer,
 )
+from ..services.unit_service import UnitService
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -55,53 +55,39 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
     @override
     def get_queryset(self) -> QuerySet[Unit]:
         """Return cached, owned units (graceful fallback to free plan)."""
-        user = cast(User, self.request.user)
-        cache_key: str = f"units_user_{user.id}"
-        enforcer = FeatureEnforcer(user)
-
-        units: QuerySet[Unit] | None = cache.get(cache_key)
-        if units is None:
-            units = Unit.objects.filter(owner=user)
-            cache.set(cache_key, units, timeout=UNITS_CACHE_TIMEOUT)
-
-        if enforcer.is_expired() and enforcer.is_past_grace_period():
-            free_limit = enforcer.get_free_plan_limit("max_units")
-            active_units = units.filter(is_archived=False)
-            if free_limit == "unlimited":
-                return active_units
-            return active_units[:free_limit]
-
-        return units
+        return UnitService.get_unit_queryset(self.request.user)
 
     @override
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         """Persist a new unit and update the cached queryset."""
-        enforcer = FeatureEnforcer(self.request.user)
-        if not enforcer.can_create("max_units"):
+        if not UnitService.can_create_unit(self.request.user):
             raise PermissionDenied("Unit creation limit reached for your plan.")
 
         serializer.save(owner=self.request.user)
-        enforcer.increment("max_units")
-        cache.delete(f"units_user_{self.request.user.id}")
+        UnitService.increment_unit_quota(self.request.user)
+        cache.delete(UnitService.get_unit_cache_key(self.request.user.id))
 
     @override
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
         """Persist unit updates after ownership check."""
         instance = serializer.instance
-        if instance is None or instance.owner != self.request.user:
-            raise PermissionDenied("You do not have permission to update this unit.")
+        try:
+            UnitService.validate_unit_access(instance, self.request.user)
+        except ValueError as e:
+            raise PermissionDenied(str(e)) from None
         serializer.save()
-        cache.delete(f"units_user_{self.request.user.id}")
+        cache.delete(UnitService.get_unit_cache_key(self.request.user.id))
 
     @override
     def perform_destroy(self, instance: Unit) -> None:
         """Delete a unit and decrement the owner's quota."""
-        if instance.owner != self.request.user:
-            raise PermissionDenied("You do not have permission to delete this unit.")
-        enforcer = FeatureEnforcer(self.request.user)
+        try:
+            UnitService.validate_unit_access(instance, self.request.user)
+        except ValueError as e:
+            raise PermissionDenied(str(e)) from None
         instance.delete()
-        enforcer.decrement("max_units")
-        cache.delete(f"units_user_{self.request.user.id}")
+        UnitService.decrement_unit_quota(self.request.user)
+        cache.delete(UnitService.get_unit_cache_key(self.request.user.id))
 
 
 class UnitImageViewSet(viewsets.ModelViewSet[UnitImage]):
