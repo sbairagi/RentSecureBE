@@ -28,6 +28,7 @@ from django.views.decorators.csrf import csrf_exempt
 from core.services.auth_service import AuthService
 from core.services.otp_service import OTPService
 from core.services.subscription_service import SubscriptionService
+from core.services.usage_limit_service import UsageLimitService
 from notification.services.rent_notify_service import send_payout_notification
 from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
@@ -297,7 +298,7 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self) -> Any:
         if isinstance(self.request.user, AnonymousUser):
             return self.queryset.none()
-        return SubscriptionService.get_user_usage_limits(self.request.user)
+        return UsageLimitService.get_user_usage_limits(self.request.user)
 
 
 # ---------------------------------------------------------------------------
