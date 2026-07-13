@@ -20,10 +20,294 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  scan-architecture:
+    name: Scan Repository Architecture
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      metadata-path: ${{ steps.scan.outputs.metadata-path }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml-validation"
+      - name: Scan repository architecture
+        id: scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
+          echo "metadata-path=architecture/generated/architecture.json" >> "$GITHUB_OUTPUT"
+
+  generate-plantuml:
+    name: Generate PlantUML Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "plantuml"
+          cache-key-suffix: "-uml-validation"
+      - name: Generate PlantUML diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_plantuml.py \
+            --output docs/uml/generated/plantuml \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+
+  generate-mermaid:
+    name: Generate Mermaid Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml-validation"
+      - name: Generate Mermaid diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_mermaid.py \
+            --output docs/uml/generated/mermaid \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+
+  generate-c4:
+    name: Generate C4 Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml-validation"
+      - name: Generate C4 diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_c4.py \
+            --output docs/diagrams/generated/c4 \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+
+  generate-domain:
+    name: Generate Domain Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml-validation"
+      - name: Generate domain diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_domain_diagrams.py \
+            --output docs/uml/generated/domain \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+
+  generate-flows:
+    name: Generate Flow Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml-validation"
+      - name: Generate flow diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_flow_diagrams.py \
+            --output docs/diagrams/generated/flows \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+
+  generate-infrastructure:
+    name: Generate Infrastructure Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml-validation"
+      - name: Generate infrastructure diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_infrastructure_diagrams.py \
+            --output docs/diagrams/generated/infrastructure \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+
+  generate-ddd:
+    name: Generate DDD Bounded Context Diagrams
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [scan-architecture]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-uml-validation"
+      - name: Generate DDD bounded context diagrams
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagrams/generate_ddd_diagrams.py \
+            --output docs/uml/generated/ddd \
+            --all \
+            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+
   validate-metadata:
     name: Validate Architecture Metadata
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [scan-architecture]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -60,6 +344,7 @@ jobs:
     name: Validate PlantUML Syntax
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [scan-architecture, generate-plantuml]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -75,7 +360,7 @@ jobs:
             objects.githubusercontent.com:443
             api.github.com:443
             pypi.org:443
-            pypi.python.org:443
+            pypi.pythonhosted.org:443
             files.pythonhosted.org:443
       - uses: ./.github/actions/setup-python-environment
         with:
@@ -95,6 +380,7 @@ jobs:
     name: Validate Mermaid Syntax
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [scan-architecture, generate-mermaid]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -110,7 +396,7 @@ jobs:
             objects.githubusercontent.com:443
             api.github.com:443
             pypi.org:443
-            pypi.python.org:443
+            pypi.pythonhosted.org:443
             files.pythonhosted.org:443
       - uses: ./.github/actions/setup-python-environment
         with:
@@ -129,6 +415,7 @@ jobs:
     name: Validate C4 Diagrams
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [scan-architecture, generate-c4]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -144,7 +431,7 @@ jobs:
             objects.githubusercontent.com:443
             api.github.com:443
             pypi.org:443
-            pypi.python.org:443
+            pypi.pythonhosted.org:443
             files.pythonhosted.org:443
       - uses: ./.github/actions/setup-python-environment
         with:
@@ -163,6 +450,7 @@ jobs:
     name: Validate Diagram Links
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [scan-architecture, generate-domain, generate-flows, generate-infrastructure, generate-ddd]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -178,7 +466,7 @@ jobs:
             objects.githubusercontent.com:443
             api.github.com:443
             pypi.org:443
-            pypi.python.org:443
+            pypi.pythonhosted.org:443
             files.pythonhosted.org:443
       - uses: ./.github/actions/setup-python-environment
         with:
@@ -196,6 +484,7 @@ jobs:
     name: Check Missing Diagrams
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [scan-architecture, generate-plantuml, generate-mermaid, generate-c4, generate-domain, generate-flows, generate-infrastructure, generate-ddd]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -211,7 +500,7 @@ jobs:
             objects.githubusercontent.com:443
             api.github.com:443
             pypi.org:443
-            pypi.python.org:443
+            pypi.pythonhosted.org:443
             files.pythonhosted.org:443
       - uses: ./.github/actions/setup-python-environment
         with:
@@ -230,6 +519,7 @@ jobs:
     name: Check Outdated Diagrams
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [scan-architecture, generate-plantuml, generate-mermaid, generate-c4, generate-domain, generate-flows, generate-infrastructure, generate-ddd]
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -245,7 +535,7 @@ jobs:
             objects.githubusercontent.com:443
             api.github.com:443
             pypi.org:443
-            pypi.python.org:443
+            pypi.pythonhosted.org:443
             files.pythonhosted.org:443
       - uses: ./.github/actions/setup-python-environment
         with:
