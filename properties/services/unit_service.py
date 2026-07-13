@@ -24,6 +24,7 @@ from ..constants import UNITS_CACHE_TIMEOUT
 from ..models import Unit
 from ..models.building_models import Building
 from ..policies.unit_policy import UnitPolicy
+from ..repositories.building_repository import BuildingRepository
 from ..repositories.unit_repository import UnitRepository
 
 # ---------------------------------------------------------------------------
@@ -234,7 +235,7 @@ def get_owner_analytics(user: User) -> OwnerAnalytics:
         An :class:`OwnerAnalytics` ``TypedDict`` with per-building details
         and aggregate totals.
     """
-    buildings = Building.objects.filter(owner=user, is_archived=False)
+    buildings = BuildingRepository.active_owned_by(user)
     buildings_data: list[BuildingAnalytics] = []
 
     total_units = 0
