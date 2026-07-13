@@ -26,6 +26,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from core.services.auth_service import AuthService
+from core.services.bank_details_service import BankDetailsService
 from core.services.otp_service import OTPService
 from core.services.subscription_service import SubscriptionService
 from core.services.usage_limit_service import UsageLimitService
@@ -34,7 +35,6 @@ from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
     process_rent_payout,
 )
-from rentsecure_be.utils.cashfree_payout import add_beneficiary
 from rentsecure_be.utils.export_utils import generate_owner_rent_report
 from shared.exceptions import ValidationError
 
@@ -514,35 +514,23 @@ def update_owner_bank_details(
     Fixed: Uses register_beneficiary from cashfree_service.
     Fixed: Uses correct RentRecord field (owner) instead of renter__property__owner.
     """
-    from properties.models.rent_record_models import RentRecord  # nosonar
-
     data = request.data
     owner: User = cast(User, request.user)
 
-    required_fields = ["account_number", "ifsc_code", "account_holder_name"]
-    if not all(data.get(field) for field in required_fields):
-        return Response({"error": "Missing fields"}, status=400)
-
-    # Delete old beneficiary on Cashfree
     try:
-        bank = OwnerBankDetails.objects.get(owner=owner)
-        if bank.beneficiary_id:
-            delete_beneficiary(bank.beneficiary_id)
-    except OwnerBankDetails.DoesNotExist:
+        BankDetailsService.validate_fields(data)
+    except ValueError as e:
+        return Response({"error": str(e)}, status=400)
+
+    bank = BankDetailsService.get_existing_bank(owner)
+    if bank is None:
         bank = OwnerBankDetails(owner=owner)
 
-    # Register new beneficiary
-    bene_id = f"owner_{owner.pk}_{uuid.uuid4().hex[:8]}"
-    response = add_beneficiary(
-        {
-            "beneId": bene_id,
-            "name": data["account_holder_name"],
-            "phone": owner.phone or "",
-            "email": owner.email or "",
-            "bankAccount": data["account_number"],
-            "ifsc": data["ifsc_code"],
-            "address1": "India",
-        }
+    if bank.beneficiary_id:
+        delete_beneficiary(bank.beneficiary_id)
+
+    response = BankDetailsService.register_beneficiary(
+        owner, {**data, "bene_id_suffix": uuid.uuid4().hex[:8]}
     )
 
     if response.get("subCode") != "200":
@@ -550,16 +538,9 @@ def update_owner_bank_details(
             {"error": "Bank registration failed", "response": response}, status=400
         )
 
-    # Save bank details
-    bank.bank_account_number = data["account_number"]
-    bank.ifsc_code = data["ifsc_code"]
-    bank.beneficiary_id = bene_id
-    bank.save()
-
-    # Retry all failed payouts for this owner (using correct field: owner)
-    RentRecord.objects.filter(unit__owner=owner, payout_status="FAILED").update(
-        payout_status="PENDING"
-    )
+    beneficiary_id = response.get("beneId", "")
+    BankDetailsService.save_bank_details(bank, data, beneficiary_id)
+    BankDetailsService.retry_failed_payouts(owner)
 
     return Response(
         {"message": "Bank details updated & pending payouts marked for retry ✅"}

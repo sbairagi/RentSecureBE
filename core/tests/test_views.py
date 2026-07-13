@@ -1021,7 +1021,7 @@ class TestUpdateOwnerBankDetails:
         )
         assert response.status_code == 400
 
-    @patch("core.views.add_beneficiary")
+    @patch("core.services.bank_details_service.add_beneficiary")
     @patch("core.views.delete_beneficiary")
     def test_existing_bank_with_beneficiary_deletes_first(
         self, mock_delete, mock_add, user
@@ -1048,7 +1048,7 @@ class TestUpdateOwnerBankDetails:
         assert response.status_code == 200
         mock_delete.assert_called_once_with("BENE_OLD")
 
-    @patch("core.views.add_beneficiary")
+    @patch("core.services.bank_details_service.add_beneficiary")
     def test_new_bank_creates_details(self, mock_add, user):
         mock_add.return_value = {"subCode": "200"}
         client = _auth_client(user)
@@ -1064,7 +1064,7 @@ class TestUpdateOwnerBankDetails:
         assert response.status_code == 200
         assert OwnerBankDetails.objects.filter(owner=user).exists()
 
-    @patch("core.views.add_beneficiary")
+    @patch("core.services.bank_details_service.add_beneficiary")
     def test_bank_registration_failure_returns_400(self, mock_add, user):
         mock_add.return_value = {"subCode": "400", "message": "Invalid bank"}
         client = _auth_client(user)

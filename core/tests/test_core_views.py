@@ -149,7 +149,7 @@ class UpdateOwnerBankDetailsTest(TestCase):
         self.access_token = str(refresh.access_token)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
 
-    @patch("core.views.add_beneficiary")
+    @patch("core.services.bank_details_service.add_beneficiary")
     @patch("core.views.delete_beneficiary")
     def test_update_bank_details(self, mock_delete, mock_add):
         mock_delete.return_value = {}
