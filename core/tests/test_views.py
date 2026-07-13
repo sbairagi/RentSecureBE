@@ -26,7 +26,6 @@ from core.views import (
     _process_referral,
     _process_rent_payment,
     cashfree_payout_webhook,
-    check_signature_or_return_http_response,
     create_rent_payment,
     download_rent_excel,
     owner_rent_records,
@@ -53,12 +52,29 @@ def _auth_client(user):
 
 def _make_post_request(payload: dict):
     factory = RequestFactory()
-    data = json.dumps(payload)
+    data = json.dumps(payload).encode("utf-8")
     req = factory.post(
         "/test",
         data=data,
         content_type="application/json",
     )
+    req._body = data
+    return req
+
+
+def _make_cashfree_request(payload: dict, secret: str | None = None):
+    if secret is None:
+        secret = "test-cashfree-secret"
+    body = json.dumps(payload).encode("utf-8")
+    signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    factory = RequestFactory()
+    req = factory.post(
+        "/test",
+        data=body,
+        content_type="application/json",
+    )
+    req._body = body
+    req.META["HTTP_X_CASHFREE_SIGNATURE"] = signature
     return req
 
 
@@ -558,20 +574,10 @@ class TestUsageLimitViewSet:
 
 
 class TestCashfreePayoutWebhook:
-    def test_invalid_method_returns_405(self):
-        req = _make_django_request(method="get")
-        response = cashfree_payout_webhook(req)
-        assert response.status_code == 405
-
-    def test_invalid_transfer_id_returns_404(self):
-        req = _make_post_request(
-            {"transferId": "nonexistent", "event": "TRANSFER_SUCCESS"}
-        )
-        response = cashfree_payout_webhook(req)
-        assert response.status_code == 404
-
     @patch("core.views.send_payout_notification")
     def test_transfer_success_updates_status(self, mock_notify, owner, building, unit):
+        from django.conf import settings as django_settings
+
         renter = _create_renter(unit)
         rent = RentRecord.objects.create(
             unit=unit,
@@ -583,10 +589,13 @@ class TestCashfreePayoutWebhook:
             payout_status="PENDING",
             due_date="2025-01-05",
         )
-        req = _make_post_request(
+        req = _make_cashfree_request(
             {"transferId": "txn_success", "event": "TRANSFER_SUCCESS"}
         )
-        response = cashfree_payout_webhook(req)
+        with patch.object(
+            django_settings, "CASHFREE_WEBHOOK_SECRET", "test-cashfree-secret"
+        ):
+            response = cashfree_payout_webhook(req)
         assert response.status_code == 200
         rent.refresh_from_db()
         assert rent.payout_status == "SUCCESS"
@@ -594,6 +603,8 @@ class TestCashfreePayoutWebhook:
 
     @patch("core.views.send_payout_notification")
     def test_transfer_failed_updates_status(self, mock_notify, owner, building, unit):
+        from django.conf import settings as django_settings
+
         renter = _create_renter(unit)
         rent = RentRecord.objects.create(
             unit=unit,
@@ -605,14 +616,21 @@ class TestCashfreePayoutWebhook:
             payout_status="PENDING",
             due_date="2025-01-05",
         )
-        req = _make_post_request({"transferId": "txn_fail", "event": "TRANSFER_FAILED"})
-        response = cashfree_payout_webhook(req)
+        req = _make_cashfree_request(
+            {"transferId": "txn_fail", "event": "TRANSFER_FAILED"}
+        )
+        with patch.object(
+            django_settings, "CASHFREE_WEBHOOK_SECRET", "test-cashfree-secret"
+        ):
+            response = cashfree_payout_webhook(req)
         assert response.status_code == 200
         rent.refresh_from_db()
         assert rent.payout_status == "FAILED"
 
     @patch("core.views.send_payout_notification")
     def test_notification_exception_handled(self, mock_notify, owner, building, unit):
+        from django.conf import settings as django_settings
+
         renter = _create_renter(unit)
         rent = RentRecord.objects.create(
             unit=unit,
@@ -625,11 +643,28 @@ class TestCashfreePayoutWebhook:
             due_date="2025-01-05",
         )
         mock_notify.side_effect = Exception("notification failed")
-        req = _make_post_request({"transferId": "txn_exc", "event": "TRANSFER_SUCCESS"})
-        response = cashfree_payout_webhook(req)
+        req = _make_cashfree_request(
+            {"transferId": "txn_exc", "event": "TRANSFER_SUCCESS"}
+        )
+        with patch.object(
+            django_settings, "CASHFREE_WEBHOOK_SECRET", "test-cashfree-secret"
+        ):
+            response = cashfree_payout_webhook(req)
         assert response.status_code == 200
         rent.refresh_from_db()
         assert rent.payout_status == "SUCCESS"
+
+    def test_invalid_transfer_id_returns_404(self):
+        from django.conf import settings as django_settings
+
+        req = _make_cashfree_request(
+            {"transferId": "nonexistent", "event": "TRANSFER_SUCCESS"}
+        )
+        with patch.object(
+            django_settings, "CASHFREE_WEBHOOK_SECRET", "test-cashfree-secret"
+        ):
+            response = cashfree_payout_webhook(req)
+        assert response.status_code == 404
 
 
 # ===================================================================
@@ -674,38 +709,6 @@ class TestCreateRentPayment:
         assert content["order_id"] == "order_123"
         rent.refresh_from_db()
         assert rent.razorpay_order_id == "order_123"
-
-
-# ===================================================================
-# check_signature_or_return_http_response
-# ===================================================================
-
-
-class TestCheckSignature:
-    def test_invalid_signature_returns_400(self):
-        body = b"test body"
-        signature = "bad_signature"
-        response = check_signature_or_return_http_response("secret", signature, body)
-        assert response is not None
-        assert response.status_code == 400
-
-    def test_missing_signature_returns_400(self):
-        body = b"test body"
-        response = check_signature_or_return_http_response("secret", None, body)
-        assert response is not None
-        assert response.status_code == 400
-
-    def test_missing_secret_returns_none(self):
-        body = b"test body"
-        response = check_signature_or_return_http_response(None, "sig", body)
-        assert response is None
-
-    def test_valid_signature_returns_none(self):
-        body = b"test body"
-        secret = "secret"
-        signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
-        response = check_signature_or_return_http_response(secret, signature, body)
-        assert response is None
 
 
 # ===================================================================
@@ -856,14 +859,22 @@ class TestRazorpayWebhook:
         assert response.status_code == 405
 
     def test_invalid_json_returns_400(self):
+        from django.conf import settings as django_settings
+
         from core.views import razorpay_webhook
 
+        body = b"not json"
+        sig = hmac.new(b"test-razorpay-secret", body, hashlib.sha256).hexdigest()
         req = SimpleNamespace(
             method="POST",
-            body=b"not json",
-            headers={},
+            body=body,
+            headers={"X-Razorpay-Signature": sig},
         )
-        response = razorpay_webhook(req)
+
+        with patch.object(
+            django_settings, "RAZORPAY_WEBHOOK_SECRET", "test-razorpay-secret"
+        ):
+            response = razorpay_webhook(req)
         assert response.status_code == 400
 
     def test_invalid_signature_returns_400(self):
@@ -920,13 +931,16 @@ class TestRazorpayWebhook:
         )
         mock_get_rent.return_value = rent
         body = json.dumps({"event": "payment.captured"}).encode()
+        sig = hmac.new(b"test-razorpay-secret", body, hashlib.sha256).hexdigest()
         req = SimpleNamespace(
             method="POST",
             body=body,
-            headers={"X-Razorpay-Signature": "sig"},
+            headers={"X-Razorpay-Signature": sig},
         )
 
-        with patch.object(django_settings, "RAZORPAY_WEBHOOK_SECRET", None):
+        with patch.object(
+            django_settings, "RAZORPAY_WEBHOOK_SECRET", "test-razorpay-secret"
+        ):
             response = razorpay_webhook(req)
         assert response.status_code == 200
         mock_process.assert_called_once()
@@ -939,13 +953,16 @@ class TestRazorpayWebhook:
 
         mock_get_rent.return_value = None
         body = json.dumps({"event": "unknown.event"}).encode()
+        sig = hmac.new(b"test-razorpay-secret", body, hashlib.sha256).hexdigest()
         req = SimpleNamespace(
             method="POST",
             body=body,
-            headers={"X-Razorpay-Signature": "sig"},
+            headers={"X-Razorpay-Signature": sig},
         )
 
-        with patch.object(django_settings, "RAZORPAY_WEBHOOK_SECRET", None):
+        with patch.object(
+            django_settings, "RAZORPAY_WEBHOOK_SECRET", "test-razorpay-secret"
+        ):
             response = razorpay_webhook(req)
         assert response.status_code == 200
 
@@ -970,13 +987,16 @@ class TestRazorpayWebhook:
         rent.payment_status = RentRecord.Status.PAID
         mock_get_rent.return_value = rent
         body = json.dumps({"event": "payment.captured"}).encode()
+        sig = hmac.new(b"test-razorpay-secret", body, hashlib.sha256).hexdigest()
         req = SimpleNamespace(
             method="POST",
             body=body,
-            headers={"X-Razorpay-Signature": "sig"},
+            headers={"X-Razorpay-Signature": sig},
         )
 
-        with patch.object(django_settings, "RAZORPAY_WEBHOOK_SECRET", None):
+        with patch.object(
+            django_settings, "RAZORPAY_WEBHOOK_SECRET", "test-razorpay-secret"
+        ):
             response = razorpay_webhook(req)
         assert response.status_code == 200
         assert json.loads(response.content) == {

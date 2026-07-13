@@ -13,6 +13,71 @@ from .models import Building, RentAgreementDraft, Renter, Unit
 
 User = get_user_model()
 
+LEGALITY_WEBHOOK_SECRET = "test-leegality-secret"
+
+
+def _sign_leegality_payload(payload: dict, secret: str) -> tuple[bytes, str]:
+    import hashlib
+    import hmac
+    import json
+
+    body = json.dumps(payload, sort_keys=True).encode("utf-8")
+    signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    return body, signature
+
+
+def _call_leegality_webhook(payload: dict, secret=None):
+    from django.test import RequestFactory, override_settings
+
+    from properties.views.unit_views import leegality_webhook
+
+    secret = secret or LEGALITY_WEBHOOK_SECRET
+    body, signature = _sign_leegality_payload(payload, secret)
+    factory = RequestFactory()
+    req = factory.post(
+        "/properties/leegality/webhook/",
+        data=body,
+        content_type="application/json",
+    )
+    req._body = body
+    req.META["HTTP_X_LEEGALITY_SIGNATURE"] = signature
+    with override_settings(LEEGALITY_WEBHOOK_SECRET=secret):
+        return leegality_webhook(req)
+
+
+@override_settings(LEEGALITY_WEBHOOK_SECRET=LEGALITY_WEBHOOK_SECRET)
+class LeegalityWebhookTests(APITestCase):
+    def test_leegality_webhook_marks_owner_signed(self):
+        response = _call_leegality_webhook(
+            {"document_id": "doc_abc", "status": "SIGNED", "participant": "OWNER"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.agreement.refresh_from_db()
+        self.assertTrue(self.agreement.owner_signed)
+        self.assertFalse(self.agreement.renter_signed)
+
+    def test_leegality_webhook_marks_renter_signed(self):
+        response = _call_leegality_webhook(
+            {"document_id": "doc_abc", "status": "SIGNED", "participant": "RENTER"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.agreement.refresh_from_db()
+        self.assertFalse(self.agreement.owner_signed)
+        self.assertTrue(self.agreement.renter_signed)
+
+    def test_leegality_webhook_marks_both_signed_for_unknown_participant(self):
+        response = _call_leegality_webhook(
+            {"document_id": "doc_abc", "status": "SIGNED", "participant": "OTHER"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.agreement.refresh_from_db()
+        self.assertTrue(self.agreement.owner_signed)
+        self.assertTrue(self.agreement.renter_signed)
+
+    def test_leegality_webhook_rejects_get_method(self):
+        response = self.client.get("/api/leegality/webhook/")
+        self.assertEqual(response.status_code, 405)
+
 
 class LeegalityServiceTests(TestCase):
     def setUp(self):
@@ -140,36 +205,27 @@ class LeegalityWebhookTests(APITestCase):
         self.client = APIClient()
 
     def test_leegality_webhook_marks_owner_signed(self):
-        response = self.client.post(
-            "/api/leegality/webhook/",
-            {"document_id": "doc_abc", "status": "SIGNED", "participant": "OWNER"},
-            format="json",
+        response = _call_leegality_webhook(
+            {"document_id": "doc_abc", "status": "SIGNED", "participant": "OWNER"}
         )
-
         self.assertEqual(response.status_code, 200)
         self.agreement.refresh_from_db()
         self.assertTrue(self.agreement.owner_signed)
         self.assertFalse(self.agreement.renter_signed)
 
     def test_leegality_webhook_marks_renter_signed(self):
-        response = self.client.post(
-            "/api/leegality/webhook/",
-            {"document_id": "doc_abc", "status": "SIGNED", "participant": "RENTER"},
-            format="json",
+        response = _call_leegality_webhook(
+            {"document_id": "doc_abc", "status": "SIGNED", "participant": "RENTER"}
         )
-
         self.assertEqual(response.status_code, 200)
         self.agreement.refresh_from_db()
         self.assertFalse(self.agreement.owner_signed)
         self.assertTrue(self.agreement.renter_signed)
 
     def test_leegality_webhook_marks_both_signed_for_unknown_participant(self):
-        response = self.client.post(
-            "/api/leegality/webhook/",
-            {"document_id": "doc_abc", "status": "SIGNED", "participant": "OTHER"},
-            format="json",
+        response = _call_leegality_webhook(
+            {"document_id": "doc_abc", "status": "SIGNED", "participant": "OTHER"}
         )
-
         self.assertEqual(response.status_code, 200)
         self.agreement.refresh_from_db()
         self.assertTrue(self.agreement.owner_signed)

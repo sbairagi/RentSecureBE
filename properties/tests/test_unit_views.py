@@ -10,11 +10,10 @@ from unittest.mock import patch
 from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from core.models import PlanFeatureLimit, SubscriptionPlan, UsageLimit, UserSubscription
 from properties.constants import GRACE_PERIOD_DAYS
@@ -385,12 +384,40 @@ class RentAgreementDraftViewSetTests(TestCase):
         self.assertEqual(len(response.data), 1)
 
 
+@override_settings(LEEGALITY_WEBHOOK_SECRET="test-leegality-secret")
 class LeegalityWebhookTests(TestCase):
-    def test_post_method_accepted(self):
-        response = self.client.post(
+    SECRET = "test-leegality-secret"
+
+    def _signed_post(self, payload, secret=None):
+        from django.test import RequestFactory, override_settings
+        from django.urls import resolve
+
+        secret = secret or self.SECRET
+        body, signature = _sign_leegality_payload(payload, secret)
+        factory = RequestFactory()
+        req = factory.post(
             "/properties/leegality/webhook/",
-            data={"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"},
+            data=body,
             content_type="application/json",
+        )
+        req._body = body
+        req.META["HTTP_X_LEEGALITY_SIGNATURE"] = signature
+        import sys
+
+        sys.stderr.write(f"DEBUG _signed_post body={body!r} sig={signature[:16]!r}\n")
+        sys.stderr.flush()
+        with override_settings(LEEGALITY_WEBHOOK_SECRET=secret):
+            match = resolve("/properties/leegality/webhook/")
+            response = match.func(req)
+        sys.stderr.write(
+            f"DEBUG response status={response.status_code} content={response.content[:80]!r}\n"
+        )
+        sys.stderr.flush()
+        return response
+
+    def test_post_method_accepted(self):
+        response = self._signed_post(
+            {"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"}
         )
         self.assertEqual(response.status_code, 200)
 
@@ -399,11 +426,19 @@ class LeegalityWebhookTests(TestCase):
         self.assertEqual(response.status_code, 405)
 
     def test_invalid_json_returns_400(self):
-        response = self.client.post(
+        from django.test import RequestFactory, override_settings
+        from django.urls import resolve
+
+        factory = RequestFactory()
+        req = factory.post(
             "/properties/leegality/webhook/",
-            data="not json",
+            data=b"not json",
             content_type="application/json",
         )
+        req.META["HTTP_X_LEEGALITY_SIGNATURE"] = "anysig"
+        with override_settings(LEEGALITY_WEBHOOK_SECRET="test-leegality-secret"):
+            match = resolve("/properties/leegality/webhook/")
+            response = match.func(req)
         self.assertEqual(response.status_code, 400)
 
     def test_signed_owner_updates_agreement(self):
@@ -415,7 +450,7 @@ class LeegalityWebhookTests(TestCase):
             name="WHB",
             address_line="1 St",
             city="C",
-            state="S",
+            state="CO",
             country="CO",
             postal_code="1",
         )
@@ -426,7 +461,7 @@ class LeegalityWebhookTests(TestCase):
             unit_type="flat",
             address_line="1 St",
             city="C",
-            state="S",
+            state="CO",
             country="CO",
             postal_code="1",
         )
@@ -445,10 +480,8 @@ class LeegalityWebhookTests(TestCase):
             file="draft.pdf",
             leegality_document_id="doc123",
         )
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"},
-            content_type="application/json",
+        response = self._signed_post(
+            {"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"}
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -466,7 +499,7 @@ class LeegalityWebhookTests(TestCase):
             name="WHB2",
             address_line="1 St",
             city="C",
-            state="S",
+            state="CO",
             country="CO",
             postal_code="1",
         )
@@ -477,7 +510,7 @@ class LeegalityWebhookTests(TestCase):
             unit_type="flat",
             address_line="1 St",
             city="C",
-            state="S",
+            state="CO",
             country="CO",
             postal_code="1",
         )
@@ -496,10 +529,8 @@ class LeegalityWebhookTests(TestCase):
             file="draft.pdf",
             leegality_document_id="doc456",
         )
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"document_id": "doc456", "status": "SIGNED", "participant": "RENTER"},
-            content_type="application/json",
+        response = self._signed_post(
+            {"document_id": "doc456", "status": "SIGNED", "participant": "RENTER"}
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -507,28 +538,28 @@ class LeegalityWebhookTests(TestCase):
 
     def test_missing_signature_returns_400_when_secret_configured(self):
         payload = {"document_id": "doc123", "status": "SIGNED"}
-        with patch.object(settings, "LEEGALITY_WEBHOOK_SECRET", "secret"):
-            response = self.client.post(
-                "/properties/leegality/webhook/",
-                data=payload,
-                content_type="application/json",
-            )
+        response = self.client.post(
+            "/properties/leegality/webhook/",
+            data=payload,
+            content_type="application/json",
+        )
         self.assertEqual(response.status_code, 400)
 
     def test_invalid_signature_returns_400_when_secret_configured(self):
         payload = {"document_id": "doc123", "status": "SIGNED"}
-        with patch.object(settings, "LEEGALITY_WEBHOOK_SECRET", "secret"):
-            response = self.client.post(
-                "/properties/leegality/webhook/",
-                data=payload,
-                content_type="application/json",
-                headers={"X-Leegality-Signature": "invalid"},
-            )
+        response = self.client.post(
+            "/properties/leegality/webhook/",
+            data=payload,
+            content_type="application/json",
+            headers={"X-Leegality-Signature": "invalid"},
+        )
         self.assertEqual(response.status_code, 400)
 
     def test_valid_signature_allows_webhook_when_secret_configured(self):
         payload = {"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"}
-        body, signature = _sign_leegality_payload(payload, secret="secret")
+        body, signature = _sign_leegality_payload(
+            payload, secret="test-leegality-secret"
+        )
         owner = User.objects.create_user(
             username="sig_owner", password="p", full_name="SigOwner", phone="+1"
         )
@@ -537,7 +568,7 @@ class LeegalityWebhookTests(TestCase):
             name="SigB",
             address_line="1 St",
             city="C",
-            state="S",
+            state="CO",
             country="CO",
             postal_code="1",
         )
@@ -548,7 +579,7 @@ class LeegalityWebhookTests(TestCase):
             unit_type="flat",
             address_line="1 St",
             city="C",
-            state="S",
+            state="CO",
             country="CO",
             postal_code="1",
         )
@@ -567,13 +598,23 @@ class LeegalityWebhookTests(TestCase):
             file="draft.pdf",
             leegality_document_id="doc123",
         )
-        with patch.object(settings, "LEEGALITY_WEBHOOK_SECRET", "secret"):
-            response = self.client.post(
-                "/properties/leegality/webhook/",
-                data=body,
-                content_type="application/json",
-                headers={"X-Leegality-Signature": signature},
-            )
+        from django.test import RequestFactory
+        from django.urls import resolve
+
+        body, signature = _sign_leegality_payload(
+            {"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"},
+            "test-leegality-secret",
+        )
+        factory = RequestFactory()
+        req = factory.post(
+            "/properties/leegality/webhook/",
+            data=body,
+            content_type="application/json",
+        )
+        req._body = body
+        req.META["HTTP_X_LEEGALITY_SIGNATURE"] = signature
+        match = resolve("/properties/leegality/webhook/")
+        response = match.func(req)
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
         self.assertTrue(agreement.owner_signed)

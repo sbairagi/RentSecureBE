@@ -21,6 +21,7 @@ from rest_framework.serializers import BaseSerializer
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -302,19 +303,9 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
 # Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
 # from external agreement providers. Those callers do not have browser
 # sessions and therefore cannot supply a CSRF token.
-# Security: Leegality webhook signature is verified below for authenticated delivery.
-def _verify_leegality_signature(request: HttpRequest) -> JsonResponse | None:
-    signature = request.headers.get("X-Leegality-Signature")
-    webhook_secret = getattr(settings, "LEEGALITY_WEBHOOK_SECRET", None)
-    if webhook_secret and signature:
-        expected = hmac.new(
-            webhook_secret.encode("utf-8"), request.body, hashlib.sha256
-        ).hexdigest()
-        if not hmac.compare_digest(expected, signature):
-            return JsonResponse({"error": "Invalid signature!"}, status=400)
-    elif webhook_secret and not signature:
-        return JsonResponse({"error": "Missing signature!"}, status=400)
-    return None
+# Security: Leegality webhook signature is verified inline below (hmac + sha256)
+# before any business logic executes. The LEEGALITY_WEBHOOK_SECRET setting must
+# be configured in production; the endpoint refuses all requests if it is absent.
 
 
 def _apply_signature_status(
@@ -345,9 +336,20 @@ def leegality_webhook(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
-    signature_error = _verify_leegality_signature(request)
-    if signature_error is not None:
-        return signature_error
+    webhook_secret = getattr(settings, "LEEGALITY_WEBHOOK_SECRET", None)
+    if not webhook_secret:
+        raise ImproperlyConfigured("LEEGALITY_WEBHOOK_SECRET is not set")
+    signature = request.headers.get("X-Leegality-Signature")
+    if not signature:
+        return JsonResponse({"error": "Missing signature!"}, status=400)
+    if not hmac.compare_digest(
+        hmac.new(
+            webhook_secret.encode("utf-8"), request.body, hashlib.sha256
+        ).hexdigest(),
+        signature,
+    ):
+        logger.warning("Leegality webhook: invalid signature")
+        return JsonResponse({"error": "Invalid signature!"}, status=400)
 
     try:
         payload: dict[str, Any] = json.loads(request.body.decode("utf-8"))

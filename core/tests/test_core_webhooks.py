@@ -13,7 +13,6 @@ from core.views import (
     _get_rent_from_event,
     _process_referral,
     cashfree_payout_webhook,
-    check_signature_or_return_http_response,
     create_rent_payment,
     razorpay_webhook,
 )
@@ -338,28 +337,6 @@ class CreateRentPaymentTests(TestCase):
         self.assertEqual(rent.razorpay_order_id, "order_123")
 
 
-class CheckSignatureTests(TestCase):
-    def test_invalid_signature_returns_400(self):
-        body = b"test body"
-        signature = "bad_signature"
-        response = check_signature_or_return_http_response("secret", signature, body)
-        self.assertIsNotNone(response)
-        self.assertEqual(response.status_code, 400)
-
-    def test_missing_signature_returns_400(self):
-        body = b"test body"
-        response = check_signature_or_return_http_response("secret", None, body)
-        self.assertIsNotNone(response)
-        self.assertEqual(response.status_code, 400)
-
-    def test_valid_signature_returns_none(self):
-        body = b"test body"
-        secret = "secret"
-        signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
-        response = check_signature_or_return_http_response(secret, signature, body)
-        self.assertIsNone(response)
-
-
 class GetRentFromEventTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -445,7 +422,9 @@ class RazorpayWebhookTests(TestCase):
             data="not json",
             content_type="application/json",
         )
-        response = razorpay_webhook(req)
+        req.META["HTTP_X_RAZORPAY_SIGNATURE"] = "anysig"
+        with patch.object(settings, "RAZORPAY_WEBHOOK_SECRET", "secret"):
+            response = razorpay_webhook(req)
         self.assertEqual(response.status_code, 400)
 
 

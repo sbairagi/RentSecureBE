@@ -22,6 +22,7 @@ from twilio.rest import Client
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, Group
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone
@@ -328,15 +329,9 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 # Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
 # from external payment/webhook providers. Those callers do not have browser
 # sessions and therefore cannot supply a CSRF token.
-# Security: Cashfree webhook signature is verified below for authenticated delivery.
-def _verify_cashfree_signature(request: HttpRequest) -> JsonResponse | None:
-    signature = request.headers.get("X-Cashfree-Signature")
-    webhook_secret = getattr(settings, "CASHFREE_WEBHOOK_SECRET", None)
-    return check_signature_or_return_http_response(
-        webhook_secret, signature, request.body
-    )
-
-
+# Security: Cashfree webhook signature is verified inline below (hmac + sha256)
+# before any business logic executes. The CASHFREE_WEBHOOK_SECRET setting must
+# be configured in production; the endpoint refuses all requests if it is absent.
 @csrf_exempt
 def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     """Handle Cashfree payout status webhook.
@@ -349,9 +344,20 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     if request.method != "POST":
         return JsonResponse({"error": _ERROR_INVALID_METHOD}, status=405)
 
-    signature_error = _verify_cashfree_signature(request)
-    if signature_error is not None:
-        return signature_error
+    webhook_secret = getattr(settings, "CASHFREE_WEBHOOK_SECRET", None)
+    if not webhook_secret:
+        raise ImproperlyConfigured("CASHFREE_WEBHOOK_SECRET is not set")
+    signature = request.headers.get("X-Cashfree-Signature")
+    if not signature:
+        return JsonResponse({"error": "Missing signature!"}, status=400)
+    if not hmac.compare_digest(
+        hmac.new(
+            webhook_secret.encode("utf-8"), request.body, hashlib.sha256
+        ).hexdigest(),
+        signature,
+    ):
+        logger.warning("Cashfree webhook: invalid signature")
+        return JsonResponse({"error": "Invalid signature!"}, status=400)
 
     payload = json.loads(request.body)
     transfer_id = payload.get("transferId")
@@ -368,7 +374,6 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
         rent.payout_status = "FAILED"
     rent.save()
 
-    # Send payout notification
     try:
         send_payout_notification(rent)
     except Exception as e:
@@ -417,29 +422,12 @@ def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     )
 
 
-def check_signature_or_return_http_response(
-    webhook_secret: str | None,
-    signature: str | None,
-    body: bytes,
-) -> JsonResponse | None:
-    """Verify HMAC signature and return error response if invalid."""
-    if webhook_secret and signature:
-        if not hmac.compare_digest(
-            hmac.new(webhook_secret.encode("utf-8"), body, hashlib.sha256).hexdigest(),
-            signature,
-        ):
-            logger.warning("Razorpay webhook: invalid signature")
-            return JsonResponse({"error": "Invalid signature!"}, status=400)
-    elif webhook_secret and not signature:
-        logger.warning("Razorpay webhook: missing signature header")
-        return JsonResponse({"error": "Missing signature!"}, status=400)
-    return None
-
-
 # Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
 # from external payment/webhook providers. Those callers do not have browser
 # sessions and therefore cannot supply a CSRF token.
-# Security: Razorpay webhook signature is verified below for authenticated delivery.
+# Security: Razorpay webhook signature is verified inline below (hmac + sha256)
+# before any business logic executes. The RAZORPAY_WEBHOOK_SECRET setting must
+# be configured in production; the endpoint refuses all requests if it is absent.
 @csrf_exempt
 def razorpay_webhook(request: HttpRequest) -> JsonResponse:
     """Single Razorpay webhook handler with HMAC signature verification.
@@ -456,11 +444,17 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:
     signature = request.headers.get("X-Razorpay-Signature")
 
     webhook_secret = getattr(settings, "RAZORPAY_WEBHOOK_SECRET", None)
-    error_response = check_signature_or_return_http_response(
-        webhook_secret, signature, body
-    )
-    if error_response is not None:
-        return error_response
+    if not webhook_secret:
+        raise ImproperlyConfigured("RAZORPAY_WEBHOOK_SECRET is not set")
+    signature = request.headers.get("X-Razorpay-Signature")
+    if not signature:
+        return JsonResponse({"error": "Missing signature!"}, status=400)
+    if not hmac.compare_digest(
+        hmac.new(webhook_secret.encode("utf-8"), body, hashlib.sha256).hexdigest(),
+        signature,
+    ):
+        logger.warning("Razorpay webhook: invalid signature")
+        return JsonResponse({"error": "Invalid signature!"}, status=400)
 
     try:
         data = json.loads(body)
