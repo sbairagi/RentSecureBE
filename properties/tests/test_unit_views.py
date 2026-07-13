@@ -529,40 +529,41 @@ class LeegalityWebhookTests(TestCase):
     def test_valid_signature_allows_webhook_when_secret_configured(self):
         payload = {"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"}
         body, signature = _sign_leegality_payload(payload, secret="secret")
+        owner = User.objects.create_user(
+            username="sig_owner", password="p", full_name="SigOwner", phone="+1"
+        )
+        building = Building.objects.create(
+            owner=owner,
+            name="SigB",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        unit = Unit.objects.create(
+            owner=owner,
+            building=building,
+            unit="SIG1",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        renter = Renter.objects.create(
+            unit=unit,
+            name="SigRenter",
+            phone="+911234567900",
+            email="sig.renter@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=date.today(),
+        )
         agreement = RentAgreementDraft.objects.create(
-            user=User.objects.create_user(
-                username="sig_owner", password="p", full_name="SigOwner", phone="+1"
-            ),
-            renter=None,
-            unit=Unit.objects.create(
-                owner=User.objects.create_user(
-                    username="sig_unit_owner",
-                    password="p",
-                    full_name="SigUnitOwner",
-                    phone="+1",
-                ),
-                building=Building.objects.create(
-                    owner=User.objects.create_user(
-                        username="sig_bld_owner",
-                        password="p",
-                        full_name="SigBldOwner",
-                        phone="+1",
-                    ),
-                    name="SigB",
-                    address_line="1 St",
-                    city="C",
-                    state="S",
-                    country="CO",
-                    postal_code="1",
-                ),
-                unit="SIG1",
-                unit_type="flat",
-                address_line="1 St",
-                city="C",
-                state="S",
-                country="CO",
-                postal_code="1",
-            ),
+            user=owner,
+            renter=renter,
+            unit=unit,
             file="draft.pdf",
             leegality_document_id="doc123",
         )
