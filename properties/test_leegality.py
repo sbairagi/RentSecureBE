@@ -47,6 +47,46 @@ def _call_leegality_webhook(payload: dict, secret=None):
 
 @override_settings(LEEGALITY_WEBHOOK_SECRET=LEGALITY_WEBHOOK_SECRET)
 class LeegalityWebhookTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="owner1", password="pass123", email="owner@example.com"
+        )
+        self.building = Building.objects.create(
+            name="Test Building",
+            address_line="123 Main St",
+            city="New York",
+            state="NY",
+            country="USA",
+            postal_code="10001",
+            owner=self.user,
+        )
+        self.unit = Unit.objects.create(
+            owner=self.user,
+            building=self.building,
+            unit="101",
+            address_line="123 Main St",
+            city="New York",
+            state="NY",
+            country="USA",
+            postal_code="10001",
+            unit_type=Unit.UnitType.FLAT,
+        )
+        self.renter = Renter.objects.create(
+            unit=self.unit,
+            name="Alice",
+            phone="+919876543210",
+            rent_amount=10000,
+            start_date=date(2025, 1, 1),
+        )
+        self.agreement = RentAgreementDraft.objects.create(
+            user=self.user,
+            renter=self.renter,
+            unit=self.unit,
+            file=ContentFile(b"PDF content", name="draft.pdf"),
+            leegality_document_id="doc_abc",
+        )
+        self.client = APIClient()
+
     def test_leegality_webhook_marks_owner_signed(self):
         response = _call_leegality_webhook(
             {"document_id": "doc_abc", "status": "SIGNED", "participant": "OWNER"}
@@ -161,79 +201,6 @@ class LeegalityServiceTests(TestCase):
                 owner_email="owner@example.com",
                 renter_email="renter@example.com",
             )
-
-
-class LeegalityWebhookTests(APITestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username="owner1", password="pass123", email="owner@example.com"
-        )
-        self.building = Building.objects.create(
-            name="Test Building",
-            address_line="123 Main St",
-            city="New York",
-            state="NY",
-            country="USA",
-            postal_code="10001",
-            owner=self.user,
-        )
-        self.unit = Unit.objects.create(
-            owner=self.user,
-            building=self.building,
-            unit="101",
-            address_line="123 Main St",
-            city="New York",
-            state="NY",
-            country="USA",
-            postal_code="10001",
-            unit_type=Unit.UnitType.FLAT,
-        )
-        self.renter = Renter.objects.create(
-            unit=self.unit,
-            name="Alice",
-            phone="+919876543210",
-            rent_amount=10000,
-            start_date=date(2025, 1, 1),
-        )
-        self.agreement = RentAgreementDraft.objects.create(
-            user=self.user,
-            renter=self.renter,
-            unit=self.unit,
-            file=ContentFile(b"PDF content", name="draft.pdf"),
-            leegality_document_id="doc_abc",
-        )
-        self.client = APIClient()
-
-    def test_leegality_webhook_marks_owner_signed(self):
-        response = _call_leegality_webhook(
-            {"document_id": "doc_abc", "status": "SIGNED", "participant": "OWNER"}
-        )
-        self.assertEqual(response.status_code, 200)
-        self.agreement.refresh_from_db()
-        self.assertTrue(self.agreement.owner_signed)
-        self.assertFalse(self.agreement.renter_signed)
-
-    def test_leegality_webhook_marks_renter_signed(self):
-        response = _call_leegality_webhook(
-            {"document_id": "doc_abc", "status": "SIGNED", "participant": "RENTER"}
-        )
-        self.assertEqual(response.status_code, 200)
-        self.agreement.refresh_from_db()
-        self.assertFalse(self.agreement.owner_signed)
-        self.assertTrue(self.agreement.renter_signed)
-
-    def test_leegality_webhook_marks_both_signed_for_unknown_participant(self):
-        response = _call_leegality_webhook(
-            {"document_id": "doc_abc", "status": "SIGNED", "participant": "OTHER"}
-        )
-        self.assertEqual(response.status_code, 200)
-        self.agreement.refresh_from_db()
-        self.assertTrue(self.agreement.owner_signed)
-        self.assertTrue(self.agreement.renter_signed)
-
-    def test_leegality_webhook_rejects_get_method(self):
-        response = self.client.get("/api/leegality/webhook/")
-        self.assertEqual(response.status_code, 405)
 
 
 class RentAgreementDraftHistoryTests(TestCase):

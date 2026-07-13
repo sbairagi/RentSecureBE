@@ -36,6 +36,29 @@ def _sign_leegality_payload(payload: dict, secret: str) -> tuple[bytes, str]:
     return body, signature
 
 
+def _call_leegality_webhook(payload, secret=None):
+    from django.test import RequestFactory, override_settings
+
+    from properties.views.unit_views import leegality_webhook
+
+    secret = secret or "test-leegality-secret"
+    if isinstance(payload, bytes):
+        body = payload
+    else:
+        body = json.dumps(payload).encode("utf-8")
+    signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    factory = RequestFactory()
+    req = factory.post(
+        "/properties/leegality/webhook/",
+        data=body,
+        content_type="application/json",
+    )
+    req._body = body
+    req.META["HTTP_X_LEEGALITY_SIGNATURE"] = signature
+    with override_settings(LEEGALITY_WEBHOOK_SECRET=secret):
+        return leegality_webhook(req)
+
+
 def _auth(u):
     c = APIClient()
     c.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(u).access_token}")
@@ -388,35 +411,8 @@ class RentAgreementDraftViewSetTests(TestCase):
 class LeegalityWebhookTests(TestCase):
     SECRET = "test-leegality-secret"
 
-    def _signed_post(self, payload, secret=None):
-        from django.test import RequestFactory, override_settings
-        from django.urls import resolve
-
-        secret = secret or self.SECRET
-        body, signature = _sign_leegality_payload(payload, secret)
-        factory = RequestFactory()
-        req = factory.post(
-            "/properties/leegality/webhook/",
-            data=body,
-            content_type="application/json",
-        )
-        req._body = body
-        req.META["HTTP_X_LEEGALITY_SIGNATURE"] = signature
-        import sys
-
-        sys.stderr.write(f"DEBUG _signed_post body={body!r} sig={signature[:16]!r}\n")
-        sys.stderr.flush()
-        with override_settings(LEEGALITY_WEBHOOK_SECRET=secret):
-            match = resolve("/properties/leegality/webhook/")
-            response = match.func(req)
-        sys.stderr.write(
-            f"DEBUG response status={response.status_code} content={response.content[:80]!r}\n"
-        )
-        sys.stderr.flush()
-        return response
-
     def test_post_method_accepted(self):
-        response = self._signed_post(
+        response = _call_leegality_webhook(
             {"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"}
         )
         self.assertEqual(response.status_code, 200)
@@ -426,19 +422,7 @@ class LeegalityWebhookTests(TestCase):
         self.assertEqual(response.status_code, 405)
 
     def test_invalid_json_returns_400(self):
-        from django.test import RequestFactory, override_settings
-        from django.urls import resolve
-
-        factory = RequestFactory()
-        req = factory.post(
-            "/properties/leegality/webhook/",
-            data=b"not json",
-            content_type="application/json",
-        )
-        req.META["HTTP_X_LEEGALITY_SIGNATURE"] = "anysig"
-        with override_settings(LEEGALITY_WEBHOOK_SECRET="test-leegality-secret"):
-            match = resolve("/properties/leegality/webhook/")
-            response = match.func(req)
+        response = _call_leegality_webhook(b"not json")
         self.assertEqual(response.status_code, 400)
 
     def test_signed_owner_updates_agreement(self):
@@ -480,7 +464,7 @@ class LeegalityWebhookTests(TestCase):
             file="draft.pdf",
             leegality_document_id="doc123",
         )
-        response = self._signed_post(
+        response = _call_leegality_webhook(
             {"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"}
         )
         self.assertEqual(response.status_code, 200)
@@ -529,7 +513,7 @@ class LeegalityWebhookTests(TestCase):
             file="draft.pdf",
             leegality_document_id="doc456",
         )
-        response = self._signed_post(
+        response = _call_leegality_webhook(
             {"document_id": "doc456", "status": "SIGNED", "participant": "RENTER"}
         )
         self.assertEqual(response.status_code, 200)
@@ -598,23 +582,9 @@ class LeegalityWebhookTests(TestCase):
             file="draft.pdf",
             leegality_document_id="doc123",
         )
-        from django.test import RequestFactory
-        from django.urls import resolve
-
-        body, signature = _sign_leegality_payload(
-            {"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"},
-            "test-leegality-secret",
+        response = _call_leegality_webhook(
+            {"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"}
         )
-        factory = RequestFactory()
-        req = factory.post(
-            "/properties/leegality/webhook/",
-            data=body,
-            content_type="application/json",
-        )
-        req._body = body
-        req.META["HTTP_X_LEEGALITY_SIGNATURE"] = signature
-        match = resolve("/properties/leegality/webhook/")
-        response = match.func(req)
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
         self.assertTrue(agreement.owner_signed)
@@ -1826,10 +1796,8 @@ class LeegalityWebhookBranchTests(TestCase):
     def test_hit_documentid_variant(self):
         """Payload key 'documentId' resolves the agreement."""
         agreement = self._make_agreement(doc_id="sid_variant")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"documentId": "sid_variant", "status": "SIGNED"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"documentId": "sid_variant", "status": "SIGNED"}
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -1838,10 +1806,8 @@ class LeegalityWebhookBranchTests(TestCase):
     def test_hit_documentkey_variant(self):
         """Payload key 'documentKey' resolves the agreement."""
         self._make_agreement(doc_id="sid_key")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"documentKey": "sid_key", "status": "SIGNED"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"documentKey": "sid_key", "status": "SIGNED"}
         )
         self.assertEqual(response.status_code, 200)
         a = RentAgreementDraft.objects.get(leegality_document_id="sid_key")
@@ -1851,10 +1817,8 @@ class LeegalityWebhookBranchTests(TestCase):
     def test_hit_parameter_state_instead_of_status(self):
         """Payload key 'state' = 'SIGNED' should also trigger the callback."""
         agreement = self._make_agreement(doc_id="sid_state")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"document_id": "sid_state", "state": "SIGNED"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"document_id": "sid_state", "state": "SIGNED"}
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -1864,14 +1828,12 @@ class LeegalityWebhookBranchTests(TestCase):
     def test_participant_owner_sets_owner_signed_only(self):
         """participant='OWNER' → only owner_signed=True."""
         agreement = self._make_agreement(doc_id="sid_owner")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={
+        response = _call_leegality_webhook(
+            {
                 "document_id": "sid_owner",
                 "status": "SIGNED",
                 "participant": "OWNER",
-            },
-            content_type="application/json",
+            }
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -1881,14 +1843,12 @@ class LeegalityWebhookBranchTests(TestCase):
     def test_participant_renter_sets_renter_signed_only(self):
         """participant='RENTER' → only renter_signed=True."""
         agreement = self._make_agreement(doc_id="sid_renter")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={
+        response = _call_leegality_webhook(
+            {
                 "document_id": "sid_renter",
                 "status": "SIGNED",
                 "participant": "RENTER",
-            },
-            content_type="application/json",
+            }
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -1898,14 +1858,12 @@ class LeegalityWebhookBranchTests(TestCase):
     def test_unknown_participant_sets_both_signed(self):
         """Participant neither OWNER nor RENTER → both owner and renter signed."""
         agreement = self._make_agreement(doc_id="sid_unknown")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={
+        response = _call_leegality_webhook(
+            {
                 "document_id": "sid_unknown",
                 "status": "SIGNED",
                 "participant": "UNKNOWN",
-            },
-            content_type="application/json",
+            }
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -1915,10 +1873,8 @@ class LeegalityWebhookBranchTests(TestCase):
     def test_status_case_insensitive_signed(self):
         """ "signed' in lower case still sets both flags."""
         agreement = self._make_agreement(doc_id="sid_lower")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"document_id": "sid_lower", "status": "signed"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"document_id": "sid_lower", "status": "signed"}
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -1927,20 +1883,16 @@ class LeegalityWebhookBranchTests(TestCase):
 
     def test_no_agreement_noop(self):
         """doc_id not found → no error, 200 returned."""
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"document_id": "nonexistent", "status": "SIGNED"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"document_id": "nonexistent", "status": "SIGNED"}
         )
         self.assertEqual(response.status_code, 200)
 
     def test_non_signed_status_is_noop(self):
         """'PENDING' status should not update any flags."""
         agreement = self._make_agreement(doc_id="sid_pending")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"document_id": "sid_pending", "status": "PENDING"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"document_id": "sid_pending", "status": "PENDING"}
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -1952,11 +1904,7 @@ class LeegalityWebhookBranchTests(TestCase):
         self.assertEqual(response.status_code, 405)
 
     def test_invalid_json_returns_400(self):
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data="not json",
-            content_type="application/json",
-        )
+        response = _call_leegality_webhook(b"not json")
         self.assertEqual(response.status_code, 400)
 
 
@@ -2076,22 +2024,18 @@ class LeegalityWebhookDocumentKeyAndStateTests(TestCase):
 
     def test_documentkey_payload_updates_owner_signed(self):
         agreement = self._make_agreement(doc_id="sid_key")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"documentKey": "sid_key", "status": "SIGNED"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"documentKey": "sid_key", "status": "SIGNED"}
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
         self.assertTrue(agreement.owner_signed)
-        self.assertTrue(agreement.renter_signed)  # participant is None → both signed
+        self.assertTrue(agreement.renter_signed)
 
     def test_state_payload_updates_owner_signed(self):
         agreement = self._make_agreement(doc_id="sid_state")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"document_id": "sid_state", "state": "SIGNED"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"document_id": "sid_state", "state": "SIGNED"}
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -2099,22 +2043,20 @@ class LeegalityWebhookDocumentKeyAndStateTests(TestCase):
 
     def test_no_agreement_noop_status_not_signed(self):
         """agreement is None OR status is not SIGNED → no update, still 200."""
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"document_id": "nonexistent", "status": "PENDING"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"document_id": "nonexistent", "status": "PENDING"}
         )
         self.assertEqual(response.status_code, 200)
-        # agreement is None branch (line 329-330 first condition is False)
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={
+        agreement = self._make_agreement(doc_id="some_id")
+        response = _call_leegality_webhook(
+            {
                 "document_id": "some_id",
-                # no status and no state, so status_value is None
-            },
-            content_type="application/json",
+            }
         )
         self.assertEqual(response.status_code, 200)
+        agreement.refresh_from_db()
+        self.assertFalse(agreement.owner_signed)
+        self.assertFalse(agreement.renter_signed)
 
 
 class UnitImageViewSetCoverageTests(TestCase):
@@ -2918,10 +2860,8 @@ class LeegalityWebhookPayloadVariantTests(TestCase):
     def test_document_id_variant_when_primary_missing(self):
         """Falls back to 'documentId' key when 'document_id' is absent."""
         agreement = self._make_agreement("docId_only")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"documentId": "docId_only", "status": "SIGNED"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"documentId": "docId_only", "status": "SIGNED"}
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -2930,10 +2870,8 @@ class LeegalityWebhookPayloadVariantTests(TestCase):
     def test_document_key_variant_when_others_missing(self):
         """Falls back to 'documentKey' key when both 'document_id' and 'documentId' absent."""
         agreement = self._make_agreement("docKey_only")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"documentKey": "docKey_only", "status": "SIGNED"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"documentKey": "docKey_only", "status": "SIGNED"}
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -2942,10 +2880,8 @@ class LeegalityWebhookPayloadVariantTests(TestCase):
     def test_state_parameter_trigger_signs_both_parties(self):
         """'state' instead of 'status' → SIGNED logic runs (no participant → both signed)."""
         agreement = self._make_agreement("sid_state")
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"document_id": "sid_state", "state": "SIGNED"},
-            content_type="application/json",
+        response = _call_leegality_webhook(
+            {"document_id": "sid_state", "state": "SIGNED"}
         )
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
@@ -2954,11 +2890,7 @@ class LeegalityWebhookPayloadVariantTests(TestCase):
 
     def test_no_document_id_key_returns_200_without_error(self):
         """Payload without any document-id key → query is empty, no crash, 200."""
-        response = self.client.post(
-            "/properties/leegality/webhook/",
-            data={"status": "SIGNED"},
-            content_type="application/json",
-        )
+        response = _call_leegality_webhook({"status": "SIGNED"})
         self.assertEqual(response.status_code, 200)
 
 
