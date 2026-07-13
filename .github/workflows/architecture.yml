@@ -123,6 +123,12 @@ jobs:
           python-version: "3.12"
           extra-packages: "pydeps"
           cache-key-suffix: "-architecture"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate dependency graph
         shell: bash
         run: |
@@ -130,7 +136,7 @@ jobs:
           python scripts/diagrams/generate_dependency_graph.py \
             --output architecture/generated/dependency-graph \
             --format dot mmd puml \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
 
   module-dependency:
     name: Stage 5c │ Module Dependency Graph
@@ -159,6 +165,12 @@ jobs:
           python-version: "3.12"
           extra-packages: "pydeps"
           cache-key-suffix: "-architecture"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate module dependency graph
         shell: bash
         run: |
@@ -167,7 +179,7 @@ jobs:
             --output architecture/generated/module-dependency-graph \
             --format dot mmd \
             --type module \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
 
   architecture-metrics:
     name: Stage 5d │ Architecture Metrics
@@ -195,13 +207,19 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-architecture"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate architecture metrics
         shell: bash
         run: |
           set -euo pipefail
           python scripts/diagrams/generate_architecture_metrics.py \
             --output architecture/generated/architecture-metrics.json \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
       - name: Upload metrics artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -224,12 +242,18 @@ jobs:
         with:
           name: architecture-metrics
           path: architecture/
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate architecture summary
         shell: bash
         run: |
           set -euo pipefail
           python scripts/diagrams/generate_architecture_summary.py \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }} \
+            --metadata architecture/generated/architecture.json \
             --output architecture/generated/architecture-summary.md
       - name: Upload summary
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -265,6 +289,12 @@ jobs:
           python-version: "3.12"
           extra-packages: "pydeps"
           cache-key-suffix: "-architecture"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate component dependency graph
         shell: bash
         run: |
@@ -273,6 +303,6 @@ jobs:
             --output architecture/generated/component-dependency-graph \
             --format dot mmd puml \
             --type component \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
 
     if: ${{ false }}

@@ -17,7 +17,7 @@ permissions:
 
 concurrency:
   group: uml-validation-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   scan-architecture:
@@ -84,6 +84,12 @@ jobs:
           python-version: "3.12"
           extra-packages: "plantuml"
           cache-key-suffix: "-uml-validation"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate PlantUML diagrams
         shell: bash
         run: |
@@ -91,7 +97,7 @@ jobs:
           python scripts/diagrams/generate_plantuml.py \
             --output docs/uml/generated/plantuml \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
 
   generate-mermaid:
     name: Generate Mermaid Diagrams
@@ -119,6 +125,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml-validation"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate Mermaid diagrams
         shell: bash
         run: |
@@ -126,7 +138,7 @@ jobs:
           python scripts/diagrams/generate_mermaid.py \
             --output docs/uml/generated/mermaid \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
 
   generate-c4:
     name: Generate C4 Diagrams
@@ -154,6 +166,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml-validation"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate C4 diagrams
         shell: bash
         run: |
@@ -161,7 +179,7 @@ jobs:
           python scripts/diagrams/generate_c4.py \
             --output docs/diagrams/generated/c4 \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
 
   generate-domain:
     name: Generate Domain Diagrams
@@ -189,6 +207,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml-validation"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate domain diagrams
         shell: bash
         run: |
@@ -196,7 +220,7 @@ jobs:
           python scripts/diagrams/generate_domain_diagrams.py \
             --output docs/uml/generated/domain \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
 
   generate-flows:
     name: Generate Flow Diagrams
@@ -224,6 +248,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml-validation"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate flow diagrams
         shell: bash
         run: |
@@ -231,7 +261,7 @@ jobs:
           python scripts/diagrams/generate_flow_diagrams.py \
             --output docs/diagrams/generated/flows \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
 
   generate-infrastructure:
     name: Generate Infrastructure Diagrams
@@ -259,6 +289,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml-validation"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate infrastructure diagrams
         shell: bash
         run: |
@@ -266,7 +302,7 @@ jobs:
           python scripts/diagrams/generate_infrastructure_diagrams.py \
             --output docs/diagrams/generated/infrastructure \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
 
   generate-ddd:
     name: Generate DDD Bounded Context Diagrams
@@ -294,6 +330,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml-validation"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate DDD bounded context diagrams
         shell: bash
         run: |
@@ -301,7 +343,7 @@ jobs:
           python scripts/diagrams/generate_ddd_diagrams.py \
             --output docs/uml/generated/ddd \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
 
   validate-metadata:
     name: Validate Architecture Metadata

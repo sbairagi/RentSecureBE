@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: uml-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   scan-architecture:
@@ -86,6 +86,12 @@ jobs:
           python-version: "3.12"
           extra-packages: "plantuml"
           cache-key-suffix: "-uml"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate PlantUML diagrams
         shell: bash
         run: |
@@ -93,7 +99,7 @@ jobs:
           python scripts/diagrams/generate_plantuml.py \
             --output docs/uml/generated/plantuml \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
       - name: Upload PlantUML artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -127,6 +133,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate Mermaid diagrams
         shell: bash
         run: |
@@ -134,7 +146,7 @@ jobs:
           python scripts/diagrams/generate_mermaid.py \
             --output docs/uml/generated/mermaid \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
       - name: Upload Mermaid artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -168,6 +180,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate C4 diagrams
         shell: bash
         run: |
@@ -175,7 +193,7 @@ jobs:
           python scripts/diagrams/generate_c4.py \
             --output docs/diagrams/generated/c4 \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
       - name: Upload C4 artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -209,6 +227,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate domain diagrams
         shell: bash
         run: |
@@ -216,7 +240,7 @@ jobs:
           python scripts/diagrams/generate_domain_diagrams.py \
             --output docs/uml/generated/domain \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
       - name: Upload domain artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -250,6 +274,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate flow diagrams
         shell: bash
         run: |
@@ -257,7 +287,7 @@ jobs:
           python scripts/diagrams/generate_flow_diagrams.py \
             --output docs/diagrams/generated/flows \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
       - name: Upload flow artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -291,6 +321,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate infrastructure diagrams
         shell: bash
         run: |
@@ -298,7 +334,7 @@ jobs:
           python scripts/diagrams/generate_infrastructure_diagrams.py \
             --output docs/diagrams/generated/infrastructure \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
       - name: Upload infrastructure artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -332,6 +368,12 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml"
+      - name: Ensure architecture metadata exists
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
       - name: Generate DDD bounded context diagrams
         shell: bash
         run: |
@@ -339,7 +381,7 @@ jobs:
           python scripts/diagrams/generate_ddd_diagrams.py \
             --output docs/uml/generated/ddd \
             --all \
-            --metadata ${{ needs.scan-architecture.outputs.metadata-path }}
+            --metadata architecture/generated/architecture.json
       - name: Upload DDD artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
