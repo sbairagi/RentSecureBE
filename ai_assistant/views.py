@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 from datetime import date, timedelta
 
@@ -11,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response
 
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
@@ -214,9 +217,34 @@ def chat_with_assistant(request: DRFRequest) -> Response:
 # // />
 
 
-@csrf_exempt  # nosonar
+# Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
+# from WhatsApp/Meta webhook delivery. Those callers do not have browser
+# sessions and therefore cannot supply a CSRF token.
+# Security: WhatsApp webhook signature is verified below for authenticated delivery.
+def _verify_whatsapp_signature(request: HttpRequest) -> JsonResponse | None:
+    signature = request.headers.get("X-Hub-Signature-256")
+    webhook_secret = getattr(settings, "WHATSAPP_WEBHOOK_SECRET", None)
+    if webhook_secret and signature:
+        expected = (
+            "sha256="
+            + hmac.new(
+                webhook_secret.encode("utf-8"), request.body, hashlib.sha256
+            ).hexdigest()
+        )
+        if not hmac.compare_digest(expected, signature):
+            return JsonResponse({"error": "Invalid signature!"}, status=400)
+    elif webhook_secret and not signature:
+        return JsonResponse({"error": "Missing signature!"}, status=400)
+    return None
+
+
+@csrf_exempt
 @require_POST
 def whatsapp_webhook(request: HttpRequest) -> JsonResponse:
+    signature_error = _verify_whatsapp_signature(request)
+    if signature_error is not None:
+        return signature_error
+
     payload = json.loads(request.body)
     phone = payload.get("from")
     message = payload.get("text")

@@ -328,7 +328,7 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 # Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
 # from external payment/webhook providers. Those callers do not have browser
 # sessions and therefore cannot supply a CSRF token.
-# Security: signature verification is enforced below for authenticated webhook delivery.
+# Security: Cashfree webhook signature is verified below for authenticated delivery.
 def _verify_cashfree_signature(request: HttpRequest) -> JsonResponse | None:
     signature = request.headers.get("X-Cashfree-Signature")
     webhook_secret = getattr(settings, "CASHFREE_WEBHOOK_SECRET", None)
@@ -337,8 +337,8 @@ def _verify_cashfree_signature(request: HttpRequest) -> JsonResponse | None:
     )
 
 
-@csrf_exempt  # nosonar
-def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
+@csrf_exempt
+def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     """Handle Cashfree payout status webhook.
 
     Fixed: rent.save() no longer overwrites `rent` with None.
@@ -439,8 +439,8 @@ def check_signature_or_return_http_response(
 # Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
 # from external payment/webhook providers. Those callers do not have browser
 # sessions and therefore cannot supply a CSRF token.
-# nosonar
-@csrf_exempt  # nosonar
+# Security: Razorpay webhook signature is verified below for authenticated delivery.
+@csrf_exempt
 def razorpay_webhook(request: HttpRequest) -> JsonResponse:
     """Single Razorpay webhook handler with HMAC signature verification.
 

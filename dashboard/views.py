@@ -1,6 +1,5 @@
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from properties.models import RentRecord
@@ -13,7 +12,6 @@ def agreement_status_view(request: HttpRequest) -> HttpResponse:
     return render(request, "dashboard/agreement_status.html", {"records": records})
 
 
-@csrf_exempt  # nosonar
 @require_POST
 def retry_signature(request: HttpRequest, rent_id: int) -> HttpResponse:
     if request.method == "POST":

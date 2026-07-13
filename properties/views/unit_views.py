@@ -302,7 +302,7 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
 # Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
 # from external agreement providers. Those callers do not have browser
 # sessions and therefore cannot supply a CSRF token.
-# Security: signature verification is enforced below for authenticated webhook delivery.
+# Security: Leegality webhook signature is verified below for authenticated delivery.
 def _verify_leegality_signature(request: HttpRequest) -> JsonResponse | None:
     signature = request.headers.get("X-Leegality-Signature")
     webhook_secret = getattr(settings, "LEEGALITY_WEBHOOK_SECRET", None)
@@ -334,8 +334,8 @@ def _apply_signature_status(
     agreement.save(update_fields=["owner_signed", "renter_signed"])
 
 
-@csrf_exempt  # nosonar
-def leegality_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
+@csrf_exempt
+def leegality_webhook(request: HttpRequest) -> JsonResponse:
     """Process Leegality signing-status callbacks.
 
     Updates ``owner_signed`` / ``renter_signed`` flags based on the
