@@ -27,6 +27,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from core.services.auth_service import AuthService
 from core.services.otp_service import OTPService
+from core.services.subscription_service import SubscriptionService
 from notification.services.rent_notify_service import send_payout_notification
 from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
@@ -238,7 +239,7 @@ class UserSubscriptionViewSet(viewsets.ModelViewSet):
     def get_queryset(self) -> Any:
         if isinstance(self.request.user, AnonymousUser):
             return self.queryset.none()
-        return UserSubscription.objects.filter(user=self.request.user)
+        return SubscriptionService.get_user_subscriptions(self.request.user)
 
     @override
     def perform_create(self, serializer: Any) -> None:
@@ -246,13 +247,14 @@ class UserSubscriptionViewSet(viewsets.ModelViewSet):
 
     @override
     def perform_update(self, serializer: Any) -> None:
-        if serializer.instance.user != self.request.user:
+        subscription = serializer.instance
+        if not SubscriptionService.can_user_modify(self.request.user, subscription):
             raise PermissionDenied("You can't edit another user's subscription.")
         serializer.save()
 
     @override
     def perform_destroy(self, instance: UserSubscription) -> None:
-        if instance.user != self.request.user:
+        if not SubscriptionService.can_user_modify(self.request.user, instance):
             raise PermissionDenied("You can't delete another user's subscription.")
         instance.delete()
 
@@ -266,7 +268,7 @@ class AddOnPurchaseViewSet(viewsets.ModelViewSet):
     def get_queryset(self) -> Any:
         if isinstance(self.request.user, AnonymousUser):
             return self.queryset.none()
-        return AddOnPurchase.objects.filter(user=self.request.user)
+        return SubscriptionService.get_user_addon_purchases(self.request.user)
 
     @override
     def perform_create(self, serializer: Any) -> None:
@@ -274,13 +276,14 @@ class AddOnPurchaseViewSet(viewsets.ModelViewSet):
 
     @override
     def perform_update(self, serializer: Any) -> None:
-        if serializer.instance.user != self.request.user:
+        purchase = serializer.instance
+        if not SubscriptionService.can_user_modify(self.request.user, purchase):
             raise PermissionDenied("You can't modify another user's purchase.")
         serializer.save()
 
     @override
     def perform_destroy(self, instance: AddOnPurchase) -> None:
-        if instance.user != self.request.user:
+        if not SubscriptionService.can_user_modify(self.request.user, instance):
             raise PermissionDenied("You can't delete another user's purchase.")
         instance.delete()
 
@@ -294,7 +297,7 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self) -> Any:
         if isinstance(self.request.user, AnonymousUser):
             return self.queryset.none()
-        return UsageLimit.objects.filter(user=self.request.user)
+        return SubscriptionService.get_user_usage_limits(self.request.user)
 
 
 # ---------------------------------------------------------------------------
