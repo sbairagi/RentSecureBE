@@ -14,7 +14,9 @@ shape without having to read the implementation.
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Any, TypedDict
+
+from rest_framework import serializers
 
 from core.models import User
 
@@ -53,6 +55,31 @@ class OwnerAnalytics(TypedDict):
     total_buildings: int
     buildings: list[BuildingAnalytics]
     aggregate: OwnerAggregate
+
+
+# ---------------------------------------------------------------------------
+# Business workflow helpers
+# ---------------------------------------------------------------------------
+
+
+def validate_building_access(building: Building | None, user: User) -> None:
+    """Raise ``ValidationError`` when the user does not own the building."""
+    if building is None or building.owner != user:
+        raise serializers.ValidationError("You do not own the selected building.")
+
+
+def validate_coordinates(latitude: float | None, longitude: float | None) -> None:
+    """Raise ``ValidationError`` when coordinates are outside valid ranges."""
+    if latitude is not None and not -90 <= latitude <= 90:
+        raise serializers.ValidationError("Latitude must be between -90 and 90.")
+    if longitude is not None and not -180 <= longitude <= 180:
+        raise serializers.ValidationError("Longitude must be between -180 and 180.")
+
+
+def prepare_unit_creation(validated_data: dict[str, Any], user: User) -> dict[str, Any]:
+    """Inject the owner into ``validated_data`` for unit creation."""
+    validated_data["owner"] = user
+    return validated_data
 
 
 # ---------------------------------------------------------------------------
