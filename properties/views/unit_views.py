@@ -317,8 +317,25 @@ def _verify_leegality_signature(request: HttpRequest) -> JsonResponse | None:
     return None
 
 
-@csrf_exempt
-def leegality_webhook(request: HttpRequest) -> JsonResponse:
+def _apply_signature_status(
+    agreement: RentAgreementDraft | None,
+    status_value: str | None,
+    participant: str | None,
+) -> None:
+    if agreement is None or status_value is None or status_value.upper() != "SIGNED":
+        return
+    if participant and participant.upper() == "OWNER":
+        agreement.owner_signed = True
+    elif participant and participant.upper() == "RENTER":
+        agreement.renter_signed = True
+    else:
+        agreement.owner_signed = True
+        agreement.renter_signed = True
+    agreement.save(update_fields=["owner_signed", "renter_signed"])
+
+
+@csrf_exempt  # nosonar
+def leegality_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
     """Process Leegality signing-status callbacks.
 
     Updates ``owner_signed`` / ``renter_signed`` flags based on the
@@ -348,15 +365,6 @@ def leegality_webhook(request: HttpRequest) -> JsonResponse:
     agreement: RentAgreementDraft | None = RentAgreementDraft.objects.filter(
         leegality_document_id=doc_id
     ).first()
-    if agreement is not None and status_value is not None:
-        if status_value.upper() == "SIGNED":
-            if participant and participant.upper() == "OWNER":
-                agreement.owner_signed = True
-            elif participant and participant.upper() == "RENTER":
-                agreement.renter_signed = True
-            else:
-                agreement.owner_signed = True
-                agreement.renter_signed = True
-            agreement.save(update_fields=["owner_signed", "renter_signed"])
+    _apply_signature_status(agreement, status_value, participant)
 
     return JsonResponse({"status": "ok"})

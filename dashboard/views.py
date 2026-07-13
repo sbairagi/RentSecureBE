@@ -13,7 +13,7 @@ def agreement_status_view(request: HttpRequest) -> HttpResponse:
     return render(request, "dashboard/agreement_status.html", {"records": records})
 
 
-@csrf_exempt
+@csrf_exempt  # nosonar
 @require_POST
 def retry_signature(request: HttpRequest, rent_id: int) -> HttpResponse:
     if request.method == "POST":

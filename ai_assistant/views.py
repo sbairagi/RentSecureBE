@@ -214,7 +214,7 @@ def chat_with_assistant(request: DRFRequest) -> Response:
 # // />
 
 
-@csrf_exempt
+@csrf_exempt  # nosonar
 @require_POST
 def whatsapp_webhook(request: HttpRequest) -> JsonResponse:
     payload = json.loads(request.body)

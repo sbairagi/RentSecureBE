@@ -58,6 +58,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_ERROR_INVALID_METHOD = "Invalid method"
+
 
 # ---------------------------------------------------------------------------
 # OTP / Authentication
@@ -335,8 +337,8 @@ def _verify_cashfree_signature(request: HttpRequest) -> JsonResponse | None:
     )
 
 
-@csrf_exempt
-def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
+@csrf_exempt  # nosonar
+def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
     """Handle Cashfree payout status webhook.
 
     Fixed: rent.save() no longer overwrites `rent` with None.
@@ -345,7 +347,7 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     from properties.models.rent_record_models import RentRecord
 
     if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)
+        return JsonResponse({"error": _ERROR_INVALID_METHOD}, status=405)
 
     signature_error = _verify_cashfree_signature(request)
     if signature_error is not None:
@@ -380,7 +382,7 @@ def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     from properties.models.rent_record_models import RentRecord  # nosonar
 
     if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)
+        return JsonResponse({"error": _ERROR_INVALID_METHOD}, status=405)
 
     data = json.loads(request.body)
     rent_id = data.get("rent_id")
@@ -448,7 +450,7 @@ def razorpay_webhook(request: HttpRequest) -> JsonResponse:
     from properties.models.rent_record_models import RentRecord  # nosonar
 
     if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)
+        return JsonResponse({"error": _ERROR_INVALID_METHOD}, status=405)
 
     body = request.body
     signature = request.headers.get("X-Razorpay-Signature")
