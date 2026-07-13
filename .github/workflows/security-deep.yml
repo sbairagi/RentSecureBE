@@ -9,8 +9,6 @@ name: Security Deep
 
 'on':
   workflow_call:
-  schedule:
-    - cron: '0 2 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -62,7 +60,7 @@ jobs:
         with:
           fetch-depth: 1
       - name: Run OpenSSF Scorecard
-        uses: ossf/scorecard-action@v2.0.10
+        uses: ossf/scorecard-action@13ec8c77e8a5dae7e0a0d47bde3e3004df15d34f
         with:
           results_file: scorecard-results.sarif
           results_format: sarif
