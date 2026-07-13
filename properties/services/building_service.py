@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..repositories.building_repository import BuildingRepository
+
 
 class BuildingService:
     """Service for building business workflows.
@@ -35,7 +37,8 @@ class BuildingService:
 
     @staticmethod
     def get_owner_buildings(user: Any) -> Any:
-        raise NotImplementedError
+        """Return buildings owned by the given user."""
+        return BuildingRepository.owned_by(user)
 
     @staticmethod
     def validate_ownership(building: Any, user: Any) -> bool:
