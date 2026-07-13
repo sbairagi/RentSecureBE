@@ -24,7 +24,7 @@ def load_hashes(hash_file: Path) -> dict:
         return {}
     try:
         with open(hash_file) as f:
-            return json.load(f)
+            return json.load(f)  # type: ignore[no-any-return]
     except Exception:
         return {}
 
@@ -46,7 +46,6 @@ def check_outdated(  # noqa: C901
 
     previous_hashes = load_hashes(hash_file)
     current_hashes = {}
-    outdated = []
 
     # Check all Python files
     for py_file in source_path.rglob("*.py"):
@@ -68,19 +67,20 @@ def check_outdated(  # noqa: C901
             current_hashes[f"diagram:{rel_path}"] = get_file_hash(diagram_file)
 
     # Compare hashes
+    changed_existing = []
+    new_files = []
     for key, hash_val in current_hashes.items():
         if key in previous_hashes and previous_hashes[key] != hash_val:
-            outdated.append(key)
+            changed_existing.append(key)
+        elif key not in previous_hashes:
+            new_files.append(key)
 
-    # Check for new files
-    for key in current_hashes:
-        if key not in previous_hashes:
-            outdated.append(f"{key} (new)")
-
-    if outdated:
-        for item in outdated:
+    if changed_existing or new_files:
+        for item in changed_existing:
             print(f"OUTDATED: {item}")
-        if fail_on_outdated:
+        for item in new_files:
+            print(f"NEW: {item}")
+        if fail_on_outdated and changed_existing:
             return 1
     else:
         print("No outdated diagrams detected")

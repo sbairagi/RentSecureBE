@@ -115,7 +115,7 @@ class AppScanner:
                 for target in item.targets:
                     if isinstance(target, ast.Name):
                         field_name = target.id
-                        field_type = _unparse(item.value) if item.value else ""
+                        field_type = _unparse(item.value)
                         field_info: dict[str, Any] = {
                             "name": field_name,
                             "raw": field_type,
@@ -186,9 +186,7 @@ class AppScanner:
                     if isinstance(meta_item, ast.Assign):
                         for target in meta_item.targets:
                             if isinstance(target, ast.Name):
-                                model["meta"][target.id] = (
-                                    _unparse(meta_item.value) if meta_item.value else ""
-                                )
+                                model["meta"][target.id] = _unparse(meta_item.value)
         self.data["models"].append(model)
 
     def _register_view(

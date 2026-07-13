@@ -53,38 +53,8 @@ jobs:
       - name: Validate metadata schema
         shell: bash
         run: |
-           set -euo pipefail
-           python -c "
-             import json, sys
-             from pathlib import Path
-
-             path = Path('architecture/generated/architecture.json')
-             if not path.exists():
-                 print('ERROR: architecture.json not found')
-                 sys.exit(1)
-
-             data = json.loads(path.read_text())
-             required_keys = ['generated_at', 'root', 'django_apps', 'installed_apps', 'feature_flags', 'apps', 'urls', 'dependencies', 'celery', 'infrastructure']
-             missing = [k for k in required_keys if k not in data]
-             if missing:
-                 print(f'ERROR: Missing required keys: {missing}')
-                 sys.exit(1)
-
-             if not isinstance(data['apps'], dict) or len(data['apps']) == 0:
-                 print('ERROR: apps must be a non-empty dict')
-                 sys.exit(1)
-
-             for app_name, app_data in data['apps'].items():
-                 if not isinstance(app_data, dict):
-                     print(f'ERROR: app {app_name} must be a dict')
-                     sys.exit(1)
-                 for key in ['models', 'views', 'serializers', 'urls', 'services', 'files']:
-                     if key not in app_data:
-                         print(f'ERROR: app {app_name} missing key: {key}')
-                         sys.exit(1)
-
-             print('Architecture metadata validation passed')
-           "
+          set -euo pipefail
+          python scripts/diagrams/validate_architecture_metadata.py
 
   validate-plantuml:
     name: Validate PlantUML Syntax
@@ -112,12 +82,6 @@ jobs:
           python-version: "3.12"
           extra-packages: "plantuml"
           cache-key-suffix: "-uml-validation"
-      - name: Install PlantUML
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq graphviz default-jre-headless
       - name: Validate PlantUML diagrams
         shell: bash
         run: |

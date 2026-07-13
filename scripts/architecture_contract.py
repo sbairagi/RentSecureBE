@@ -824,6 +824,8 @@ class ArchitectureContractValidator:
                 "shard-validation",
                 "contract-tests",
                 "architecture",
+                "uml",
+                "uml-validation",
             ],
         )
 

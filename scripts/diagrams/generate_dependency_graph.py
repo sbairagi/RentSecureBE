@@ -11,7 +11,7 @@ from pathlib import Path
 
 def load_metadata(path: str) -> dict:
     with open(path, encoding="utf-8") as f:
-        return json.load(f)
+        return json.load(f)  # type: ignore[no-any-return]
 
 
 def generate_dot(metadata: dict, graph_type: str) -> str:  # noqa: C901

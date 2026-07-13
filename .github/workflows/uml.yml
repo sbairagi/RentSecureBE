@@ -86,12 +86,6 @@ jobs:
           python-version: "3.12"
           extra-packages: "plantuml"
           cache-key-suffix: "-uml"
-      - name: Install PlantUML
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq graphviz default-jre-headless
       - name: Generate PlantUML diagrams
         shell: bash
         run: |

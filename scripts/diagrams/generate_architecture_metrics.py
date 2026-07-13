@@ -7,15 +7,16 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 
 def load_metadata(path: str) -> dict:
     with open(path, encoding="utf-8") as f:
-        return json.load(f)
+        return json.load(f)  # type: ignore[no-any-return]
 
 
 def generate_metrics(metadata: dict, output: str) -> None:
-    metrics = {
+    metrics: dict[str, Any] = {
         "generated_at": "auto",
         "apps": {},
         "totals": {

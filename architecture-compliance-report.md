@@ -1,10 +1,10 @@
 # Architecture Compliance Report
 
 - **Repository:** `/Users/sbairagi/Desktop/MVP Project/RentSecureBE`
-- **Version:** 2.3.0
-- **Architecture:** 2.3.0
-- **Pipeline:** 2.3.0
-- **Timestamp:** 2026-07-07T05:44:47.976926
+- **Version:** 2.4.0
+- **Architecture:** 2.4.0
+- **Pipeline:** 2.4.0
+- **Timestamp:** 2026-07-13T05:20:36.863257
 - **Score:** 100/100 (100%)
 - **Status:** ✅ COMPLIANT
 
@@ -36,9 +36,9 @@ Violations: 0 (CRITICAL: 0, ERROR: 0, WARNING: 0)
 - Stage 2c  │ Django System & Migration Checks ← lint-fast
 - Stage 2d  │ Hypothesis Property Tests (Fast) ← lint-fast
 - Stage 2e  │ Architecture & Contracts ← lint-fast
-- Stage 2f  │ Security Fast-Track ← lint-fast
-- Stage 2g  │ Mutation Testing (Smoke) ← lint-fast
-- Stage 3   │ Quality Gate (SonarCloud) ← test-shard-1, test-shard-2, test-shard-3, test-shard-4, shard-validation, contract-tests, architecture
+- Stage 2h  │ Security Fast-Track ← lint-fast
+- Stage 2i  │ Mutation Testing (Smoke) ← lint-fast
+- Stage 3   │ Quality Gate (SonarCloud) ← test-shard-1, test-shard-2, test-shard-3, test-shard-4, shard-validation, contract-tests, architecture, uml, uml-validation
 - Stage 4   │ Deploy Readiness Check ← quality, security-fast, django-check
 - Stage 5   │ Deploy to Production ← deploy-readiness
 
@@ -53,11 +53,13 @@ Violations: 0 (CRITICAL: 0, ERROR: 0, WARNING: 0)
 - Stage 2c  │ API Contract Tests ← lint-fast
 - Stage 2c  │ Django System & Migration Checks ← lint-fast
 - Stage 2e  │ Architecture & Contracts ← lint-fast
-- Stage 2f  │ Security Fast-Track ← lint-fast
-- Stage 2g  │ Mutation Testing (Smoke) ← lint-fast
-- Stage 2h │ Migration Rollback Validation ← lint-fast
+- Stage 2f  │ UML Generation ← lint-fast
+- Stage 2g  │ UML Validation ← lint-fast
+- Stage 2h  │ Security Fast-Track ← lint-fast
+- Stage 2i  │ Mutation Testing (Smoke) ← lint-fast
+- Stage 2j │ Migration Rollback Validation ← lint-fast
 - Stage 2d  │ Hypothesis Property Tests (Fast) ← lint-fast
-- Stage 3   │ Quality Gate (SonarCloud) ← test-shard-1, test-shard-2, test-shard-3, test-shard-4, shard-validation, contract-tests, architecture
+- Stage 3   │ Quality Gate (SonarCloud) ← test-shard-1, test-shard-2, test-shard-3, test-shard-4, shard-validation, contract-tests, architecture, uml, uml-validation
 - Stage 4   │ Deploy Readiness Check ← quality, security-fast, django-check
 - Stage 5   │ Deploy to Production ← deploy-readiness
 

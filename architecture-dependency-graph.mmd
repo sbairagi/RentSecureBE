@@ -26,6 +26,8 @@ graph TD
   lint-fast --> django-check
   lint-fast --> hypothesis-fast
   lint-fast --> architecture
+  lint-fast --> uml
+  lint-fast --> uml-validation
   lint-fast --> security-fast
   lint-fast --> mutation-smoke
   lint-fast --> migration-rollback-validation
@@ -36,6 +38,8 @@ graph TD
   shard-validation --> quality
   contract-tests --> quality
   architecture --> quality
+  uml --> quality
+  uml-validation --> quality
   quality --> deploy-readiness
   security-fast --> deploy-readiness
   django-check --> deploy-readiness

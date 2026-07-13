@@ -28,6 +28,8 @@ digraph architecture {
   "Django System & Migration Checks" -> "Lint Fast";
   "Hypothesis Property Tests (Fast)" -> "Lint Fast";
   "Architecture & Contracts" -> "Lint Fast";
+  "UML Generation" -> "Lint Fast";
+  "UML Validation" -> "Lint Fast";
   "Security Fast-Track" -> "Lint Fast";
   "Mutation Testing (Smoke)" -> "Lint Fast";
   "Migration Rollback Validation" -> "Lint Fast";
@@ -38,6 +40,8 @@ digraph architecture {
   "Quality Gate (SonarCloud)" -> "Shard Distribution Validation";
   "Quality Gate (SonarCloud)" -> "API Contract Tests";
   "Quality Gate (SonarCloud)" -> "Architecture & Contracts";
+  "Quality Gate (SonarCloud)" -> "UML Generation";
+  "Quality Gate (SonarCloud)" -> "UML Validation";
   "Deploy Readiness Check" -> "Quality Gate (SonarCloud)";
   "Deploy Readiness Check" -> "Security Fast-Track";
   "Deploy Readiness Check" -> "Django System & Migration Checks";

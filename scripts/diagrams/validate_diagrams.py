@@ -22,7 +22,7 @@ def validate_plantuml(path: Path) -> list[str]:
         errors.append(f"Missing @enduml tag: {path}")
 
     try:
-        import plantuml
+        import plantuml  # type: ignore[import-not-found]
 
         plantuml_inst = plantuml.PlantUML()
         result = plantuml_inst.processes_file(str(path))
