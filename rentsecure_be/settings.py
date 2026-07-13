@@ -70,6 +70,7 @@ CASHFREE_PAYOUT_BASE_TEST_URL = config(
 CASHFREE_PAYOUT_BASE_URL = config(
     "CASHFREE_PAYOUT_BASE_URL", default="https://payout-api.cashfree.com"
 )
+CASHFREE_WEBHOOK_SECRET = config("CASHFREE_WEBHOOK_SECRET", default="")
 
 RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
 RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
@@ -80,6 +81,7 @@ LEEGALITY_API_KEY = config("LEEGALITY_API_KEY", default="")
 LEEGALITY_ORG_ID = config("LEEGALITY_ORG_ID", default="")
 LEEGALITY_WORKFLOW_ID = config("LEEGALITY_WORKFLOW_ID", default="")
 LEEGALITY_TEMPLATE_ID = config("LEEGALITY_TEMPLATE_ID", default="")
+LEEGALITY_WEBHOOK_SECRET = config("LEEGALITY_WEBHOOK_SECRET", default="")
 
 AWS_S3_BUCKET_NAME = config("AWS_S3_BUCKET_NAME", default="")
 AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="")

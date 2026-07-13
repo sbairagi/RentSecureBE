@@ -7,6 +7,8 @@ the surface area small.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import logging
 from typing import TYPE_CHECKING, Any, cast
@@ -16,6 +18,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import BaseSerializer
 
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.http import HttpRequest, JsonResponse
@@ -299,9 +302,23 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
 # Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
 # from external agreement providers. Those callers do not have browser
 # sessions and therefore cannot supply a CSRF token.
-# nosonar
-@csrf_exempt  # nosonar
-def leegality_webhook(request: HttpRequest) -> JsonResponse:  # noqa: S3776  # nosonar
+# Security: signature verification is enforced below for authenticated webhook delivery.
+def _verify_leegality_signature(request: HttpRequest) -> JsonResponse | None:
+    signature = request.headers.get("X-Leegality-Signature")
+    webhook_secret = getattr(settings, "LEEGALITY_WEBHOOK_SECRET", None)
+    if webhook_secret and signature:
+        expected = hmac.new(
+            webhook_secret.encode("utf-8"), request.body, hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(expected, signature):
+            return JsonResponse({"error": "Invalid signature!"}, status=400)
+    elif webhook_secret and not signature:
+        return JsonResponse({"error": "Missing signature!"}, status=400)
+    return None
+
+
+@csrf_exempt
+def leegality_webhook(request: HttpRequest) -> JsonResponse:
     """Process Leegality signing-status callbacks.
 
     Updates ``owner_signed`` / ``renter_signed`` flags based on the
@@ -310,6 +327,10 @@ def leegality_webhook(request: HttpRequest) -> JsonResponse:  # noqa: S3776  # n
     """
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    signature_error = _verify_leegality_signature(request)
+    if signature_error is not None:
+        return signature_error
 
     try:
         payload: dict[str, Any] = json.loads(request.body.decode("utf-8"))

@@ -27,13 +27,13 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from core.utils.export_utils import generate_owner_rent_report
 from notification.services.rent_notify_service import send_payout_notification
 from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
     process_rent_payout,
 )
 from rentsecure_be.utils.cashfree_payout import add_beneficiary
+from rentsecure_be.utils.export_utils import generate_owner_rent_report
 
 from .models import (
     OTP,
@@ -326,18 +326,30 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
 # Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
 # from external payment/webhook providers. Those callers do not have browser
 # sessions and therefore cannot supply a CSRF token.
-# nosonar
-@csrf_exempt  # nosonar
-def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:  # nosonar
+# Security: signature verification is enforced below for authenticated webhook delivery.
+def _verify_cashfree_signature(request: HttpRequest) -> JsonResponse | None:
+    signature = request.headers.get("X-Cashfree-Signature")
+    webhook_secret = getattr(settings, "CASHFREE_WEBHOOK_SECRET", None)
+    return check_signature_or_return_http_response(
+        webhook_secret, signature, request.body
+    )
+
+
+@csrf_exempt
+def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     """Handle Cashfree payout status webhook.
 
     Fixed: rent.save() no longer overwrites `rent` with None.
     Fixed: Removed invalid rent.renter.property.owner chain.
     """
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord
 
     if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)  # noqa: S1192
+        return JsonResponse({"error": "Invalid method"}, status=405)
+
+    signature_error = _verify_cashfree_signature(request)
+    if signature_error is not None:
+        return signature_error
 
     payload = json.loads(request.body)
     transfer_id = payload.get("transferId")

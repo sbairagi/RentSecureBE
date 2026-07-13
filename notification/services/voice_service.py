@@ -1,5 +1,6 @@
 # services/voice_service.py
 import asyncio
+import os
 import tempfile
 
 import edge_tts
@@ -14,14 +15,17 @@ def generate_voice_note(text: str, lang: str = "en") -> str:
     try:
         edge_lang = LANGUAGE_CODE_MAP.get(lang, lang)
 
-        async def _generate() -> str:
+        async def _generate(path: str) -> str:
             communicate = edge_tts.Communicate(text, edge_lang)
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp:
-                path = temp.name
             await communicate.save(path)
             return path
 
-        return asyncio.run(_generate())
+        fd, path = tempfile.mkstemp(suffix=".mp3")
+        os.close(fd)
+        try:
+            return asyncio.run(_generate(path))
+        finally:
+            pass
     except Exception as e:
         print("Voice note generation failed:", e)
         return ""

@@ -209,14 +209,14 @@ class QueryCountNoSelectRelatedTests(TestCase):
         try:
             qs_method = UnitViewSet.queryset
             qs = qs_method.__get__(UnitViewSet, UnitViewSet)()
-            django_qs = str(qs.query)
-            self.assertIn(
-                "SELECT",
-                django_qs,
-                "Unit queryset must use select_related to prevent N+1 queries on 'building'",
-            )
         except Exception:
             self.skipTest("UnitViewSet.queryset not accessible (uses get_queryset())")
+        django_qs = str(qs.query)
+        self.assertIn(
+            "SELECT",
+            django_qs,
+            "Unit queryset must use select_related to prevent N+1 queries on 'building'",
+        )
 
     def test_renter_queryset_uses_select_related_unit(self):
         """Renter queryset must use select_related('unit') to avoid N+1."""
@@ -224,7 +224,7 @@ class QueryCountNoSelectRelatedTests(TestCase):
 
         try:
             qs = RenterViewSet.queryset.__get__(RenterViewSet, RenterViewSet)()
-            django_qs = str(qs.query)
-            self.assertIn("SELECT", django_qs)
         except Exception:
             self.skipTest("RenterViewSet queryset not accessible")
+        django_qs = str(qs.query)
+        self.assertIn("SELECT", django_qs)

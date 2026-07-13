@@ -5,6 +5,7 @@ import hmac
 import json
 from unittest.mock import MagicMock, patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -87,12 +88,19 @@ class CashfreePayoutWebhookTests(TestCase):
         from django.test import RequestFactory
 
         factory = RequestFactory()
+        body = json.dumps(payload).encode("utf-8")
         req = factory.post(
             "/test",
-            data=json.dumps(payload),
+            data=body,
             content_type="application/json",
         )
+        req._body = body
         return req
+
+    def _sign_payload(self, payload, secret):
+        body = json.dumps(payload).encode("utf-8")
+        signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+        return body, signature
 
     def test_invalid_method_returns_405(self):
         from django.test import RequestFactory
@@ -102,29 +110,8 @@ class CashfreePayoutWebhookTests(TestCase):
         response = cashfree_payout_webhook(req)
         self.assertEqual(response.status_code, 405)
 
-    def test_invalid_transfer_id_returns_404(self):
-        response = cashfree_payout_webhook(
-            self._make_request(
-                {
-                    "transferId": "nonexistent",
-                    "event": "TRANSFER_SUCCESS",
-                }
-            )
-        )
-        self.assertEqual(response.status_code, 404)
-
-    def test_transfer_success_updates_status(self):
-        rent = RentRecord.objects.create(
-            unit=self.unit,
-            renter=self.renter,
-            amount=10000,
-            payment_method="upi",
-            status="PAID",
-            payout_reference="txn_success",
-            payout_status="PENDING",
-            due_date="2025-01-05",
-        )
-        with patch("core.views.send_payout_notification"):
+    def test_missing_signature_returns_400(self):
+        with patch.object(settings, "CASHFREE_WEBHOOK_SECRET", "secret"):
             response = cashfree_payout_webhook(
                 self._make_request(
                     {
@@ -133,57 +120,137 @@ class CashfreePayoutWebhookTests(TestCase):
                     }
                 )
             )
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_signature_returns_400(self):
+        payload = {
+            "transferId": "txn_success",
+            "event": "TRANSFER_SUCCESS",
+        }
+        body, _ = self._sign_payload(payload, "secret")
+        req = self._make_request(payload)
+        req._body = body
+        req.META["HTTP_X_CASHFREE_SIGNATURE"] = "invalid"
+        with patch.object(settings, "CASHFREE_WEBHOOK_SECRET", "secret"):
+            response = cashfree_payout_webhook(req)
+        self.assertEqual(response.status_code, 400)
+
+    def test_valid_signature_allows_webhook(self):
+        payload = {
+            "transferId": "txn_success",
+            "event": "TRANSFER_SUCCESS",
+        }
+        body, signature = self._sign_payload(payload, "test-cashfree-secret")
+        req = self._make_request(payload)
+        req._body = body
+        req.META["HTTP_X_CASHFREE_SIGNATURE"] = signature
+        with patch.object(settings, "CASHFREE_WEBHOOK_SECRET", "test-cashfree-secret"):
+            rent = RentRecord.objects.create(
+                unit=self.unit,
+                renter=self.renter,
+                amount=10000,
+                payment_method="upi",
+                status="PAID",
+                payout_reference="txn_success",
+                payout_status="PENDING",
+                due_date="2025-01-05",
+            )
+            with patch("core.views.send_payout_notification"):
+                response = cashfree_payout_webhook(req)
+        self.assertEqual(response.status_code, 200)
+        rent.refresh_from_db()
+        self.assertEqual(rent.payout_status, "SUCCESS")
+
+    def test_invalid_transfer_id_returns_404(self):
+        payload = {
+            "transferId": "nonexistent",
+            "event": "TRANSFER_SUCCESS",
+        }
+        body, signature = self._sign_payload(payload, "test-cashfree-secret")
+        req = self._make_request(payload)
+        req._body = body
+        req.META["HTTP_X_CASHFREE_SIGNATURE"] = signature
+        with patch.object(settings, "CASHFREE_WEBHOOK_SECRET", "test-cashfree-secret"):
+            response = cashfree_payout_webhook(req)
+        self.assertEqual(response.status_code, 404)
+
+    def test_transfer_success_updates_status(self):
+        payload = {
+            "transferId": "txn_success",
+            "event": "TRANSFER_SUCCESS",
+        }
+        body, signature = self._sign_payload(payload, "test-cashfree-secret")
+        req = self._make_request(payload)
+        req._body = body
+        req.META["HTTP_X_CASHFREE_SIGNATURE"] = signature
+        with patch.object(settings, "CASHFREE_WEBHOOK_SECRET", "test-cashfree-secret"):
+            rent = RentRecord.objects.create(
+                unit=self.unit,
+                renter=self.renter,
+                amount=10000,
+                payment_method="upi",
+                status="PAID",
+                payout_reference="txn_success",
+                payout_status="PENDING",
+                due_date="2025-01-05",
+            )
+            with patch("core.views.send_payout_notification"):
+                response = cashfree_payout_webhook(req)
         self.assertEqual(response.status_code, 200)
         rent.refresh_from_db()
         self.assertEqual(rent.payout_status, "SUCCESS")
 
     def test_transfer_failed_updates_status(self):
-        rent = RentRecord.objects.create(
-            unit=self.unit,
-            renter=self.renter,
-            amount=10000,
-            payment_method="upi",
-            status="PAID",
-            payout_reference="txn_fail",
-            payout_status="PENDING",
-            due_date="2025-01-05",
-        )
-        with patch("core.views.send_payout_notification"):
-            response = cashfree_payout_webhook(
-                self._make_request(
-                    {
-                        "transferId": "txn_fail",
-                        "event": "TRANSFER_FAILED",
-                    }
-                )
+        payload = {
+            "transferId": "txn_fail",
+            "event": "TRANSFER_FAILED",
+        }
+        body, signature = self._sign_payload(payload, "test-cashfree-secret")
+        req = self._make_request(payload)
+        req._body = body
+        req.META["HTTP_X_CASHFREE_SIGNATURE"] = signature
+        with patch.object(settings, "CASHFREE_WEBHOOK_SECRET", "test-cashfree-secret"):
+            rent = RentRecord.objects.create(
+                unit=self.unit,
+                renter=self.renter,
+                amount=10000,
+                payment_method="upi",
+                status="PAID",
+                payout_reference="txn_fail",
+                payout_status="PENDING",
+                due_date="2025-01-05",
             )
+            with patch("core.views.send_payout_notification"):
+                response = cashfree_payout_webhook(req)
         self.assertEqual(response.status_code, 200)
         rent.refresh_from_db()
         self.assertEqual(rent.payout_status, "FAILED")
 
     def test_notification_exception_is_handled(self):
-        rent = RentRecord.objects.create(
-            unit=self.unit,
-            renter=self.renter,
-            amount=10000,
-            payment_method="upi",
-            status="PAID",
-            payout_reference="txn_exc",
-            payout_status="PENDING",
-            due_date="2025-01-05",
-        )
-        with patch(
-            "core.views.send_payout_notification",
-            side_effect=Exception("notification failed"),
-        ):
-            response = cashfree_payout_webhook(
-                self._make_request(
-                    {
-                        "transferId": "txn_exc",
-                        "event": "TRANSFER_SUCCESS",
-                    }
-                )
+        payload = {
+            "transferId": "txn_exc",
+            "event": "TRANSFER_SUCCESS",
+        }
+        body, signature = self._sign_payload(payload, "test-cashfree-secret")
+        req = self._make_request(payload)
+        req._body = body
+        req.META["HTTP_X_CASHFREE_SIGNATURE"] = signature
+        with patch.object(settings, "CASHFREE_WEBHOOK_SECRET", "test-cashfree-secret"):
+            rent = RentRecord.objects.create(
+                unit=self.unit,
+                renter=self.renter,
+                amount=10000,
+                payment_method="upi",
+                status="PAID",
+                payout_reference="txn_exc",
+                payout_status="PENDING",
+                due_date="2025-01-05",
             )
+            with patch(
+                "core.views.send_payout_notification",
+                side_effect=Exception("notification failed"),
+            ):
+                response = cashfree_payout_webhook(req)
         self.assertEqual(response.status_code, 200)
         rent.refresh_from_db()
         self.assertEqual(rent.payout_status, "SUCCESS")

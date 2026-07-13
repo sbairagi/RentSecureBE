@@ -1,5 +1,8 @@
 """Tests for properties/views/unit_views.py — Unit, UnitImage, UnitDocument, RentAgreementDraft ViewSets and Leegality webhook."""
 
+import hashlib
+import hmac
+import json
 from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
@@ -7,6 +10,7 @@ from unittest.mock import patch
 from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -25,6 +29,12 @@ from properties.models import (
 )
 
 User = get_user_model()
+
+
+def _sign_leegality_payload(payload: dict, secret: str) -> tuple[bytes, str]:
+    body = json.dumps(payload).encode("utf-8")
+    signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    return body, signature
 
 
 def _auth(u):
@@ -494,6 +504,78 @@ class LeegalityWebhookTests(TestCase):
         self.assertEqual(response.status_code, 200)
         agreement.refresh_from_db()
         self.assertTrue(agreement.renter_signed)
+
+    def test_missing_signature_returns_400_when_secret_configured(self):
+        payload = {"document_id": "doc123", "status": "SIGNED"}
+        with patch.object(settings, "LEEGALITY_WEBHOOK_SECRET", "secret"):
+            response = self.client.post(
+                "/properties/leegality/webhook/",
+                data=payload,
+                content_type="application/json",
+            )
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_signature_returns_400_when_secret_configured(self):
+        payload = {"document_id": "doc123", "status": "SIGNED"}
+        with patch.object(settings, "LEEGALITY_WEBHOOK_SECRET", "secret"):
+            response = self.client.post(
+                "/properties/leegality/webhook/",
+                data=payload,
+                content_type="application/json",
+                headers={"X-Leegality-Signature": "invalid"},
+            )
+        self.assertEqual(response.status_code, 400)
+
+    def test_valid_signature_allows_webhook_when_secret_configured(self):
+        payload = {"document_id": "doc123", "status": "SIGNED", "participant": "OWNER"}
+        body, signature = _sign_leegality_payload(payload, secret="secret")
+        agreement = RentAgreementDraft.objects.create(
+            user=User.objects.create_user(
+                username="sig_owner", password="p", full_name="SigOwner", phone="+1"
+            ),
+            renter=None,
+            unit=Unit.objects.create(
+                owner=User.objects.create_user(
+                    username="sig_unit_owner",
+                    password="p",
+                    full_name="SigUnitOwner",
+                    phone="+1",
+                ),
+                building=Building.objects.create(
+                    owner=User.objects.create_user(
+                        username="sig_bld_owner",
+                        password="p",
+                        full_name="SigBldOwner",
+                        phone="+1",
+                    ),
+                    name="SigB",
+                    address_line="1 St",
+                    city="C",
+                    state="S",
+                    country="CO",
+                    postal_code="1",
+                ),
+                unit="SIG1",
+                unit_type="flat",
+                address_line="1 St",
+                city="C",
+                state="S",
+                country="CO",
+                postal_code="1",
+            ),
+            file="draft.pdf",
+            leegality_document_id="doc123",
+        )
+        with patch.object(settings, "LEEGALITY_WEBHOOK_SECRET", "secret"):
+            response = self.client.post(
+                "/properties/leegality/webhook/",
+                data=body,
+                content_type="application/json",
+                headers={"X-Leegality-Signature": signature},
+            )
+        self.assertEqual(response.status_code, 200)
+        agreement.refresh_from_db()
+        self.assertTrue(agreement.owner_signed)
 
 
 class UnitViewSetExpiredSubscriptionTests(TestCase):
