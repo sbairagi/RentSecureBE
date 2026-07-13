@@ -28,6 +28,7 @@ from core.services.auth_service import AuthService
 from core.services.bank_details_service import BankDetailsService
 from core.services.otp_service import OTPService
 from core.services.owner_reporting_service import OwnerReportingService
+from core.services.referral_service import ReferralService
 from core.services.subscription_service import SubscriptionService
 from core.services.usage_limit_service import UsageLimitService
 from notification.services.rent_notify_service import send_payout_notification
@@ -99,21 +100,10 @@ class SendOTP(APIView):
 
 def _process_referral(otp: OTP, user: User) -> Response | None:
     """Shared referral logic for owner/renter OTP verification."""
-    from referral_and_earn.models import Referral
-
-    if otp.referral_code:
-        try:
-            referrer_referral = Referral.objects.get(referral_code=otp.referral_code)
-            referrer = referrer_referral.user
-
-            referral, _ = Referral.objects.get_or_create(user=user)
-            if not referral.referred_by:
-                referral.referred_by = referrer
-                referral.save()
-                referrer_referral.bonus_earned += 500
-                referrer_referral.save()
-        except Referral.DoesNotExist:
-            return Response({"error": "Invalid referral code"}, status=400)
+    try:
+        ReferralService.process_referral(otp, user)
+    except ValidationError as e:
+        return Response({"error": str(e)}, status=400)
     return None
 
 
