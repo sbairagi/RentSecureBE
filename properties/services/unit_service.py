@@ -23,6 +23,7 @@ from core.models import User
 from ..constants import UNITS_CACHE_TIMEOUT
 from ..models import Renter, Unit
 from ..models.building_models import Building
+from ..repositories.unit_repository import UnitRepository
 
 # ---------------------------------------------------------------------------
 # Typed payloads — keep the public contract stable & mypy-friendly.
@@ -206,7 +207,7 @@ def get_building_analytics(building: Building) -> BuildingAnalytics:
     Returns:
         A :class:`BuildingAnalytics` ``TypedDict`` with totals and rates.
     """
-    units = Unit.objects.filter(building=building, is_archived=False)
+    units = UnitRepository.by_building_active(building)
     total: int = units.count()
     occupied: int = units.filter(
         status__in=[Unit.VacancyStatus.OCCUPIED, "OCCUPIED"]

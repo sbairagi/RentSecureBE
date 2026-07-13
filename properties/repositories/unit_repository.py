@@ -53,3 +53,8 @@ class UnitRepository:
     def by_building_and_owner(building: Any, user: Any) -> Any:
         """Return units for a given building and owner."""
         return Unit.objects.filter(building=building, owner=user)
+
+    @staticmethod
+    def by_building_active(building: Any) -> Any:
+        """Return active units for a given building."""
+        return Unit.objects.filter(building=building, is_archived=False)
