@@ -28,6 +28,7 @@ from core.services.auth_service import AuthService
 from core.services.bank_details_service import BankDetailsService
 from core.services.otp_service import OTPService
 from core.services.owner_reporting_service import OwnerReportingService
+from core.services.password_service import PasswordService
 from core.services.referral_service import ReferralService
 from core.services.subscription_service import SubscriptionService
 from core.services.usage_limit_service import UsageLimitService
@@ -168,19 +169,11 @@ class ChangePasswordView(generics.UpdateAPIView):
         old_password = request.data.get("old_password")
         new_password = request.data.get("new_password")
 
-        if not old_password or not new_password:
-            return Response(
-                {"error": "Both old and new passwords are required."}, status=400
-            )
+        try:
+            PasswordService.change_password(user, old_password, new_password)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
 
-        if not user.check_password(old_password):
-            return Response({"error": "Old password is incorrect."}, status=400)
-
-        if old_password == new_password:
-            return Response({"error": "New password must be different."}, status=400)
-
-        user.set_password(new_password)
-        user.save()
         return Response({"message": "Password changed successfully."}, status=200)
 
 
@@ -195,12 +188,11 @@ class ResetPasswordView(APIView):
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         new_password = request.data.get("new_password")
 
-        if not new_password:
-            return Response({"error": "New password is required."}, status=400)
+        try:
+            PasswordService.reset_password(request.user, new_password)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
 
-        user = request.user
-        user.set_password(new_password)
-        user.save()
         return Response({"message": "Password reset successful."}, status=200)
 
 
