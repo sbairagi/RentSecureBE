@@ -27,6 +27,16 @@ django.setup()
 User = get_user_model()
 
 
+def _create_rent_record_and_validate(**kwargs):
+    rr = RentRecord(**kwargs)
+    rr.full_clean()
+
+
+def _create_renter_and_validate(**kwargs):
+    r = Renter(**kwargs)
+    r.full_clean()
+
+
 # ---------------------------------------------------------------------------
 # Hypothesis strategies
 # ---------------------------------------------------------------------------
@@ -128,7 +138,7 @@ class TestRentRecordProperties(HypothesisDjangoTestCase):
         regardless of Hypothesis-generated input."""
         if amount < 0:
             with pytest.raises(ValidationError):
-                rr = RentRecord(
+                _create_rent_record_and_validate(
                     unit=self.unit,
                     renter=self.renter,
                     amount=amount,
@@ -137,7 +147,6 @@ class TestRentRecordProperties(HypothesisDjangoTestCase):
                     paid_on=paid_on,
                     due_date=date(2024, 6, 5),
                 )
-                rr.full_clean()
         else:
             rr = RentRecord(
                 unit=self.unit,
@@ -213,7 +222,7 @@ class TestRenterProperties(HypothesisDjangoTestCase):
         Hypothesis finds violating inputs that hand-written tests miss."""
         if end < start:
             with pytest.raises(ValidationError):
-                Renter(
+                _create_renter_and_validate(
                     unit=self.unit,
                     name="HypothesisRen",
                     phone="+919876543210",
@@ -223,7 +232,7 @@ class TestRenterProperties(HypothesisDjangoTestCase):
                     rent_amount=Decimal("15000"),
                     is_active=True,
                     status=Renter.RenterStatus.ACTIVE,
-                ).full_clean()
+                )
         else:
             r = Renter(
                 unit=self.unit,

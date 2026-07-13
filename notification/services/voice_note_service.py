@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def send_thank_you_voice_note(rent: Any) -> None:
-
+    """Send a Hindi thank-you voice note to a renter who paid rent early."""
     if rent.renter is None:
         return
     name: str = rent.renter.full_name

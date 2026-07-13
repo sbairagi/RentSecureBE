@@ -354,19 +354,19 @@ class GetUsedUnitsTests(TestCase):
         plan = SubscriptionPlan.objects.create(
             name="guuplan", monthly_price=Decimal("0"), yearly_price=Decimal("0")
         )
-        sub = UserSubscription(user=user, plan=plan, is_active=True)
-        result = get_used_units(user, "max_units", sub)
+        UserSubscription(user=user, plan=plan, is_active=True)
+        result = get_used_units(user, "max_units")
         self.assertEqual(result, 0)
 
     def test_usage_limit_count_returned(self):
         plan = SubscriptionPlan.objects.create(
             name="guuplan2", monthly_price=Decimal("0"), yearly_price=Decimal("0")
         )
-        sub = UserSubscription.objects.create(user=self.user, plan=plan, is_active=True)
+        UserSubscription.objects.create(user=self.user, plan=plan, is_active=True)
         UsageLimit.objects.create(
             user=self.user, feature_key="max_units", usage_count=3
         )
-        result = get_used_units(self.user, "max_units", sub)
+        result = get_used_units(self.user, "max_units")
         self.assertEqual(result, 3)
 
 

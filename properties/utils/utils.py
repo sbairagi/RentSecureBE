@@ -207,8 +207,9 @@ def check_feature_limit(
     ).first()
     current_usage = usage.usage_count if usage else 0
 
-    if isinstance(subscription_limit, str) and subscription_limit == "unlimited":
-        return True, current_usage, subscription_limit, add_on_limit
+    if isinstance(subscription_limit, str):
+        if subscription_limit.lower() == "unlimited":
+            return True, current_usage, subscription_limit, add_on_limit
 
     total_allowed: int = int(subscription_limit) + add_on_limit
     allowed: bool = current_usage < total_allowed
@@ -257,7 +258,6 @@ def get_limit_for_source(
 def get_used_units(
     user: User | AnonymousUser,
     feature_key: str,
-    source: UserSubscription | AddOnPurchase,
 ) -> int:
     if user.pk is None:
         return 0

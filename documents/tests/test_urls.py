@@ -8,7 +8,8 @@ HTTP routes through Django's URL router.
 
 from rest_framework.routers import DefaultRouter
 
-from django.urls import include, path
+from django.test import TestCase, override_settings
+from django.urls import include, path, resolve
 
 from documents.views import (
     GenerateRentAgreementPdfViewSet,
@@ -36,3 +37,24 @@ handler500 = "django.views.defaults.server_error"
 urlpatterns = [
     path("documents/", include(router.urls)),
 ]
+
+
+class TestDocumentUrls(TestCase):
+    """Verify that document URL patterns resolve correctly."""
+
+    def test_rent_agreement_url_resolves(self):
+        with override_settings(ROOT_URLCONF="documents.tests.test_urls"):
+            resolver = resolve(
+                "/documents/rent_agreement/1/generate-rent-agreement-pdf/"
+            )
+            self.assertEqual(resolver.func.cls, GenerateRentAgreementPdfViewSet)
+
+    def test_unit_dossier_url_resolves(self):
+        with override_settings(ROOT_URLCONF="documents.tests.test_urls"):
+            resolver = resolve("/documents/properties/1/generate-dossier-pdf/")
+            self.assertEqual(resolver.func.cls, GenerateUnitDossierPdfViewSet)
+
+    def test_rent_receipt_url_resolves(self):
+        with override_settings(ROOT_URLCONF="documents.tests.test_urls"):
+            resolver = resolve("/documents/rent_receipt/")
+            self.assertEqual(resolver.func.cls, GenerateRentReceiptPdfViewSet)

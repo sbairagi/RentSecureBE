@@ -93,10 +93,7 @@ class TestFeatureLimitProperties(HypothesisDjangoTestCase):
         }
         if feature_key not in valid_keys:
             with pytest.raises(ValidationError):
-                fl = PlanFeatureLimit(
-                    plan=self.plan, feature_key=feature_key, value=value
-                )
-                fl.full_clean()
+                PlanFeatureLimit(plan=self.plan, feature_key=feature_key, value=value)
         else:
             fl = PlanFeatureLimit(plan=self.plan, feature_key=feature_key, value=value)
             fl.full_clean()
