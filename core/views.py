@@ -20,7 +20,6 @@ from twilio.rest import Client
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ImproperlyConfigured
-from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -28,6 +27,7 @@ from django.views.decorators.csrf import csrf_exempt
 from core.services.auth_service import AuthService
 from core.services.bank_details_service import BankDetailsService
 from core.services.otp_service import OTPService
+from core.services.owner_reporting_service import OwnerReportingService
 from core.services.subscription_service import SubscriptionService
 from core.services.usage_limit_service import UsageLimitService
 from notification.services.rent_notify_service import send_payout_notification
@@ -559,31 +559,8 @@ def rent_inflow_summary(request: Request, /, *args: Any, **kwargs: Any) -> Respo
 
     Fixed: Uses correct RentRecord field (owner) and (amount) and (PENDING).
     """
-    from properties.models.rent_record_models import RentRecord  # nosonar
-
     owner: User = cast(User, request.user)
-    total_received = (
-        RentRecord.objects.filter(unit__owner=owner, status="PAID").aggregate(
-            total=Sum("amount")
-        )["total"]
-        or 0
-    )
-
-    pending_count = RentRecord.objects.filter(
-        unit__owner=owner, status="PENDING"
-    ).count()
-
-    failed_payouts = RentRecord.objects.filter(
-        unit__owner=owner, payout_status="FAILED"
-    ).count()
-
-    return Response(
-        {
-            "total_received": total_received,
-            "pending_payments": pending_count,
-            "failed_payouts": failed_payouts,
-        }
-    )
+    return Response(OwnerReportingService.get_rent_inflow_summary(owner))
 
 
 @api_view(["GET"])
@@ -593,28 +570,8 @@ def owner_rent_records(request: Request, /, *args: Any, **kwargs: Any) -> Respon
 
     Fixed: Uses correct FK path (unit.owner, renter.name, unit.unit).
     """
-    from properties.models.rent_record_models import RentRecord  # nosonar
-
     owner: User = cast(User, request.user)
-    rents = (
-        RentRecord.objects.filter(unit__owner=owner)
-        .select_related("renter", "unit")
-        .order_by("-due_date")
-    )
-
-    return Response(
-        [
-            {
-                "property": r.unit.unit,
-                "renter": r.renter.name if r.renter else "",
-                "month": r.due_date.strftime("%B %Y"),
-                "rent": float(r.amount),
-                "status": r.status,
-                "payout_status": r.payout_status,
-            }
-            for r in rents
-        ]
-    )
+    return Response(OwnerReportingService.get_owner_rent_records(owner))
 
 
 @api_view(["GET"])
