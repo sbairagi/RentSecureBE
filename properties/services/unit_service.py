@@ -23,6 +23,7 @@ from core.models import User
 from ..constants import UNITS_CACHE_TIMEOUT
 from ..models import Renter, Unit
 from ..models.building_models import Building
+from ..policies.unit_policy import UnitPolicy
 from ..repositories.unit_repository import UnitRepository
 
 # ---------------------------------------------------------------------------
@@ -133,7 +134,7 @@ class UnitService:
     @staticmethod
     def validate_unit_access(unit: Any, user: Any) -> None:
         """Raise ``ValueError`` when the user does not own the unit."""
-        if unit is None or unit.owner != user:
+        if not UnitPolicy.can_access_unit(unit, user):
             raise ValueError("You do not have permission to access this unit.")
 
     @staticmethod
