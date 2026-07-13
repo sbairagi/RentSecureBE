@@ -1,6 +1,6 @@
 # Enterprise CI/CD Governance
 
-> **Version:** 2.0.0
+> **Version:** 2.4.0
 > **Scope:** RentSecureBE — Production-Grade Django Backend
 > **Last Updated:** 26 June 2026
 

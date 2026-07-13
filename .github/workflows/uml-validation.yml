@@ -548,6 +548,34 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml-validation"
+      - name: Generate all diagrams for checking
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
+          python scripts/diagrams/generate_plantuml.py \
+            --output docs/uml/generated/plantuml --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_mermaid.py \
+            --output docs/uml/generated/mermaid --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_c4.py \
+            --output docs/diagrams/generated/c4 --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_domain_diagrams.py \
+            --output docs/uml/generated/domain --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_flow_diagrams.py \
+            --output docs/diagrams/generated/flows --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_infrastructure_diagrams.py \
+            --output docs/diagrams/generated/infrastructure --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_ddd_diagrams.py \
+            --output docs/uml/generated/ddd --all \
+            --metadata architecture/generated/architecture.json
       - name: Check for missing diagrams
         shell: bash
         run: |
@@ -583,11 +611,39 @@ jobs:
         with:
           python-version: "3.12"
           cache-key-suffix: "-uml-validation"
+      - name: Generate all diagrams for checking
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p architecture/generated
+          python scripts/diagrams/generate_uml_from_ast.py \
+            --output architecture/generated/architecture.json
+          python scripts/diagrams/generate_plantuml.py \
+            --output docs/uml/generated/plantuml --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_mermaid.py \
+            --output docs/uml/generated/mermaid --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_c4.py \
+            --output docs/diagrams/generated/c4 --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_domain_diagrams.py \
+            --output docs/uml/generated/domain --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_flow_diagrams.py \
+            --output docs/diagrams/generated/flows --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_infrastructure_diagrams.py \
+            --output docs/diagrams/generated/infrastructure --all \
+            --metadata architecture/generated/architecture.json
+          python scripts/diagrams/generate_ddd_diagrams.py \
+            --output docs/uml/generated/ddd --all \
+            --metadata architecture/generated/architecture.json
       - name: Check for outdated diagrams
         shell: bash
         run: |
           set -euo pipefail
           python scripts/diagrams/check_outdated_diagrams.py \
             --source-dir . \
-            --diagram-dir docs/uml \
+            --diagram-dir docs \
             --fail-on-outdated

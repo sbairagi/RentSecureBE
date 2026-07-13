@@ -76,6 +76,14 @@ def compliant_ci_yaml() -> dict[str, Any]:
                 "needs": ["lint-fast"],
                 "uses": "./.github/workflows/architecture.yml",
             },
+            "uml": {
+                "needs": ["lint-fast"],
+                "uses": "./.github/workflows/uml.yml",
+            },
+            "uml-validation": {
+                "needs": ["lint-fast"],
+                "uses": "./.github/workflows/uml-validation.yml",
+            },
             "security-fast": {
                 "needs": ["lint-fast"],
                 "uses": "./.github/workflows/security.yml",
@@ -98,6 +106,8 @@ def compliant_ci_yaml() -> dict[str, Any]:
                     "shard-validation",
                     "contract-tests",
                     "architecture",
+                    "uml",
+                    "uml-validation",
                 ],
                 "uses": "./.github/workflows/quality.yml",
             },
@@ -152,6 +162,8 @@ def write_temp_env(
         "hypothesis.yml",
         "contract-tests.yml",
         "architecture.yml",
+        "uml.yml",
+        "uml-validation.yml",
         "security.yml",
         "security-deep.yml",
         "quality.yml",
@@ -187,27 +199,30 @@ def write_temp_env(
     # Write doc files with all required content
     arc_contract_doc = doc_dir / "architecture-contract.md"
     arc_contract_doc.write_text(
-        "# Architecture Contract\n\n> **Version:** 2.3.0\n\nSome content with 2.3.0 version.\n"
+        "# Architecture Contract\n\n> **Version:** 2.4.0\n\nSome content with 2.4.0 version.\n"
     )
 
     pipeline_doc = doc_dir / "ci-cd-pipeline.md"
     pipeline_doc.write_text(
         "# CI/CD Pipeline & UML Overview\n\n"
-        "> **Pipeline Version:** 2.3.0\n\n"
+        "> **Pipeline Version:** 2.4.0\n\n"
         "## Part 1: CI/CD Pipeline Flow Diagram\n\n"
         "### Setup\n"
         "### Code Quality\n"
         "### Tests\n"
         "### Django Checks\n"
         "### Architecture\n"
+        "### UML Generation\n"
+        "### UML Validation\n"
         "### Security\n"
         "### Quality Gate\n"
+        "### Deploy Readiness\n"
         "### Deploy\n"
     )
 
     governance_doc = doc_dir / "governance.md"
     governance_doc.write_text(
-        "# Enterprise CI/CD Governance\n\n> **Version:** 2.3.0\n\n"
+        "# Enterprise CI/CD Governance\n\n> **Version:** 2.4.0\n\n"
     )
 
     # Add extra files if specified
@@ -483,7 +498,7 @@ class TestParsing:
         val.repo_root = Path(tmpdir)
         config = val.parse_ci_yaml()
         assert config["name"] == "CI Pipeline"
-        assert len(val.actual_jobs) == 16
+        assert len(val.actual_jobs) == 18
         assert "lint-fast" in val.actual_jobs
         assert "deploy" in val.actual_jobs
 
