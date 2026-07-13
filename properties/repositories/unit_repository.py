@@ -58,3 +58,13 @@ class UnitRepository:
     def by_building_active(building: Any) -> Any:
         """Return active units for a given building."""
         return Unit.objects.filter(building=building, is_archived=False)
+
+    @staticmethod
+    def save(unit: Unit, **fields: Any) -> None:
+        """Save a unit with optional field updates."""
+        if fields:
+            for attr, value in fields.items():
+                setattr(unit, attr, value)
+            unit.save(update_fields=list(fields))
+        else:
+            unit.save()

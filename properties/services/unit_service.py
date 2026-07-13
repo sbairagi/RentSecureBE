@@ -194,7 +194,7 @@ def update_unit_status(unit: Unit) -> None:
     if unit.status != new_status or unit.is_vacant != is_vacant:
         unit.status = new_status
         unit.is_vacant = is_vacant
-        unit.save(update_fields=["status", "is_vacant", "updated_at"])
+        UnitRepository.save(unit, status=new_status, is_vacant=is_vacant)
 
 
 def get_building_analytics(building: Building) -> BuildingAnalytics:
