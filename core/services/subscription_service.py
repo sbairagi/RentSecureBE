@@ -36,5 +36,17 @@ class SubscriptionService(BaseService):
     def can_user_modify(user: Any, subscription: Any) -> bool:
         return subscription.user == user
 
+    @staticmethod
+    def create_user_subscription(
+        user: Any, validated_data: dict[str, Any]
+    ) -> UserSubscription:
+        validated_data["user"] = user
+        user_data = validated_data.pop("user")
+        subscription, _ = UserSubscription.objects.update_or_create(
+            user=user_data,
+            defaults=validated_data,
+        )
+        return subscription
+
     def execute(self, *args: Any, **kwargs: Any) -> ServiceResult[Any]:
         raise NotImplementedError

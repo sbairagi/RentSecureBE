@@ -12,6 +12,7 @@ from .models import (
     User,
     UserSubscription,
 )
+from .services.subscription_service import SubscriptionService
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -35,13 +36,9 @@ class UserSubscriptionSerializer(serializers.ModelSerializer):
 
     @override
     def create(self, validated_data: dict[str, Any]) -> UserSubscription:
-        validated_data["user"] = self.context["request"].user
-        user = validated_data.pop("user")
-        subscription, _ = UserSubscription.objects.update_or_create(
-            user=user,
-            defaults=validated_data,
+        return SubscriptionService.create_user_subscription(
+            self.context["request"].user, validated_data
         )
-        return subscription
 
 
 class AddOnPurchaseSerializer(serializers.ModelSerializer):
