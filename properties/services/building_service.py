@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from rest_framework.exceptions import PermissionDenied
+
 from ..repositories.building_repository import BuildingRepository
 
 
@@ -23,7 +25,20 @@ class BuildingService:
 
     @staticmethod
     def create_building(user: Any, validated_data: dict[str, Any]) -> Any:
-        raise NotImplementedError
+        """Create a building for the given user after enforcing plan limits."""
+        from django.core.cache import cache
+
+        from ..feature_enforcer import FeatureEnforcer
+        from ..models import Building
+
+        enforcer = FeatureEnforcer(user)
+        if not enforcer.can_create("max_buildings"):
+            raise PermissionDenied("Building creation limit reached for your plan.")
+
+        building = Building.objects.create(owner=user, **validated_data)
+        enforcer.increment("max_buildings")
+        cache.delete(f"buildings_user_{user.id}")
+        return building
 
     @staticmethod
     def update_building(

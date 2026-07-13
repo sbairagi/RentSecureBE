@@ -13,6 +13,7 @@ from ..constants import BUILDINGS_CACHE_TIMEOUT
 from ..feature_enforcer import FeatureEnforcer
 from ..models import Building
 from ..serializers import BuildingSerializer
+from ..services.building_service import BuildingService
 
 
 class BuildingViewSet(viewsets.ModelViewSet[Building]):
@@ -41,15 +42,10 @@ class BuildingViewSet(viewsets.ModelViewSet[Building]):
 
     @override
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
-        user = self.request.user
-        enforcer = FeatureEnforcer(user)
-
-        if not enforcer.can_create("max_buildings"):
-            raise PermissionDenied("Building creation limit reached for your plan.")
-
-        serializer.save(owner=user)
-        enforcer.increment("max_buildings")
-        cache.delete(f"buildings_user_{user.id}")
+        building = BuildingService.create_building(
+            self.request.user, serializer.validated_data
+        )
+        serializer.instance = building
 
     @override
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
