@@ -5,8 +5,10 @@ Project Stack:
 - Frontend: React Native Expo Router
 - Database: PostgreSQL
 - Cloud: AWS EC2
-- Payments: Cashfree
-- WhatsApp: Twilio / Interakt
+- Payments: Manual UPI (Year 1), Razorpay/Cashfree (Stage 2, behind feature flags)
+- WhatsApp: WhatsApp Business API (Stage 2, behind feature flags)
+- SMS: MSG91/Twilio (Stage 2, behind feature flags)
+- Push: Firebase Cloud Messaging (FCM, free)
 - PDF Engine: WeasyPrint
 
 Coding Standards:
@@ -20,6 +22,29 @@ Coding Standards:
 - Keep functions small and reusable.
 - Avoid duplicate code.
 - Maintain backward compatibility.
+
+Year 1 Infrastructure Constraints:
+- Monthly budget: ₹2,000–3,000 INR maximum
+- Background jobs: Cron + Django management commands (NO Celery in Year 1)
+- Cache: Django Local Memory Cache (NO Redis mandatory in Year 1)
+- Search: PostgreSQL full-text search (NO OpenSearch in Year 1)
+- Queue: No message broker required
+- File Storage: S3 only (NO CloudFront in Year 1)
+- Deployment: Single EC2 instance (NO Kubernetes, EKS, ECS)
+
+Payment Rules:
+- Year 1: Free manual UPI flow (tenant pays owner directly)
+- Owner registers UPI ID, QR Code, Bank Account
+- Tenant uploads UTR and payment details
+- Owner manually approves or rejects
+- Rent Receipt PDF generated and emailed on approval
+- Razorpay/Cashfree adapters MUST exist but stay disabled via feature flags
+- UI MUST display "Coming Soon" for premium payment options
+
+Notification Rules:
+- Year 1: Only free channels (Email, FCM Push, In-App)
+- WhatsApp, SMS integrations MUST exist but stay disabled via feature flags
+- UI MUST display "Coming Soon" for premium notification channels
 
 Important Existing Business Logic:
 - Subscription limits and add-on limits are separate.

@@ -204,6 +204,85 @@ Future phases may include:
 
 ---
 
+## Infrastructure Evolution Stages
+
+The following stages describe the production infrastructure evolution while keeping business logic unchanged.
+
+### Stage 1 — Year 1 Bootstrap (Current)
+**Goal:** Minimum viable production infrastructure within ₹2,000–3,000 INR/month budget.
+
+**Infrastructure:**
+- Single EC2 instance (t3.micro, Free Tier eligible)
+- RDS PostgreSQL (db.t3.micro, Free Tier eligible)
+- S3 for file storage
+- CloudWatch Basic
+- GitHub Actions CI/CD
+- No Redis, No Celery, No CloudFront, No OpenSearch
+
+**Services:**
+- Manual UPI payments (free)
+- Email + FCM Push + In-App notifications (free)
+- Django management commands + cron for background jobs
+- Django Local Memory Cache
+
+---
+
+### Stage 2 — Scale & Optimize
+**Trigger:** CPU > 70% OR 500+ payments/month OR manual verification > 10 hrs/week.
+
+**Infrastructure:**
+- Auto Scaling Group (2x EC2 t3.small)
+- Application Load Balancer
+- RDS PostgreSQL (db.t3.small Multi-AZ)
+- ElastiCache Redis (cache.t3.micro)
+- S3 + CloudFront CDN
+- Celery + Redis for background jobs
+- Payment gateway integration (Razorpay/Cashfree)
+- WhatsApp/SMS notifications enabled
+
+---
+
+### Stage 3 — High Availability
+**Trigger:** 10,000+ users OR latency > 500ms OR search complexity requires advanced features.
+
+**Infrastructure:**
+- 2x EC2 t3.large
+- RDS read replicas (db.t3.large)
+- ElastiCache Redis cluster
+- OpenSearch for advanced search
+- Enhanced CloudWatch + X-Ray
+- OpenTelemetry
+
+---
+
+### Stage 4 — Enterprise Scale
+**Trigger:** 100,000+ users OR global expansion.
+
+**Infrastructure:**
+- Container orchestration (EKS/ECS)
+- Microservice extraction from modular monolith
+- Multi-region deployment
+- OpenSearch cluster
+- Full observability stack
+- Global CDN
+
+---
+
+### Infrastructure Decision Matrix
+
+| Component | Year 1 | Stage 2 | Stage 3 | Stage 4 |
+|-----------|--------|---------|---------|---------|
+| Payment | Manual UPI | Razorpay/Cashfree | Smart routing | Global orchestration |
+| Notifications | Email + FCM | WhatsApp + SMS | Voice + Telegram | AI-powered |
+| Background Jobs | Cron + management commands | Celery + Redis | Priority queues | Event-driven |
+| Cache | Django Local Memory | Redis | Redis Cluster | Multi-tier |
+| Search | PostgreSQL full-text | PostgreSQL optimized | OpenSearch | OpenSearch Cluster |
+| File Storage | S3 only | S3 + CloudFront | Multi-region S3 | Global CDN |
+| Observability | CloudWatch Basic | CloudWatch + X-Ray | OpenTelemetry | Full observability |
+| Deployment | Single EC2 | ASG + ALB + Redis | Read replicas | Container orchestration |
+
+---
+
 ## Execution Rules
 1. One phase at a time
 2. Each phase requires its own ADR
@@ -212,3 +291,6 @@ Future phases may include:
 5. No phase changes external APIs
 6. No phase changes business logic behavior
 7. Documentation updates are part of each phase
+8. Infrastructure changes must preserve Clean Architecture and DDD patterns
+9. Feature flags control all premium integrations
+10. Domain interfaces remain stable across all stages

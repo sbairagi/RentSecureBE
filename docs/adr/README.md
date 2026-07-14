@@ -4,7 +4,7 @@
 
 This directory contains Architecture Decision Records (ADRs) for the RentSecureBE project.
 
-### Status Legend
+## Status Legend
 
 - **Proposed**: Under discussion
 - **Accepted**: Approved and implemented
@@ -46,6 +46,12 @@ This directory contains Architecture Decision Records (ADRs) for the RentSecureB
 | ADR-028 | Notification Flow Diagrams | Accepted | 2026-07-13 |
 | ADR-029 | Payment Flow Diagrams | Accepted | 2026-07-13 |
 | ADR-030 | AWS Deployment Diagrams | Accepted | 2026-07-13 |
+| ADR-031 | Manual UPI Payments as Year 1 Payment Strategy | Accepted | 2026-07-14 |
+| ADR-032 | Free Notification Channels Only in Year 1 | Accepted | 2026-07-14 |
+| ADR-033 | Cron + Management Commands as Year 1 Background Job Strategy | Accepted | 2026-07-14 |
+| ADR-034 | Django Local Memory Cache as Year 1 Cache Strategy | Accepted | 2026-07-14 |
+| ADR-035 | PostgreSQL Full-Text Search as Year 1 Search Strategy | Accepted | 2026-07-14 |
+| ADR-036 | S3 Only as Year 1 File Storage Strategy | Accepted | 2026-07-14 |
 
 ## Creating a New ADR
 

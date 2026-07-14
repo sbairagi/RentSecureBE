@@ -28,13 +28,13 @@
 | API | Django REST Framework |
 | Auth | JWT (SimpleJWT) |
 | Database | PostgreSQL (Production), SQLite (Development) |
-| Cache/Queue | Redis |
-| Background Tasks | Celery + Celery Beat |
+| Cache | Django Local Memory Cache (Year 1), Redis (Stage 2) |
+| Background Tasks | Cron + Management Commands (Year 1), Celery (Stage 2) |
 | Storage | AWS S3 |
 | Deployment | AWS EC2 + Nginx + Gunicorn |
 | CI/CD | GitHub Actions |
 | Code Quality | SonarCloud, import-linter |
-| Notifications | Email, Push, WhatsApp, Voice |
+| Notifications | Email, FCM Push, In-App (Year 1), WhatsApp/SMS (Stage 2) |
 
 ## Project Structure
 
