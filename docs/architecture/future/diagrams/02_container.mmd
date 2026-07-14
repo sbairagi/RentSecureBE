@@ -1,0 +1,42 @@
+graph TB
+    subgraph "RentSecure Platform"
+        subgraph "Web Tier"
+            LB[Load Balancer<br/>ALB Stage 2+]
+            Nginx[Nginx<br/>SSL Termination]
+        end
+
+        subgraph "App Tier"
+            Gunicorn[Gunicorn Workers<br/>Django App]
+        end
+
+        subgraph "Data Tier"
+            RDS[(RDS PostgreSQL<br/>Primary)]
+            Redis[(Redis<br/>Stage 2+)]
+            S3[S3 Storage]
+        end
+
+        subgraph "Background Tier"
+            Cron[systemd timers<br/>Year 1]
+            Celery[Celery + Redis<br/>Stage 2+]
+        end
+
+        subgraph "External Services"
+            SES[AWS SES<br/>Email]
+            FCM[Firebase FCM<br/>Push]
+            Razorpay[Razorpay<br/>Stage 2]
+        end
+    end
+
+    LB --> Nginx
+    Nginx --> Gunicorn
+    Gunicorn --> RDS
+    Gunicorn --> S3
+    Gunicorn --> Redis
+    Gunicorn --> SES
+    Gunicorn --> FCM
+    Cron --> Gunicorn
+    Celery --> Gunicorn
+
+    style Gunicorn fill:#e1f5ff
+    style RDS fill:#e8f5e9
+    style LB fill:#fff3e0

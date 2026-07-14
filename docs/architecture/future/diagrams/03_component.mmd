@@ -1,0 +1,171 @@
+graph LR
+    subgraph "apps/identity/"
+        ID_Domain[domain/]
+        ID_App[application/]
+        ID_Infra[infrastructure/]
+        ID_Pres[interfaces/]
+    end
+
+    subgraph "apps/subscription/"
+        SUB_Domain[domain/]
+        SUB_App[application/]
+        SUB_Infra[infrastructure/]
+        SUB_Pres[interfaces/]
+    end
+
+    subgraph "apps/property/"
+        PROP_Domain[domain/]
+        PROP_App[application/]
+        PROP_Infra[infrastructure/]
+        PROP_Pres[interfaces/]
+    end
+
+    subgraph "apps/rent/"
+        RENT_Domain[domain/]
+        RENT_App[application/]
+        RENT_Infra[infrastructure/]
+        RENT_Pres[interfaces/]
+    end
+
+    subgraph "apps/payment/"
+        PAY_Domain[domain/]
+        PAY_App[application/]
+        PAY_Infra[infrastructure/]
+        PAY_Pres[interfaces/]
+    end
+
+    subgraph "apps/notification/"
+        NOTIF_Domain[domain/]
+        NOTIF_App[application/]
+        NOTIF_Infra[infrastructure/]
+        NOTIF_Pres[interfaces/]
+    end
+
+    subgraph "apps/document/"
+        DOC_Domain[domain/]
+        DOC_App[application/]
+        DOC_Infra[infrastructure/]
+        DOC_Pres[interfaces/]
+    end
+
+    subgraph "apps/finance/"
+        FIN_Domain[domain/]
+        FIN_App[application/]
+        FIN_Infra[infrastructure/]
+        FIN_Pres[interfaces/]
+    end
+
+    subgraph "apps/referral/"
+        REF_Domain[domain/]
+        REF_App[application/]
+        REF_Infra[infrastructure/]
+        REF_Pres[interfaces/]
+    end
+
+    subgraph "apps/ai/"
+        AI_Domain[domain/]
+        AI_App[application/]
+        AI_Infra[infrastructure/]
+        AI_Pres[interfaces/]
+    end
+
+    subgraph "apps/dashboard/"
+        DASH_Domain[domain/]
+        DASH_App[application/]
+        DASH_Infra[infrastructure/]
+        DASH_Pres[interfaces/]
+    end
+
+    subgraph "shared/"
+        Shared[Utilities<br/>Types<br/>Exceptions<br/>Events<br/>Interfaces]
+    end
+
+    subgraph "platform/"
+        Platform[Cache<br/>Storage<br/>Search<br/>Queue<br/>Events<br/>DI]
+    end
+
+    ID_Pres --> ID_App
+    ID_App --> ID_Domain
+    ID_Infra --> ID_Domain
+
+    SUB_Pres --> SUB_App
+    SUB_App --> SUB_Domain
+    SUB_Infra --> SUB_Domain
+
+    PROP_Pres --> PROP_App
+    PROP_App --> PROP_Domain
+    PROP_Infra --> PROP_Domain
+
+    RENT_Pres --> RENT_App
+    RENT_App --> RENT_Domain
+    RENT_Infra --> RENT_Domain
+
+    PAY_Pres --> PAY_App
+    PAY_App --> PAY_Domain
+    PAY_Infra --> PAY_Domain
+
+    NOTIF_Pres --> NOTIF_App
+    NOTIF_App --> NOTIF_Domain
+    NOTIF_Infra --> NOTIF_Domain
+
+    DOC_Pres --> DOC_App
+    DOC_App --> DOC_Domain
+    DOC_Infra --> DOC_Domain
+
+    FIN_Pres --> FIN_App
+    FIN_App --> FIN_Domain
+    FIN_Infra --> FIN_Domain
+
+    REF_Pres --> REF_App
+    REF_App --> REF_Domain
+    REF_Infra --> REF_Domain
+
+    AI_Pres --> AI_App
+    AI_App --> AI_Domain
+    AI_Infra --> AI_Domain
+
+    DASH_Pres --> DASH_App
+    DASH_App --> DASH_Domain
+    DASH_Infra --> DASH_Domain
+
+    ID_Domain --> Shared
+    SUB_Domain --> Shared
+    PROP_Domain --> Shared
+    RENT_Domain --> Shared
+    PAY_Domain --> Shared
+    NOTIF_Domain --> Shared
+    DOC_Domain --> Shared
+    FIN_Domain --> Shared
+    REF_Domain --> Shared
+    AI_Domain --> Shared
+    DASH_Domain --> Shared
+
+    ID_Infra --> Platform
+    SUB_Infra --> Platform
+    PROP_Infra --> Platform
+    RENT_Infra --> Platform
+    PAY_Infra --> Platform
+    NOTIF_Infra --> Platform
+    DOC_Infra --> Platform
+    FIN_Infra --> Platform
+    REF_Infra --> Platform
+    AI_Infra --> Platform
+    DASH_Infra --> Platform
+
+    ID_App --> Platform
+    SUB_App --> Platform
+    PROP_App --> Platform
+    RENT_App --> Platform
+    PAY_App --> Platform
+    NOTIF_App --> Platform
+    DOC_App --> Platform
+    FIN_App --> Platform
+    REF_App --> Platform
+    AI_App --> Platform
+    DASH_App --> Platform
+
+    style ID_Domain fill:#e1f5ff
+    style SUB_Domain fill:#e1f5ff
+    style PROP_Domain fill:#e1f5ff
+    style Shared fill:#fff3e0
+    style Platform fill:#f3e5f5

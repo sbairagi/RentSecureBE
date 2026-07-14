@@ -1,0 +1,73 @@
+graph TD
+    subgraph "Layer 5: Presentation"
+        Views[Views]
+        Serializers[Serializers]
+        Permissions[Permissions]
+        Filters[Filters]
+        URLs[URL Configuration]
+    end
+
+    subgraph "Layer 4: Application"
+        Services[Application Services]
+        Commands[Commands]
+        Queries[Queries]
+        Selectors[Selectors]
+        DTOs[DTOs]
+    end
+
+    subgraph "Layer 3: Domain"
+        Entities[Entities]
+        ValueObjects[Value Objects]
+        Events[Domain Events]
+        Policies[Policies]
+        Exceptions[Domain Exceptions]
+        RepoInterfaces[Repository Interfaces]
+    end
+
+    subgraph "Layer 2: Infrastructure"
+        ORM[Django Models]
+        RepoImpl[Repository Implementations]
+        Adapters[External Adapters]
+        Signals[Signals]
+        Management[Management Commands]
+    end
+
+    subgraph "Layer 1: Platform"
+        Cache[Cache Adapters]
+        Storage[Storage Adapters]
+        Search[Search Adapters]
+        Queue[Queue Adapters]
+        EventBus[Event Bus]
+        DI[Dependency Injection]
+    end
+
+    subgraph "Layer 0: Shared"
+        SharedUtils[Utilities]
+        SharedTypes[Types]
+        SharedExceptions[Base Exceptions]
+        SharedEvents[Event Base Class]
+        SharedInterfaces[Abstract Interfaces]
+    end
+
+    Views --> Services
+    Views --> Serializers
+    Services --> Entities
+    Services --> RepoInterfaces
+    Services --> Cache
+    Commands --> Services
+    Queries --> Selectors
+    Selectors --> RepoInterfaces
+    Entities --> Events
+    Entities --> ValueObjects
+    Policies --> Entities
+    Policies --> ValueObjects
+    RepoImpl --> RepoInterfaces
+    RepoImpl --> ORM
+    Adapters --> RepoInterfaces
+    Cache --> SharedUtils
+    Storage --> SharedUtils
+
+    style Entities fill:#e1f5ff
+    style Services fill:#fff3e0
+    style Views fill:#f3e5f5
+    style SharedUtils fill:#e8f5e9

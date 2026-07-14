@@ -1,0 +1,75 @@
+graph TB
+    subgraph "External Users"
+        Tenant[Tenant]
+        Owner[Owner]
+        Admin[Admin]
+        CA[Chartered Accountant]
+    end
+
+    subgraph "RentSecure Platform"
+        subgraph "Presentation Layer"
+            API[API Layer<br/>Django DRF]
+            Web[Web Frontend<br/>Expo React Native]
+        end
+
+        subgraph "Application Layer"
+            AppServices[Application Services]
+        end
+
+        subgraph "Domain Layer"
+            Domain[Domain Entities<br/>Policies<br/>Events]
+        end
+
+        subgraph "Infrastructure Layer"
+            ORM[Django ORM]
+            Adapters[External Adapters]
+        end
+
+        subgraph "Platform Layer"
+            Cache[Cache Adapters]
+            Storage[Storage Adapters]
+            Queue[Queue Adapters]
+            Search[Search Adapters]
+        end
+
+        subgraph "Shared"
+            SharedUtils[Utilities<br/>Types<br/>Exceptions]
+        end
+    end
+
+    subgraph "External Systems"
+        DB[(PostgreSQL)]
+        S3[S3 Storage]
+        SMTP[Email SMTP]
+        FCM[Firebase FCM]
+        UPI[UPI Systems]
+        Razorpay[Razorpay<br/>Stage 2]
+    end
+
+    Tenant --> API
+    Owner --> API
+    Admin --> API
+    CA --> API
+
+    API --> AppServices
+    Web --> API
+
+    AppServices --> Domain
+    AppServices --> ORM
+    AppServices --> Adapters
+    AppServices --> Cache
+
+    ORM --> DB
+    Adapters --> SMTP
+    Adapters --> FCM
+    Adapters --> UPI
+    Adapters --> Razorpay
+
+    Storage --> S3
+    Queue --> DB
+    Search --> DB
+
+    style Domain fill:#e1f5ff
+    style AppServices fill:#fff3e0
+    style API fill:#f3e5f5
+    style DB fill:#e8f5e9

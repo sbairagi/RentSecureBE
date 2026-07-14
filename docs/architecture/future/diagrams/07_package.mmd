@@ -1,0 +1,86 @@
+graph TD
+    subgraph "rentsecure_be/"
+        subgraph "apps/"
+            ID["identity/<br/>├── domain/<br/>├── application/<br/>├── infrastructure/<br/>└── interfaces/"]
+            SUB["subscription/<br/>├── domain/<br/>├── application/<br/>├── infrastructure/<br/>└── interfaces/"]
+            PROP["property/<br/>├── domain/<br/>├── application/<br/>├── infrastructure/<br/>└── interfaces/"]
+            RENT["rent/<br/>├── domain/<br/>├── application/<br/>├── infrastructure/<br/>└── interfaces/"]
+            PAY["payment/<br/>├── domain/<br/>├── application/<br/>├── infrastructure/<br/>└── interfaces/"]
+            NOTIF["notification/<br/>├── domain/<br/>├── application/<br/>├── infrastructure/<br/>└── interfaces/"]
+            DOC["document/<br/>├── domain/<br/>├── application/<br/>├── infrastructure/<br/>└── interfaces/"]
+            FIN["finance/<br/>├── domain/<br/>├── application/<br/>├── infrastructure/<br/>└── interfaces/"]
+            REF["referral/<br/>├── domain/<br/>├── application/<br/>├── infrastructure/<br/>└── interfaces/"]
+            AI["ai/<br/>├── domain/<br/>├── application/<br/>├── infrastructure/<br/>└── interfaces/"]
+            DASH["dashboard/<br/>├── domain/<br/>├── application/<br/>├── infrastructure/<br/>└── interfaces/"]
+        end
+
+        subgraph "shared/"
+            S1["constants.py"]
+            S2["domain_events.py"]
+            S3["enums.py"]
+            S4["exceptions.py"]
+            S5["interfaces.py"]
+            S6["types.py"]
+            S7["utils.py"]
+            S8["validators.py"]
+        end
+
+        subgraph "platform/"
+            P1["cache/"]
+            P2["storage/"]
+            P3["search/"]
+            P4["queue/"]
+            P5["events/"]
+            P6["di/"]
+        end
+
+        subgraph "config/"
+            C1["settings/<br/>├── base.py<br/>├── development.py<br/>├── production.py<br/>├── testing.py<br/>└── ci.py"]
+            C2["urls.py"]
+            C3["wsgi.py"]
+        end
+
+        subgraph "scripts/"
+            SC["architecture_contract.py<br/>seed_data.py<br/>backup_db.py"]
+        end
+
+        subgraph "tools/"
+            T1["adr/"]
+            T2["diagrams/"]
+            T3["migrations/"]
+        end
+
+        subgraph "tests/"
+            TST1["factories.py"]
+            TST2["conftest.py"]
+            TST3["test_architecture_contract/"]
+            TST4["test_api_contracts/"]
+            TST5["load/"]
+        end
+
+        subgraph "docs/"
+            D1["architecture/<br/>├── future/<br/>├── adr/<br/>└── contracts/"]
+            D2["api/"]
+            D3["business-rules/"]
+        end
+    end
+
+    style ID fill:#e1f5ff
+    style SUB fill:#e1f5ff
+    style PROP fill:#fff3e0
+    style RENT fill:#fff3e0
+    style PAY fill:#f3e5f5
+    style NOTIF fill:#f3e5f5
+    style DOC fill:#e8f5e9
+    style FIN fill:#e8f5e9
+    style REF fill:#fce4ec
+    style AI fill:#fce4ec
+    style DASH fill:#fce4ec
+    style S1 fill:#e0f2f1
+    style S2 fill:#e0f2f1
+    style S3 fill:#e0f2f1
+    style S4 fill:#e0f2f1
+    style S5 fill:#e0f2f1
+    style S6 fill:#e0f2f1
+    style S7 fill:#e0f2f1
+    style S8 fill:#e0f2f1

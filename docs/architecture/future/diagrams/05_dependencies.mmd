@@ -1,0 +1,45 @@
+graph LR
+    subgraph "Allowed Dependencies"
+        direction TB
+        L5[Presentation]
+        L4[Application]
+        L3[Domain]
+        L2[Infrastructure]
+        L1[Platform]
+        L0[Shared]
+
+        L5 --> L4
+        L4 --> L3
+        L3 --> L0
+        L4 --> L2
+        L2 --> L3
+        L2 --> L1
+        L1 --> L0
+    end
+
+    subgraph "Forbidden Dependencies"
+        direction TB
+        F1[Domain → Application]
+        F2[Domain → Infrastructure]
+        F3[Domain → Presentation]
+        F4[Application → Presentation]
+        F5[Presentation → Domain]
+        F6[Presentation → Infrastructure]
+        F7[Shared → Apps]
+        F8[Cross-App Direct]
+    end
+
+    style L5 fill:#f3e5f5
+    style L4 fill:#fff3e0
+    style L3 fill:#e1f5ff
+    style L2 fill:#e8f5e9
+    style L1 fill:#fce4ec
+    style L0 fill:#e0f2f1
+    style F1 fill:#ffcdd2
+    style F2 fill:#ffcdd2
+    style F3 fill:#ffcdd2
+    style F4 fill:#ffcdd2
+    style F5 fill:#ffcdd2
+    style F6 fill:#ffcdd2
+    style F7 fill:#ffcdd2
+    style F8 fill:#ffcdd2

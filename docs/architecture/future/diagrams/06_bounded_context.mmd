@@ -1,0 +1,70 @@
+graph TB
+    subgraph "RentSecure Bounded Contexts"
+        ID[Identity<br/>Authentication<br/>Authorization]
+        SUB[Subscription<br/>Plans<br/>Add-ons<br/>Feature Flags]
+        PROP[Property<br/>Buildings<br/>Units<br/>Renters]
+        RENT[Rent<br/>Calculations<br/>Agreements<br/>Late Fees]
+        PAY[Payment<br/>Processing<br/>Verification<br/>Refunds]
+        NOTIF[Notification<br/>Email<br/>Push<br/>WhatsApp<br/>SMS]
+        DOC[Document<br/>PDF Generation<br/>Templates<br/>Storage]
+        FIN[Finance<br/>Tax<br/>CA Profiles<br/>Compliance]
+        REF[Referral<br/>Codes<br/>Bonuses<br/>Rewards]
+        AI[AI Assistant<br/>SmartBot<br/>Document Analysis<br/>Rent Suggestions]
+        DASH[Dashboard<br/>Analytics<br/>Reports<br/>Metrics]
+    end
+
+    ID -->|uses| SUB
+    SUB -->|checks| ID
+    PROP -->|depends on| ID
+    PROP -->|depends on| SUB
+    RENT -->|depends on| PROP
+    RENT -->|depends on| PAY
+    RENT -->|depends on| DOC
+    RENT -->|depends on| NOTIF
+    PAY -->|depends on| ID
+    PAY -->|depends on| RENT
+    PAY -->|depends on| DOC
+    PAY -->|depends on| NOTIF
+    NOTIF -->|depends on| ID
+    DOC -->|depends on| ID
+    FIN -->|depends on| ID
+    FIN -->|depends on| PROP
+    FIN -->|depends on| PAY
+    FIN -->|depends on| DOC
+    REF -->|depends on| ID
+    REF -->|depends on| PAY
+    AI -->|reads from| ID
+    AI -->|reads from| PROP
+    AI -->|reads from| RENT
+    AI -->|reads from| PAY
+    AI -->|reads from| DOC
+    DASH -->|reads from| ID
+    DASH -->|reads from| PROP
+    DASH -->|reads from| RENT
+    DASH -->|reads from| PAY
+    DASH -->|reads from| FIN
+    DASH -->|reads from| REF
+    DASH -->|reads from| AI
+
+    NOTIF -->|notifies| ID
+    NOTIF -->|notifies| PROP
+    NOTIF -->|notifies| RENT
+    NOTIF -->|notifies| PAY
+    NOTIF -->|notifies| FIN
+    NOTIF -->|notifies| REF
+
+    DOC -->|generates for| RENT
+    DOC -->|generates for| PAY
+    DOC -->|generates for| FIN
+
+    style ID fill:#e1f5ff
+    style SUB fill:#e1f5ff
+    style PROP fill:#fff3e0
+    style RENT fill:#fff3e0
+    style PAY fill:#f3e5f5
+    style NOTIF fill:#f3e5f5
+    style DOC fill:#e8f5e9
+    style FIN fill:#e8f5e9
+    style REF fill:#fce4ec
+    style AI fill:#fce4ec
+    style DASH fill:#fce4ec
