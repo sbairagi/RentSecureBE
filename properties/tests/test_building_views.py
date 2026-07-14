@@ -118,7 +118,9 @@ class TestBuildingViewSetCacheHitAndExpiredGrace(APITestCase):
 
         view = BuildingViewSet.as_view({"get": "list"})
 
-        with patch("properties.views.building_views.FeatureEnforcer") as mock_enforcer:
+        with patch(
+            "properties.services.building_service.FeatureEnforcer"
+        ) as mock_enforcer:
             mock_instance = mock_enforcer.return_value
             mock_instance.is_expired.return_value = True
             mock_instance.is_past_grace_period.return_value = True
@@ -175,7 +177,9 @@ class TestBuildingViewSetCacheHitAndExpiredGrace(APITestCase):
 
         view = BuildingViewSet.as_view({"get": "list"})
 
-        with patch("properties.views.building_views.FeatureEnforcer") as mock_enforcer:
+        with patch(
+            "properties.services.building_service.FeatureEnforcer"
+        ) as mock_enforcer:
             mock_instance = mock_enforcer.return_value
             mock_instance.is_expired.return_value = True
             mock_instance.is_past_grace_period.return_value = True
