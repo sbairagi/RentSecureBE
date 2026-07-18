@@ -33,11 +33,11 @@ from core.services.referral_service import ReferralService
 from core.services.subscription_service import SubscriptionService
 from core.services.usage_limit_service import UsageLimitService
 from notification.services.rent_notify_service import send_payout_notification
+from properties.utils.export_utils import generate_owner_rent_report
 from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
     process_rent_payout,
 )
-from rentsecure_be.utils.export_utils import generate_owner_rent_report
 from shared.exceptions import ValidationError
 
 from .models import (

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from rentsecure_be.utils.export_utils import generate_owner_rent_report
+from properties.utils.export_utils import generate_owner_rent_report
 
 User = get_user_model()
 
