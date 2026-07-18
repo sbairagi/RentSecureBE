@@ -3,8 +3,9 @@ from typing import Any
 from django.core.files.storage import default_storage
 
 from notification.utils import send_whatsapp_message
+from payments.adapters.cashfree import CashfreeAdapter
+from payments.services.payment_service import PaymentService
 from properties.models import Renter, RentRecord
-from rentsecure_be.services.cashfree_service import process_rent_payout
 from smartbot.services.agreement_service import generate_agreement_pdf
 
 from .services.leegality_service import initiate_signature
@@ -29,7 +30,7 @@ def retry_payout(renter_name: str) -> str:
         rent = RentRecord.objects.filter(renter__name__icontains=renter_name).latest(
             "created_at"
         )
-        result = process_rent_payout(rent)
+        result = PaymentService(CashfreeAdapter()).process_payout(rent)
         return f"✅ Payout retried: {result.get('status')}"
     except (Renter.DoesNotExist, RentRecord.DoesNotExist, ValueError):
         return "❌ Could not retry payout."
