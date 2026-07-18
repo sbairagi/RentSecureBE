@@ -33,11 +33,9 @@ from core.services.referral_service import ReferralService
 from core.services.subscription_service import SubscriptionService
 from core.services.usage_limit_service import UsageLimitService
 from notification.services.rent_notify_service import send_payout_notification
+from payments.adapters.cashfree import CashfreeAdapter
+from payments.services.payment_service import PaymentService
 from properties.utils.export_utils import generate_owner_rent_report
-from rentsecure_be.services.cashfree_service import (
-    delete_beneficiary,
-    process_rent_payout,
-)
 from shared.exceptions import ValidationError
 
 from .models import (
@@ -475,7 +473,8 @@ def _process_rent_payment(rent: RentRecord) -> None:
     rent.date_paid = timezone.now().date()
     rent.save(update_fields=["status", "paid_on", "updated_at"])
     try:
-        process_rent_payout(rent)
+        payment_service = PaymentService(CashfreeAdapter())
+        payment_service.process_payout(rent)
     except Exception as e:
         logger.exception(f"Failed to process payout for rent {rent.id}: {e}")
 
@@ -509,7 +508,8 @@ def update_owner_bank_details(
         bank = OwnerBankDetails(owner=owner)
 
     if bank.beneficiary_id:
-        delete_beneficiary(bank.beneficiary_id)
+        payment_service = PaymentService(CashfreeAdapter())
+        payment_service.delete_beneficiary(bank.beneficiary_id)
 
     response = BankDetailsService.register_beneficiary(
         owner, {**data, "bene_id_suffix": uuid.uuid4().hex[:8]}
