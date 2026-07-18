@@ -115,7 +115,7 @@ class RentNotifyServiceTest(TestCase):
         self.owner.profile.whatsapp_number = "+919876543210"
         self.owner.profile.language_preference = "hi"
 
-    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.i18n_service.translate_msg")
     @patch("notification.services.whatsapp_service.send_whatsapp_message")
     @patch("notification.services.voice_service.generate_voice_note")
     def test_notify_renter(self, mock_voice, mock_whatsapp, mock_translate):
@@ -125,7 +125,7 @@ class RentNotifyServiceTest(TestCase):
         mock_whatsapp.assert_called()
         mock_translate.assert_called_once()
 
-    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.i18n_service.translate_msg")
     @patch("notification.services.whatsapp_service.send_whatsapp_message")
     @patch("notification.services.voice_service.generate_voice_note")
     def test_notify_owner(self, mock_voice, mock_whatsapp, mock_translate):
@@ -165,7 +165,7 @@ class RentNotifyServiceTest(TestCase):
     @patch("notification.services.whatsapp_service.send_whatsapp_audio")
     @patch("notification.services.whatsapp_service.send_whatsapp_message")
     @patch("notification.services.voice_service.generate_voice_note")
-    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.i18n_service.translate_msg")
     def test_notify_owner_post_payout(
         self, mock_translate, mock_voice, mock_whatsapp, mock_audio, mock_upload
     ):
@@ -283,7 +283,7 @@ class RentNotifyServiceEdgeTests(TestCase):
         self.assertEqual(_renter_lang(renter, default="en"), "en")
 
     @patch(
-        "rentsecure_be.services.i18n_service.translate_msg",
+        "notification.services.i18n_service.translate_msg",
         side_effect=Exception("translation failed"),
     )
     @patch("notification.services.whatsapp_service.send_whatsapp_message")
@@ -299,7 +299,7 @@ class RentNotifyServiceEdgeTests(TestCase):
         notify_renter(renter, "Test message")
         mock_translate.assert_called_once()
 
-    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.i18n_service.translate_msg")
     @patch(
         "notification.services.whatsapp_service.send_whatsapp_message",
         side_effect=Exception("send failed"),
@@ -317,7 +317,7 @@ class RentNotifyServiceEdgeTests(TestCase):
         notify_renter(renter, "Test message")
         mock_translate.assert_called_once()
 
-    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.i18n_service.translate_msg")
     @patch("notification.services.whatsapp_service.send_whatsapp_message")
     @patch("notification.services.voice_service.generate_voice_note", return_value=None)
     def test_notify_renter_skips_audio_when_none(
@@ -334,7 +334,7 @@ class RentNotifyServiceEdgeTests(TestCase):
         mock_voice.assert_called_once()
 
     @patch(
-        "rentsecure_be.services.i18n_service.translate_msg",
+        "notification.services.i18n_service.translate_msg",
         side_effect=Exception("translation failed"),
     )
     @patch("notification.services.whatsapp_service.send_whatsapp_message")
@@ -351,7 +351,7 @@ class RentNotifyServiceEdgeTests(TestCase):
         notify_owner(owner, "Test message")
         mock_translate.assert_called_once()
 
-    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.i18n_service.translate_msg")
     @patch(
         "notification.services.whatsapp_service.send_whatsapp_message",
         side_effect=Exception("send failed"),
@@ -370,7 +370,7 @@ class RentNotifyServiceEdgeTests(TestCase):
         notify_owner(owner, "Test message")
         mock_translate.assert_called_once()
 
-    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.i18n_service.translate_msg")
     @patch("notification.services.whatsapp_service.send_whatsapp_message")
     @patch("notification.services.voice_service.generate_voice_note", return_value=None)
     def test_notify_owner_skips_audio_when_none(
@@ -399,7 +399,7 @@ class RentNotifyServiceEdgeTests(TestCase):
         mock_notify.assert_called_once()
 
     @patch("notification.services.whatsapp_service.upload_to_s3")
-    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.i18n_service.translate_msg")
     @patch("notification.services.whatsapp_service.send_whatsapp_message")
     @patch("notification.services.voice_service.generate_voice_note")
     def test_notify_owner_post_payout_failed_status(
@@ -420,7 +420,7 @@ class RentNotifyServiceEdgeTests(TestCase):
         notify_owner_post_payout(rent)
         mock_translate.assert_called_once()
 
-    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.i18n_service.translate_msg")
     @patch("notification.services.whatsapp_service.send_whatsapp_message")
     @patch("notification.services.voice_service.generate_voice_note")
     def test_notify_owner_post_payout_no_phone(
@@ -441,7 +441,7 @@ class RentNotifyServiceEdgeTests(TestCase):
         mock_translate.assert_called_once()
         mock_whatsapp.assert_not_called()
 
-    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.i18n_service.translate_msg")
     @patch("notification.services.whatsapp_service.send_whatsapp_message")
     @patch("notification.services.voice_service.generate_voice_note", return_value=None)
     def test_notify_owner_post_payout_skips_audio(

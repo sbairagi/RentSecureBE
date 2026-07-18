@@ -40,12 +40,12 @@ def _renter_lang(renter: Any, default: str = "en") -> str:
 
 
 def notify_renter(renter: Any, message: str) -> None:
+    from notification.services.i18n_service import translate_msg  # nosonar
     from notification.services.voice_service import generate_voice_note  # nosonar
     from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
     from notification.services.whatsapp_service import (
         send_whatsapp_message,  # nosonar; nosonar
     )
-    from rentsecure_be.services.i18n_service import translate_msg  # nosonar
 
     lang = _renter_lang(renter, default="en")
     phone = _renter_phone(renter)
@@ -71,12 +71,12 @@ def notify_renter(renter: Any, message: str) -> None:
 
 
 def notify_owner(owner: Any, message: str) -> None:
+    from notification.services.i18n_service import translate_msg  # nosonar
     from notification.services.voice_service import generate_voice_note  # nosonar
     from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
     from notification.services.whatsapp_service import (
         send_whatsapp_message,  # nosonar; nosonar
     )
-    from rentsecure_be.services.i18n_service import translate_msg  # nosonar
 
     lang = getattr(getattr(owner, "profile", None), "language_preference", None) or "en"
     phone = (
@@ -133,12 +133,12 @@ def send_payout_notification(rent: Any) -> None:
 
 
 def notify_owner_post_payout(rent: Any) -> None:
+    from notification.services.i18n_service import translate_msg  # nosonar
     from notification.services.voice_service import generate_voice_note  # nosonar
     from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
     from notification.services.whatsapp_service import (
         send_whatsapp_message,  # nosonar; nosonar
     )
-    from rentsecure_be.services.i18n_service import translate_msg  # nosonar
 
     owner = rent.renter.unit.owner
     profile = getattr(owner, "profile", None)

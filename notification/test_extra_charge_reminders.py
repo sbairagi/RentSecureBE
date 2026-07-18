@@ -59,7 +59,7 @@ class ExtraChargeReminderTests(TestCase):
     @patch("notification.services.extra_charge_reminders.send_whatsapp_audio")
     @patch("notification.services.extra_charge_reminders.send_whatsapp_message")
     @patch("notification.services.extra_charge_reminders.generate_voice_note")
-    @patch("rentsecure_be.services.i18n_service.translate_msg")
+    @patch("notification.services.i18n_service.translate_msg")
     def test_send_due_extra_charge_reminders_sends_text_and_audio(
         self,
         mock_translate,

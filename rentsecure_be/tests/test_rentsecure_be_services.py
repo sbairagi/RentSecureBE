@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 
-from rentsecure_be.services.i18n_service import translate_msg
+from notification.services.i18n_service import translate_msg
 from rentsecure_be.services.razorpay_service import create_payment_link
 from rentsecure_be.utils.cashfree_payout import (
     add_beneficiary,
@@ -19,7 +19,7 @@ class TranslateMsgTest(TestCase):
 
     def test_translate_non_english_success(self):
         with patch(
-            "rentsecure_be.services.i18n_service.GoogleTranslator"
+            "notification.services.i18n_service.GoogleTranslator"
         ) as mock_translator:
             instance = MagicMock()
             instance.translate.return_value = "Hola"
@@ -30,7 +30,7 @@ class TranslateMsgTest(TestCase):
 
     def test_translate_non_english_failure_returns_original(self):
         with patch(
-            "rentsecure_be.services.i18n_service.GoogleTranslator",
+            "notification.services.i18n_service.GoogleTranslator",
             side_effect=RuntimeError("API down"),
         ):
             result = translate_msg("Hello", "fr")
@@ -38,7 +38,7 @@ class TranslateMsgTest(TestCase):
 
     def test_translate_returns_original_when_translated_is_none(self):
         with patch(
-            "rentsecure_be.services.i18n_service.GoogleTranslator"
+            "notification.services.i18n_service.GoogleTranslator"
         ) as mock_translator:
             instance = MagicMock()
             instance.translate.return_value = None
