@@ -8,7 +8,7 @@ from rest_framework.serializers import BaseSerializer
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
 from ..models import Caretaker, Unit

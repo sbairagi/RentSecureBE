@@ -19,7 +19,7 @@ from notification.services.rent_notify_service import send_payout_notification
 from notification.utils import send_whatsapp_message
 from rentsecure_be.services.cashfree_service import process_rent_payout
 from rentsecure_be.services.razorpay_service import create_payment_link
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
 from ..models import Renter, RentRecord, Unit

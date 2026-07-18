@@ -3,7 +3,7 @@ from typing import Any
 from django.core.management.base import BaseCommand
 
 from properties.services.extra_charge_service import generate_monthly_extra_charges
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 
 class Command(BaseCommand):

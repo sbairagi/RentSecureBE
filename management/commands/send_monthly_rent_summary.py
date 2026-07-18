@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from properties.services.summary_service import send_monthly_rent_summary_email
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 if TYPE_CHECKING:
     from core.models import User

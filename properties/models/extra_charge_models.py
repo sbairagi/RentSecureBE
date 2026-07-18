@@ -5,7 +5,7 @@ from simple_history.models import HistoricalRecords  # type: ignore[import-untyp
 from django.conf import settings
 from django.db import models
 
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 from .renter_models import Renter
 from .unit_models import Unit

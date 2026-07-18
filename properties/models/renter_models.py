@@ -11,7 +11,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 
 from core.models import User
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 from .unit_models import Unit
 

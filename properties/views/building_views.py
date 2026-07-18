@@ -4,7 +4,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import BaseSerializer
 
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 from ..models import Building
 from ..serializers import BuildingSerializer

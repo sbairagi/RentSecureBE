@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand
 
 from properties.models import RentRecord
 from rentsecure_be.services.cashfree_service import process_rent_payout
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 
 class Command(BaseCommand):

@@ -14,7 +14,7 @@ from django.db import models
 
 # Local Imports
 from core.models import User
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 if TYPE_CHECKING:
     from django.core.files.uploadedfile import UploadedFile

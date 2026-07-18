@@ -2,7 +2,7 @@ from typing import Any, cast
 
 from rest_framework import serializers
 
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 from ..models import RentAgreementDraft, Unit, UnitDocument, UnitImage
 from ..services.unit_service import (

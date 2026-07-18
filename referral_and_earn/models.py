@@ -5,7 +5,7 @@ from typing import Any
 from django.conf import settings
 from django.db import models
 
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 
 class Referral(models.Model):

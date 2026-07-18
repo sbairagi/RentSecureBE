@@ -14,7 +14,7 @@ from django.utils.timezone import now
 
 from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import RentRecord
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 DEFAULT_GRACE_DAYS = 3
 

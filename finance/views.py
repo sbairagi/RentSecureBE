@@ -21,7 +21,7 @@ from django.http import FileResponse
 
 from core.models import User
 from properties.models import Unit
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 from .models import CAProfile, TaxSubmissionToCA
 from .serializers import CAProfileSerializer, TaxSubmissionToCASerializer

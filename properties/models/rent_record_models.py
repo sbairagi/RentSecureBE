@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 from .unit_models import Unit
 

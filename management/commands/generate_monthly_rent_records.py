@@ -4,7 +4,7 @@ from typing import Any
 from django.core.management.base import BaseCommand
 
 from properties.models import Renter, RentRecord
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 
 class Command(BaseCommand):

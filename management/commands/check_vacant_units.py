@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import Unit
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 logger = logging.getLogger(__name__)
 

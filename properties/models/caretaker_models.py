@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
 
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 # Reuse the shared phone regex if available; otherwise define a local one.
 phone_regex = RegexValidator(

@@ -4,7 +4,7 @@ Property Tax Record model for tracking property tax payments and due dates.
 
 from django.db import models
 
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 
 class PropertyTaxRecord(models.Model):

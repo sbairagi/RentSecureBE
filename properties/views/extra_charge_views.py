@@ -7,7 +7,7 @@ from rest_framework.serializers import BaseSerializer
 
 from django.contrib.auth.models import AnonymousUser
 
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 from ..models import ExtraCharge
 from ..serializers import ExtraChargeSerializer

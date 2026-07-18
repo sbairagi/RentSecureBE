@@ -13,7 +13,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 
 from core.models import User
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
 from ..models import Renter, Unit

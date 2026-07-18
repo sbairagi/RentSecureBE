@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 
 class ReferralConfig(AppConfig):

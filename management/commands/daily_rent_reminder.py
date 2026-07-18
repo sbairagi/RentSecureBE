@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 
 from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import Renter
-from rentsecure_be.type_compat import override
+from shared.type_compat import override
 
 
 class Command(BaseCommand):
