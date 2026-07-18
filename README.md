@@ -18,7 +18,6 @@
 ![C4 Context](docs/diagrams/generated/c4/c4-context.puml)
 ![C4 Container](docs/diagrams/generated/c4/c4-container.puml)
 
-![Architecture Dependency Graph](architecture/architecture-dependency-graph.dot)
 
 ## Tech Stack
 
@@ -80,7 +79,7 @@ Auto-generated diagrams are available in:
 - [CI/CD Governance](docs/governance.md)
 - [Business Rules](docs/business-rules/README.md)
 - [AI Governance](docs/ai-governance/README.md)
-- [ADR Index](docs/adr/README.md)
+- [ADR Index](docs/architecture/adr/README.md)
 
 ## Setup
 

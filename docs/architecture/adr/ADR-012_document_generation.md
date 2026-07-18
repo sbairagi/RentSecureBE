@@ -130,5 +130,5 @@ DocumentService.generate(template_id, context)
 
 ## References
 
-- [Bounded Contexts](docs/architecture/future/02_bounded_contexts.md)
-- [Production Architecture](docs/architecture/production-architecture.md)
+- [Bounded Contexts](../future/02_bounded_contexts.md)
+- [Production Architecture](../production-architecture.md)

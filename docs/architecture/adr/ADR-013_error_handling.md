@@ -138,5 +138,5 @@ InfrastructureException (wraps external errors)
 
 ## References
 
-- [Layer Rules](docs/architecture/future/04_layer_rules.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Layer Rules](../future/04_layer_rules.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)

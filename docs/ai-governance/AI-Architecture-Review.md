@@ -36,7 +36,7 @@ This document defines the process for reviewing AI-generated architecture propos
 
 ## Decision Record
 
-All approved architecture changes must be recorded as an ADR in `docs/adr/`.
+All approved architecture changes must be recorded as an ADR in `docs/architecture/adr/`.
 
 ## Escalation
 

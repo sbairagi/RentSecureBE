@@ -172,7 +172,9 @@ class BuildingViewSetAPITests(APITestCase):
         )
         response = self.client.delete(f"/api/buildings/{building.id}/")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Building.objects.count(), 0)
+        self.assertEqual(Building.objects.count(), 1)
+        building.refresh_from_db()
+        self.assertTrue(building.is_archived)
 
     def test_cannot_delete_other_user_building(self):
         """Test cannot delete building owned by other user"""

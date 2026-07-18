@@ -132,6 +132,6 @@ NotificationService.send(user_id, "PaymentSubmitted", context)
 
 ## References
 
-- [Notification Rules](.kilo/instructions/notifications.md)
-- [Production Architecture](docs/architecture/production-architecture.md)
-- [Bounded Contexts](docs/architecture/future/02_bounded_contexts.md)
+- [Notification Rules](../../../.kilo/instructions/notifications.md)
+- [Production Architecture](../production-architecture.md)
+- [Bounded Contexts](../future/02_bounded_contexts.md)

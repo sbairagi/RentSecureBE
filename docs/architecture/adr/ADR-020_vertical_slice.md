@@ -113,5 +113,5 @@ features/
 
 ## References
 
-- [Target Folder Structure](docs/architecture/future/03_target_folder_structure.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Target Folder Structure](../future/03_target_folder_structure.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)

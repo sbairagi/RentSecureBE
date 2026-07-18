@@ -1,0 +1,4060 @@
+{
+  "generated_at": "auto",
+  "root": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE",
+  "django_apps": [
+    "ai_assistant",
+    "core",
+    "documents",
+    "finance",
+    "notification",
+    "properties",
+    "referral_and_earn",
+    "smartbot"
+  ],
+  "installed_apps": [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "simple_history",
+    "fcm_django",
+    "django_celery_beat",
+    "core",
+    "notification",
+    "properties",
+    "finance",
+    "referral_and_earn",
+    "documents",
+    "smartbot",
+    "django_extensions"
+  ],
+  "feature_flags": [
+    "ENABLE_CASHFREE",
+    "ENABLE_EMAIL",
+    "ENABLE_LEEGALITY",
+    "ENABLE_OPENAI",
+    "ENABLE_PUSH_NOTIFICATION",
+    "ENABLE_RAZORPAY",
+    "ENABLE_VOICE",
+    "ENABLE_WHATSAPP"
+  ],
+  "apps": {
+    "ai_assistant": {
+      "name": "ai_assistant",
+      "path": "ai_assistant",
+      "models": [],
+      "views": [],
+      "serializers": [],
+      "urls": [],
+      "services": [
+        {
+          "file": "ai_assistant/services/archive_service.py",
+          "functions": [
+            "_serialize_value",
+            "archive_renter_data"
+          ]
+        },
+        {
+          "file": "ai_assistant/services/finance_ai.py",
+          "functions": [
+            "analyze_financial_health"
+          ]
+        },
+        {
+          "file": "ai_assistant/services/i18n_service.py",
+          "functions": [
+            "translate_msg"
+          ]
+        },
+        {
+          "file": "ai_assistant/services/invoice_service.py",
+          "functions": [
+            "generate_final_invoice_pdf"
+          ]
+        },
+        {
+          "file": "ai_assistant/services/unit_service.py",
+          "functions": [
+            "update_unit_status"
+          ]
+        }
+      ],
+      "signals": [],
+      "files": [
+        {
+          "path": "ai_assistant/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "ai_assistant/admin.py",
+          "sha256": "226414ed0d1224d4"
+        },
+        {
+          "path": "ai_assistant/apps.py",
+          "sha256": "87d63d513c02ae8b"
+        },
+        {
+          "path": "ai_assistant/models.py",
+          "sha256": "a3d38b4aa0a3c65f"
+        },
+        {
+          "path": "ai_assistant/receivers.py",
+          "sha256": "07f36c67df92aa93"
+        },
+        {
+          "path": "ai_assistant/services/archive_service.py",
+          "sha256": "00bebd24a188d073"
+        },
+        {
+          "path": "ai_assistant/services/finance_ai.py",
+          "sha256": "a6aa1f668fd95e6c"
+        },
+        {
+          "path": "ai_assistant/services/i18n_service.py",
+          "sha256": "02943107a9a3dc74"
+        },
+        {
+          "path": "ai_assistant/services/invoice_service.py",
+          "sha256": "d35645e6bc99235b"
+        },
+        {
+          "path": "ai_assistant/services/unit_service.py",
+          "sha256": "9131305e4db7986d"
+        },
+        {
+          "path": "ai_assistant/tests/test_services.py",
+          "sha256": "978e8719f23624cd"
+        },
+        {
+          "path": "ai_assistant/urls.py",
+          "sha256": "2ea7e2266f408f25"
+        },
+        {
+          "path": "ai_assistant/views.py",
+          "sha256": "6b33d81a1fced8b7"
+        }
+      ],
+      "model_count": 0,
+      "view_count": 0,
+      "serializer_count": 0,
+      "service_count": 5,
+      "signal_count": 0
+    },
+    "core": {
+      "name": "core",
+      "path": "core",
+      "models": [
+        {
+          "name": "UserProfile",
+          "file": "core/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "user",
+              "raw": "models.OneToOneField(User, on_delete=models.CASCADE)",
+              "type": "OneToOneField",
+              "related_model": "User"
+            },
+            {
+              "name": "whatsapp_number",
+              "raw": "models.CharField(max_length=15, help_text='Include country code, e.g. +91xxxxxxxxxx')",
+              "type": "CharField"
+            },
+            {
+              "name": "whatsapp_opt_in",
+              "raw": "models.BooleanField(default=True)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "language_preference",
+              "raw": "models.CharField(max_length=2, default='en', choices=[('en', 'English'), ('hi', 'Hindi')])",
+              "type": "CharField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "OneToOne",
+              "from": "user",
+              "to": "User"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "NotificationPreference",
+          "file": "core/models.py",
+          "bases": [
+            "UpsertMixin",
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "owner",
+              "raw": "models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_preference')",
+              "type": "OneToOneField",
+              "related_model": "User"
+            },
+            {
+              "name": "rent_alerts_whatsapp",
+              "raw": "models.BooleanField(default=True)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "rent_alerts_email",
+              "raw": "models.BooleanField(default=True)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "monthly_summary_email",
+              "raw": "models.BooleanField(default=True)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "monthly_summary_whatsapp",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "payout_alerts_whatsapp",
+              "raw": "models.BooleanField(default=True)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "payout_alerts_email",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "_upsert_filter_fields",
+              "raw": "('owner',)",
+              "type": ""
+            },
+            {
+              "name": "_upsert_skip_fields",
+              "raw": "frozenset({'id', 'owner'})",
+              "type": "frozenset"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "OneToOne",
+              "from": "owner",
+              "to": "User"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "OTP",
+          "file": "core/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "phone_number",
+              "raw": "models.CharField(max_length=15)",
+              "type": "CharField"
+            },
+            {
+              "name": "code",
+              "raw": "models.CharField(max_length=6)",
+              "type": "CharField"
+            },
+            {
+              "name": "referral_code",
+              "raw": "models.CharField(max_length=6)",
+              "type": "CharField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "is_verified",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "history",
+              "raw": "HistoricalRecords(user_model=settings.AUTH_USER_MODEL)",
+              "type": "HistoricalRecords"
+            }
+          ],
+          "relationships": [],
+          "meta": {}
+        },
+        {
+          "name": "OwnerBankDetails",
+          "file": "core/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "owner",
+              "raw": "models.OneToOneField(User, on_delete=models.CASCADE, related_name='bank_details')",
+              "type": "OneToOneField",
+              "related_model": "User"
+            },
+            {
+              "name": "bank_account_number",
+              "raw": "models.CharField(max_length=30)",
+              "type": "CharField"
+            },
+            {
+              "name": "ifsc_code",
+              "raw": "models.CharField(max_length=20)",
+              "type": "CharField"
+            },
+            {
+              "name": "account_holder_name",
+              "raw": "models.CharField(max_length=100, blank=True, default='')",
+              "type": "CharField"
+            },
+            {
+              "name": "beneficiary_id",
+              "raw": "models.CharField(max_length=100, unique=True, blank=True)",
+              "type": "CharField"
+            },
+            {
+              "name": "bank_account_verified",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "OneToOne",
+              "from": "owner",
+              "to": "User"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "SubscriptionPlan",
+          "file": "core/models.py",
+          "bases": [
+            "UpsertMixin",
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "PLAN_CHOICES",
+              "raw": "[('free', 'Free'), ('pro', 'Pro'), ('elite', 'Elite')]",
+              "type": "["
+            },
+            {
+              "name": "id",
+              "raw": "models.AutoField(primary_key=True)",
+              "type": "AutoField"
+            },
+            {
+              "name": "name",
+              "raw": "models.CharField(max_length=50, choices=PLAN_CHOICES, unique=True)",
+              "type": "CharField"
+            },
+            {
+              "name": "monthly_price",
+              "raw": "models.DecimalField(max_digits=10, decimal_places=2)",
+              "type": "DecimalField"
+            },
+            {
+              "name": "yearly_price",
+              "raw": "models.DecimalField(max_digits=10, decimal_places=2)",
+              "type": "DecimalField"
+            },
+            {
+              "name": "features",
+              "raw": "models.TextField(help_text='Comma-separated list or rich description')",
+              "type": "TextField"
+            },
+            {
+              "name": "is_active",
+              "raw": "models.BooleanField(default=True)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "updated_at",
+              "raw": "models.DateTimeField(auto_now=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "_upsert_filter_fields",
+              "raw": "('name',)",
+              "type": ""
+            },
+            {
+              "name": "_upsert_skip_fields",
+              "raw": "frozenset({'id', 'name', 'created_at', 'updated_at'})",
+              "type": "frozenset"
+            }
+          ],
+          "relationships": [],
+          "meta": {}
+        },
+        {
+          "name": "UserSubscription",
+          "file": "core/models.py",
+          "bases": [
+            "UpsertMixin",
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "id",
+              "raw": "models.AutoField(primary_key=True)",
+              "type": "AutoField"
+            },
+            {
+              "name": "user",
+              "raw": "models.OneToOneField(User, on_delete=models.CASCADE, related_name='usersubscription')",
+              "type": "OneToOneField",
+              "related_model": "User"
+            },
+            {
+              "name": "plan",
+              "raw": "models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True)",
+              "type": "ForeignKey",
+              "related_model": "SubscriptionPlan"
+            },
+            {
+              "name": "start_date",
+              "raw": "models.DateField(auto_now_add=True)",
+              "type": "DateField"
+            },
+            {
+              "name": "end_date",
+              "raw": "models.DateField(null=True, blank=True)",
+              "type": "DateField"
+            },
+            {
+              "name": "is_active",
+              "raw": "models.BooleanField(default=True)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "is_yearly",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "tax_reminder_days_before",
+              "raw": "models.PositiveIntegerField(default=7, help_text='Days before tax due date to send reminder')",
+              "type": "PositiveIntegerField"
+            },
+            {
+              "name": "rent_reminder_days_before",
+              "raw": "models.PositiveIntegerField(default=7, help_text='Days before rent due date to send reminder')",
+              "type": "PositiveIntegerField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "updated_at",
+              "raw": "models.DateTimeField(auto_now=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "_upsert_filter_fields",
+              "raw": "('user',)",
+              "type": ""
+            },
+            {
+              "name": "_upsert_skip_fields",
+              "raw": "frozenset({'id', 'user', 'start_date', 'created_at', 'updated_at'})",
+              "type": "frozenset"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "OneToOne",
+              "from": "user",
+              "to": "User"
+            },
+            {
+              "type": "ForeignKey",
+              "from": "plan",
+              "to": "SubscriptionPlan"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "AddOnPurchase",
+          "file": "core/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "FEATURE_CHOICES",
+              "raw": "[('max_buildings', 'Max Buildings'), ('max_units', 'Max Units'), ('max_renters', 'Max Renters per Unit'), ('max_caretakers', 'Max Caretakers per Unit'), ('max_unit_images', 'Max Unit Images'), ('max_document_uploads', 'Max Document Uploads per Unit'), ('tax_notifications', 'Tax Notifications'), ('whatsapp_alerts', 'WhatsApp Alerts'), ('rent_agreement_drafting', 'Rent Agreement Drafting'), ('export_pdf_dossier', 'Export PDF Dossier')]",
+              "type": "["
+            },
+            {
+              "name": "id",
+              "raw": "models.AutoField(primary_key=True)",
+              "type": "AutoField"
+            },
+            {
+              "name": "user",
+              "raw": "models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)",
+              "type": "ForeignKey",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "name",
+              "raw": "models.CharField(max_length=50, choices=FEATURE_CHOICES)",
+              "type": "CharField"
+            },
+            {
+              "name": "amount",
+              "raw": "models.DecimalField(max_digits=10, decimal_places=2)",
+              "type": "DecimalField"
+            },
+            {
+              "name": "is_recurring",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "purchase_date",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "PlanFeatureLimit",
+          "file": "core/models.py",
+          "bases": [
+            "UpsertMixin",
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "id",
+              "raw": "models.AutoField(primary_key=True)",
+              "type": "AutoField"
+            },
+            {
+              "name": "plan",
+              "raw": "models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE, related_name='limits')",
+              "type": "ForeignKey",
+              "related_model": "SubscriptionPlan"
+            },
+            {
+              "name": "feature_key",
+              "raw": "models.CharField(max_length=50, choices=AddOnPurchase.FEATURE_CHOICES)",
+              "type": "CharField"
+            },
+            {
+              "name": "value",
+              "raw": "models.CharField(max_length=20)",
+              "type": "CharField"
+            },
+            {
+              "name": "_upsert_filter_fields",
+              "raw": "('plan', 'feature_key')",
+              "type": ""
+            },
+            {
+              "name": "_upsert_skip_fields",
+              "raw": "frozenset({'id', 'plan', 'feature_key'})",
+              "type": "frozenset"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "plan",
+              "to": "SubscriptionPlan"
+            }
+          ],
+          "meta": {
+            "unique_together": "('plan', 'feature_key')"
+          }
+        },
+        {
+          "name": "UsageLimit",
+          "file": "core/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "id",
+              "raw": "models.AutoField(primary_key=True)",
+              "type": "AutoField"
+            },
+            {
+              "name": "user",
+              "raw": "models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='usage_limits')",
+              "type": "ForeignKey",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "feature_key",
+              "raw": "models.CharField(max_length=50, choices=AddOnPurchase.FEATURE_CHOICES)",
+              "type": "CharField"
+            },
+            {
+              "name": "usage_count",
+              "raw": "models.IntegerField(default=0)",
+              "type": "IntegerField"
+            },
+            {
+              "name": "updated_at",
+              "raw": "models.DateTimeField(auto_now=True)",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            }
+          ],
+          "meta": {
+            "unique_together": "('user', 'feature_key')"
+          }
+        }
+      ],
+      "views": [
+        {
+          "name": "SendOTP",
+          "file": "core/views.py",
+          "bases": [
+            "APIView"
+          ],
+          "methods": [
+            "post"
+          ]
+        },
+        {
+          "name": "OwnerVerifyOTP",
+          "file": "core/views.py",
+          "bases": [
+            "APIView"
+          ],
+          "methods": [
+            "post"
+          ]
+        },
+        {
+          "name": "RenterVerifyOTP",
+          "file": "core/views.py",
+          "bases": [
+            "APIView"
+          ],
+          "methods": [
+            "post"
+          ]
+        },
+        {
+          "name": "ChangePasswordView",
+          "file": "core/views.py",
+          "bases": [
+            "generics.UpdateAPIView"
+          ],
+          "methods": [
+            "post",
+            "update"
+          ]
+        },
+        {
+          "name": "ResetPasswordView",
+          "file": "core/views.py",
+          "bases": [
+            "APIView"
+          ],
+          "methods": [
+            "post"
+          ]
+        },
+        {
+          "name": "SubscriptionPlanViewSet",
+          "file": "core/views.py",
+          "bases": [
+            "viewsets.ReadOnlyModelViewSet"
+          ],
+          "methods": []
+        },
+        {
+          "name": "PlanFeatureLimitViewSet",
+          "file": "core/views.py",
+          "bases": [
+            "viewsets.ReadOnlyModelViewSet"
+          ],
+          "methods": []
+        },
+        {
+          "name": "UserSubscriptionViewSet",
+          "file": "core/views.py",
+          "bases": [
+            "viewsets.ModelViewSet"
+          ],
+          "methods": [
+            "get_queryset",
+            "perform_create",
+            "perform_update",
+            "perform_destroy"
+          ]
+        },
+        {
+          "name": "AddOnPurchaseViewSet",
+          "file": "core/views.py",
+          "bases": [
+            "viewsets.ModelViewSet"
+          ],
+          "methods": [
+            "get_queryset",
+            "perform_create",
+            "perform_update",
+            "perform_destroy"
+          ]
+        },
+        {
+          "name": "UsageLimitViewSet",
+          "file": "core/views.py",
+          "bases": [
+            "viewsets.ReadOnlyModelViewSet"
+          ],
+          "methods": [
+            "get_queryset"
+          ]
+        }
+      ],
+      "serializers": [
+        {
+          "name": "UserSerializer",
+          "file": "core/serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "SubscriptionPlanSerializer",
+          "file": "core/serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "UserSubscriptionSerializer",
+          "file": "core/serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "AddOnPurchaseSerializer",
+          "file": "core/serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "PlanFeatureLimitSerializer",
+          "file": "core/serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "UsageLimitSerializer",
+          "file": "core/serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        }
+      ],
+      "urls": [],
+      "services": [],
+      "signals": [],
+      "files": [
+        {
+          "path": "core/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "core/admin.py",
+          "sha256": "c154c01136070dbc"
+        },
+        {
+          "path": "core/apps.py",
+          "sha256": "921c56c02afe29c2"
+        },
+        {
+          "path": "core/models.py",
+          "sha256": "575b5c527c61d7b1"
+        },
+        {
+          "path": "core/serializers.py",
+          "sha256": "e5d9915c71041dc1"
+        },
+        {
+          "path": "core/signals.py",
+          "sha256": "f7d4aa484441d304"
+        },
+        {
+          "path": "core/tests/test_auth.py",
+          "sha256": "7b8435d82be22f39"
+        },
+        {
+          "path": "core/tests/test_comprehensive.py",
+          "sha256": "25e013040eadb591"
+        },
+        {
+          "path": "core/tests/test_core_views.py",
+          "sha256": "872c4414d2136005"
+        },
+        {
+          "path": "core/tests/test_core_webhooks.py",
+          "sha256": "380a8062a3c53ff6"
+        },
+        {
+          "path": "core/tests/test_export_utils.py",
+          "sha256": "d6847ec40bfd4c59"
+        },
+        {
+          "path": "core/tests/test_signals.py",
+          "sha256": "8b0070f66f9f62cf"
+        },
+        {
+          "path": "core/tests/test_views.py",
+          "sha256": "f2713c4ba4a6db0b"
+        },
+        {
+          "path": "core/urls.py",
+          "sha256": "a12480c0f2403d85"
+        },
+        {
+          "path": "core/utils/export_utils.py",
+          "sha256": "4a54b1685813e0db"
+        },
+        {
+          "path": "core/views.py",
+          "sha256": "75116b827e736021"
+        }
+      ],
+      "model_count": 9,
+      "view_count": 10,
+      "serializer_count": 6,
+      "service_count": 0,
+      "signal_count": 0
+    },
+    "documents": {
+      "name": "documents",
+      "path": "documents",
+      "models": [],
+      "views": [
+        {
+          "name": "GenerateRentAgreementPdfViewSet",
+          "file": "documents/views.py",
+          "bases": [
+            "viewsets.ViewSet"
+          ],
+          "methods": [
+            "generate_rent_agreement_pdf"
+          ]
+        },
+        {
+          "name": "GenerateUnitDossierPdfViewSet",
+          "file": "documents/views.py",
+          "bases": [
+            "viewsets.ViewSet"
+          ],
+          "methods": [
+            "generate_dossier_pdf"
+          ]
+        },
+        {
+          "name": "GenerateRentReceiptPdfViewSet",
+          "file": "documents/views.py",
+          "bases": [
+            "viewsets.ModelViewSet"
+          ],
+          "methods": [
+            "pdf_receipt"
+          ]
+        }
+      ],
+      "serializers": [],
+      "urls": [],
+      "services": [],
+      "signals": [],
+      "files": [
+        {
+          "path": "documents/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "documents/apps.py",
+          "sha256": "46338ccb673f4efc"
+        },
+        {
+          "path": "documents/tests/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "documents/tests/test_legacy.py",
+          "sha256": "5cd7d8626d875a67"
+        },
+        {
+          "path": "documents/tests/test_routes.py",
+          "sha256": "647299f3ba5c7fbf"
+        },
+        {
+          "path": "documents/tests/test_urls.py",
+          "sha256": "d23edcd841e05197"
+        },
+        {
+          "path": "documents/tests/test_utils.py",
+          "sha256": "b9408dc6e3686b1b"
+        },
+        {
+          "path": "documents/tests/test_views.py",
+          "sha256": "cfa19297a48795ab"
+        },
+        {
+          "path": "documents/urls.py",
+          "sha256": "25475702beba57d8"
+        },
+        {
+          "path": "documents/utils.py",
+          "sha256": "8dbbf20fd5590404"
+        },
+        {
+          "path": "documents/views.py",
+          "sha256": "a19e858b3bc1940d"
+        }
+      ],
+      "model_count": 0,
+      "view_count": 3,
+      "serializer_count": 0,
+      "service_count": 0,
+      "signal_count": 0
+    },
+    "finance": {
+      "name": "finance",
+      "path": "finance",
+      "models": [
+        {
+          "name": "CAProfile",
+          "file": "finance/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "user",
+              "raw": "models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)",
+              "type": "OneToOneField",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "firm_name",
+              "raw": "models.CharField(max_length=255)",
+              "type": "CharField"
+            },
+            {
+              "name": "contact_email",
+              "raw": "models.EmailField()",
+              "type": "EmailField"
+            },
+            {
+              "name": "phone",
+              "raw": "models.CharField(max_length=15)",
+              "type": "CharField"
+            },
+            {
+              "name": "verified",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "OneToOne",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "TaxSubmissionToCA",
+          "file": "finance/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "user",
+              "raw": "models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tax_submissions_to_ca')",
+              "type": "ForeignKey",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "ca",
+              "raw": "models.ForeignKey(CAProfile, on_delete=models.SET_NULL, null=True, blank=True)",
+              "type": "ForeignKey",
+              "related_model": "CAProfile"
+            },
+            {
+              "name": "financial_year",
+              "raw": "models.CharField(max_length=9, help_text='e.g., 2024-25')",
+              "type": "CharField"
+            },
+            {
+              "name": "sent_to_email",
+              "raw": "models.EmailField()",
+              "type": "EmailField"
+            },
+            {
+              "name": "sent_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "message",
+              "raw": "models.TextField(blank=True)",
+              "type": "TextField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "type": "ForeignKey",
+              "from": "ca",
+              "to": "CAProfile"
+            }
+          ],
+          "meta": {}
+        }
+      ],
+      "views": [
+        {
+          "name": "CAProfileViewSet",
+          "file": "finance/views.py",
+          "bases": [
+            "viewsets.ModelViewSet[CAProfile]"
+          ],
+          "methods": [
+            "perform_create"
+          ]
+        },
+        {
+          "name": "TaxSubmissionToCAViewSet",
+          "file": "finance/views.py",
+          "bases": [
+            "viewsets.ModelViewSet[TaxSubmissionToCA]"
+          ],
+          "methods": [
+            "get_queryset",
+            "perform_create"
+          ]
+        },
+        {
+          "name": "DownloadTaxFilesView",
+          "file": "finance/views.py",
+          "bases": [
+            "APIView"
+          ],
+          "methods": [
+            "get"
+          ]
+        }
+      ],
+      "serializers": [
+        {
+          "name": "CAProfileSerializer",
+          "file": "finance/serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "TaxSubmissionToCASerializer",
+          "file": "finance/serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        }
+      ],
+      "urls": [],
+      "services": [],
+      "signals": [],
+      "files": [
+        {
+          "path": "finance/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "finance/admin.py",
+          "sha256": "efca06ec380780e9"
+        },
+        {
+          "path": "finance/apps.py",
+          "sha256": "400aa6e9ed03c6ec"
+        },
+        {
+          "path": "finance/models.py",
+          "sha256": "3cefb7e52f183639"
+        },
+        {
+          "path": "finance/serializers.py",
+          "sha256": "16a215496308eb5f"
+        },
+        {
+          "path": "finance/tests/test_finance_comprehensive.py",
+          "sha256": "b56f96ff39f56b23"
+        },
+        {
+          "path": "finance/tests/test_finance_utils.py",
+          "sha256": "aa97d694ce3a768f"
+        },
+        {
+          "path": "finance/tests/test_finance_views.py",
+          "sha256": "b00d51347222015f"
+        },
+        {
+          "path": "finance/tests/test_serializers_and_urls.py",
+          "sha256": "a7a50208fa5bde0b"
+        },
+        {
+          "path": "finance/urls.py",
+          "sha256": "44019fa800971d6f"
+        },
+        {
+          "path": "finance/utils.py",
+          "sha256": "429cd68165076717"
+        },
+        {
+          "path": "finance/views.py",
+          "sha256": "d63cd8299262702b"
+        }
+      ],
+      "model_count": 2,
+      "view_count": 3,
+      "serializer_count": 2,
+      "service_count": 0,
+      "signal_count": 0
+    },
+    "notification": {
+      "name": "notification",
+      "path": "notification",
+      "models": [
+        {
+          "name": "Notification",
+          "file": "notification/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "user",
+              "raw": "models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')",
+              "type": "ForeignKey",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "title",
+              "raw": "models.CharField(max_length=200)",
+              "type": "CharField"
+            },
+            {
+              "name": "message",
+              "raw": "models.TextField()",
+              "type": "TextField"
+            },
+            {
+              "name": "is_read",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "DeviceToken",
+          "file": "notification/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "user",
+              "raw": "models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)",
+              "type": "ForeignKey",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "token",
+              "raw": "models.CharField(max_length=255)",
+              "type": "CharField"
+            },
+            {
+              "name": "platform",
+              "raw": "models.CharField(max_length=20, default='expo')",
+              "type": "CharField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            }
+          ],
+          "meta": {}
+        }
+      ],
+      "views": [],
+      "serializers": [],
+      "urls": [],
+      "services": [
+        {
+          "file": "notification/services/communication.py",
+          "functions": [
+            "send_smart_alert"
+          ]
+        },
+        {
+          "file": "notification/services/extra_charge_reminders.py",
+          "functions": [
+            "send_due_extra_charge_reminders"
+          ]
+        },
+        {
+          "file": "notification/services/late_fees_notify_service.py",
+          "functions": [
+            "notify_renter_about_late_fee",
+            "notify_owner_about_late_fee"
+          ]
+        },
+        {
+          "file": "notification/services/notifications.py",
+          "functions": [
+            "send_push_notification"
+          ]
+        },
+        {
+          "file": "notification/services/rent_notify_service.py",
+          "functions": [
+            "_renter_phone",
+            "_renter_lang",
+            "notify_renter",
+            "notify_owner",
+            "send_payout_notification",
+            "notify_owner_post_payout"
+          ]
+        },
+        {
+          "file": "notification/services/schedule_reminders.py",
+          "functions": [
+            "get_upcoming_rent_dues",
+            "get_upcoming_tax_dues",
+            "generate_rent_reminder_msg",
+            "generate_tax_reminder_msg",
+            "_safe_lang_for_renter",
+            "_safe_whatsapp",
+            "process_rent_reminders",
+            "process_tax_reminders"
+          ]
+        },
+        {
+          "file": "notification/services/services.py",
+          "functions": [
+            "notify_user",
+            "notify_owner_renter_flagged"
+          ]
+        },
+        {
+          "file": "notification/services/sms_service.py",
+          "functions": [
+            "send_sms"
+          ]
+        },
+        {
+          "file": "notification/services/voice_note_service.py",
+          "functions": [
+            "send_thank_you_voice_note",
+            "send_late_rent_reminder",
+            "alert_owner_about_delay"
+          ]
+        },
+        {
+          "file": "notification/services/voice_service.py",
+          "functions": [
+            "generate_voice_note"
+          ]
+        },
+        {
+          "file": "notification/services/whatsapp_service.py",
+          "functions": [
+            "send_whatsapp_message",
+            "send_whatsapp_audio",
+            "upload_to_s3",
+            "send_agreement_via_whatsapp"
+          ]
+        }
+      ],
+      "signals": [],
+      "files": [
+        {
+          "path": "notification/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "notification/admin.py",
+          "sha256": "226414ed0d1224d4"
+        },
+        {
+          "path": "notification/apps.py",
+          "sha256": "d35c17049a72f50f"
+        },
+        {
+          "path": "notification/management/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "notification/management/commands/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "notification/management/commands/send_extra_charge_reminders.py",
+          "sha256": "36f9fb735f6ad76f"
+        },
+        {
+          "path": "notification/models.py",
+          "sha256": "c92bf4b8c1dcb89f"
+        },
+        {
+          "path": "notification/services/communication.py",
+          "sha256": "bd5905c445c8bf7b"
+        },
+        {
+          "path": "notification/services/extra_charge_reminders.py",
+          "sha256": "74b71feaba5d3acb"
+        },
+        {
+          "path": "notification/services/late_fees_notify_service.py",
+          "sha256": "e9225dff5e8bf4b6"
+        },
+        {
+          "path": "notification/services/notifications.py",
+          "sha256": "1531cebf581f0c42"
+        },
+        {
+          "path": "notification/services/rent_notify_service.py",
+          "sha256": "b36b7924704a5161"
+        },
+        {
+          "path": "notification/services/schedule_reminders.py",
+          "sha256": "713ad6363d40f04e"
+        },
+        {
+          "path": "notification/services/services.py",
+          "sha256": "82dc5af191fb5ae5"
+        },
+        {
+          "path": "notification/services/sms_service.py",
+          "sha256": "3e766dd7bd6799bf"
+        },
+        {
+          "path": "notification/services/voice_note_service.py",
+          "sha256": "eea84f8068d7c90c"
+        },
+        {
+          "path": "notification/services/voice_service.py",
+          "sha256": "3f39985713dddb38"
+        },
+        {
+          "path": "notification/services/whatsapp_service.py",
+          "sha256": "4232393b62d22860"
+        },
+        {
+          "path": "notification/test_extra_charge_reminders.py",
+          "sha256": "d1ff71086f0cce27"
+        },
+        {
+          "path": "notification/tests/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "notification/tests/test_extra_charge_reminders.py",
+          "sha256": "346f455a6558edcd"
+        },
+        {
+          "path": "notification/tests/test_notification_services.py",
+          "sha256": "5976c6450a6a269f"
+        },
+        {
+          "path": "notification/tests/test_notification_views.py",
+          "sha256": "9de1b7a3da48d175"
+        },
+        {
+          "path": "notification/tests/test_views.py",
+          "sha256": "fba35b97d6a0eec3"
+        },
+        {
+          "path": "notification/tests/test_voice_note_service.py",
+          "sha256": "400d785c3c3bc537"
+        },
+        {
+          "path": "notification/urls.py",
+          "sha256": "7cf6e3b73117ca2e"
+        },
+        {
+          "path": "notification/utils.py",
+          "sha256": "453d9cf6b19e705c"
+        },
+        {
+          "path": "notification/views.py",
+          "sha256": "968bb0be1f3b2ba1"
+        }
+      ],
+      "model_count": 2,
+      "view_count": 0,
+      "serializer_count": 0,
+      "service_count": 11,
+      "signal_count": 0
+    },
+    "properties": {
+      "name": "properties",
+      "path": "properties",
+      "models": [
+        {
+          "name": "Building",
+          "file": "properties/models/building_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "name",
+              "raw": "models.CharField(max_length=255, help_text=\"Building name or identifier (e.g., 'Sunshine Complex', 'Tower A')\")",
+              "type": "CharField"
+            },
+            {
+              "name": "address_line",
+              "raw": "models.CharField(max_length=255, help_text='Street address of the building')",
+              "type": "CharField"
+            },
+            {
+              "name": "city",
+              "raw": "models.CharField(max_length=100, help_text='City where building is located', db_index=True)",
+              "type": "CharField"
+            },
+            {
+              "name": "state",
+              "raw": "models.CharField(max_length=100, help_text='State or province')",
+              "type": "CharField"
+            },
+            {
+              "name": "country",
+              "raw": "models.CharField(max_length=100, help_text='Country name')",
+              "type": "CharField"
+            },
+            {
+              "name": "postal_code",
+              "raw": "models.CharField(max_length=10, help_text='ZIP or postal code')",
+              "type": "CharField"
+            },
+            {
+              "name": "owner",
+              "raw": "models.ForeignKey(User, on_delete=models.CASCADE, related_name='buildings', help_text='Owner of this building', db_index=True)",
+              "type": "ForeignKey",
+              "related_model": "User"
+            },
+            {
+              "name": "is_archived",
+              "raw": "models.BooleanField(default=False, help_text='Soft-delete: archived buildings are excluded from queries')",
+              "type": "BooleanField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True, db_index=True, help_text='When this building was added to the system')",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "owner",
+              "to": "User"
+            }
+          ],
+          "meta": {
+            "unique_together": "('name', 'address_line', 'city', 'owner')",
+            "indexes": "[models.Index(fields=['owner', 'is_archived']), models.Index(fields=['city', 'owner'])]",
+            "verbose_name": "'Building'",
+            "verbose_name_plural": "'Buildings'",
+            "ordering": "['-created_at']"
+          }
+        },
+        {
+          "name": "CareTaker",
+          "file": "properties/models/caretaker_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "unit",
+              "raw": "models.ForeignKey('properties.Unit', on_delete=models.CASCADE, related_name='caretakers', db_index=True)",
+              "type": "ForeignKey",
+              "related_model": "properties.Unit"
+            },
+            {
+              "name": "user",
+              "raw": "models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True, related_name='caretaker_profile')",
+              "type": "OneToOneField",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "name",
+              "raw": "models.CharField(max_length=100, help_text='Caretaker full name')",
+              "type": "CharField"
+            },
+            {
+              "name": "email",
+              "raw": "models.EmailField(default='', blank=True)",
+              "type": "EmailField"
+            },
+            {
+              "name": "phone",
+              "raw": "models.CharField(validators=[phone_regex], max_length=15, help_text='Primary phone')",
+              "type": "CharField"
+            },
+            {
+              "name": "alternate_phone",
+              "raw": "models.CharField(validators=[phone_regex], max_length=15, blank=True, help_text='Alternate phone')",
+              "type": "CharField"
+            },
+            {
+              "name": "address",
+              "raw": "models.TextField(blank=True)",
+              "type": "TextField"
+            },
+            {
+              "name": "joining_date",
+              "raw": "models.DateField(help_text='Date of joining', db_index=True)",
+              "type": "DateField"
+            },
+            {
+              "name": "leaving_date",
+              "raw": "models.DateField(null=True, blank=True)",
+              "type": "DateField"
+            },
+            {
+              "name": "is_active",
+              "raw": "models.BooleanField(default=True, help_text='Currently active?')",
+              "type": "BooleanField"
+            },
+            {
+              "name": "notes",
+              "raw": "models.TextField(blank=True)",
+              "type": "TextField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "updated_at",
+              "raw": "models.DateTimeField(auto_now=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "history",
+              "raw": "HistoricalRecords(user_model=settings.AUTH_USER_MODEL)",
+              "type": "HistoricalRecords"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "unit",
+              "to": "properties.Unit"
+            },
+            {
+              "type": "OneToOne",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            }
+          ],
+          "meta": {
+            "unique_together": "('unit', 'phone')",
+            "ordering": "['-joining_date']",
+            "verbose_name": "'Caretaker'",
+            "verbose_name_plural": "'Caretakers'"
+          }
+        },
+        {
+          "name": "CareTakerAssignmentLog",
+          "file": "properties/models/caretaker_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "caretaker",
+              "raw": "models.ForeignKey(CareTaker, on_delete=models.CASCADE, db_index=True)",
+              "type": "ForeignKey",
+              "related_model": "CareTaker"
+            },
+            {
+              "name": "action",
+              "raw": "models.CharField(max_length=20, help_text='assigned / unassigned')",
+              "type": "CharField"
+            },
+            {
+              "name": "action_date",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "notes",
+              "raw": "models.TextField(blank=True)",
+              "type": "TextField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "caretaker",
+              "to": "CareTaker"
+            }
+          ],
+          "meta": {
+            "ordering": "['-action_date']"
+          }
+        },
+        {
+          "name": "ExtraCharge",
+          "file": "properties/models/extra_charge_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "renter",
+              "raw": "models.ForeignKey(Renter, on_delete=models.CASCADE, related_name='extra_charges', db_index=True)",
+              "type": "ForeignKey",
+              "related_model": "Renter"
+            },
+            {
+              "name": "unit",
+              "raw": "models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='extra_charges', db_index=True)",
+              "type": "ForeignKey",
+              "related_model": "Unit"
+            },
+            {
+              "name": "name",
+              "raw": "models.CharField(max_length=50, help_text='Charge name, e.g. Electricity or Maintenance')",
+              "type": "CharField"
+            },
+            {
+              "name": "amount",
+              "raw": "models.DecimalField(max_digits=10, decimal_places=2)",
+              "type": "DecimalField"
+            },
+            {
+              "name": "due_date",
+              "raw": "models.DateField()",
+              "type": "DateField"
+            },
+            {
+              "name": "status",
+              "raw": "models.CharField(max_length=10, choices=Status.choices, default=Status.DUE, help_text='Current payment status for this extra charge')",
+              "type": "CharField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "updated_at",
+              "raw": "models.DateTimeField(auto_now=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "history",
+              "raw": "HistoricalRecords(user_model=settings.AUTH_USER_MODEL)",
+              "type": "HistoricalRecords"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "renter",
+              "to": "Renter"
+            },
+            {
+              "type": "ForeignKey",
+              "from": "unit",
+              "to": "Unit"
+            }
+          ],
+          "meta": {
+            "ordering": "['due_date']",
+            "indexes": "[models.Index(fields=['status']), models.Index(fields=['due_date'])]"
+          }
+        },
+        {
+          "name": "PropertyTaxRecord",
+          "file": "properties/models/property_tax_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "property",
+              "raw": "models.ForeignKey('properties.Building', on_delete=models.CASCADE, related_name='tax_records')",
+              "type": "ForeignKey",
+              "related_model": "properties.Building"
+            },
+            {
+              "name": "amount",
+              "raw": "models.DecimalField(max_digits=12, decimal_places=2)",
+              "type": "DecimalField"
+            },
+            {
+              "name": "due_date",
+              "raw": "models.DateField()",
+              "type": "DateField"
+            },
+            {
+              "name": "paid",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "paid_date",
+              "raw": "models.DateField(null=True, blank=True)",
+              "type": "DateField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "updated_at",
+              "raw": "models.DateTimeField(auto_now=True)",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "property",
+              "to": "properties.Building"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "RentRecord",
+          "file": "properties/models/rent_record_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "unit",
+              "raw": "models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='rent_records', db_index=True, help_text='Unit this rent record belongs to')",
+              "type": "ForeignKey",
+              "related_model": "Unit"
+            },
+            {
+              "name": "renter",
+              "raw": "models.ForeignKey('properties.Renter', on_delete=models.SET_NULL, null=True, related_name='rent_records', help_text='Renter who made the payment')",
+              "type": "ForeignKey",
+              "related_model": "properties.Renter"
+            },
+            {
+              "name": "amount",
+              "raw": "models.DecimalField(max_digits=10, decimal_places=2, help_text='Rent amount paid')",
+              "type": "DecimalField"
+            },
+            {
+              "name": "payment_method",
+              "raw": "models.CharField(max_length=50, choices=PaymentMethod.choices, help_text='Mode of payment used')",
+              "type": "CharField"
+            },
+            {
+              "name": "status",
+              "raw": "models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, help_text='Payment status')",
+              "type": "CharField"
+            },
+            {
+              "name": "paid_on",
+              "raw": "models.DateField(null=True, blank=True, help_text='Date when payment was made')",
+              "type": "DateField"
+            },
+            {
+              "name": "due_date",
+              "raw": "models.DateField(help_text='Rent due date', db_index=True)",
+              "type": "DateField"
+            },
+            {
+              "name": "late_fee",
+              "raw": "models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Late fee applied')",
+              "type": "DecimalField"
+            },
+            {
+              "name": "discount",
+              "raw": "models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Any discount given')",
+              "type": "DecimalField"
+            },
+            {
+              "name": "notes",
+              "raw": "models.TextField(blank=True)",
+              "type": "TextField"
+            },
+            {
+              "name": "transaction_id",
+              "raw": "models.CharField(max_length=100, blank=True, help_text='Payment gateway / bank ref')",
+              "type": "CharField"
+            },
+            {
+              "name": "payout_status",
+              "raw": "models.CharField(max_length=20, default='PENDING', help_text='Payout transfer status')",
+              "type": "CharField"
+            },
+            {
+              "name": "payout_reference",
+              "raw": "models.CharField(max_length=100, blank=True, help_text='Payout gateway reference')",
+              "type": "CharField"
+            },
+            {
+              "name": "payment_link",
+              "raw": "models.CharField(max_length=500, blank=True, help_text='Payment gateway link')",
+              "type": "CharField"
+            },
+            {
+              "name": "invoice_pdf",
+              "raw": "models.FileField(upload_to='invoices/', blank=True, null=True, help_text='Generated rent receipt PDF')",
+              "type": "FileField"
+            },
+            {
+              "name": "razorpay_order_id",
+              "raw": "models.CharField(max_length=100, blank=True, help_text='Razorpay order reference')",
+              "type": "CharField"
+            },
+            {
+              "name": "payout_retries",
+              "raw": "models.PositiveIntegerField(default=0, help_text='Number of payout retry attempts')",
+              "type": "PositiveIntegerField"
+            },
+            {
+              "name": "last_payout_retry",
+              "raw": "models.DateTimeField(blank=True, null=True, help_text='Timestamp of last payout retry')",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "payout_retry_count",
+              "raw": "models.PositiveIntegerField(default=0, help_text='Cumulative payout retry count')",
+              "type": "PositiveIntegerField"
+            },
+            {
+              "name": "adjustment_reason",
+              "raw": "models.TextField(blank=True, help_text='Reason for late fee or adjustment')",
+              "type": "TextField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "updated_at",
+              "raw": "models.DateTimeField(auto_now=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "history",
+              "raw": "HistoricalRecords(user_model=settings.AUTH_USER_MODEL)",
+              "type": "HistoricalRecords"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "unit",
+              "to": "Unit"
+            },
+            {
+              "type": "ForeignKey",
+              "from": "renter",
+              "to": "properties.Renter"
+            }
+          ],
+          "meta": {
+            "unique_together": "('unit', 'due_date')",
+            "ordering": "['-due_date']",
+            "verbose_name": "'Rent Record'",
+            "verbose_name_plural": "'Rent Records'"
+          }
+        },
+        {
+          "name": "Renter",
+          "file": "properties/models/renter_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "id",
+              "raw": "models.AutoField(primary_key=True)",
+              "type": "AutoField"
+            },
+            {
+              "name": "unit",
+              "raw": "models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='renters', db_index=True)",
+              "type": "ForeignKey",
+              "related_model": "Unit"
+            },
+            {
+              "name": "user",
+              "raw": "models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True, related_name='renter_profile')",
+              "type": "OneToOneField",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "name",
+              "raw": "models.CharField(max_length=100, help_text=\"Renter's full name\")",
+              "type": "CharField"
+            },
+            {
+              "name": "email",
+              "raw": "models.EmailField(default='', blank=True, help_text=\"Renter's email for receipts and notifications\")",
+              "type": "EmailField"
+            },
+            {
+              "name": "phone",
+              "raw": "models.CharField(validators=[phone_regex], max_length=15, help_text='Primary phone number')",
+              "type": "CharField"
+            },
+            {
+              "name": "alternate_phone",
+              "raw": "models.CharField(validators=[phone_regex], max_length=15, blank=True, help_text='Alternate phone number')",
+              "type": "CharField"
+            },
+            {
+              "name": "emergency_contact_name",
+              "raw": "models.CharField(max_length=100, blank=True, help_text='Emergency contact name')",
+              "type": "CharField"
+            },
+            {
+              "name": "emergency_contact_number",
+              "raw": "models.CharField(validators=[phone_regex], max_length=15, blank=True, help_text='Emergency contact number')",
+              "type": "CharField"
+            },
+            {
+              "name": "renter_image",
+              "raw": "models.ImageField(upload_to='renter_image/', blank=True, null=True, help_text='Photo of renter')",
+              "type": "ImageField"
+            },
+            {
+              "name": "id_proof",
+              "raw": "models.FileField(upload_to='id_proofs/renter/', help_text=\"Renter's ID proof document\")",
+              "type": "FileField"
+            },
+            {
+              "name": "rent_agreement",
+              "raw": "models.FileField(upload_to='agreements/', help_text='Rent agreement document')",
+              "type": "FileField"
+            },
+            {
+              "name": "rent_amount",
+              "raw": "models.DecimalField(max_digits=10, decimal_places=2, help_text='Rent amount')",
+              "type": "DecimalField"
+            },
+            {
+              "name": "start_date",
+              "raw": "models.DateField(help_text='Rental start date', db_index=True)",
+              "type": "DateField"
+            },
+            {
+              "name": "end_date",
+              "raw": "models.DateField(null=True, blank=True, help_text='Rental end date')",
+              "type": "DateField"
+            },
+            {
+              "name": "is_active",
+              "raw": "models.BooleanField(default=True, help_text='Is renter currently active?')",
+              "type": "BooleanField"
+            },
+            {
+              "name": "notes",
+              "raw": "models.TextField(blank=True, help_text='Additional notes')",
+              "type": "TextField"
+            },
+            {
+              "name": "whatsapp_number",
+              "raw": "models.CharField(max_length=15, blank=True, help_text='For WhatsApp messages')",
+              "type": "CharField"
+            },
+            {
+              "name": "rent_due_date",
+              "raw": "models.DateField(blank=True, null=True, default=date.today, help_text='Required for rent reminder')",
+              "type": "DateField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True, help_text='Move in Date')",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "late_payment_count",
+              "raw": "models.IntegerField(default=0)",
+              "type": "IntegerField"
+            },
+            {
+              "name": "updated_at",
+              "raw": "models.DateTimeField(auto_now=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "history",
+              "raw": "HistoricalRecords(user_model=settings.AUTH_USER_MODEL)",
+              "type": "HistoricalRecords"
+            },
+            {
+              "name": "missed_rents",
+              "raw": "models.PositiveIntegerField(default=0)",
+              "type": "PositiveIntegerField"
+            },
+            {
+              "name": "is_flagged",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "flagged_reason",
+              "raw": "models.TextField(blank=True)",
+              "type": "TextField"
+            },
+            {
+              "name": "is_agreement_revoked",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "revocation_reason",
+              "raw": "models.TextField(blank=True)",
+              "type": "TextField"
+            },
+            {
+              "name": "revoked_by_owner",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "revoked_on",
+              "raw": "models.DateTimeField(blank=True, null=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "vacated_on",
+              "raw": "models.DateField(blank=True, null=True)",
+              "type": "DateField"
+            },
+            {
+              "name": "status",
+              "raw": "models.CharField(max_length=20, choices=RenterStatus.choices, default=RenterStatus.ACTIVE)",
+              "type": "CharField"
+            },
+            {
+              "name": "notice_start_date",
+              "raw": "models.DateField(null=True, blank=True)",
+              "type": "DateField"
+            },
+            {
+              "name": "final_invoice_path",
+              "raw": "models.CharField(max_length=255, blank=True)",
+              "type": "CharField"
+            },
+            {
+              "name": "onboarding_status",
+              "raw": "models.CharField(max_length=20, choices=OnboardingStatus.choices, default=OnboardingStatus.PENDING, help_text='Renter self-onboarding progress')",
+              "type": "CharField"
+            },
+            {
+              "name": "kyc_status",
+              "raw": "models.CharField(max_length=20, choices=KYCStatus.choices, default=KYCStatus.NOT_STARTED, help_text='KYC verification status')",
+              "type": "CharField"
+            },
+            {
+              "name": "onboarding_token",
+              "raw": "models.CharField(max_length=255, blank=True, unique=True, help_text='Secure token for onboarding link')",
+              "type": "CharField"
+            },
+            {
+              "name": "onboarding_link_sent_at",
+              "raw": "models.DateTimeField(null=True, blank=True, help_text='When the onboarding link was sent to renter')",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "unit",
+              "to": "Unit"
+            },
+            {
+              "type": "OneToOne",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            }
+          ],
+          "meta": {
+            "unique_together": "('unit', 'phone')",
+            "ordering": "['-start_date']"
+          }
+        },
+        {
+          "name": "RentReminderLog",
+          "file": "properties/models/renter_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "renter",
+              "raw": "models.ForeignKey(Renter, on_delete=models.CASCADE)",
+              "type": "ForeignKey",
+              "related_model": "Renter"
+            },
+            {
+              "name": "message_type",
+              "raw": "models.CharField(max_length=20, help_text='EXAMPLE: PRE, DUE, LATE')",
+              "type": "CharField"
+            },
+            {
+              "name": "sent_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "renter",
+              "to": "Renter"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "AgreementRevocationLog",
+          "file": "properties/models/renter_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "renter",
+              "raw": "models.ForeignKey(Renter, on_delete=models.CASCADE)",
+              "type": "ForeignKey",
+              "related_model": "Renter"
+            },
+            {
+              "name": "revoked_by",
+              "raw": "models.ForeignKey(User, on_delete=models.CASCADE)",
+              "type": "ForeignKey",
+              "related_model": "User"
+            },
+            {
+              "name": "reason",
+              "raw": "models.TextField()",
+              "type": "TextField"
+            },
+            {
+              "name": "timestamp",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "renter",
+              "to": "Renter"
+            },
+            {
+              "type": "ForeignKey",
+              "from": "revoked_by",
+              "to": "User"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "ArchivedRenter",
+          "file": "properties/models/renter_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "renter",
+              "raw": "models.OneToOneField(Renter, on_delete=models.CASCADE)",
+              "type": "OneToOneField",
+              "related_model": "Renter"
+            },
+            {
+              "name": "data",
+              "raw": "models.JSONField()",
+              "type": "JSONField"
+            },
+            {
+              "name": "agreement_pdf",
+              "raw": "models.FileField(upload_to='archived/agreements/')",
+              "type": "FileField"
+            },
+            {
+              "name": "police_pdf",
+              "raw": "models.FileField(upload_to='archived/police/')",
+              "type": "FileField"
+            },
+            {
+              "name": "property_images",
+              "raw": "models.JSONField(default=list)",
+              "type": "JSONField"
+            },
+            {
+              "name": "final_invoice",
+              "raw": "models.FileField(upload_to='archived/final_invoice/')",
+              "type": "FileField"
+            },
+            {
+              "name": "archived_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "OneToOne",
+              "from": "renter",
+              "to": "Renter"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "RentAgreementDraft",
+          "file": "properties/models/renter_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "user",
+              "raw": "models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_index=True)",
+              "type": "ForeignKey",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "renter",
+              "raw": "models.OneToOneField(Renter, on_delete=models.CASCADE, db_index=True)",
+              "type": "OneToOneField",
+              "related_model": "Renter"
+            },
+            {
+              "name": "unit",
+              "raw": "models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='rent_agreement_draft')",
+              "type": "ForeignKey",
+              "related_model": "Unit"
+            },
+            {
+              "name": "generated_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "file",
+              "raw": "models.FileField(upload_to='auto_agreements/')",
+              "type": "FileField"
+            },
+            {
+              "name": "leegality_document_id",
+              "raw": "models.CharField(max_length=255, blank=True)",
+              "type": "CharField"
+            },
+            {
+              "name": "owner_signed",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "renter_signed",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            },
+            {
+              "name": "history",
+              "raw": "HistoricalRecords(user_model=settings.AUTH_USER_MODEL)",
+              "type": "HistoricalRecords"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "type": "OneToOne",
+              "from": "renter",
+              "to": "Renter"
+            },
+            {
+              "type": "ForeignKey",
+              "from": "unit",
+              "to": "Unit"
+            }
+          ],
+          "meta": {
+            "unique_together": "('renter', 'unit')"
+          }
+        },
+        {
+          "name": "PoliceVerification",
+          "file": "properties/models/renter_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "user",
+              "raw": "models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_index=True)",
+              "type": "ForeignKey",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "renter",
+              "raw": "models.OneToOneField(Renter, on_delete=models.CASCADE, db_index=True)",
+              "type": "OneToOneField",
+              "related_model": "Renter"
+            },
+            {
+              "name": "unit",
+              "raw": "models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='police_verification')",
+              "type": "ForeignKey",
+              "related_model": "Unit"
+            },
+            {
+              "name": "generated_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "file",
+              "raw": "models.FileField(upload_to='rent_agreements/')",
+              "type": "FileField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "type": "OneToOne",
+              "from": "renter",
+              "to": "Renter"
+            },
+            {
+              "type": "ForeignKey",
+              "from": "unit",
+              "to": "Unit"
+            }
+          ],
+          "meta": {
+            "unique_together": "('renter', 'unit')"
+          }
+        },
+        {
+          "name": "Unit",
+          "file": "properties/models/unit_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "id",
+              "raw": "models.AutoField(primary_key=True)",
+              "type": "AutoField"
+            },
+            {
+              "name": "owner",
+              "raw": "models.ForeignKey(User, on_delete=models.CASCADE, related_name='units', db_index=True, help_text='Property owner')",
+              "type": "ForeignKey",
+              "related_model": "User"
+            },
+            {
+              "name": "building",
+              "raw": "models.ForeignKey('properties.Building', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='units', help_text='Parent building (optional for standalone units)')",
+              "type": "ForeignKey",
+              "related_model": "properties.Building"
+            },
+            {
+              "name": "unit",
+              "raw": "models.CharField(max_length=100, help_text=\"Unit identifier (e.g., '101', 'Flat A', 'Shop 5')\")",
+              "type": "CharField"
+            },
+            {
+              "name": "building_name",
+              "raw": "models.CharField(max_length=100, blank=True, help_text='Display name of building (cached for performance)')",
+              "type": "CharField"
+            },
+            {
+              "name": "unit_type",
+              "raw": "models.CharField(max_length=50, choices=UnitType.choices, help_text='Type of property')",
+              "type": "CharField"
+            },
+            {
+              "name": "address_line",
+              "raw": "models.CharField(max_length=255, help_text='Street address')",
+              "type": "CharField"
+            },
+            {
+              "name": "landmark",
+              "raw": "models.CharField(max_length=255, blank=True, help_text='Nearby landmark for easy identification')",
+              "type": "CharField"
+            },
+            {
+              "name": "city",
+              "raw": "models.CharField(max_length=100, help_text='City', db_index=True)",
+              "type": "CharField"
+            },
+            {
+              "name": "state",
+              "raw": "models.CharField(max_length=100, help_text='State/Province')",
+              "type": "CharField"
+            },
+            {
+              "name": "country",
+              "raw": "models.CharField(max_length=100, help_text='Country')",
+              "type": "CharField"
+            },
+            {
+              "name": "postal_code",
+              "raw": "models.CharField(max_length=20, help_text='ZIP or postal code')",
+              "type": "CharField"
+            },
+            {
+              "name": "latitude",
+              "raw": "models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, help_text='Latitude coordinate (-90 to 90)')",
+              "type": "DecimalField"
+            },
+            {
+              "name": "longitude",
+              "raw": "models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True, help_text='Longitude coordinate (-180 to 180)')",
+              "type": "DecimalField"
+            },
+            {
+              "name": "status",
+              "raw": "models.CharField(max_length=20, choices=VacancyStatus.choices, default=VacancyStatus.VACANT, help_text='Current occupancy status')",
+              "type": "CharField"
+            },
+            {
+              "name": "is_vacant",
+              "raw": "models.BooleanField(default=True, help_text=\"Denormalized: True if status=='vacant'\")",
+              "type": "BooleanField"
+            },
+            {
+              "name": "is_verified",
+              "raw": "models.BooleanField(default=False, help_text='Whether property details have been verified')",
+              "type": "BooleanField"
+            },
+            {
+              "name": "is_archived",
+              "raw": "models.BooleanField(default=False, help_text='Soft-delete: archived units are hidden from listings')",
+              "type": "BooleanField"
+            },
+            {
+              "name": "last_vacated_at",
+              "raw": "models.DateField(null=True, blank=True, help_text='Date when the unit became vacant because no active renter remained')",
+              "type": "DateField"
+            },
+            {
+              "name": "rent_due_reminder",
+              "raw": "models.BooleanField(default=True, help_text='Enable automated rent due reminders')",
+              "type": "BooleanField"
+            },
+            {
+              "name": "agreement_expiry_reminder",
+              "raw": "models.BooleanField(default=True, help_text='Enable automated agreement expiry reminders')",
+              "type": "BooleanField"
+            },
+            {
+              "name": "maintenance_notes",
+              "raw": "models.TextField(blank=True, help_text='Internal notes about maintenance or issues')",
+              "type": "TextField"
+            },
+            {
+              "name": "notes",
+              "raw": "models.TextField(blank=True, help_text='Additional notes about the unit')",
+              "type": "TextField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True, db_index=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "updated_at",
+              "raw": "models.DateTimeField(auto_now=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "history",
+              "raw": "HistoricalRecords(user_model=settings.AUTH_USER_MODEL)",
+              "type": "HistoricalRecords"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "owner",
+              "to": "User"
+            },
+            {
+              "type": "ForeignKey",
+              "from": "building",
+              "to": "properties.Building"
+            }
+          ],
+          "meta": {
+            "unique_together": "('owner', 'unit', 'building', 'address_line')",
+            "indexes": "[models.Index(fields=['city', 'owner']), models.Index(fields=['owner', 'is_archived'])]",
+            "verbose_name": "'Unit'",
+            "verbose_name_plural": "'Units'",
+            "ordering": "['-created_at']"
+          }
+        },
+        {
+          "name": "UnitVacancy",
+          "file": "properties/models/unit_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "unit",
+              "raw": "models.OneToOneField(UNIT_MODEL_REF, on_delete=models.CASCADE, help_text='Unit that became vacant')",
+              "type": "OneToOneField",
+              "related_model": "UNIT_MODEL_REF"
+            },
+            {
+              "name": "reason",
+              "raw": "models.CharField(max_length=100, choices=Reason.choices, help_text='Reason for vacancy')",
+              "type": "CharField"
+            },
+            {
+              "name": "noted_on",
+              "raw": "models.DateField(auto_now_add=True, help_text='Date vacancy was recorded')",
+              "type": "DateField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "OneToOne",
+              "from": "unit",
+              "to": "UNIT_MODEL_REF"
+            }
+          ],
+          "meta": {
+            "verbose_name": "'Unit Vacancy'",
+            "verbose_name_plural": "'Unit Vacancies'",
+            "ordering": "['-noted_on']"
+          }
+        },
+        {
+          "name": "UnitDocument",
+          "file": "properties/models/unit_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "unit",
+              "raw": "models.ForeignKey(UNIT_MODEL_REF, on_delete=models.CASCADE, db_index=True, related_name='documents', help_text='Unit this document belongs to')",
+              "type": "ForeignKey",
+              "related_model": "UNIT_MODEL_REF"
+            },
+            {
+              "name": "renter",
+              "raw": "models.ForeignKey('properties.Renter', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='documents', help_text='Associated renter (optional)')",
+              "type": "ForeignKey",
+              "related_model": "properties.Renter"
+            },
+            {
+              "name": "document",
+              "raw": "models.FileField(upload_to='unit_documents/', help_text='Uploaded document file')",
+              "type": "FileField"
+            },
+            {
+              "name": "file_hash",
+              "raw": "models.CharField(max_length=64, editable=False, db_index=True, help_text='SHA256 hash for deduplication')",
+              "type": "CharField"
+            },
+            {
+              "name": "uploaded_at",
+              "raw": "models.DateTimeField(auto_now_add=True, help_text='When document was uploaded')",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "unit",
+              "to": "UNIT_MODEL_REF"
+            },
+            {
+              "type": "ForeignKey",
+              "from": "renter",
+              "to": "properties.Renter"
+            }
+          ],
+          "meta": {
+            "verbose_name": "'Unit Document'",
+            "verbose_name_plural": "'Unit Documents'",
+            "ordering": "['-uploaded_at']",
+            "indexes": "[models.Index(fields=['unit', 'uploaded_at'])]"
+          }
+        },
+        {
+          "name": "UnitImage",
+          "file": "properties/models/unit_models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "unit",
+              "raw": "models.ForeignKey(UNIT_MODEL_REF, on_delete=models.CASCADE, db_index=True, related_name='images', help_text='Unit these images belong to')",
+              "type": "ForeignKey",
+              "related_model": "UNIT_MODEL_REF"
+            },
+            {
+              "name": "renter",
+              "raw": "models.ForeignKey('properties.Renter', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='images', help_text='Associated renter (optional - for condition check-in/out photos)')",
+              "type": "ForeignKey",
+              "related_model": "properties.Renter"
+            },
+            {
+              "name": "image",
+              "raw": "models.ImageField(upload_to='unit_images/', help_text='Unit image/photo')",
+              "type": "ImageField"
+            },
+            {
+              "name": "image_hash",
+              "raw": "models.CharField(max_length=64, editable=False, db_index=True, help_text='SHA256 hash for deduplication')",
+              "type": "CharField"
+            },
+            {
+              "name": "uploaded_at",
+              "raw": "models.DateTimeField(auto_now_add=True, help_text='When image was uploaded')",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "unit",
+              "to": "UNIT_MODEL_REF"
+            },
+            {
+              "type": "ForeignKey",
+              "from": "renter",
+              "to": "properties.Renter"
+            }
+          ],
+          "meta": {
+            "verbose_name": "'Unit Image'",
+            "verbose_name_plural": "'Unit Images'",
+            "ordering": "['-uploaded_at']",
+            "indexes": "[models.Index(fields=['unit', 'uploaded_at'])]"
+          }
+        }
+      ],
+      "views": [
+        {
+          "name": "BuildingViewSet",
+          "file": "properties/views/building_views.py",
+          "bases": [
+            "viewsets.ModelViewSet[Building]"
+          ],
+          "methods": [
+            "get_queryset",
+            "perform_create",
+            "perform_update",
+            "perform_destroy"
+          ]
+        },
+        {
+          "name": "CaretakerViewSet",
+          "file": "properties/views/caretaker_views.py",
+          "bases": [
+            "viewsets.ModelViewSet[Caretaker]"
+          ],
+          "methods": [
+            "get_queryset",
+            "perform_create",
+            "perform_update",
+            "perform_destroy"
+          ]
+        },
+        {
+          "name": "ExtraChargeViewSet",
+          "file": "properties/views/extra_charge_views.py",
+          "bases": [
+            "viewsets.ModelViewSet[ExtraCharge]"
+          ],
+          "methods": [
+            "get_queryset",
+            "perform_create"
+          ]
+        },
+        {
+          "name": "RentRecordViewSet",
+          "file": "properties/views/rent_record_views.py",
+          "bases": [
+            "viewsets.ModelViewSet[RentRecord]"
+          ],
+          "methods": [
+            "get_queryset",
+            "perform_create",
+            "perform_update",
+            "perform_destroy"
+          ]
+        },
+        {
+          "name": "RenterViewSet",
+          "file": "properties/views/renter_views.py",
+          "bases": [
+            "viewsets.ModelViewSet[Renter]"
+          ],
+          "methods": [
+            "get_queryset",
+            "create",
+            "perform_create",
+            "perform_update",
+            "perform_destroy"
+          ]
+        },
+        {
+          "name": "UnitViewSet",
+          "file": "properties/views/unit_views.py",
+          "bases": [
+            "viewsets.ModelViewSet[Unit]"
+          ],
+          "methods": [
+            "get_queryset",
+            "perform_create",
+            "perform_update",
+            "perform_destroy"
+          ]
+        },
+        {
+          "name": "UnitImageViewSet",
+          "file": "properties/views/unit_views.py",
+          "bases": [
+            "viewsets.ModelViewSet[UnitImage]"
+          ],
+          "methods": [
+            "get_queryset",
+            "perform_create",
+            "perform_update",
+            "perform_destroy"
+          ]
+        },
+        {
+          "name": "UnitDocumentViewSet",
+          "file": "properties/views/unit_views.py",
+          "bases": [
+            "viewsets.ModelViewSet[UnitDocument]"
+          ],
+          "methods": [
+            "get_queryset",
+            "perform_create",
+            "perform_update",
+            "perform_destroy"
+          ]
+        },
+        {
+          "name": "RentAgreementDraftViewSet",
+          "file": "properties/views/unit_views.py",
+          "bases": [
+            "viewsets.ModelViewSet[RentAgreementDraft]"
+          ],
+          "methods": [
+            "get_queryset",
+            "perform_create",
+            "perform_update",
+            "perform_destroy"
+          ]
+        }
+      ],
+      "serializers": [
+        {
+          "name": "BuildingSerializer",
+          "file": "properties/serializers/building_serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": [
+            "units"
+          ]
+        },
+        {
+          "name": "CaretakerSerializer",
+          "file": "properties/serializers/caretaker_serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "ExtraChargeSerializer",
+          "file": "properties/serializers/extra_charge_serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "RentRecordSerializer",
+          "file": "properties/serializers/rent_record_serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": [
+            "ALLOWED_UPDATE_FIELDS"
+          ]
+        },
+        {
+          "name": "RenterSerializer",
+          "file": "properties/serializers/renter_serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "RenterRentRecordSerializer",
+          "file": "properties/serializers/renter_serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": [
+            "due_date",
+            "amount",
+            "invoice_url"
+          ]
+        },
+        {
+          "name": "UnitSerializer",
+          "file": "properties/serializers/unit_serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "UnitImageSerializer",
+          "file": "properties/serializers/unit_serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "UnitDocumentSerializer",
+          "file": "properties/serializers/unit_serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        },
+        {
+          "name": "RentAgreementDraftSerializer",
+          "file": "properties/serializers/unit_serializers.py",
+          "bases": [
+            "serializers.ModelSerializer"
+          ],
+          "fields": []
+        }
+      ],
+      "urls": [],
+      "services": [
+        {
+          "file": "properties/services/extra_charge_service.py",
+          "functions": [
+            "generate_monthly_extra_charges",
+            "get_due_extra_charges"
+          ]
+        },
+        {
+          "file": "properties/services/receipt_service.py",
+          "functions": [
+            "generate_rent_receipt_pdf",
+            "send_rent_receipt_email",
+            "send_rent_receipt_on_payment"
+          ]
+        },
+        {
+          "file": "properties/services/renter_onboarding_service.py",
+          "functions": [
+            "send_renter_onboarding_invite",
+            "send_renter_onboarding_reminder",
+            "notify_owner_renter_completed_kyc"
+          ]
+        },
+        {
+          "file": "properties/services/summary_service.py",
+          "functions": [
+            "get_monthly_rent_summary",
+            "send_monthly_rent_summary_email",
+            "_send_summary_email",
+            "_send_summary_whatsapp",
+            "_send_whatsapp_message",
+            "_log_no_notification_sent",
+            "_build_summary_message"
+          ]
+        },
+        {
+          "file": "properties/services/unit_service.py",
+          "functions": [
+            "update_unit_status",
+            "get_building_analytics",
+            "get_owner_analytics"
+          ]
+        }
+      ],
+      "signals": [],
+      "files": [
+        {
+          "path": "properties/__init__.py",
+          "sha256": "4d611ce28faf3ade"
+        },
+        {
+          "path": "properties/admin/__init__.py",
+          "sha256": "8f395567b6058658"
+        },
+        {
+          "path": "properties/admin/building_admin.py",
+          "sha256": "f54c0f22dbef8072"
+        },
+        {
+          "path": "properties/admin/caretaker_admin.py",
+          "sha256": "1e0bdffdbf09f5d9"
+        },
+        {
+          "path": "properties/admin/property_tax_admin.py",
+          "sha256": "d62b6f46132a1d14"
+        },
+        {
+          "path": "properties/admin/rent_record_admin.py",
+          "sha256": "c271a053e647df65"
+        },
+        {
+          "path": "properties/admin/renter_admin.py",
+          "sha256": "ec2ca7598f2278cd"
+        },
+        {
+          "path": "properties/admin/subscription_admin.py",
+          "sha256": "1f3d621998f67f8d"
+        },
+        {
+          "path": "properties/admin/unit_admin.py",
+          "sha256": "45cfa85b45ce47c2"
+        },
+        {
+          "path": "properties/admin/usage_limit_admin.py",
+          "sha256": "06d104c38b88872b"
+        },
+        {
+          "path": "properties/apps.py",
+          "sha256": "994ea6b96941f2d8"
+        },
+        {
+          "path": "properties/communication/auto_generate_rent_records.py",
+          "sha256": "9a36fe7927bc6189"
+        },
+        {
+          "path": "properties/communication/retry_failed_payouts.py",
+          "sha256": "5eecffda5e082377"
+        },
+        {
+          "path": "properties/constants.py",
+          "sha256": "379d5ea22dc495d0"
+        },
+        {
+          "path": "properties/cron/flag_defaulters.py",
+          "sha256": "36a446e51e58d3d3"
+        },
+        {
+          "path": "properties/cron/vacate_reminder.py",
+          "sha256": "d30bddd3014ae0a6"
+        },
+        {
+          "path": "properties/feature_enforcer.py",
+          "sha256": "cbe35acd346189bc"
+        },
+        {
+          "path": "properties/management/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "properties/management/commands/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "properties/management/commands/generate_monthly_extra_charges.py",
+          "sha256": "f0184f84af89006f"
+        },
+        {
+          "path": "properties/management/commands/send_monthly_rent_summary.py",
+          "sha256": "d303970174e91629"
+        },
+        {
+          "path": "properties/models/__init__.py",
+          "sha256": "f26537d9981381d8"
+        },
+        {
+          "path": "properties/models/building_models.py",
+          "sha256": "b4ec7f5b54c962e3"
+        },
+        {
+          "path": "properties/models/caretaker_models.py",
+          "sha256": "192f2b972fbbd096"
+        },
+        {
+          "path": "properties/models/extra_charge_models.py",
+          "sha256": "6d06ddc9689ae842"
+        },
+        {
+          "path": "properties/models/property_tax_models.py",
+          "sha256": "816c907afcc929d9"
+        },
+        {
+          "path": "properties/models/rent_record_models.py",
+          "sha256": "fc4b34c6cd825c41"
+        },
+        {
+          "path": "properties/models/renter_models.py",
+          "sha256": "4cc3c165ad5fe9ca"
+        },
+        {
+          "path": "properties/models/subscription_models.py",
+          "sha256": "2021c2585d8b04e5"
+        },
+        {
+          "path": "properties/models/unit_models.py",
+          "sha256": "a48b926cd0243722"
+        },
+        {
+          "path": "properties/models/usage_limit_models.py",
+          "sha256": "d188ec21ed3eff69"
+        },
+        {
+          "path": "properties/scheduler.py",
+          "sha256": "b007437d93fad398"
+        },
+        {
+          "path": "properties/serializers/__init__.py",
+          "sha256": "8e672bdf4c8db6bf"
+        },
+        {
+          "path": "properties/serializers/building_serializers.py",
+          "sha256": "d9d52ca2652e3ebd"
+        },
+        {
+          "path": "properties/serializers/caretaker_serializers.py",
+          "sha256": "4637ec0a819d5e81"
+        },
+        {
+          "path": "properties/serializers/extra_charge_serializers.py",
+          "sha256": "42dfa4f7fad6454a"
+        },
+        {
+          "path": "properties/serializers/property_tax_serializers.py",
+          "sha256": "f0950109bd437f9d"
+        },
+        {
+          "path": "properties/serializers/rent_record_serializers.py",
+          "sha256": "33ee58f14e6c0968"
+        },
+        {
+          "path": "properties/serializers/renter_serializers.py",
+          "sha256": "6321f4706aeb57b6"
+        },
+        {
+          "path": "properties/serializers/subscription_serializers.py",
+          "sha256": "38a149cce97f93d8"
+        },
+        {
+          "path": "properties/serializers/unit_serializers.py",
+          "sha256": "3f6e0b71551c2204"
+        },
+        {
+          "path": "properties/serializers/usage_limit_serializers.py",
+          "sha256": "b438b3790f72b825"
+        },
+        {
+          "path": "properties/services/extra_charge_service.py",
+          "sha256": "4b8a5a33bbdc5bd4"
+        },
+        {
+          "path": "properties/services/receipt_service.py",
+          "sha256": "499cf00258aa71af"
+        },
+        {
+          "path": "properties/services/renter_onboarding_service.py",
+          "sha256": "b4cde94a01e56a1a"
+        },
+        {
+          "path": "properties/services/summary_service.py",
+          "sha256": "ca5d00cb7a97a772"
+        },
+        {
+          "path": "properties/services/unit_service.py",
+          "sha256": "193ed6176ae82d92"
+        },
+        {
+          "path": "properties/signals/__init__.py",
+          "sha256": "2757059bb2b05c70"
+        },
+        {
+          "path": "properties/signals/renter_signals.py",
+          "sha256": "90b0d7298372b093"
+        },
+        {
+          "path": "properties/test_api_integration.py",
+          "sha256": "2d7863799c415b80"
+        },
+        {
+          "path": "properties/test_e2e_comprehensive.py",
+          "sha256": "a3253d7b55852824"
+        },
+        {
+          "path": "properties/test_leegality.py",
+          "sha256": "4c0de8198265fe28"
+        },
+        {
+          "path": "properties/test_loopholes_critical.py",
+          "sha256": "c6ae9a59b22f0f89"
+        },
+        {
+          "path": "properties/tests/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "properties/tests/building_tests.py",
+          "sha256": "763c8f5e247055ef"
+        },
+        {
+          "path": "properties/tests/caretaker_tests.py",
+          "sha256": "3f2b179d1bce6d97"
+        },
+        {
+          "path": "properties/tests/rent_record_tests.py",
+          "sha256": "1e9e59804a78c6c8"
+        },
+        {
+          "path": "properties/tests/renter_tests.py",
+          "sha256": "2a06498db015b7dd"
+        },
+        {
+          "path": "properties/tests/test_building_views.py",
+          "sha256": "fb0ce9c7e6d574dc"
+        },
+        {
+          "path": "properties/tests/test_caretaker_views.py",
+          "sha256": "29280db200277539"
+        },
+        {
+          "path": "properties/tests/test_cashfree_service.py",
+          "sha256": "f2add7042b08165b"
+        },
+        {
+          "path": "properties/tests/test_coverage.py",
+          "sha256": "35f6351a03d63dd3"
+        },
+        {
+          "path": "properties/tests/test_extra_charge_serializers.py",
+          "sha256": "881da8f7669d8af4"
+        },
+        {
+          "path": "properties/tests/test_feature_enforcer_comprehensive.py",
+          "sha256": "89badfb0fec43a7a"
+        },
+        {
+          "path": "properties/tests/test_feature_enforcer_edge.py",
+          "sha256": "5e341e5ab986e267"
+        },
+        {
+          "path": "properties/tests/test_models_unit.py",
+          "sha256": "e7ae2aa0a57ae724"
+        },
+        {
+          "path": "properties/tests/test_properties_comprehensive.py",
+          "sha256": "4f2eef2385cf2936"
+        },
+        {
+          "path": "properties/tests/test_property_views.py",
+          "sha256": "4923f634cd0d5e66"
+        },
+        {
+          "path": "properties/tests/test_property_views_urls.py",
+          "sha256": "23b356e0da5d095f"
+        },
+        {
+          "path": "properties/tests/test_receipt_service.py",
+          "sha256": "d5363c82d44d841a"
+        },
+        {
+          "path": "properties/tests/test_rent_record_serializers.py",
+          "sha256": "54dcd0e721f2f939"
+        },
+        {
+          "path": "properties/tests/test_rent_record_views.py",
+          "sha256": "7ae91bca41bbaf6f"
+        },
+        {
+          "path": "properties/tests/test_renter_models.py",
+          "sha256": "48050ee2014eaea4"
+        },
+        {
+          "path": "properties/tests/test_renter_serializers.py",
+          "sha256": "8fd20df332782c3c"
+        },
+        {
+          "path": "properties/tests/test_renter_views.py",
+          "sha256": "c16fd1fd0488c261"
+        },
+        {
+          "path": "properties/tests/test_signals.py",
+          "sha256": "4c86757209646b1a"
+        },
+        {
+          "path": "properties/tests/test_signals_package.py",
+          "sha256": "3f2e092f2305aeb0"
+        },
+        {
+          "path": "properties/tests/test_unit_models.py",
+          "sha256": "6b9aff62ad08ec7f"
+        },
+        {
+          "path": "properties/tests/test_unit_serializers.py",
+          "sha256": "544b14a902e96dd9"
+        },
+        {
+          "path": "properties/tests/test_unit_views.py",
+          "sha256": "4fdb1c11b98d7ec0"
+        },
+        {
+          "path": "properties/tests/test_unit_views_extra.py",
+          "sha256": "21b44b183ae0a56a"
+        },
+        {
+          "path": "properties/tests/test_utils.py",
+          "sha256": "841dbc881bde3ff3"
+        },
+        {
+          "path": "properties/tests/unit_tests.py",
+          "sha256": "5859898539adf46f"
+        },
+        {
+          "path": "properties/urls.py",
+          "sha256": "1b84141da5320f6d"
+        },
+        {
+          "path": "properties/utils/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "properties/utils/onboarding_utils.py",
+          "sha256": "f0ca1a2b07399e92"
+        },
+        {
+          "path": "properties/utils/utils.py",
+          "sha256": "a8024bd743e50e1e"
+        },
+        {
+          "path": "properties/views/__init__.py",
+          "sha256": "7354e54b956fd48b"
+        },
+        {
+          "path": "properties/views/building_views.py",
+          "sha256": "9406d2b3326e9007"
+        },
+        {
+          "path": "properties/views/caretaker_views.py",
+          "sha256": "6c7623b4bc403bc5"
+        },
+        {
+          "path": "properties/views/extra_charge_views.py",
+          "sha256": "0569c64c07198e77"
+        },
+        {
+          "path": "properties/views/owner_dashboard.py",
+          "sha256": "18b85b5dd2fe243d"
+        },
+        {
+          "path": "properties/views/property_views.py",
+          "sha256": "bc53baf27c2e1eac"
+        },
+        {
+          "path": "properties/views/rent_record_views.py",
+          "sha256": "e591e71a84c0c5f3"
+        },
+        {
+          "path": "properties/views/renter_views.py",
+          "sha256": "1c0723f154e07797"
+        },
+        {
+          "path": "properties/views/subscription_views.py",
+          "sha256": "c96c33a53f950c58"
+        },
+        {
+          "path": "properties/views/unit_views.py",
+          "sha256": "0c9d9942c4c11c64"
+        },
+        {
+          "path": "properties/views/usage_limit_views.py",
+          "sha256": "74c1caefd152af70"
+        }
+      ],
+      "model_count": 16,
+      "view_count": 9,
+      "serializer_count": 10,
+      "service_count": 5,
+      "signal_count": 0
+    },
+    "referral_and_earn": {
+      "name": "referral_and_earn",
+      "path": "referral_and_earn",
+      "models": [
+        {
+          "name": "Referral",
+          "file": "referral_and_earn/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "user",
+              "raw": "models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referral_profile')",
+              "type": "OneToOneField",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "referred_by",
+              "raw": "models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='referrals_made')",
+              "type": "ForeignKey",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "referral_code",
+              "raw": "models.CharField(max_length=20, unique=True)",
+              "type": "CharField"
+            },
+            {
+              "name": "bonus_earned",
+              "raw": "models.DecimalField(max_digits=10, decimal_places=2, default=0.0)",
+              "type": "DecimalField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "OneToOne",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "type": "ForeignKey",
+              "from": "referred_by",
+              "to": "settings.AUTH_USER_MODEL"
+            }
+          ],
+          "meta": {}
+        }
+      ],
+      "views": [],
+      "serializers": [],
+      "urls": [],
+      "services": [],
+      "signals": [],
+      "files": [
+        {
+          "path": "referral_and_earn/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "referral_and_earn/admin.py",
+          "sha256": "226414ed0d1224d4"
+        },
+        {
+          "path": "referral_and_earn/apps.py",
+          "sha256": "6fd3ad6fc9e31771"
+        },
+        {
+          "path": "referral_and_earn/models.py",
+          "sha256": "37d6db4301cc7a29"
+        },
+        {
+          "path": "referral_and_earn/signals.py",
+          "sha256": "55cf500160b1e5da"
+        }
+      ],
+      "model_count": 1,
+      "view_count": 0,
+      "serializer_count": 0,
+      "service_count": 0,
+      "signal_count": 0
+    },
+    "smartbot": {
+      "name": "smartbot",
+      "path": "smartbot",
+      "models": [
+        {
+          "name": "SmartBotChat",
+          "file": "smartbot/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "user",
+              "raw": "models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)",
+              "type": "ForeignKey",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "message",
+              "raw": "models.TextField()",
+              "type": "TextField"
+            },
+            {
+              "name": "reply",
+              "raw": "models.TextField()",
+              "type": "TextField"
+            },
+            {
+              "name": "timestamp",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "SmartBotMessage",
+          "file": "smartbot/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "user",
+              "raw": "models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)",
+              "type": "ForeignKey",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "query",
+              "raw": "models.TextField()",
+              "type": "TextField"
+            },
+            {
+              "name": "response",
+              "raw": "models.TextField()",
+              "type": "TextField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "user",
+              "to": "settings.AUTH_USER_MODEL"
+            }
+          ],
+          "meta": {}
+        },
+        {
+          "name": "AIAlert",
+          "file": "smartbot/models.py",
+          "bases": [
+            "models.Model"
+          ],
+          "fields": [
+            {
+              "name": "owner",
+              "raw": "models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)",
+              "type": "ForeignKey",
+              "related_model": "settings.AUTH_USER_MODEL"
+            },
+            {
+              "name": "alert_type",
+              "raw": "models.CharField(max_length=100)",
+              "type": "CharField"
+            },
+            {
+              "name": "message",
+              "raw": "models.TextField()",
+              "type": "TextField"
+            },
+            {
+              "name": "created_at",
+              "raw": "models.DateTimeField(auto_now_add=True)",
+              "type": "DateTimeField"
+            },
+            {
+              "name": "resolved",
+              "raw": "models.BooleanField(default=False)",
+              "type": "BooleanField"
+            }
+          ],
+          "relationships": [
+            {
+              "type": "ForeignKey",
+              "from": "owner",
+              "to": "settings.AUTH_USER_MODEL"
+            }
+          ],
+          "meta": {}
+        }
+      ],
+      "views": [],
+      "serializers": [],
+      "urls": [],
+      "services": [
+        {
+          "file": "smartbot/services/agreement_service.py",
+          "functions": [
+            "generate_agreement_pdf"
+          ]
+        },
+        {
+          "file": "smartbot/services/chatbot_service.py",
+          "functions": [
+            "handle_chat_message"
+          ]
+        },
+        {
+          "file": "smartbot/services/gpt_services.py",
+          "functions": [
+            "gpt_smart_reply"
+          ]
+        },
+        {
+          "file": "smartbot/services/leegality_service.py",
+          "functions": [
+            "initiate_signature",
+            "check_signature_status"
+          ]
+        },
+        {
+          "file": "smartbot/services/services.py",
+          "functions": [
+            "generate_ai_alerts",
+            "_generate_alerts_for_renter",
+            "_has_missed_consecutive_months",
+            "_has_irregular_rent_pattern"
+          ]
+        }
+      ],
+      "signals": [],
+      "files": [
+        {
+          "path": "smartbot/__init__.py",
+          "sha256": "e3b0c44298fc1c14"
+        },
+        {
+          "path": "smartbot/actions.py",
+          "sha256": "571d454d3d7f39d2"
+        },
+        {
+          "path": "smartbot/admin.py",
+          "sha256": "226414ed0d1224d4"
+        },
+        {
+          "path": "smartbot/apps.py",
+          "sha256": "9583471dc59aa15a"
+        },
+        {
+          "path": "smartbot/cron/reminders.py",
+          "sha256": "a0b505490a811bfc"
+        },
+        {
+          "path": "smartbot/intents.py",
+          "sha256": "912468328cad2a51"
+        },
+        {
+          "path": "smartbot/models.py",
+          "sha256": "7ac0b5eaf683f06d"
+        },
+        {
+          "path": "smartbot/services/agreement_service.py",
+          "sha256": "49b492419083ffd2"
+        },
+        {
+          "path": "smartbot/services/chatbot_service.py",
+          "sha256": "acae332024752ffe"
+        },
+        {
+          "path": "smartbot/services/gpt_services.py",
+          "sha256": "5fc00185bdda7744"
+        },
+        {
+          "path": "smartbot/services/leegality_service.py",
+          "sha256": "77a8eed8d538ba98"
+        },
+        {
+          "path": "smartbot/services/services.py",
+          "sha256": "bd5165ad4b8051e1"
+        },
+        {
+          "path": "smartbot/tasks.py",
+          "sha256": "9899595e4382a1cf"
+        },
+        {
+          "path": "smartbot/tests/test_actions.py",
+          "sha256": "aa183b34d950b01f"
+        },
+        {
+          "path": "smartbot/tests/test_leegality_service.py",
+          "sha256": "d92bf4203eef2860"
+        },
+        {
+          "path": "smartbot/tests/test_smartbot_views.py",
+          "sha256": "84a29eec110c1df7"
+        },
+        {
+          "path": "smartbot/tests.py",
+          "sha256": "cf1fec3646afd6f2"
+        },
+        {
+          "path": "smartbot/views.py",
+          "sha256": "f4860b657cd006df"
+        },
+        {
+          "path": "smartbot/whatsapp_service.py",
+          "sha256": "87f05153bfb38583"
+        }
+      ],
+      "model_count": 3,
+      "view_count": 0,
+      "serializer_count": 0,
+      "service_count": 5,
+      "signal_count": 0
+    }
+  },
+  "urls": [
+    {
+      "file": "ai_assistant/urls.py",
+      "path": "webhooks/whatsapp/",
+      "view": "whatsapp_webhook",
+      "name": "whatsapp_webhook",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "core/urls.py",
+      "path": "auth/send-otp/",
+      "view": "SendOTP.as_view()",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "core/urls.py",
+      "path": "auth/owner/verify-otp/",
+      "view": "OwnerVerifyOTP.as_view()",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "core/urls.py",
+      "path": "auth/renter/verify-otp/",
+      "view": "RenterVerifyOTP.as_view()",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "core/urls.py",
+      "path": "api/token/refresh/",
+      "view": "TokenRefreshView.as_view()",
+      "name": "token_refresh",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "core/urls.py",
+      "path": "webhook/cashfree/payout/",
+      "view": "cashfree_payout_webhook",
+      "name": "cashfree_payout_webhook",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "core/urls.py",
+      "path": "api/owner/update-bank-details/",
+      "view": "update_owner_bank_details",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "core/urls.py",
+      "path": "api/rent/payment-callback/",
+      "view": "razorpay_webhook",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "core/urls.py",
+      "path": "change-password/",
+      "view": "ChangePasswordView.as_view()",
+      "name": "change-password",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "core/urls.py",
+      "path": "reset-password/",
+      "view": "ResetPasswordView.as_view()",
+      "name": "reset-password",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "core/urls.py",
+      "path": "",
+      "view": "include(router.urls)",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "dashboard/urls.py",
+      "path": "agreements/",
+      "view": "views.agreement_status_view",
+      "name": "agreement_status",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "dashboard/urls.py",
+      "path": "retry-signature/<int:rent_id>/",
+      "view": "views.retry_signature",
+      "name": "retry_signature",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "documents/urls.py",
+      "path": "document/",
+      "view": "include(router.urls)",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "finance/urls.py",
+      "path": "",
+      "view": "include(router.urls)",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "finance/urls.py",
+      "path": "tax-summary/download/",
+      "view": "DownloadTaxFilesView.as_view()",
+      "name": "download-tax-files",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "notification/urls.py",
+      "path": "register-fcm/",
+      "view": "register_fcm_token",
+      "name": "register-fcm",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "notification/urls.py",
+      "path": "get/",
+      "view": "get_notifications",
+      "name": "get-notifications",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "notification/urls.py",
+      "path": "mark/<int:notification_id>/",
+      "view": "mark_notification_read",
+      "name": "mark-notification-read",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "notification/urls.py",
+      "path": "save-token/",
+      "view": "save_device_token",
+      "name": "save-device-token",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "properties/urls.py",
+      "path": "",
+      "view": "include(router.urls)",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "properties/urls.py",
+      "path": "owner/rent-records/",
+      "view": "owner_rent_records",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "properties/urls.py",
+      "path": "rent-records/<int:rent_id>/invoice/",
+      "view": "download_rent_invoice",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "properties/urls.py",
+      "path": "renter/rent-due/",
+      "view": "get_latest_due_rent",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "properties/urls.py",
+      "path": "renter/rent-history/",
+      "view": "rent_history",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "properties/urls.py",
+      "path": "owner/rents/",
+      "view": "owner_rent_overview",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "properties/urls.py",
+      "path": "owner/dashboard-summary/",
+      "view": "owner_dashboard_summary",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "properties/urls.py",
+      "path": "owner/retry_payout_api/<int:rent_id>/",
+      "view": "retry_payout_api",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "properties/urls.py",
+      "path": "leegality/webhook/",
+      "view": "leegality_webhook",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "rentsecure_be/urls.py",
+      "path": "admin/",
+      "view": "admin.site.urls",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "rentsecure_be/urls.py",
+      "path": "api/",
+      "view": "include('core.urls')",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "rentsecure_be/urls.py",
+      "path": "api/",
+      "view": "include('properties.urls')",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "rentsecure_be/urls.py",
+      "path": "api/notifications/",
+      "view": "include('notification.urls')",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "rentsecure_be/urls.py",
+      "path": "properties/",
+      "view": "include('properties.urls')",
+      "name": "",
+      "include": "",
+      "function": "path"
+    },
+    {
+      "file": "rentsecure_be/urls.py",
+      "path": "documents/",
+      "view": "include('documents.urls')",
+      "name": "",
+      "include": "",
+      "function": "path"
+    }
+  ],
+  "dependencies": {
+    "ai_assistant": [
+      "properties",
+      "core",
+      "notification",
+      "smartbot"
+    ],
+    "core": [
+      "notification",
+      "properties",
+      "referral_and_earn"
+    ],
+    "documents": [
+      "properties",
+      "core"
+    ],
+    "finance": [
+      "properties",
+      "core"
+    ],
+    "notification": [
+      "core",
+      "properties"
+    ],
+    "properties": [
+      "core",
+      "notification"
+    ],
+    "referral_and_earn": [],
+    "smartbot": [
+      "notification",
+      "properties"
+    ]
+  },
+  "celery": {
+    "broker": "redis",
+    "backend": "redis",
+    "beat": true,
+    "tasks": []
+  },
+  "infrastructure": {
+    "framework": "Django",
+    "api": "DRF",
+    "database": "PostgreSQL",
+    "cache": "Redis",
+    "worker": "Celery",
+    "storage": "S3",
+    "deployment": "EC2"
+  }
+}

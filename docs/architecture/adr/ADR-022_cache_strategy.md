@@ -107,5 +107,5 @@ RentSecure uses **Django Local Memory Cache** in Year 1, with a **cache abstract
 
 ## References
 
-- [Production Architecture](docs/architecture/production-architecture.md)
-- [Platform Adapters](docs/architecture/future/03_target_folder_structure.md)
+- [Production Architecture](../production-architecture.md)
+- [Platform Adapters](../future/03_target_folder_structure.md)

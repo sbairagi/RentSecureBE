@@ -55,7 +55,7 @@ Transformation occurs across 30+ phases. Each phase:
 No breaking changes to external APIs during the transformation.
 
 ## References
-- [Architecture README](docs/architecture/README.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
-- [Roadmap](architecture/ROADMAP.md)
+- [Architecture README](../../docs/architecture/README.md)
+- [Architecture Principles](../ARCHITECTURE_PRINCIPLES.md)
+- [Roadmap](../ROADMAP.md)
 - Existing ADRs in `docs/adr/`

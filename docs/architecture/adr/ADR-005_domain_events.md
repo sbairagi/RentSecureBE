@@ -106,6 +106,6 @@ Cross-context communication in RentSecure uses **domain events**. When a signifi
 
 ## References
 
-- [Domain Events](docs/architecture/future/07_domain_events.md)
-- [Bounded Contexts](docs/architecture/future/02_bounded_contexts.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Domain Events](../future/07_domain_events.md)
+- [Bounded Contexts](../future/02_bounded_contexts.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)

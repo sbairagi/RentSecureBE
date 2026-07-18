@@ -180,5 +180,5 @@ urlpatterns = [
 
 ## References
 
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
-- [Production Architecture](docs/architecture/production-architecture.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Production Architecture](../production-architecture.md)

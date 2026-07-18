@@ -60,6 +60,6 @@ Each phase produces only:
 No business logic moves, no API changes, no model changes.
 
 ## References
-- [Architecture README](docs/architecture/README.md)
-- [Roadmap](architecture/ROADMAP.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Architecture README](../../docs/architecture/README.md)
+- [Roadmap](../ROADMAP.md)
+- [Architecture Principles](../ARCHITECTURE_PRINCIPLES.md)

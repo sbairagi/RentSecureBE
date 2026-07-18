@@ -117,7 +117,7 @@ The system remains a single deployable unit but is internally structured as inde
 
 ## References
 
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
-- [Module Boundaries](architecture/module-boundaries.md)
-- [Dependency Rules](architecture/dependency-rules.md)
-- [Production Architecture](docs/architecture/production-architecture.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Module Boundaries](../../../architecture/module-boundaries.md)
+- [Dependency Rules](../../../architecture/dependency-rules.md)
+- [Production Architecture](../production-architecture.md)

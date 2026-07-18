@@ -105,6 +105,6 @@ All data access in RentSecure will go through **repository interfaces** defined 
 
 ## References
 
-- [Repository Pattern](docs/architecture/future/08_repository_pattern.md)
-- [Layer Rules](docs/architecture/future/04_layer_rules.md)
-- [Dependency Rules](docs/architecture/future/05_dependency_rules.md)
+- [Repository Pattern](../future/08_repository_pattern.md)
+- [Layer Rules](../future/04_layer_rules.md)
+- [Dependency Rules](../future/05_dependency_rules.md)

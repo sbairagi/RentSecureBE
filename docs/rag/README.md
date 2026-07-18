@@ -40,8 +40,6 @@ Structured documentation for **retrieval-augmented generation (RAG)**. Each file
 ## Related human docs
 
 - [business-rules/](../business-rules/README.md) — intended behavior by domain
-- [business-gaps/](../business-gaps/BUSINESS_GAPS_AUDIT.md) — policy vs implementation gaps
-- [bugs/](../bugs/README.md) — bugs by Django app
 - [BUSINESS_LOGIC_AND_SUBSCRIPTION.md](../BUSINESS_LOGIC_AND_SUBSCRIPTION.md) — long-form deep dive
 
 ## Suggested system prompt snippet

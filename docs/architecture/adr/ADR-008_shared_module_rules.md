@@ -109,5 +109,5 @@ The `shared/` directory contains utilities used across the codebase. Without str
 
 ## References
 
-- [Layer Rules](docs/architecture/future/04_layer_rules.md)
-- [Dependency Rules](docs/architecture/future/05_dependency_rules.md)
+- [Layer Rules](../future/04_layer_rules.md)
+- [Dependency Rules](../future/05_dependency_rules.md)

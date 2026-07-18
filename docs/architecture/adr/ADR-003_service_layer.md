@@ -107,6 +107,6 @@ All business logic in RentSecure lives in **application services**. Views and se
 
 ## References
 
-- [Service Layer](docs/architecture/future/09_service_layer.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
-- [Dependency Rules](architecture/dependency-rules.md)
+- [Service Layer](../future/09_service_layer.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Dependency Rules](../../../architecture/dependency-rules.md)

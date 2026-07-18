@@ -31,6 +31,5 @@ Each file documents rules for one domain: validation, access control, limits, AP
 **See also:**
 
 - [Business logic & subscription (deep dive)](../BUSINESS_LOGIC_AND_SUBSCRIPTION.md)
-- [Business gaps & bugs audit](../business-gaps/BUSINESS_GAPS_AUDIT.md) — code vs documented rules
 
 **Source:** Derived from `properties/business_rules.md`, models, views, and `properties/TEST_DOCUMENTATION.md`.

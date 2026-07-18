@@ -153,5 +153,5 @@ def setup_test_container() -> ServiceContainer:
 
 ## References
 
-- [Service Layer](docs/architecture/future/09_service_layer.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Service Layer](../future/09_service_layer.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)

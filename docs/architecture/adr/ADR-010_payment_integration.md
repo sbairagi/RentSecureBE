@@ -139,6 +139,6 @@ Tenant receives receipt
 
 ## References
 
-- [Production Architecture](docs/architecture/production-architecture.md)
-- [Finance Rules](.kilo/instructions/finance.md)
-- [Bounded Contexts](docs/architecture/future/02_bounded_contexts.md)
+- [Production Architecture](../production-architecture.md)
+- [Finance Rules](../../../.kilo/instructions/finance.md)
+- [Bounded Contexts](../future/02_bounded_contexts.md)

@@ -38,8 +38,8 @@ The current architecture is a **Modular Monolith** implemented with Django 5.2 +
 No migration required. This is a documentation-only phase. Production code, APIs, serializers, models, migrations, CI behavior, GitHub Actions, Sonar configuration, and Import-Linter configuration remain untouched.
 
 ## References
-- [Architecture README](docs/architecture/README.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
-- [Coding Standards](architecture/CODING_STANDARDS.md)
-- [Roadmap](architecture/ROADMAP.md)
+- [Architecture README](../../docs/architecture/README.md)
+- [Architecture Principles](../ARCHITECTURE_PRINCIPLES.md)
+- [Coding Standards](../CODING_STANDARDS.md)
+- [Roadmap](../ROADMAP.md)
 - Existing ADRs in `docs/adr/`

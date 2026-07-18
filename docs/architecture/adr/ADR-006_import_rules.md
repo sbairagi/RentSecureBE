@@ -103,6 +103,6 @@ RentSecure uses **import-linter** to enforce architecture rules in CI.
 
 ## References
 
-- [Dependency Rules](docs/architecture/future/05_dependency_rules.md)
-- [Layer Rules](docs/architecture/future/04_layer_rules.md)
-- [Import-Linter Configuration](import-linter.ini)
+- [Dependency Rules](../future/05_dependency_rules.md)
+- [Layer Rules](../future/04_layer_rules.md)
+- [Import-Linter Configuration](../../../import-linter.ini)

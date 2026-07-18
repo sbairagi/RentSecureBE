@@ -139,5 +139,5 @@ apps/<context>/tests/
 
 ## References
 
-- [Testing Rules](.kilo/instructions/testing.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Testing Rules](../../../.kilo/instructions/testing.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)

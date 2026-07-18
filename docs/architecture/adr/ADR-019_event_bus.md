@@ -128,5 +128,5 @@ class InProcessEventBus(EventBus):
 
 ## References
 
-- [Domain Events](docs/architecture/future/07_domain_events.md)
-- [Bounded Contexts](docs/architecture/future/02_bounded_contexts.md)
+- [Domain Events](../future/07_domain_events.md)
+- [Bounded Contexts](../future/02_bounded_contexts.md)

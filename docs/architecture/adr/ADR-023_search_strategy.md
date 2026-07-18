@@ -110,5 +110,5 @@ RentSecure uses **PostgreSQL full-text search** in Year 1, with an **OpenSearch 
 
 ## References
 
-- [Production Architecture](docs/architecture/production-architecture.md)
-- [Platform Adapters](docs/architecture/future/03_target_folder_structure.md)
+- [Production Architecture](../production-architecture.md)
+- [Platform Adapters](../future/03_target_folder_structure.md)

@@ -128,5 +128,5 @@ class PaymentDashboardSelector:
 
 ## References
 
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
-- [Repository Pattern](docs/architecture/future/08_repository_pattern.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Repository Pattern](../future/08_repository_pattern.md)

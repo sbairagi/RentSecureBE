@@ -99,5 +99,5 @@ Business logic must live in application services or domain entities.
 
 ## References
 
-- [Service Layer](docs/architecture/future/09_service_layer.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Service Layer](../future/09_service_layer.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)

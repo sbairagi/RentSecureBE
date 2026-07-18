@@ -130,5 +130,5 @@ class PaymentService:
 
 ## References
 
-- [Security Rules](.kilo/instructions/security.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Security Rules](../../../.kilo/instructions/security.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)

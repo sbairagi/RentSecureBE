@@ -165,5 +165,5 @@ def send_rent_reminders_task(self):
 
 ## References
 
-- [Production Architecture](docs/architecture/production-architecture.md)
-- [Architecture Principles](architecture/ARCHITECTURE_PRINCIPLES.md)
+- [Production Architecture](../production-architecture.md)
+- [Architecture Principles](../../../architecture/ARCHITECTURE_PRINCIPLES.md)
