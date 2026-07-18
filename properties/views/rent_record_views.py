@@ -17,8 +17,9 @@ from django.shortcuts import get_object_or_404
 from core.models import User
 from notification.services.rent_notify_service import send_payout_notification
 from notification.utils import send_whatsapp_message
-from rentsecure_be.services.cashfree_service import process_rent_payout
-from rentsecure_be.services.razorpay_service import create_payment_link
+from payments.adapters.cashfree import CashfreeAdapter
+from payments.adapters.razorpay import RazorpayAdapter
+from payments.services.payment_service import PaymentService
 from shared.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
@@ -69,7 +70,7 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
         rent = serializer.save()
 
         try:
-            link = create_payment_link(rent)
+            link = PaymentService(RazorpayAdapter()).create_payment_link(rent)
             rent.payment_link = link
             rent.save(update_fields=["payment_link"])
             send_whatsapp_message(
@@ -116,7 +117,7 @@ def retry_payout_api(request: DRFRequest, rent_id: int) -> Any:
         return Response({"error": "Payout not retryable"}, status=400)
 
     try:
-        process_rent_payout(rent)
+        PaymentService(CashfreeAdapter()).process_payout(rent)
         rent.refresh_from_db()
         if rent.payout_status == "SUCCESS":
             send_payout_notification(rent)

@@ -3,8 +3,9 @@ from datetime import timedelta
 from django.utils.timezone import now
 
 from notification.services.whatsapp_service import send_whatsapp_message
+from payments.adapters.cashfree import CashfreeAdapter
+from payments.services.payment_service import PaymentService
 from properties.models import RentRecord
-from rentsecure_be.services.cashfree_service import process_rent_payout
 
 
 def retry_failed_payouts() -> None:
@@ -28,7 +29,7 @@ def _should_skip_retry(rent: RentRecord) -> bool:
 
 def _process_payout_retry(rent: RentRecord) -> None:
     try:
-        process_rent_payout(rent)
+        PaymentService(CashfreeAdapter()).process_payout(rent)
     except Exception as e:
         print(f"Payout retry failed for Rent ID {rent.id}: {e}")
         return
