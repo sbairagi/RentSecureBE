@@ -1,14 +1,10 @@
-# Legacy implementation archived
-
-######################################################################################################################
-
-
 from typing import Any
 
 from django.core.management.base import BaseCommand
 
+from payments.adapters.cashfree import CashfreeAdapter
+from payments.services.payment_service import PaymentService
 from properties.models import RentRecord
-from rentsecure_be.services.cashfree_service import process_rent_payout
 from shared.type_compat import override
 
 
@@ -17,6 +13,7 @@ class Command(BaseCommand):
 
     @override
     def handle(self, *args: Any, **kwargs: Any) -> None:
+        payment_service = PaymentService(CashfreeAdapter())
         failed_rents = RentRecord.objects.filter(
             status="PAID",
             payout_status="FAILED",
@@ -26,7 +23,7 @@ class Command(BaseCommand):
         for rent in failed_rents:
             try:
                 self.stdout.write(f"Retrying payout for Rent ID: {rent.id}")
-                process_rent_payout(rent)
+                payment_service.process_payout(rent)
                 rent.payout_retry_count += 1
                 rent.save(update_fields=["payout_retry_count"])
             except Exception as e:
