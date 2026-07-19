@@ -86,6 +86,12 @@ LEEGALITY_WEBHOOK_SECRET = config("LEEGALITY_WEBHOOK_SECRET", default="")
 AWS_S3_BUCKET_NAME = config("AWS_S3_BUCKET_NAME", default="")
 AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="")
 
+_default_encryption_key = config(
+    "FIELD_ENCRYPTION_KEY",
+    default="86kvFzt7WV_XPUyaL2dK_5C8uTaPpJBHDsbXpCMQ6Ho=",
+)
+FIELD_ENCRYPTION_KEY = _default_encryption_key
+
 # Feature flags for optional integrations
 ENABLE_RAZORPAY = config("ENABLE_RAZORPAY", default=False, cast=bool)
 ENABLE_CASHFREE = config("ENABLE_CASHFREE", default=False, cast=bool)
@@ -135,6 +141,7 @@ INSTALLED_APPS = [
     "referral_and_earn",
     "documents",
     "smartbot",
+    "payments",
     "django_extensions",
 ]
 

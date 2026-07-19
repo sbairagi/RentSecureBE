@@ -10,7 +10,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def _get_auth_token() -> str:
+def _get_auth_token() -> str | None:
     from rentsecure_be.utils.cashfree_payout import get_auth_token  # nosonar
 
     return get_auth_token()
@@ -44,7 +44,7 @@ def _resolve_owner(rent: Any) -> Any | None:
 
 
 def _load_bank_details(owner: Any, rent: Any) -> Any | None:
-    from core.models import OwnerBankDetails
+    from payments.models import OwnerBankDetails
 
     try:
         bank_details = OwnerBankDetails.objects.get(owner=owner)
@@ -163,7 +163,7 @@ class CashfreeAdapter:
         return response
 
     def register_beneficiary(self, bank_details: Any) -> dict[str, Any]:
-        from core.models import OwnerBankDetails
+        from payments.models import OwnerBankDetails
 
         if not isinstance(bank_details, OwnerBankDetails):
             raise TypeError("bank_details must be an OwnerBankDetails instance")
@@ -197,7 +197,7 @@ class CashfreeAdapter:
         return response
 
     def delete_beneficiary(self, beneficiary_id: str) -> dict[str, Any]:
-        url = f"{settings.CASHFREE_PAYOUT_BASE_TEST_URL}" "/payout/v1/deleteBeneficiary"
+        url = f"{settings.CASHFREE_PAYOUT_BASE_TEST_URL}/payout/v1/deleteBeneficiary"
         payload = {"beneId": beneficiary_id}
         headers = {
             "Authorization": f"Bearer {_get_auth_token()}",

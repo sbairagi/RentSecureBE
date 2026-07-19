@@ -1,4 +1,5 @@
 # mypy: disable-error-code="import-untyped"
+import warnings
 from typing import Any
 
 from simple_history.models import HistoricalRecords
@@ -7,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from shared.fields import EncryptedCharField
 from shared.type_compat import override
 
 
@@ -109,11 +111,20 @@ class OwnerBankDetails(models.Model):
     owner = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="bank_details"
     )
-    bank_account_number = models.CharField(max_length=30)
-    ifsc_code = models.CharField(max_length=20)
+    bank_account_number = EncryptedCharField(max_length=30)
+    ifsc_code = EncryptedCharField(max_length=20)
     account_holder_name = models.CharField(max_length=100, blank=True, default="")
     beneficiary_id = models.CharField(max_length=100, unique=True, blank=True)
     bank_account_verified = models.BooleanField(default=False)
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        warnings.warn(
+            "core.models.OwnerBankDetails is deprecated. "
+            "Use payments.models.OwnerBankDetails instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
 
     @override
     def __str__(self) -> str:
