@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 import notification.services.voice_note_service as _vns
 from properties.models import Building, Renter, RentRecord, Unit
@@ -15,6 +15,7 @@ _ORIGINAL_SEND_LATE = _vns.send_late_rent_reminder
 _ORIGINAL_ALERT_OWNER = _vns.alert_owner_about_delay
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class SendThankYouVoiceNoteTests(TestCase):
     def setUp(self):
         owner_cls = (
@@ -69,10 +70,10 @@ class SendThankYouVoiceNoteTests(TestCase):
     def test_send_voice_note_to_renter(self):
         _vns.send_thank_you_voice_note = _ORIGINAL_SEND_THANK_YOU
         with patch(
-            "notification.services.voice_note_service.send_whatsapp_audio"
+            "notification.services.notification_service.NotificationService.send_whatsapp_audio"
         ) as mock_send:
             with patch(
-                "notification.services.voice_note_service.generate_voice_note"
+                "notification.services.notification_service.NotificationService.generate_voice_note"
             ) as mock_generate:
                 mock_generate.return_value = "/tmp/test_audio.mp3"
                 mock_send.return_value = None
@@ -84,8 +85,12 @@ class SendThankYouVoiceNoteTests(TestCase):
                 mock_generate.assert_called_once()
                 mock_send.assert_called_once()
 
-    @patch("notification.services.voice_note_service.send_whatsapp_audio")
-    @patch("notification.services.voice_note_service.generate_voice_note")
+    @patch(
+        "notification.services.notification_service.NotificationService.send_whatsapp_audio"
+    )
+    @patch(
+        "notification.services.notification_service.NotificationService.generate_voice_note"
+    )
     def test_send_voice_note_skipped_when_no_audio(self, mock_generate, mock_send):
         _vns.send_thank_you_voice_note = _ORIGINAL_SEND_THANK_YOU
         mock_generate.return_value = None
@@ -102,6 +107,7 @@ class SendThankYouVoiceNoteTests(TestCase):
         send_thank_you_voice_note(self.rent)
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class SendLateRentReminderTests(TestCase):
     def setUp(self):
         owner_cls = (
@@ -155,10 +161,10 @@ class SendLateRentReminderTests(TestCase):
     def test_send_late_reminder(self):
         _vns.send_late_rent_reminder = _ORIGINAL_SEND_LATE
         with patch(
-            "notification.services.voice_note_service.send_whatsapp_audio"
+            "notification.adapters.whatsapp.WhatsAppAdapter.send_whatsapp_audio"
         ) as mock_send:
             with patch(
-                "notification.services.voice_note_service.generate_voice_note"
+                "notification.adapters.voice.VoiceAdapter.generate_voice_note"
             ) as mock_generate:
                 mock_generate.return_value = "/tmp/test_audio.mp3"
                 mock_send.return_value = None
@@ -182,8 +188,10 @@ class SendLateRentReminderTests(TestCase):
 
     def test_send_late_reminder_creates_log(self):
         _vns.send_late_rent_reminder = _ORIGINAL_SEND_LATE
-        with patch("notification.services.voice_note_service.send_whatsapp_audio"):
-            with patch("notification.services.voice_note_service.generate_voice_note"):
+        with patch(
+            "notification.adapters.whatsapp.WhatsAppAdapter.send_whatsapp_audio"
+        ):
+            with patch("notification.adapters.voice.VoiceAdapter.generate_voice_note"):
                 from notification.services.voice_note_service import (
                     send_late_rent_reminder,
                 )
@@ -197,6 +205,7 @@ class SendLateRentReminderTests(TestCase):
                 self.assertEqual(log.message_type, "LATE")
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class AlertOwnerAboutDelayTests(TestCase):
     def setUp(self):
         owner_cls = (
@@ -248,7 +257,7 @@ class AlertOwnerAboutDelayTests(TestCase):
     def test_alert_owner_sends_message(self):
         _vns.alert_owner_about_delay = _ORIGINAL_ALERT_OWNER
         with patch(
-            "notification.services.voice_note_service.send_whatsapp_message"
+            "notification.adapters.whatsapp.WhatsAppAdapter.send_whatsapp_message"
         ) as mock_send:
             self.owner.whatsapp_number = "+919876543210"
             self.owner.save()
@@ -257,10 +266,17 @@ class AlertOwnerAboutDelayTests(TestCase):
             alert_owner_about_delay(self.rent)
             mock_send.assert_called_once()
 
+    def test_alert_owner_skipped_when_no_renter(self):
+        _vns.alert_owner_about_delay = _ORIGINAL_ALERT_OWNER
+        from notification.services.voice_note_service import alert_owner_about_delay
+
+        self.rent.renter = None
+        alert_owner_about_delay(self.rent)
+
     def test_alert_owner_skipped_when_no_number(self):
         _vns.alert_owner_about_delay = _ORIGINAL_ALERT_OWNER
         with patch(
-            "notification.services.voice_note_service.send_whatsapp_message"
+            "notification.adapters.whatsapp.WhatsAppAdapter.send_whatsapp_message"
         ) as mock_send:
             self.owner.whatsapp_number = ""
             self.owner.save()

@@ -505,7 +505,9 @@ class RentRecordViewSetAPITests(APITestCase):
             "payment_method": RentRecord.PaymentMethod.CASH,
         }
         with patch("rentsecure_be.services.razorpay_service.create_payment_link"):
-            with patch("notification.utils.send_whatsapp_message"):
+            with patch(
+                "notification.adapters.whatsapp.WhatsAppAdapter.send_whatsapp_message"
+            ):
                 response = self.client.post("/api/rent-records/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 

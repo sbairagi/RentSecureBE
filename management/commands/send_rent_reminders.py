@@ -3,7 +3,7 @@ from typing import Any
 
 from django.core.management.base import BaseCommand
 
-from notification.services.whatsapp_service import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 from properties.models import Renter
 from shared.type_compat import override
 
@@ -28,5 +28,5 @@ class Command(BaseCommand):
 Hi {renter.name}, your rent of ₹{renter.rent_amount} for *{renter.property.name}* is due on *{renter.rent_due_date.strftime("%d %B")}*.
 Please pay on time to avoid late fees. Thank you! 🙏
 """
-            send_whatsapp_message(renter.whatsapp_number, msg)
+            NotificationService().send_whatsapp_message(renter.whatsapp_number, msg)
             self.stdout.write(f"Reminder sent to {renter.name}")

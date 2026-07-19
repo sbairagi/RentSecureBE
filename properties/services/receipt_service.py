@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Any
 
 from weasyprint import HTML
 
-from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 
 if TYPE_CHECKING:
@@ -99,17 +98,21 @@ def send_rent_receipt_email(rent_record: RentRecord) -> bool:
         )
 
         email_to: list[str] = [renter.email] if renter.email else []
-        email = EmailMessage(
-            subject=subject,
-            body=body,
-            from_email="no-reply@rentsecure.in",
-            to=email_to,
-        )
-
         receipt_month: str = rent_record.due_date.strftime("%Y%m")
         filename: str = f"rent_receipt_{rent_record.id}_{receipt_month}.pdf"
-        email.attach(filename, pdf_bytes, "application/pdf")
-        email.send(fail_silently=False)
+
+        from notification.services.notification_service import NotificationService
+
+        sent = NotificationService().send_email(
+            subject=subject,
+            message=body,
+            recipient_list=email_to,
+            from_email="no-reply@rentsecure.in",
+            attachments=[(filename, pdf_bytes, "application/pdf")],
+        )
+
+        if not sent:
+            return False
 
         logger.info(
             "Rent receipt email sent to %s for rent %s", renter.email, rent_record.id

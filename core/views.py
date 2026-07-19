@@ -15,7 +15,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from twilio.rest import Client
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
@@ -32,6 +31,7 @@ from core.services.password_service import PasswordService
 from core.services.referral_service import ReferralService
 from core.services.subscription_service import SubscriptionService
 from core.services.usage_limit_service import UsageLimitService
+from notification.services.notification_service import NotificationService
 from notification.services.rent_notify_service import send_payout_notification
 from payments.adapters.cashfree import CashfreeAdapter
 from payments.services.payment_service import PaymentService
@@ -70,15 +70,10 @@ _ERROR_INVALID_METHOD = "Invalid method"
 
 
 def send_otp(phone_number: str, code: str) -> None:
-    """Send OTP via Twilio in production; log locally during development."""
-    if not settings.DEBUG:
-        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-        message = f"Your verification code is {code}"
-        client.messages.create(
-            body=message, from_=settings.TWILIO_PHONE_NUMBER, to=phone_number
-        )
-    else:
+    if settings.DEBUG:
         print(f"[MOCK OTP to {phone_number}] Your OTP is {code}")
+    else:
+        NotificationService().send_otp(phone_number, code)
 
 
 class SendOTP(APIView):

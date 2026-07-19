@@ -377,15 +377,12 @@ def _rentsecure_test_defaults(db, monkeypatch):  # type: ignore[no-untyped-def]
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             self.messages = _FakeMessages()
 
-    monkeypatch.setattr("core.views.Client", _FakeTwilioClient)
-    monkeypatch.setattr("core.services.otp_service.Client", _FakeTwilioClient)
-    monkeypatch.setattr("notification.utils.Client", _FakeTwilioClient)
-    monkeypatch.setattr(
-        "notification.services.whatsapp_service.Client", _FakeTwilioClient
-    )
+    monkeypatch.setattr("notification.adapters.sms.Client", _FakeTwilioClient)
+    monkeypatch.setattr("notification.adapters.whatsapp.Client", _FakeTwilioClient)
     monkeypatch.setattr(
         "properties.views.rent_record_views.create_payment_link",
         lambda rent: f"https://payments.test/rent/{rent.id}",
+        raising=False,
     )
     monkeypatch.setattr(
         "notification.services.voice_note_service.send_thank_you_voice_note",

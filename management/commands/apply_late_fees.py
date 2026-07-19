@@ -12,7 +12,7 @@ from typing import Any
 from django.core.management.base import BaseCommand
 from django.utils.timezone import now
 
-from notification.services.whatsapp_service import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 from properties.models import RentRecord
 from shared.type_compat import override
 
@@ -53,7 +53,7 @@ class Command(BaseCommand):
                 f"is overdue.\nA late fee of ₹{rent.late_fee} has been applied.\n"
                 "Pay ASAP via the app."
             )
-            send_whatsapp_message(renter.phone, message)
+            NotificationService().send_whatsapp_message(renter.phone, message)
 
         self.stdout.write(
             self.style.SUCCESS(f"Late fees applied to {processed} rent records.")

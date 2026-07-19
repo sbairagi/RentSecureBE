@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from core.models import UserProfile
 from notification.services.extra_charge_reminders import send_due_extra_charge_reminders
@@ -72,6 +72,7 @@ def _build_renter_chain(
 # ---------------------------------------------------------------------------
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class ExtraChargeReminderNoPhoneTest(TestCase):
     def test_skips_renter_without_phone(self):
         owner, unit, renter, _ = _build_renter_chain(
@@ -95,13 +96,13 @@ class ExtraChargeReminderNoPhoneTest(TestCase):
 
         with (
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_message"
+                "notification.services.notification_service.NotificationService.send_whatsapp_message"
             ) as mock_msg,
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_audio"
+                "notification.services.notification_service.NotificationService.send_whatsapp_audio"
             ) as mock_audio,
             patch(
-                "notification.services.extra_charge_reminders.generate_voice_note",
+                "notification.services.notification_service.NotificationService.generate_voice_note",
                 return_value=None,
             ) as mock_voice,
         ):
@@ -118,6 +119,7 @@ class ExtraChargeReminderNoPhoneTest(TestCase):
 # ---------------------------------------------------------------------------
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class ExtraChargeReminderNoUserDefaultEnTest(TestCase):
     def test_defaults_to_en_when_renter_has_no_user(self):
         owner, unit, renter, _ = _build_renter_chain(
@@ -138,13 +140,13 @@ class ExtraChargeReminderNoUserDefaultEnTest(TestCase):
 
         with (
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_message"
+                "notification.services.notification_service.NotificationService.send_whatsapp_message"
             ) as mock_msg,
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_audio"
+                "notification.services.notification_service.NotificationService.send_whatsapp_audio"
             ) as mock_audio,
             patch(
-                "notification.services.extra_charge_reminders.generate_voice_note",
+                "notification.services.notification_service.NotificationService.generate_voice_note",
                 return_value=None,
             ) as mock_voice,
         ):
@@ -163,6 +165,7 @@ class ExtraChargeReminderNoUserDefaultEnTest(TestCase):
 # ---------------------------------------------------------------------------
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class ExtraChargeReminderNoProfileDefaultEnTest(TestCase):
     def test_defaults_to_en_when_user_has_no_profile(self):
         user = User.objects.create_user(
@@ -189,13 +192,13 @@ class ExtraChargeReminderNoProfileDefaultEnTest(TestCase):
 
         with (
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_message"
+                "notification.services.notification_service.NotificationService.send_whatsapp_message"
             ) as mock_msg,
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_audio"
+                "notification.services.notification_service.NotificationService.send_whatsapp_audio"
             ) as mock_audio,
             patch(
-                "notification.services.extra_charge_reminders.generate_voice_note",
+                "notification.services.notification_service.NotificationService.generate_voice_note",
                 return_value=None,
             ) as mock_voice,
         ):
@@ -212,6 +215,7 @@ class ExtraChargeReminderNoProfileDefaultEnTest(TestCase):
 # ---------------------------------------------------------------------------
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class ExtraChargeReminderWithProfileLangTest(TestCase):
     def test_uses_profile_language_preference(self):
         user = User.objects.create_user(
@@ -244,13 +248,13 @@ class ExtraChargeReminderWithProfileLangTest(TestCase):
 
         with (
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_message"
+                "notification.services.notification_service.NotificationService.send_whatsapp_message"
             ) as mock_msg,
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_audio"
+                "notification.services.notification_service.NotificationService.send_whatsapp_audio"
             ) as mock_audio,
             patch(
-                "notification.services.extra_charge_reminders.generate_voice_note",
+                "notification.services.notification_service.NotificationService.generate_voice_note",
                 return_value=None,
             ) as mock_voice,
         ):
@@ -267,6 +271,7 @@ class ExtraChargeReminderWithProfileLangTest(TestCase):
 # ---------------------------------------------------------------------------
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class ExtraChargeReminderWhatsappMessageExceptionTest(TestCase):
     def test_continues_on_whatsapp_message_exception(self):
         owner, unit, renter, _ = _build_renter_chain(
@@ -285,14 +290,14 @@ class ExtraChargeReminderWhatsappMessageExceptionTest(TestCase):
 
         with (
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_message",
+                "notification.services.notification_service.NotificationService.send_whatsapp_message",
                 side_effect=Exception("Twilio error"),
             ) as mock_msg,
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_audio"
+                "notification.services.notification_service.NotificationService.send_whatsapp_audio"
             ) as mock_audio,
             patch(
-                "notification.services.extra_charge_reminders.generate_voice_note"
+                "notification.services.notification_service.NotificationService.generate_voice_note"
             ) as mock_voice,
         ):
             result = send_due_extra_charge_reminders()
@@ -309,6 +314,7 @@ class ExtraChargeReminderWhatsappMessageExceptionTest(TestCase):
 # ---------------------------------------------------------------------------
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class ExtraChargeReminderNoAudioPathTest(TestCase):
     def test_skips_audio_when_voice_note_returns_none(self):
         owner, unit, renter, _ = _build_renter_chain(
@@ -327,13 +333,13 @@ class ExtraChargeReminderNoAudioPathTest(TestCase):
 
         with (
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_message"
+                "notification.services.notification_service.NotificationService.send_whatsapp_message"
             ) as mock_msg,
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_audio"
+                "notification.services.notification_service.NotificationService.send_whatsapp_audio"
             ) as mock_audio,
             patch(
-                "notification.services.extra_charge_reminders.generate_voice_note",
+                "notification.services.notification_service.NotificationService.generate_voice_note",
                 return_value=None,
             ) as mock_voice,
         ):
@@ -361,13 +367,13 @@ class ExtraChargeReminderNoAudioPathTest(TestCase):
 
         with (
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_message"
+                "notification.services.notification_service.NotificationService.send_whatsapp_message"
             ) as mock_msg,
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_audio"
+                "notification.services.notification_service.NotificationService.send_whatsapp_audio"
             ) as mock_audio,
             patch(
-                "notification.services.extra_charge_reminders.generate_voice_note",
+                "notification.services.notification_service.NotificationService.generate_voice_note",
                 return_value="/tmp/test_audio.mp3",
             ) as mock_voice,
         ):
@@ -386,6 +392,7 @@ class ExtraChargeReminderNoAudioPathTest(TestCase):
 # ---------------------------------------------------------------------------
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class ExtraChargeReminderWhatsappAudioExceptionTest(TestCase):
     def test_continues_on_whatsapp_audio_exception(self):
         owner, unit, renter, _ = _build_renter_chain(
@@ -404,14 +411,14 @@ class ExtraChargeReminderWhatsappAudioExceptionTest(TestCase):
 
         with (
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_message"
+                "notification.services.notification_service.NotificationService.send_whatsapp_message"
             ) as mock_msg,
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_audio",
+                "notification.services.notification_service.NotificationService.send_whatsapp_audio",
                 side_effect=Exception("Audio send error"),
             ) as mock_audio,
             patch(
-                "notification.services.extra_charge_reminders.generate_voice_note",
+                "notification.services.notification_service.NotificationService.generate_voice_note",
                 return_value="/tmp/test.mp3",
             ) as mock_voice,
         ):
@@ -463,14 +470,14 @@ class ExtraChargeReminderWhatsappAudioExceptionTest(TestCase):
 
         with (
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_message"
+                "notification.services.notification_service.NotificationService.send_whatsapp_message"
             ) as mock_msg,
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_audio",
+                "notification.services.notification_service.NotificationService.send_whatsapp_audio",
                 side_effect=audio_side_effect,
             ) as mock_audio,
             patch(
-                "notification.services.extra_charge_reminders.generate_voice_note",
+                "notification.services.notification_service.NotificationService.generate_voice_note",
                 return_value="/tmp/test.mp3",
             ),
         ):
@@ -486,6 +493,7 @@ class ExtraChargeReminderWhatsappAudioExceptionTest(TestCase):
 # ---------------------------------------------------------------------------
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class ExtraChargeReminderDaysAheadTest(TestCase):
     def test_days_ahead_filters_charges_correctly(self):
         owner, unit, renter, _ = _build_renter_chain(
@@ -524,11 +532,13 @@ class ExtraChargeReminderDaysAheadTest(TestCase):
 
         with (
             patch(
-                "notification.services.extra_charge_reminders.send_whatsapp_message"
+                "notification.services.notification_service.NotificationService.send_whatsapp_message"
             ) as mock_msg,
-            patch("notification.services.extra_charge_reminders.send_whatsapp_audio"),
             patch(
-                "notification.services.extra_charge_reminders.generate_voice_note",
+                "notification.services.notification_service.NotificationService.send_whatsapp_audio"
+            ),
+            patch(
+                "notification.services.notification_service.NotificationService.generate_voice_note",
                 return_value=None,
             ),
         ):

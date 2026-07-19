@@ -3,7 +3,7 @@ from typing import Any
 
 from django.core.management.base import BaseCommand
 
-from notification.utils import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 from properties.models import Renter
 from shared.type_compat import override
 
@@ -28,7 +28,7 @@ def auto_deactivate_notice_period_renters() -> None:
         renter.status = "deactivated"
         renter.save()
         print(f"✅ Deactivated renter {renter.name} from unit {renter.unit}")
-        send_whatsapp_message(
+        NotificationService().send_whatsapp_message(
             renter.unit.owner.whatsapp_number,
             f"ℹ️ Your renter {renter.name} has been auto-deactivated after 1-month notice period.",
         )

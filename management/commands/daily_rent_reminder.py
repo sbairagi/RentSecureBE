@@ -3,7 +3,7 @@ from typing import Any
 
 from django.core.management.base import BaseCommand
 
-from notification.services.whatsapp_service import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 from properties.models import Renter
 from shared.type_compat import override
 
@@ -25,7 +25,7 @@ class Command(BaseCommand):
             days_left = (date(today.year, today.month, due_day) - today).days
 
             if days_left in [3, 0, -2]:
-                send_whatsapp_message(
+                NotificationService().send_whatsapp_message(
                     renter.phone,
                     f"Reminder: Your rent is due in {days_left} days.",
                 )

@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from notification.services.whatsapp_service import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 from properties.models import Renter
 
 
@@ -27,4 +27,4 @@ def send_vacate_reminders() -> None:
             f"{renter.revoked_on.date()}, but the tenant is still marked active.\n"
             f"Please update their status if they've vacated."
         )
-        send_whatsapp_message(owner.whatsapp_number, message)
+        NotificationService().send_whatsapp_message(owner.whatsapp_number, message)

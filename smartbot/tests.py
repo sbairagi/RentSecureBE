@@ -41,7 +41,7 @@ class SmartBotActionsTest(TestCase):
         self.assertIn("❌", result)
 
     @patch("smartbot.actions.RentRecord")
-    @patch("smartbot.actions.process_rent_payout")
+    @patch("payments.services.payment_service.PaymentService.process_payout")
     def test_retry_payout_success(self, mock_process, mock_rent_record):
         mock_rent = MagicMock()
         mock_rent_record.objects.filter.return_value.latest.return_value = mock_rent

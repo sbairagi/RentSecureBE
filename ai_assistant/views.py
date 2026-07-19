@@ -23,7 +23,7 @@ from django.views.decorators.http import require_POST
 
 from ai_assistant.services.finance_ai import analyze_financial_health
 from core.models import UserProfile
-from notification.services.whatsapp_service import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 from properties.models import PropertyTaxRecord, Renter, RentRecord
 from smartbot.services.chatbot_service import handle_chat_message
 
@@ -255,5 +255,5 @@ def whatsapp_webhook(request: HttpRequest) -> JsonResponse:
         return JsonResponse({"message": "User not found"}, status=404)
 
     reply = handle_chat_message(user, message)
-    send_whatsapp_message(phone, reply)
+    NotificationService().send_whatsapp_message(phone, reply)
     return JsonResponse({"message": "OK"})

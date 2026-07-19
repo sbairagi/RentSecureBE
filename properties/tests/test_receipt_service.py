@@ -147,7 +147,11 @@ class TestSendRentReceiptEmail:
         )
 
         pdf_bytes = b"%PDF-1.4 receipt"
-        mock_email_instance = MagicMock()
+        captured_kwargs: dict = {}
+
+        def fake_send_email(**kwargs):
+            captured_kwargs.update(kwargs)
+            return True
 
         with (
             patch(
@@ -155,21 +159,19 @@ class TestSendRentReceiptEmail:
                 return_value=pdf_bytes,
             ),
             patch(
-                "properties.services.receipt_service.EmailMessage",
-                return_value=mock_email_instance,
-            ) as email_cls,
+                "notification.services.notification_service.NotificationService.send_email",
+                side_effect=lambda **kw: fake_send_email(**kw),
+            ) as mock_send_email,
             patch("properties.services.receipt_service.logger") as mock_logger,
         ):
             result = receipt_service.send_rent_receipt_email(rent_record)
 
         assert result is True
-        email_cls.assert_called_once()
-        mock_email_instance.attach.assert_called_once()
-        attach_call = mock_email_instance.attach.call_args
-        assert attach_call[0][0].startswith("rent_receipt_")
-        assert attach_call[0][1] == pdf_bytes
-        assert attach_call[0][2] == "application/pdf"
-        mock_email_instance.send.assert_called_once_with(fail_silently=False)
+        mock_send_email.assert_called_once()
+        assert captured_kwargs["subject"].startswith("Rent Receipt")
+        assert captured_kwargs["recipient_list"] == [renter.email]
+        assert captured_kwargs["attachments"][0][0].startswith("rent_receipt_")
+        assert captured_kwargs["attachments"][0][1] == pdf_bytes
         mock_logger.info.assert_called_once()
         assert "Rent receipt email sent to" in mock_logger.info.call_args[0][0]
 
@@ -188,8 +190,6 @@ class TestSendRentReceiptEmail:
         )
 
         pdf_bytes = b"%PDF-1.4 receipt"
-        mock_email_instance = MagicMock()
-        mock_email_instance.send.side_effect = Exception("SMTP down")
 
         with (
             patch(
@@ -197,19 +197,13 @@ class TestSendRentReceiptEmail:
                 return_value=pdf_bytes,
             ),
             patch(
-                "properties.services.receipt_service.EmailMessage",
-                return_value=mock_email_instance,
+                "notification.services.notification_service.NotificationService.send_email",
+                return_value=False,
             ),
-            patch("properties.services.receipt_service.logger") as mock_logger,
         ):
             result = receipt_service.send_rent_receipt_email(rent_record)
 
         assert result is False
-        mock_email_instance.send.assert_called_once_with(fail_silently=False)
-        mock_logger.exception.assert_called_once()
-        assert (
-            "Failed to send rent receipt email" in mock_logger.exception.call_args[0][0]
-        )
 
     def test_email_body_contains_expected_fields(self, db):
         unit = UnitFactory()
@@ -226,13 +220,11 @@ class TestSendRentReceiptEmail:
         )
 
         pdf_bytes = b"%PDF-1.4 receipt"
-        mock_email_instance = MagicMock()
-        captured_call = {}
+        captured_kwargs: dict = {}
 
-        def fake_email_init(*args, **kwargs):
-            captured_call["args"] = args
-            captured_call["kwargs"] = kwargs
-            return mock_email_instance
+        def fake_send_email(**kwargs):
+            captured_kwargs.update(kwargs)
+            return True
 
         with (
             patch(
@@ -240,17 +232,17 @@ class TestSendRentReceiptEmail:
                 return_value=pdf_bytes,
             ),
             patch(
-                "properties.services.receipt_service.EmailMessage",
-                side_effect=fake_email_init,
+                "notification.services.notification_service.NotificationService.send_email",
+                side_effect=lambda **kw: fake_send_email(**kw),
             ),
         ):
             receipt_service.send_rent_receipt_email(rent_record)
 
-        subject = captured_call["kwargs"]["subject"]
+        subject = captured_kwargs["subject"]
         assert "Rent Receipt" in subject
         assert "June 2026" in subject
         assert "₹15000" in subject
-        body = captured_call["kwargs"]["body"]
+        body = captured_kwargs["message"]
         assert renter.name in body
         assert "Property:" in body
         assert "Amount: ₹15000" in body

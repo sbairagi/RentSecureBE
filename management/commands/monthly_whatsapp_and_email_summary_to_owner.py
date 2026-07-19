@@ -12,16 +12,18 @@ def send_all_owners_monthly_summary() -> None:
         msg = build_summary_message(summary)
         phone = owner.whatsapp_number or ""
         if phone:
-            from notification.services.whatsapp_service import send_whatsapp_message
+            from notification.services.notification_service import NotificationService
 
-            send_whatsapp_message(phone, msg)
+            NotificationService().send_whatsapp_message(phone, msg)
 
-        from django.core.mail import EmailMessage
+        from notification.services.notification_service import NotificationService
 
-        email = EmailMessage(
-            subject="Your Monthly Rent Summary", body=msg, to=[owner.email]
+        NotificationService().send_email(
+            subject="Your Monthly Rent Summary",
+            message=msg,
+            recipient_list=[owner.email],
+            from_email="no-reply@rentsecure.in",
         )
-        email.send()
 
 
 def generate_monthly_summary_for_owner(owner: User) -> dict[str, Any]:

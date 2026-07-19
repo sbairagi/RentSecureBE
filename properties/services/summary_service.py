@@ -15,7 +15,6 @@ import logging
 from datetime import date
 from typing import TypedDict
 
-from django.core.mail import send_mail
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -126,14 +125,14 @@ def _send_summary_email(
     owner: User, summary: MonthlySummary, message_text: str
 ) -> bool:
     try:
-        send_mail(
+        from notification.services.notification_service import NotificationService
+
+        return NotificationService().send_email(
             subject=f"Monthly Rent Summary - {summary['month_name']}",
             message=message_text,
-            from_email="no-reply@rentsecure.in",
             recipient_list=[owner.email],
-            fail_silently=False,
+            from_email="no-reply@rentsecure.in",
         )
-        return True
     except Exception as exc:
         logger.exception("Failed to send email to %s: %s", owner.email, exc)
         return False
@@ -149,9 +148,9 @@ def _send_summary_whatsapp(
 
 def _send_whatsapp_message(phone: str, message_text: str) -> bool:
     try:
-        from notification.services.whatsapp_service import send_whatsapp_message
+        from notification.services.notification_service import NotificationService
 
-        result = send_whatsapp_message(phone, message_text)
+        result = NotificationService().send_whatsapp_message(phone, message_text)
         return bool(result)
     except Exception as exc:
         logger.exception("Failed to send WhatsApp to %s: %s", phone, exc)

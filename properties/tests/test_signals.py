@@ -1,11 +1,12 @@
 import logging
 from datetime import date, timedelta
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from django.test import override_settings
 from django.utils import timezone
 
 from notification.models import Notification
@@ -429,7 +430,7 @@ class TestHandleRentPayment:
 
 
 class TestUpdateRenterDefaulterStatus:
-    @patch("notification.services.services.notify_owner_renter_flagged")
+    @patch("notification.services.rent_notify_service.notify_owner_renter_flagged")
     def test_pending_past_due_missed_rents_incremented_and_flagged(
         self, mock_notify, unit
     ):
@@ -447,7 +448,7 @@ class TestUpdateRenterDefaulterStatus:
         assert renter.flagged_reason == "Missed 3 or more rent payments."
         mock_notify.assert_called_once_with(renter)
 
-    @patch("notification.services.services.notify_owner_renter_flagged")
+    @patch("notification.services.rent_notify_service.notify_owner_renter_flagged")
     def test_pending_past_due_already_flagged_no_notify(self, mock_notify, unit):
         renter = RenterFactory(
             unit=unit, missed_rents=5, is_flagged=True, flagged_reason="Already flagged"
@@ -500,7 +501,7 @@ class TestUpdateRenterDefaulterStatus:
         update_renter_defaulter_status(rent)
 
     @patch(
-        "notification.services.services.notify_owner_renter_flagged",
+        "notification.services.rent_notify_service.notify_owner_renter_flagged",
         side_effect=Exception("Notify failed"),
     )
     def test_notify_exception_logged_and_continues(self, mock_notify, unit, caplog):
@@ -524,48 +525,55 @@ class TestUpdateRenterDefaulterStatus:
 
 
 class TestNotifyOwnerIfUnitVacant:
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @override_settings(ENABLE_WHATSAPP=True)
+    @patch("notification.adapters.whatsapp.Client")
     def test_deactivated_no_other_active_with_whatsapp_sends_message(
-        self, mock_whatsapp, unit
+        self, mock_client, unit
     ):
         renter = RenterFactory(unit=unit, status=Renter.RenterStatus.DEACTIVATED)
-        mock_whatsapp.reset_mock()
+        mock_client.return_value.messages.create.return_value = MagicMock()
+        mock_client.reset_mock()
         notify_owner_if_unit_vacant(sender=Renter, instance=renter)
-        mock_whatsapp.assert_called_once()
+        mock_client.return_value.messages.create.assert_called_once()
 
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @override_settings(ENABLE_WHATSAPP=True)
+    @patch("notification.adapters.whatsapp.Client")
     def test_revoked_no_other_active_with_whatsapp_sends_message(
-        self, mock_whatsapp, unit
+        self, mock_client, unit
     ):
         renter = RenterFactory(unit=unit, status=Renter.RenterStatus.REVOKED)
-        mock_whatsapp.reset_mock()
+        mock_client.return_value.messages.create.return_value = MagicMock()
+        mock_client.reset_mock()
         notify_owner_if_unit_vacant(sender=Renter, instance=renter)
-        mock_whatsapp.assert_called_once()
+        mock_client.return_value.messages.create.assert_called_once()
 
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @override_settings(ENABLE_WHATSAPP=True)
+    @patch("notification.adapters.whatsapp.Client")
     def test_deactivated_no_other_active_no_whatsapp_number_skips(
-        self, mock_whatsapp, unit, owner
+        self, mock_client, unit, owner
     ):
         owner.whatsapp_number = ""
         owner.save(update_fields=["whatsapp_number"])
         renter = RenterFactory(unit=unit, status=Renter.RenterStatus.DEACTIVATED)
         notify_owner_if_unit_vacant(sender=Renter, instance=renter)
-        mock_whatsapp.assert_not_called()
+        mock_client.return_value.messages.create.assert_not_called()
 
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
-    def test_deactivated_other_active_renters_exist_skips(self, mock_whatsapp, unit):
+    @override_settings(ENABLE_WHATSAPP=True)
+    @patch("notification.adapters.whatsapp.Client")
+    def test_deactivated_other_active_renters_exist_skips(self, mock_client, unit):
         RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
         deactivated_renter = RenterFactory(
             unit=unit, status=Renter.RenterStatus.DEACTIVATED
         )
         notify_owner_if_unit_vacant(sender=Renter, instance=deactivated_renter)
-        mock_whatsapp.assert_not_called()
+        mock_client.return_value.messages.create.assert_not_called()
 
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
-    def test_active_status_skips(self, mock_whatsapp, unit):
+    @override_settings(ENABLE_WHATSAPP=True)
+    @patch("notification.adapters.whatsapp.Client")
+    def test_active_status_skips(self, mock_client, unit):
         renter = RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
         notify_owner_if_unit_vacant(sender=Renter, instance=renter)
-        mock_whatsapp.assert_not_called()
+        mock_client.return_value.messages.create.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

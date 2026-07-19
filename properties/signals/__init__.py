@@ -164,7 +164,9 @@ def update_renter_defaulter_status(rent: RentRecord) -> None:
         rent.status == RentRecord.Status.PENDING
         and rent.due_date < timezone.now().date()
     ):
-        from notification.services.services import notify_owner_renter_flagged
+        from notification.services.rent_notify_service import (
+            notify_owner_renter_flagged,
+        )
 
         renter = rent.renter
         if renter is None:
@@ -193,14 +195,14 @@ def notify_owner_if_unit_vacant(
         unit = instance.unit
 
         if not Renter.objects.filter(unit=unit, status="active").exists():
-            from notification.services.whatsapp_service import send_whatsapp_message
+            from notification.services.notification_service import NotificationService
 
             profile = getattr(owner, "userprofile", None)
             phone = (
                 getattr(profile, "whatsapp_number", None) if profile else None
             ) or getattr(owner, "whatsapp_number", "")
             if phone:
-                send_whatsapp_message(
+                NotificationService().send_whatsapp_message(
                     phone,
                     (
                         f"Unit {unit.unit} is now vacant. "

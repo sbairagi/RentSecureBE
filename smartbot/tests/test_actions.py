@@ -24,7 +24,9 @@ class SendRentReminderTests(TestCase):
         self.renter = RenterFactory()
 
     def test_sends_reminder_and_returns_success(self):
-        with patch("smartbot.actions.send_whatsapp_message") as mock_whatsapp:
+        with patch(
+            "notification.services.notification_service.NotificationService.send_whatsapp_message"
+        ) as mock_whatsapp:
             result = send_rent_reminder(self.renter.name)
         mock_whatsapp.assert_called_once()
         self.assertIn("✅", result)
@@ -41,7 +43,7 @@ class RetryPayoutTests(TestCase):
     def setUp(self):
         self.rent_record = RentRecordFactory(status="pending")
 
-    @patch("smartbot.actions.process_rent_payout")
+    @patch("payments.services.payment_service.PaymentService.process_payout")
     def test_retry_payout_success(self, mock_process):
         mock_process.return_value = {"status": "SUCCESS"}
         result = retry_payout(self.rent_record.renter.name)

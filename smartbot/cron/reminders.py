@@ -1,6 +1,6 @@
 import logging
 
-from notification.services.whatsapp_service import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 from properties.models import RentAgreementDraft
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ def send_signature_reminders() -> None:
             )
             continue
         try:
-            send_whatsapp_message(
+            NotificationService().send_whatsapp_message(
                 phone, "🖊️ Reminder: Please sign your rent agreement."
             )
         except Exception:

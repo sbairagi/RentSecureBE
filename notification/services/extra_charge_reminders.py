@@ -3,18 +3,14 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from notification.services.voice_service import generate_voice_note
-from notification.services.whatsapp_service import (
-    send_whatsapp_audio,
-    send_whatsapp_message,
-)
+from notification.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
 
 def send_due_extra_charge_reminders(days_ahead: int = 0) -> int:
-    from notification.services.i18n_service import translate_msg  # nosonar
-    from properties.models.extra_charge_models import ExtraCharge  # nosonar
+    from notification.services.i18n_service import translate_msg
+    from properties.models.extra_charge_models import ExtraCharge
 
     target_date = timezone.now().date() + timedelta(days=days_ahead)
     charges = ExtraCharge.objects.filter(
@@ -41,15 +37,15 @@ def send_due_extra_charge_reminders(days_ahead: int = 0) -> int:
         translated_message = translate_msg(message, lang)
 
         try:
-            send_whatsapp_message(phone, translated_message)
+            NotificationService().send_whatsapp_message(phone, translated_message)
         except Exception as e:
             logger.warning(f"Failed to send WhatsApp message to {phone}: {e}")
             continue
 
-        audio_path = generate_voice_note(translated_message, lang)
+        audio_path = NotificationService().generate_voice_note(translated_message, lang)
         if audio_path:
             try:
-                send_whatsapp_audio(phone, audio_path)
+                NotificationService().send_whatsapp_audio(phone, audio_path)
             except Exception as e:
                 logger.warning(f"Failed to send WhatsApp audio to {phone}: {e}")
                 continue

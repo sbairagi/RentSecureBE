@@ -12,11 +12,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from notification.services.voice_service import generate_voice_note  # nosonar
-from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
-from notification.services.whatsapp_service import (
-    send_whatsapp_message,  # nosonar; nosonar
-)
+from notification.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +29,11 @@ def send_thank_you_voice_note(rent: Any) -> None:
         "jama kiya. Aapki samay par payment ki hum sarahna karte hain."
     )
 
-    audio_path: str | None = generate_voice_note(msg, lang="hi")
+    audio_path: str | None = NotificationService().generate_voice_note(msg, lang="hi")
     if audio_path is not None and rent.renter.whatsapp_number:
-        send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)
+        NotificationService().send_whatsapp_audio(
+            rent.renter.whatsapp_number, audio_path
+        )
 
 
 def send_late_rent_reminder(rent: Any) -> None:
@@ -57,9 +55,11 @@ def send_late_rent_reminder(rent: Any) -> None:
         "Kripya jald se jald jama karein. Dhanyawaad."
     )
 
-    audio_path: str | None = generate_voice_note(msg, lang="hi")
+    audio_path: str | None = NotificationService().generate_voice_note(msg, lang="hi")
     if audio_path is not None and rent.renter.whatsapp_number:
-        send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)
+        NotificationService().send_whatsapp_audio(
+            rent.renter.whatsapp_number, audio_path
+        )
 
     RentReminderLog.objects.create(
         renter=rent.renter,
@@ -78,4 +78,4 @@ def alert_owner_about_delay(rent: Any) -> None:
         f"has not paid rent ₹{rent.amount} due on {rent.due_date}."
     )
     if owner.whatsapp_number:
-        send_whatsapp_message(owner.whatsapp_number, msg)
+        NotificationService().send_whatsapp_message(owner.whatsapp_number, msg)

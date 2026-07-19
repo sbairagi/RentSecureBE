@@ -5,14 +5,13 @@ from typing import Any
 
 from django.utils.timezone import now
 
-from notification.services.voice_service import generate_voice_note  # nosonar
-from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
+from notification.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
 
 def get_upcoming_rent_dues() -> Any:
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    from properties.models.rent_record_models import RentRecord
 
     target_date = now().date() + timedelta(days=3)
     return RentRecord.objects.filter(due_date=target_date)
@@ -63,9 +62,9 @@ def process_rent_reminders() -> None:
         if phone:
             msg = generate_rent_reminder_msg(rent)
             try:
-                audio_path = generate_voice_note(msg, lang)
+                audio_path = NotificationService().generate_voice_note(msg, lang)
                 if audio_path:
-                    send_whatsapp_audio(phone, audio_path)
+                    NotificationService().send_whatsapp_audio(phone, audio_path)
             except OSError:
                 logger.exception("Failed to send rent reminder for rent %s", rent.id)
 
@@ -81,9 +80,9 @@ def process_tax_reminders() -> None:
         if phone:
             msg = generate_tax_reminder_msg(tax)
             try:
-                audio_path = generate_voice_note(msg, lang)
+                audio_path = NotificationService().generate_voice_note(msg, lang)
                 if audio_path:
-                    send_whatsapp_audio(phone, audio_path)
+                    NotificationService().send_whatsapp_audio(phone, audio_path)
             except OSError:
                 logger.exception(
                     "Failed to send tax reminder for tax record %s", tax.id

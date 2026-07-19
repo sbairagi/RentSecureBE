@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from notification.services.whatsapp_service import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 from properties.models import Renter
 from properties.utils.onboarding_utils import generate_onboarding_link
 
@@ -58,7 +58,9 @@ def send_renter_onboarding_invite(renter: Renter) -> bool:
             f"you and your landlord."
         )
 
-        result: bool = bool(send_whatsapp_message(renter.phone, message))
+        result: bool = bool(
+            NotificationService().send_whatsapp_message(renter.phone, message)
+        )
 
         if result:
             renter.onboarding_status = Renter.OnboardingStatus.LINK_SENT
@@ -106,7 +108,9 @@ def send_renter_onboarding_reminder(renter: Renter) -> bool:
             f"Questions? Contact your landlord or our support team."
         )
 
-        result: bool = bool(send_whatsapp_message(renter.phone, message))
+        result: bool = bool(
+            NotificationService().send_whatsapp_message(renter.phone, message)
+        )
         logger.info("Onboarding reminder sent to renter %s", renter.id)
         return result
     except Exception as exc:
@@ -123,9 +127,7 @@ def notify_owner_renter_completed_kyc(renter: Renter) -> bool:
     Returns:
         ``True`` if the WhatsApp was sent, otherwise ``False``.
     """
-    from notification.services.whatsapp_service import (
-        send_whatsapp_message as _send_whatsapp,
-    )
+    from notification.services.notification_service import NotificationService
 
     owner = getattr(renter.unit, "owner", None)
     if owner is None:
@@ -152,7 +154,9 @@ def notify_owner_renter_completed_kyc(renter: Renter) -> bool:
             f"payments from your dashboard."
         )
 
-        result: bool = bool(_send_whatsapp(whatsapp_number, message))
+        result: bool = bool(
+            NotificationService().send_whatsapp_message(whatsapp_number, message)
+        )
         logger.info("KYC completion notification sent to owner %s", owner.id)
         return result
     except Exception as exc:

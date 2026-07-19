@@ -5,7 +5,7 @@ from typing import Any
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from notification.services.whatsapp_service import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 from properties.models import Unit
 from shared.type_compat import override
 
@@ -58,22 +58,22 @@ class Command(BaseCommand):
     def _send_whatsapp_alert(self, owner: Any, message: str) -> bool:
         if not owner.whatsapp_number:
             return False
-        return send_whatsapp_message(owner.whatsapp_number, message)
+        return NotificationService().send_whatsapp_message(
+            owner.whatsapp_number, message
+        )
 
     def _send_email_alert(self, owner: Any, unit_label: str, message: str) -> bool:
         if not owner.email:
             return False
         try:
-            from django.core.mail import send_mail
+            from notification.services.notification_service import NotificationService
 
-            send_mail(
+            return NotificationService().send_email(
                 subject="Vacant Unit Alert",
                 message=message,
-                from_email="no-reply@rentsecure.in",
                 recipient_list=[owner.email],
-                fail_silently=False,
+                from_email="no-reply@rentsecure.in",
             )
-            return True
         except Exception as exc:
             logger.warning(
                 f"Failed to send vacancy email to {owner.email} "

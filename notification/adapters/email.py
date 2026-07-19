@@ -1,25 +1,29 @@
-from typing import Any
+from __future__ import annotations
+
+from django.conf import settings
+from django.core.mail import EmailMessage
 
 
 class EmailAdapter:
-    """Email notification adapter.
-
-    This adapter is enabled and will be implemented in a later task.
-    """
-
-    def send_whatsapp_message(self, phone: str, text: str) -> bool:
-        raise NotImplementedError
-
-    def send_whatsapp_audio(self, phone: str, audio_path: str) -> bool:
-        raise NotImplementedError
-
-    def send_sms(self, phone: str, message: str) -> bool:
-        raise NotImplementedError
-
-    def send_push_notification(
-        self, user: Any, title: str, message: str
-    ) -> bool | None:
-        raise NotImplementedError
-
-    def generate_voice_note(self, text: str, lang: str) -> str:
-        raise NotImplementedError
+    def send_email(
+        self,
+        subject: str,
+        message: str,
+        recipient_list: list[str],
+        from_email: str | None = None,
+        attachments: list[tuple[str, bytes, str]] | None = None,
+    ) -> bool:
+        try:
+            email = EmailMessage(
+                subject=subject,
+                body=message,
+                from_email=from_email or getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                to=recipient_list,
+            )
+            if attachments:
+                for filename, content, content_type in attachments:
+                    email.attach(filename, content, content_type)
+            email.send(fail_silently=False)
+            return True
+        except Exception:
+            return False

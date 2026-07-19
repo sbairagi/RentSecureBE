@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.utils.timezone import now
 
-from notification.services.whatsapp_service import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 from payments.adapters.cashfree import CashfreeAdapter
 from payments.services.payment_service import PaymentService
 from properties.models import RentRecord
@@ -48,7 +48,7 @@ def _notify_owner_on_successful_retry(rent: RentRecord) -> None:
         return
     phone: str | None = getattr(owner, "whatsapp_number", None)
     if phone:
-        send_whatsapp_message(
+        NotificationService().send_whatsapp_message(
             phone,
             (
                 f"✅ Rent ₹{rent.amount} has now been credited "

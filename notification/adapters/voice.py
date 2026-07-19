@@ -1,26 +1,33 @@
-from typing import Any
+from __future__ import annotations
+
+import asyncio
+import os
+import tempfile
+
+import edge_tts
+
+LANGUAGE_CODE_MAP = {
+    "en": "en-US",
+    "hi": "hi-IN",
+}
 
 
 class VoiceAdapter:
-    """Voice notification adapter.
-
-    This adapter is disabled behind a feature flag
-    and will be implemented in a later task.
-    """
-
-    def send_whatsapp_message(self, phone: str, text: str) -> bool:
-        raise NotImplementedError
-
-    def send_whatsapp_audio(self, phone: str, audio_path: str) -> bool:
-        raise NotImplementedError
-
-    def send_sms(self, phone: str, message: str) -> bool:
-        raise NotImplementedError
-
-    def send_push_notification(
-        self, user: Any, title: str, message: str
-    ) -> bool | None:
-        raise NotImplementedError
-
     def generate_voice_note(self, text: str, lang: str) -> str:
-        raise NotImplementedError
+        try:
+            edge_lang = LANGUAGE_CODE_MAP.get(lang, lang)
+
+            async def _generate(path: str) -> str:
+                communicate = edge_tts.Communicate(text, edge_lang)
+                await communicate.save(path)
+                return path
+
+            fd, path = tempfile.mkstemp(suffix=".mp3")
+            os.close(fd)
+            try:
+                return asyncio.run(_generate(path))
+            finally:
+                pass
+        except Exception as e:
+            print("Voice note generation failed:", e)
+            return ""

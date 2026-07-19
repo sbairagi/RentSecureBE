@@ -16,6 +16,9 @@ logic or adding new model fields.
 import logging
 from typing import Any
 
+from notification.models import Notification
+from notification.services.notification_service import NotificationService
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,12 +43,7 @@ def _renter_lang(renter: Any, default: str = "en") -> str:
 
 
 def notify_renter(renter: Any, message: str) -> None:
-    from notification.services.i18n_service import translate_msg  # nosonar
-    from notification.services.voice_service import generate_voice_note  # nosonar
-    from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
-    from notification.services.whatsapp_service import (
-        send_whatsapp_message,  # nosonar; nosonar
-    )
+    from notification.services.i18n_service import translate_msg
 
     lang = _renter_lang(renter, default="en")
     phone = _renter_phone(renter)
@@ -54,29 +52,24 @@ def notify_renter(renter: Any, message: str) -> None:
         translated_text = translate_msg(message, lang)
     except Exception as e:
         logger.exception(f"Translation failed for user {renter.id}: {e}")
-        translated_text = message  # fallback to original
+        translated_text = message
 
     try:
         if phone:
-            send_whatsapp_message(phone, translated_text)
+            NotificationService().send_whatsapp_message(phone, translated_text)
     except Exception as e:
         logger.exception(f"WhatsApp text message failed for user {renter.id}: {e}")
 
     try:
-        audio_path = generate_voice_note(translated_text, lang)
+        audio_path = NotificationService().generate_voice_note(translated_text, lang)
         if audio_path and phone:
-            send_whatsapp_audio(phone, audio_path)
+            NotificationService().send_whatsapp_audio(phone, audio_path)
     except Exception as e:
         logger.exception(f"WhatsApp voice note failed for user {renter.id}: {e}")
 
 
 def notify_owner(owner: Any, message: str) -> None:
-    from notification.services.i18n_service import translate_msg  # nosonar
-    from notification.services.voice_service import generate_voice_note  # nosonar
-    from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
-    from notification.services.whatsapp_service import (
-        send_whatsapp_message,  # nosonar; nosonar
-    )
+    from notification.services.i18n_service import translate_msg
 
     lang = getattr(getattr(owner, "profile", None), "language_preference", None) or "en"
     phone = (
@@ -89,18 +82,18 @@ def notify_owner(owner: Any, message: str) -> None:
         translated_text = translate_msg(message, lang)
     except Exception as e:
         logger.exception(f"Translation failed for user {owner.id}: {e}")
-        translated_text = message  # fallback to original
+        translated_text = message
 
     try:
         if phone:
-            send_whatsapp_message(phone, translated_text)
+            NotificationService().send_whatsapp_message(phone, translated_text)
     except Exception as e:
         logger.exception(f"WhatsApp text message failed for user {owner.id}: {e}")
 
     try:
-        audio_path = generate_voice_note(translated_text, lang)
+        audio_path = NotificationService().generate_voice_note(translated_text, lang)
         if audio_path and phone:
-            send_whatsapp_audio(phone, audio_path)
+            NotificationService().send_whatsapp_audio(phone, audio_path)
     except Exception as e:
         logger.exception(f"WhatsApp voice note failed for user {owner.id}: {e}")
 
@@ -133,12 +126,7 @@ def send_payout_notification(rent: Any) -> None:
 
 
 def notify_owner_post_payout(rent: Any) -> None:
-    from notification.services.i18n_service import translate_msg  # nosonar
-    from notification.services.voice_service import generate_voice_note  # nosonar
-    from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
-    from notification.services.whatsapp_service import (
-        send_whatsapp_message,  # nosonar; nosonar
-    )
+    from notification.services.i18n_service import translate_msg
 
     owner = rent.renter.unit.owner
     profile = getattr(owner, "profile", None)
@@ -157,12 +145,27 @@ def notify_owner_post_payout(rent: Any) -> None:
         )
 
     translated_msg = translate_msg(msg, lang)
-    audio_path = generate_voice_note(translated_msg, lang=lang)
+    audio_path = NotificationService().generate_voice_note(translated_msg, lang=lang)
 
-    # 1. Send text
     if phone:
-        send_whatsapp_message(phone, translated_msg)
+        NotificationService().send_whatsapp_message(phone, translated_msg)
 
-    # 2. Send voice note
     if audio_path and phone:
-        send_whatsapp_audio(phone, audio_path)
+        NotificationService().send_whatsapp_audio(phone, audio_path)
+
+
+def notify_user(user: Any, title: str, message: str) -> None:
+    Notification.objects.create(user=user, title=title, message=message)
+
+
+def notify_owner_renter_flagged(renter: Any) -> None:
+    owner = renter.property.owner
+    msg = (
+        f"🚨 Alert: Renter {renter.name} missed 3 rent payments. "
+        "Their rent agreement has been revoked."
+    )
+    NotificationService().send_whatsapp_message(
+        getattr(getattr(owner, "profile", None), "whatsapp_number", None)
+        or getattr(owner, "whatsapp_number", ""),
+        msg,
+    )

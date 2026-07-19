@@ -3,12 +3,11 @@ from __future__ import annotations
 import secrets
 from datetime import timedelta
 
-from twilio.rest import Client
-
 from django.conf import settings
 from django.utils import timezone
 
 from core.services.base import BaseService
+from notification.services.notification_service import NotificationService
 from shared.exceptions import ValidationError
 
 from ..models import OTP
@@ -61,11 +60,7 @@ class OTPService(BaseService):
 
 
 def _deliver_otp(phone_number: str, code: str) -> None:
-    if not settings.DEBUG:
-        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-        message = f"Your verification code is {code}"
-        client.messages.create(
-            body=message, from_=settings.TWILIO_PHONE_NUMBER, to=phone_number
-        )
-    else:
+    if settings.DEBUG:
         print(f"[MOCK OTP to {phone_number}] Your OTP is {code}")
+    else:
+        NotificationService().send_otp(phone_number, code)

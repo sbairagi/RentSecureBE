@@ -9,7 +9,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from notification.utils import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 
 from ..models import Building, Renter, RentRecord
 from ..serializers import RenterRentRecordSerializer
@@ -61,7 +61,7 @@ def revoke_rent_agreement(request: DRFRequest, renter_id: int) -> Response:
 
     update_unit_status(renter.unit)
 
-    send_whatsapp_message(
+    NotificationService().send_whatsapp_message(
         renter.phone,
         (
             "⚠️ Your rent agreement has been revoked by the owner. "

@@ -2,7 +2,7 @@ from typing import Any
 
 from django.core.files.storage import default_storage
 
-from notification.utils import send_whatsapp_message
+from notification.services.notification_service import NotificationService
 from payments.adapters.cashfree import CashfreeAdapter
 from payments.services.payment_service import PaymentService
 from properties.models import Renter, RentRecord
@@ -19,7 +19,7 @@ def send_rent_reminder(renter_name: str) -> str:
             f"📢 Rent Reminder: Please pay your rent ₹{renter.rent_amount} "
             f"for {renter.property.name}."
         )
-        send_whatsapp_message(renter.phone, msg)
+        NotificationService().send_whatsapp_message(renter.phone, msg)
         return f"✅ Reminder sent to {renter.name}"
     except Renter.DoesNotExist:
         return "❌ Renter not found."

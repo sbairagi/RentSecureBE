@@ -2,13 +2,14 @@ from datetime import date
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from core.models import UserProfile
 from notification.services.extra_charge_reminders import send_due_extra_charge_reminders
 from properties.models import ExtraCharge, Renter, Unit
 
 
+@override_settings(ENABLE_WHATSAPP=True, ENABLE_VOICE=True)
 class ExtraChargeReminderTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
@@ -56,9 +57,15 @@ class ExtraChargeReminderTests(TestCase):
             start_date=date.today(),
         )
 
-    @patch("notification.services.extra_charge_reminders.send_whatsapp_audio")
-    @patch("notification.services.extra_charge_reminders.send_whatsapp_message")
-    @patch("notification.services.extra_charge_reminders.generate_voice_note")
+    @patch(
+        "notification.services.notification_service.NotificationService.send_whatsapp_audio"
+    )
+    @patch(
+        "notification.services.notification_service.NotificationService.send_whatsapp_message"
+    )
+    @patch(
+        "notification.services.notification_service.NotificationService.generate_voice_note"
+    )
     @patch("notification.services.i18n_service.translate_msg")
     def test_send_due_extra_charge_reminders_sends_text_and_audio(
         self,
@@ -93,7 +100,9 @@ class ExtraChargeReminderTests(TestCase):
             "/tmp/fake.mp3",
         )
 
-    @patch("notification.services.extra_charge_reminders.send_whatsapp_message")
+    @patch(
+        "notification.services.notification_service.NotificationService.send_whatsapp_message"
+    )
     def test_send_due_extra_charge_reminders_skips_paid_and_non_due_charges(
         self, mock_send_whatsapp_message
     ):

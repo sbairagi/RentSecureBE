@@ -15,8 +15,8 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 
 from core.models import User
+from notification.services.notification_service import NotificationService
 from notification.services.rent_notify_service import send_payout_notification
-from notification.utils import send_whatsapp_message
 from payments.adapters.cashfree import CashfreeAdapter
 from payments.adapters.razorpay import RazorpayAdapter
 from payments.services.payment_service import PaymentService
@@ -73,7 +73,7 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
             link = PaymentService(RazorpayAdapter()).create_payment_link(rent)
             rent.payment_link = link
             rent.save(update_fields=["payment_link"])
-            send_whatsapp_message(
+            NotificationService().send_whatsapp_message(
                 rent.renter.phone if rent.renter else "", f"📩 Pay your rent: {link}"
             )
         except Exception as e:
