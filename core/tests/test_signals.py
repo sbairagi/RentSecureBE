@@ -3,7 +3,8 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from core.models import NotificationPreference, UserProfile
+from core.models import UserProfile
+from notification.models import NotificationPreference
 
 User = get_user_model()
 
@@ -28,8 +29,8 @@ class UserSignalTest(TestCase):
             full_name="Sig User 2",
             phone="+2",
         )
-        self.assertTrue(hasattr(user, "notification_preference"))
-        self.assertIsInstance(user.notification_preference, NotificationPreference)
+        self.assertTrue(hasattr(user, "notification_preferences"))
+        self.assertIsInstance(user.notification_preferences, NotificationPreference)
 
     def test_user_creation_assigns_free_plan(self):
         user = User.objects.create_user(
@@ -62,8 +63,10 @@ class UserSignalTest(TestCase):
             full_name="Sig User 5",
             phone="+5",
         )
-        prefs = user.notification_preference
+        prefs = user.notification_preferences
         self.assertTrue(prefs.rent_alerts_whatsapp)
         self.assertTrue(prefs.rent_alerts_email)
         self.assertTrue(prefs.monthly_summary_email)
         self.assertFalse(prefs.monthly_summary_whatsapp)
+        self.assertTrue(prefs.payout_alerts_whatsapp)
+        self.assertFalse(prefs.payout_alerts_email)

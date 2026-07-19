@@ -4,7 +4,8 @@ from typing import Any
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from core.models import NotificationPreference, User, UserProfile
+from core.models import User, UserProfile
+from notification.models import NotificationPreference
 
 from .models import PlanFeatureLimit, SubscriptionPlan, UserSubscription
 
@@ -19,7 +20,7 @@ def assign_default_plan(
     if created:
         if not hasattr(instance, "userprofile"):
             UserProfile.objects.create(user=instance)
-        if not hasattr(instance, "notification_preference"):
+        if not hasattr(instance, "notification_preferences"):
             NotificationPreference.objects.create(owner=instance)
         default_plan, _ = SubscriptionPlan.objects.get_or_create(
             name="free",

@@ -90,6 +90,15 @@ class NotificationPreference(UpsertMixin, models.Model):
     _upsert_filter_fields = ("owner",)
     _upsert_skip_fields = frozenset({"id", "owner"})
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        warnings.warn(
+            "core.models.NotificationPreference is deprecated. "
+            "Use notification.models.NotificationPreference instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
+
     @override
     def __str__(self) -> str:
         return f"Notification Preferences for {self.owner.email or self.owner.username}"

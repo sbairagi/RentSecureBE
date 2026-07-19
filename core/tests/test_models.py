@@ -3,7 +3,7 @@ import warnings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from core.models import OwnerBankDetails
+from core.models import NotificationPreference, OwnerBankDetails
 
 
 class TestOwnerBankDetailsDeprecationShim(TestCase):
@@ -60,3 +60,56 @@ class TestOwnerBankDetailsDeprecationShim(TestCase):
         retrieved = OwnerBankDetails.objects.get(owner=self.user)
         self.assertEqual(retrieved.owner, self.user)
         self.assertEqual(retrieved.bank_account_number, "9999999999")
+
+
+class TestNotificationPreferenceDeprecationShim(TestCase):
+    def setUp(self):
+        self.user_model = get_user_model()
+        self.user = self.user_model.objects.create_user(
+            username="notification_pref_deprecation_user",
+            email="notif@example.com",
+            password="testpass123",
+        )
+
+    def test_notification_preference_emits_deprecation_warning(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            NotificationPreference(owner=self.user)
+            deprecation_warnings = [
+                x for x in w if issubclass(x.category, DeprecationWarning)
+            ]
+            self.assertTrue(
+                any(
+                    "deprecated" in str(warning.message)
+                    for warning in deprecation_warnings
+                ),
+                "Expected DeprecationWarning when instantiating core.models.NotificationPreference",
+            )
+
+    def test_notification_preference_shim_maps_to_core_table(self):
+        self.assertEqual(
+            NotificationPreference._meta.db_table, "core_notificationpreference"
+        )
+
+    def test_notification_preference_shim_has_all_fields(self):
+        expected_fields = {
+            "id",
+            "owner",
+            "rent_alerts_whatsapp",
+            "rent_alerts_email",
+            "monthly_summary_email",
+            "monthly_summary_whatsapp",
+            "payout_alerts_whatsapp",
+            "payout_alerts_email",
+        }
+        actual_fields = {f.name for f in NotificationPreference._meta.get_fields()}
+        self.assertEqual(actual_fields, expected_fields)
+
+    def test_notification_preference_shim_can_create_and_read(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            pref = NotificationPreference.objects.create(owner=self.user)
+        self.assertIsNotNone(pref.pk)
+        retrieved = NotificationPreference.objects.get(owner=self.user)
+        self.assertEqual(retrieved.owner, self.user)
+        self.assertTrue(retrieved.rent_alerts_whatsapp)

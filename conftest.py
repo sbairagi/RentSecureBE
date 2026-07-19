@@ -55,13 +55,13 @@ if len(settings.SECRET_KEY) < 32:
 
 from core.models import (  # noqa: E402
     AddOnPurchase,
-    NotificationPreference,
     OwnerBankDetails,
     PlanFeatureLimit,
     SubscriptionPlan,
     UsageLimit,
     UserSubscription,
 )
+from notification.models import NotificationPreference  # noqa: E402
 from properties.models import (  # noqa: E402
     Building,
     Caretaker,
