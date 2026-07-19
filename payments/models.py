@@ -19,11 +19,14 @@ class OwnerBankDetails(models.Model):
     account_holder_name = models.CharField(max_length=100, blank=True, default="")
     beneficiary_id = models.CharField(max_length=100, unique=True, blank=True)
     bank_account_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=None, blank=True, null=True)
+    updated_at = models.DateTimeField(default=None, blank=True, null=True)
 
     class Meta:
         db_table = "payment_ownerbankdetails"
         verbose_name = "Owner Bank Details"
         verbose_name_plural = "Owner Bank Details"
+        unique_together = ("owner", "bank_account_number")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         if "owner" in kwargs:
