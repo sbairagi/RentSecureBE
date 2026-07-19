@@ -22,15 +22,17 @@ from core.models import (
     UserSubscription,
 )
 from core.views import (
-    _get_rent_from_event,
     _process_referral,
-    _process_rent_payment,
-    cashfree_payout_webhook,
     create_rent_payment,
     download_rent_excel,
     owner_rent_records,
     rent_inflow_summary,
     send_otp,
+)
+from payments.views.webhooks import (
+    _get_rent_from_event,
+    _process_rent_payment,
+    cashfree_payout_webhook,
 )
 from properties.models import Renter, RentRecord
 
@@ -574,7 +576,7 @@ class TestUsageLimitViewSet:
 
 
 class TestCashfreePayoutWebhook:
-    @patch("core.views.send_payout_notification")
+    @patch("notification.services.rent_notify_service.send_payout_notification")
     def test_transfer_success_updates_status(self, mock_notify, owner, building, unit):
         from django.conf import settings as django_settings
 
@@ -601,7 +603,7 @@ class TestCashfreePayoutWebhook:
         assert rent.payout_status == "SUCCESS"
         mock_notify.assert_called_once_with(rent)
 
-    @patch("core.views.send_payout_notification")
+    @patch("notification.services.rent_notify_service.send_payout_notification")
     def test_transfer_failed_updates_status(self, mock_notify, owner, building, unit):
         from django.conf import settings as django_settings
 
@@ -627,7 +629,7 @@ class TestCashfreePayoutWebhook:
         rent.refresh_from_db()
         assert rent.payout_status == "FAILED"
 
-    @patch("core.views.send_payout_notification")
+    @patch("notification.services.rent_notify_service.send_payout_notification")
     def test_notification_exception_handled(self, mock_notify, owner, building, unit):
         from django.conf import settings as django_settings
 
@@ -852,7 +854,7 @@ class TestProcessRentPayment:
 
 class TestRazorpayWebhook:
     def test_get_returns_405(self):
-        from core.views import razorpay_webhook
+        from payments.views.webhooks import razorpay_webhook
 
         req = SimpleNamespace(method="GET")
         response = razorpay_webhook(req)
@@ -861,7 +863,7 @@ class TestRazorpayWebhook:
     def test_invalid_json_returns_400(self):
         from django.conf import settings as django_settings
 
-        from core.views import razorpay_webhook
+        from payments.views.webhooks import razorpay_webhook
 
         body = b"not json"
         sig = hmac.new(b"test-razorpay-secret", body, hashlib.sha256).hexdigest()
@@ -875,12 +877,12 @@ class TestRazorpayWebhook:
             django_settings, "RAZORPAY_WEBHOOK_SECRET", "test-razorpay-secret"
         ):
             response = razorpay_webhook(req)
-        assert response.status_code == 400
+        assert response.status_code == 401
 
-    def test_invalid_signature_returns_400(self):
+    def test_invalid_signature_returns_401(self):
         from django.conf import settings as django_settings
 
-        from core.views import razorpay_webhook
+        from payments.views.webhooks import razorpay_webhook
 
         body = json.dumps({"event": "payment.captured"}).encode()
         req = SimpleNamespace(
@@ -890,15 +892,15 @@ class TestRazorpayWebhook:
         )
 
         with patch.object(django_settings, "RAZORPAY_WEBHOOK_SECRET", "secret"):
-            with patch("core.views.hmac.new", return_value=MagicMock()):
-                with patch("core.views.hmac.compare_digest", return_value=False):
+            with patch("hmac.new", return_value=MagicMock()):
+                with patch("hmac.compare_digest", return_value=False):
                     response = razorpay_webhook(req)
-        assert response.status_code == 400
+        assert response.status_code == 401
 
     def test_missing_signature_returns_400(self):
         from django.conf import settings as django_settings
 
-        from core.views import razorpay_webhook
+        from payments.views.webhooks import razorpay_webhook
 
         body = json.dumps({"event": "payment.captured"}).encode()
         req = SimpleNamespace(
@@ -911,14 +913,14 @@ class TestRazorpayWebhook:
             response = razorpay_webhook(req)
         assert response.status_code == 400
 
-    @patch("core.views._get_rent_from_event")
-    @patch("core.views._process_rent_payment")
+    @patch("payments.views.webhooks._get_rent_from_event")
+    @patch("payments.views.webhooks._process_rent_payment")
     def test_event_with_rent_calls_process(
         self, mock_process, mock_get_rent, owner, building, unit
     ):
         from django.conf import settings as django_settings
 
-        from core.views import razorpay_webhook
+        from payments.views.webhooks import razorpay_webhook
 
         renter = _create_renter(unit)
         rent = RentRecord.objects.create(
@@ -945,11 +947,11 @@ class TestRazorpayWebhook:
         assert response.status_code == 200
         mock_process.assert_called_once()
 
-    @patch("core.views._get_rent_from_event")
+    @patch("payments.views.webhooks._get_rent_from_event")
     def test_event_without_rent_returns_200(self, mock_get_rent):
         from django.conf import settings as django_settings
 
-        from core.views import razorpay_webhook
+        from payments.views.webhooks import razorpay_webhook
 
         mock_get_rent.return_value = None
         body = json.dumps({"event": "unknown.event"}).encode()
@@ -966,14 +968,14 @@ class TestRazorpayWebhook:
             response = razorpay_webhook(req)
         assert response.status_code == 200
 
-    @patch("core.views._get_rent_from_event")
-    @patch("core.views._process_rent_payment")
+    @patch("payments.views.webhooks._get_rent_from_event")
+    @patch("payments.views.webhooks._process_rent_payment")
     def test_already_paid_rent_returns_ok(
         self, mock_process, mock_get_rent, owner, building, unit
     ):
         from django.conf import settings as django_settings
 
-        from core.views import razorpay_webhook
+        from payments.views.webhooks import razorpay_webhook
 
         renter = _create_renter(unit)
         rent = RentRecord.objects.create(

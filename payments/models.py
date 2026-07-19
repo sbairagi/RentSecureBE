@@ -41,3 +41,34 @@ class OwnerBankDetails(models.Model):
     @override
     def __str__(self) -> str:
         return f"{self.owner.username} - {self.bank_account_number}"
+
+
+class WebhookEvent(models.Model):
+    class Provider(models.TextChoices):
+        CASHFREE = "CASHFREE", "Cashfree"
+        RAZORPAY = "RAZORPAY", "Razorpay"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        PROCESSED = "PROCESSED", "Processed"
+        FAILED = "FAILED", "Failed"
+
+    event_id = models.CharField(max_length=255, unique=True)
+    provider = models.CharField(max_length=20, choices=Provider.choices)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    payload = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "payment_webhookevent"
+        verbose_name = "Webhook Event"
+        verbose_name_plural = "Webhook Events"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.provider} - {self.event_id} ({self.status})"

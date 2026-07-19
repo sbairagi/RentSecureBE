@@ -2,6 +2,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from django.urls import include, path
+from django.views.generic import RedirectView
 
 from .views import (
     AddOnPurchaseViewSet,
@@ -13,8 +14,6 @@ from .views import (
     SubscriptionPlanViewSet,
     UsageLimitViewSet,
     UserSubscriptionViewSet,
-    cashfree_payout_webhook,
-    razorpay_webhook,
     update_owner_bank_details,
 )
 
@@ -35,11 +34,15 @@ urlpatterns = [
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path(
         "webhook/cashfree/payout/",
-        cashfree_payout_webhook,
-        name="cashfree_payout_webhook",
+        RedirectView.as_view(url="/api/webhook/cashfree/payout/", permanent=True),
+        name="cashfree_payout_webhook_redirect",
+    ),
+    path(
+        "api/rent/payment-callback/",
+        RedirectView.as_view(url="/api/webhook/razorpay/", permanent=True),
+        name="razorpay_webhook_redirect",
     ),
     path("api/owner/update-bank-details/", update_owner_bank_details),
-    path("api/rent/payment-callback/", razorpay_webhook),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),
     path("", include(router.urls)),

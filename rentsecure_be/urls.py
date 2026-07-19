@@ -22,6 +22,7 @@ from django.urls import include, path
 
 urlpatterns: list[object] = [
     path("admin/", admin.site.urls),
+    path("api/webhook/", include("payments.urls")),
     path("api/", include("core.urls")),
     path("api/", include("properties.urls")),
     path("api/notifications/", include("notification.urls")),

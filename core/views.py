@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import hmac
 import json
 import logging
 import uuid
@@ -18,10 +16,7 @@ from rest_framework.views import APIView
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
-from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 from core.services.auth_service import AuthService
 from core.services.bank_details_service import BankDetailsService
@@ -32,7 +27,6 @@ from core.services.referral_service import ReferralService
 from core.services.subscription_service import SubscriptionService
 from core.services.usage_limit_service import UsageLimitService
 from notification.services.notification_service import NotificationService
-from notification.services.rent_notify_service import send_payout_notification
 from payments.adapters.cashfree import CashfreeAdapter
 from payments.services.payment_service import PaymentService
 from properties.utils.export_utils import generate_owner_rent_report
@@ -57,7 +51,7 @@ from .serializers import (
 )
 
 if TYPE_CHECKING:
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -276,67 +270,6 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
         return UsageLimitService.get_user_usage_limits(self.request.user)
 
 
-# ---------------------------------------------------------------------------
-# Webhooks
-# ---------------------------------------------------------------------------
-
-
-# Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
-# from external payment/webhook providers. Those callers do not have browser
-# sessions and therefore cannot supply a CSRF token.
-# Security: Cashfree webhook signature is verified inline below (hmac + sha256)
-# before any business logic executes. The CASHFREE_WEBHOOK_SECRET setting must
-# be configured in production; the endpoint refuses all requests if it is absent.
-@csrf_exempt
-def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
-    """Handle Cashfree payout status webhook.
-
-    Fixed: rent.save() no longer overwrites `rent` with None.
-    Fixed: Removed invalid rent.renter.property.owner chain.
-    """
-    from properties.models.rent_record_models import RentRecord
-
-    if request.method != "POST":
-        return JsonResponse({"error": _ERROR_INVALID_METHOD}, status=405)
-
-    webhook_secret = getattr(settings, "CASHFREE_WEBHOOK_SECRET", None)
-    if not webhook_secret:
-        raise ImproperlyConfigured("CASHFREE_WEBHOOK_SECRET is not set")
-    signature = request.headers.get("X-Cashfree-Signature")
-    if not signature:
-        return JsonResponse({"error": "Missing signature!"}, status=400)
-    if not hmac.compare_digest(
-        hmac.new(
-            webhook_secret.encode("utf-8"), request.body, hashlib.sha256
-        ).hexdigest(),
-        signature,
-    ):
-        logger.warning("Cashfree webhook: invalid signature")
-        return JsonResponse({"error": "Invalid signature!"}, status=400)
-
-    payload = json.loads(request.body)
-    transfer_id = payload.get("transferId")
-    event_status = payload.get("event")
-
-    try:
-        rent = RentRecord.objects.get(payout_reference=transfer_id)
-    except RentRecord.DoesNotExist:
-        return JsonResponse({"error": "Invalid transfer ID"}, status=404)
-
-    if event_status == "TRANSFER_SUCCESS":
-        rent.payout_status = "SUCCESS"
-    elif event_status == "TRANSFER_FAILED":
-        rent.payout_status = "FAILED"
-    rent.save()
-
-    try:
-        send_payout_notification(rent)
-    except Exception as e:
-        logger.exception(f"Failed to send payout notification for rent {rent.id}: {e}")
-
-    return JsonResponse({"message": "Webhook received"}, status=200)
-
-
 def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     """Create a Razorpay order for rent payment."""
     from properties.models.rent_record_models import RentRecord  # nosonar
@@ -377,103 +310,8 @@ def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     )
 
 
-# Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
-# from external payment/webhook providers. Those callers do not have browser
-# sessions and therefore cannot supply a CSRF token.
-# Security: Razorpay webhook signature is verified inline below (hmac + sha256)
-# before any business logic executes. The RAZORPAY_WEBHOOK_SECRET setting must
-# be configured in production; the endpoint refuses all requests if it is absent.
-@csrf_exempt
-def razorpay_webhook(request: HttpRequest) -> JsonResponse:
-    """Single Razorpay webhook handler with HMAC signature verification.
-
-    Handles both payment.captured (order-based) and payment_link.paid events.
-    Consolidated from three duplicate definitions into one secure handler.
-    """
-    from properties.models.rent_record_models import RentRecord  # nosonar
-
-    if request.method != "POST":
-        return JsonResponse({"error": _ERROR_INVALID_METHOD}, status=405)
-
-    body = request.body
-    signature = request.headers.get("X-Razorpay-Signature")
-
-    webhook_secret = getattr(settings, "RAZORPAY_WEBHOOK_SECRET", None)
-    if not webhook_secret:
-        raise ImproperlyConfigured("RAZORPAY_WEBHOOK_SECRET is not set")
-    signature = request.headers.get("X-Razorpay-Signature")
-    if not signature:
-        return JsonResponse({"error": "Missing signature!"}, status=400)
-    if not hmac.compare_digest(
-        hmac.new(webhook_secret.encode("utf-8"), body, hashlib.sha256).hexdigest(),
-        signature,
-    ):
-        logger.warning("Razorpay webhook: invalid signature")
-        return JsonResponse({"error": "Invalid signature!"}, status=400)
-
-    try:
-        data = json.loads(body)
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-    event = data.get("event")
-    rent = _get_rent_from_event(data, event)
-
-    if rent is not None:
-        if rent.payment_status == RentRecord.Status.PAID:
-            return JsonResponse({"status": "ok", "message": "Already processed"})
-        _process_rent_payment(rent)
-
-    return JsonResponse({"status": "ok"})
-
-
-def _get_rent_from_event(data: dict, event: str) -> RentRecord | None:
-    from properties.models.rent_record_models import RentRecord  # nosonar
-
-    if event == "payment_link.paid":
-        try:
-            ref_id = data["payload"]["payment_link"]["entity"]["reference_id"]
-        except (KeyError, TypeError):
-            logger.warning("Razorpay webhook: missing reference_id in payload")
-            return None
-
-        try:
-            return RentRecord.objects.get(id=ref_id)
-        except RentRecord.DoesNotExist:
-            logger.warning(f"Razorpay webhook: RentRecord {ref_id} not found")
-            return None
-
-    if event == "payment.captured":
-        try:
-            razorpay_order_id = data["payload"]["payment"]["entity"]["order_id"]
-        except (KeyError, TypeError):
-            logger.warning("Razorpay webhook: missing order_id in payload")
-            return None
-
-        try:
-            return RentRecord.objects.get(razorpay_order_id=razorpay_order_id)
-        except RentRecord.DoesNotExist:
-            logger.warning(
-                f"Razorpay webhook: RentRecord for order {razorpay_order_id} not found"
-            )
-            return None
-
-    return None
-
-
-def _process_rent_payment(rent: RentRecord) -> None:
-    from properties.models.rent_record_models import RentRecord  # nosonar
-
-    rent.payment_status = RentRecord.Status.PAID
-    rent.date_paid = timezone.now().date()
-    rent.save(update_fields=["status", "paid_on", "updated_at"])
-    try:
-        payment_service = PaymentService(CashfreeAdapter())
-        payment_service.process_payout(rent)
-    except Exception as e:
-        logger.exception(f"Failed to process payout for rent {rent.id}: {e}")
-
-
+# ---------------------------------------------------------------------------
+# Bank Details
 # ---------------------------------------------------------------------------
 # Bank Details
 # ---------------------------------------------------------------------------
