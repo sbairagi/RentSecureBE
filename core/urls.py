@@ -4,17 +4,19 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from django.urls import include, path
 from django.views.generic import RedirectView
 
-from .views import (
-    AddOnPurchaseViewSet,
+from .views.auth_views import (
     ChangePasswordView,
     OwnerVerifyOTP,
     RenterVerifyOTP,
     ResetPasswordView,
     SendOTP,
+)
+from .views.bank_views import update_owner_bank_details
+from .views.subscription_views import (
+    AddOnPurchaseViewSet,
     SubscriptionPlanViewSet,
     UsageLimitViewSet,
     UserSubscriptionViewSet,
-    update_owner_bank_details,
 )
 
 # Subscription End-Points
@@ -47,10 +49,3 @@ urlpatterns = [
     path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),
     path("", include(router.urls)),
 ]
-
-# urls.py
-
-
-# urlpatterns = [
-
-# ]

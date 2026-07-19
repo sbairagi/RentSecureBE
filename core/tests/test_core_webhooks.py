@@ -9,7 +9,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from core.views import _process_referral, create_rent_payment
+from core.views.auth_views import _process_referral
+from core.views.bank_views import create_rent_payment
 from payments.views.webhooks import (
     _get_rent_from_event,
     cashfree_payout_webhook,
@@ -321,7 +322,7 @@ class CreateRentPaymentTests(TestCase):
         response = create_rent_payment(self._make_request({"rent_id": "9999"}))
         self.assertEqual(response.status_code, 404)
 
-    @patch("core.views.razorpay.Client")
+    @patch("core.views.bank_views.razorpay.Client")
     def test_success_returns_order(self, mock_client_cls):
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
@@ -460,7 +461,7 @@ class UpdateOwnerBankDetailsTests(TestCase):
             HTTP_AUTHORIZATION=f"Bearer {token}",
         )
         req.user = user
-        from core.views import update_owner_bank_details
+        from core.views.bank_views import update_owner_bank_details
 
         response = update_owner_bank_details(req)
         self.assertEqual(response.status_code, 400)

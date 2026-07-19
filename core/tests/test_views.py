@@ -21,13 +21,12 @@ from core.models import (
     UsageLimit,
     UserSubscription,
 )
-from core.views import (
-    _process_referral,
-    create_rent_payment,
+from core.views.auth_views import _process_referral, send_otp
+from core.views.bank_views import create_rent_payment
+from core.views.reporting_views import (
     download_rent_excel,
     owner_rent_records,
     rent_inflow_summary,
-    send_otp,
 )
 from payments.views.webhooks import (
     _get_rent_from_event,
@@ -120,19 +119,19 @@ def _create_renter(unit):
 
 
 class TestSendOTPFunction:
-    @patch("core.views.Client")
-    def test_send_otp_debug_mode_prints(self, mock_client_cls):
-        with patch("core.views.settings.DEBUG", True):
+    @patch("core.views.auth_views.NotificationService")
+    def test_send_otp_debug_mode_prints(self, mock_notification_service):
+        with patch("core.views.auth_views.settings.DEBUG", True):
             send_otp("+919999999999", "123456")
-        mock_client_cls.assert_not_called()
+        mock_notification_service.return_value.send_otp.assert_not_called()
 
-    @patch("core.views.Client")
-    def test_send_otp_production_sends_message(self, mock_client_cls):
-        mock_client = MagicMock()
-        mock_client_cls.return_value = mock_client
-        with patch("core.views.settings.DEBUG", False):
+    @patch("core.views.auth_views.NotificationService")
+    def test_send_otp_production_sends_message(self, mock_notification_service):
+        with patch("core.views.auth_views.settings.DEBUG", False):
             send_otp("+919999999999", "123456")
-        mock_client.messages.create.assert_called_once()
+        mock_notification_service.return_value.send_otp.assert_called_once_with(
+            "+919999999999", "123456"
+        )
 
 
 # ===================================================================
@@ -685,7 +684,7 @@ class TestCreateRentPayment:
         response = create_rent_payment(req)
         assert response.status_code == 404
 
-    @patch("core.views.razorpay.Client")
+    @patch("core.views.bank_views.razorpay.Client")
     def test_success_creates_order(self, mock_client_cls, owner, building, unit):
         renter = _create_renter(unit)
         mock_client = MagicMock()
@@ -811,7 +810,7 @@ class TestGetRentFromEvent:
 
 
 class TestProcessRentPayment:
-    @patch("core.views.process_rent_payout")
+    @patch("payments.services.payment_service.PaymentService.process_payout")
     def test_success_marks_paid_and_calls_payout(
         self, mock_payout, owner, building, unit
     ):
@@ -830,7 +829,7 @@ class TestProcessRentPayment:
         assert rent.date_paid is not None
         mock_payout.assert_called_once_with(rent)
 
-    @patch("core.views.process_rent_payout")
+    @patch("payments.services.payment_service.PaymentService.process_payout")
     def test_payout_exception_is_handled(self, mock_payout, owner, building, unit):
         renter = _create_renter(unit)
         rent = RentRecord.objects.create(
@@ -1024,7 +1023,7 @@ class TestUpdateOwnerBankDetails:
         assert response.status_code == 400
 
     @patch("core.services.bank_details_service.add_beneficiary")
-    @patch("core.views.delete_beneficiary")
+    @patch("payments.services.payment_service.PaymentService.delete_beneficiary")
     def test_existing_bank_with_beneficiary_deletes_first(
         self, mock_delete, mock_add, user
     ):
@@ -1173,7 +1172,7 @@ class TestOwnerRentRecordsView:
 
 
 class TestDownloadRentExcelView:
-    @patch("core.views.generate_owner_rent_report")
+    @patch("core.views.reporting_views.generate_owner_rent_report")
     def test_returns_excel_response(self, mock_generate, owner):
         mock_generate.return_value = b"fake_excel_content"
         req = _make_django_request(user=owner, method="get")

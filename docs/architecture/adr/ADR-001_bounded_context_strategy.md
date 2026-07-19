@@ -198,6 +198,16 @@ Each bounded context has a single owning team:
 | Phase 5 | Deprecate `core/` views/services/models (non-identity) |
 | Phase 6 | Event bus, repositories, Redis cache, AI consolidation |
 
+### PR-005: Split `core/views.py` into `core/views/` Package
+
+`core/views.py` was removed and replaced with a `core/views/` package containing four focused modules:
+- `auth_views.py` — OTP, authentication, and password views
+- `subscription_views.py` — Subscription CRUD viewsets
+- `bank_views.py` — Bank details and rent payment views
+- `reporting_views.py` — Owner reporting views
+
+No API changes. No database migration. Backward compatibility is maintained through updated import paths; all existing URLs and behaviors remain unchanged.
+
 ---
 
 ## Future Evolution

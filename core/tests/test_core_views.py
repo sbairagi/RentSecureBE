@@ -9,7 +9,11 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from core.models import OTP, OwnerBankDetails
-from core.views import download_rent_excel, owner_rent_records, rent_inflow_summary
+from core.views.reporting_views import (
+    download_rent_excel,
+    owner_rent_records,
+    rent_inflow_summary,
+)
 
 User = get_user_model()
 API_PREFIX = "/api"
@@ -26,9 +30,7 @@ class SendOTPViewTest(TestCase):
             phone="+919999999999",
         )
 
-    @patch("core.views.Client")
-    def test_send_otp_creates_otp(self, mock_client):
-        mock_client.return_value.messages.create.return_value = None
+    def test_send_otp_creates_otp(self):
         response = self.client.post(
             f"{API_PREFIX}/auth/send-otp/", {"phone": "+919999999999"}
         )
@@ -127,7 +129,7 @@ class ResetPasswordViewTest(TestCase):
         self.access_token = str(refresh.access_token)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
 
-    @patch("core.views.send_otp")
+    @patch("core.views.auth_views.send_otp")
     def test_reset_password_request(self, mock_send):
         response = self.client.post(
             f"{API_PREFIX}/reset-password/", {"new_password": "newpass456"}
@@ -150,7 +152,7 @@ class UpdateOwnerBankDetailsTest(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
 
     @patch("core.services.bank_details_service.add_beneficiary")
-    @patch("core.views.delete_beneficiary")
+    @patch("payments.services.payment_service.PaymentService.delete_beneficiary")
     def test_update_bank_details(self, mock_delete, mock_add):
         mock_delete.return_value = {}
         mock_add.return_value = {"subCode": "200"}
