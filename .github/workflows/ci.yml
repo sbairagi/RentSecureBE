@@ -156,7 +156,7 @@ jobs:
 
   quality:
     name: Stage 3 │ Quality
-    needs: [test-shard-1, test-shard-2, test-shard-3, test-shard-4, shard-validation, contract-tests, architecture, uml, uml-validation]
+    needs: [test-shard-1, test-shard-2, test-shard-3, test-shard-4, shard-validation, contract-tests, architecture, architecture-tests, uml, uml-validation]
     uses: ./.github/workflows/quality.yml
     secrets: inherit
 

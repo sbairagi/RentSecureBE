@@ -96,6 +96,38 @@ jobs:
           set -euo pipefail
           lint-imports --config import-linter.ini
 
+  architecture-tests:
+    name: Stage 5a │ Architecture Regression Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [import-linter]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            api.github.com:443
+            pypi.org:443
+            pypi.pythonhosted.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          cache-key-suffix: "-architecture"
+      - name: Run architecture tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          pytest tests/architecture/ -v --tb=short
+
   dependency-graph:
     name: Stage 5b │ Dependency Graph
     runs-on: ubuntu-latest

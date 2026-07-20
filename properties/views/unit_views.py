@@ -26,7 +26,7 @@ from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from core.models import User
-from rentsecure_be.services.leegality_service import send_agreement_for_signature
+from properties.services.leegality_service import send_agreement_for_signature
 from shared.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer

@@ -11,13 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 def _get_auth_token() -> str | None:
-    from rentsecure_be.utils.cashfree_payout import get_auth_token  # nosonar
+    from payments.utils.cashfree_payout import get_auth_token  # nosonar
 
     return get_auth_token()
 
 
 def _add_beneficiary(data: dict[str, Any]) -> dict[str, Any]:
-    from rentsecure_be.utils.cashfree_payout import add_beneficiary  # nosonar
+    from payments.utils.cashfree_payout import add_beneficiary  # nosonar
 
     return add_beneficiary(data)
 
@@ -28,7 +28,7 @@ def _make_payout(
     remarks: str,
     bene_id: str,
 ) -> dict[str, Any]:
-    from rentsecure_be.utils.cashfree_payout import make_payout  # nosonar
+    from payments.utils.cashfree_payout import make_payout  # nosonar
 
     return make_payout(
         transfer_id=transfer_id,
