@@ -44,5 +44,15 @@ class RazorpayAdapter:
     def register_beneficiary(self, bank_details: Any) -> dict[str, Any]:
         raise NotImplementedError
 
+    def create_order(self, amount: int, currency: str, receipt: str) -> dict[str, Any]:
+        return client.order.create(
+            {
+                "amount": amount,
+                "currency": currency,
+                "receipt": receipt,
+                "payment_capture": 1,
+            }
+        )
+
     def delete_beneficiary(self, beneficiary_id: str) -> dict[str, Any]:
         raise NotImplementedError

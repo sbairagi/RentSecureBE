@@ -684,11 +684,9 @@ class TestCreateRentPayment:
         response = create_rent_payment(req)
         assert response.status_code == 404
 
-    @patch("core.views.bank_views.razorpay.Client")
-    def test_success_creates_order(self, mock_client_cls, owner, building, unit):
+    @patch("payments.adapters.razorpay.client")
+    def test_success_creates_order(self, mock_client, owner, building, unit):
         renter = _create_renter(unit)
-        mock_client = MagicMock()
-        mock_client_cls.return_value = mock_client
         mock_client.order.create.return_value = {
             "id": "order_123",
             "amount": 100000,

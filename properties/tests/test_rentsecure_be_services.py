@@ -15,6 +15,7 @@ from django.test import TestCase
 import rentsecure_be.services.cashfree_service as _cashfree_service_module
 from core.models import OwnerBankDetails
 from properties.models import Building, Renter, RentRecord, Unit
+from properties.models.rent_record_models import RentRecord as _RentRecord
 from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
     pay_owner_after_rent,
@@ -30,7 +31,8 @@ User = get_user_model()
 # cannot import ``properties.models`` without breaking the layered contract,
 # the production module relies on the name being injected at runtime.  We
 # inject it here so tests can exercise the real ``isinstance`` guard.
-_cashfree_service_module.RentRecord = RentRecord
+
+_cashfree_service_module.RentRecord = _RentRecord
 
 
 class RegisterOwnerWithCashfreeTest(TestCase):

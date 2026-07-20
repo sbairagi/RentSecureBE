@@ -3,8 +3,8 @@
 from django.test import TestCase
 
 from rentsecure_be.asgi import django_asgi_app
+from rentsecure_be.type_compat import override
 from rentsecure_be.wsgi import application
-from shared.type_compat import override
 
 
 class TypeCompatTest(TestCase):

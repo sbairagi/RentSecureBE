@@ -5,7 +5,6 @@ import logging
 import uuid
 from typing import Any, cast
 
-import razorpay  # type: ignore[import-untyped]
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -24,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     """Create a Razorpay order for rent payment."""
+    from payments.adapters.razorpay import RazorpayAdapter  # nosonar
     from properties.models.rent_record_models import RentRecord  # nosonar
 
     if request.method != "POST":
@@ -37,16 +37,11 @@ def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     except RentRecord.DoesNotExist:
         return JsonResponse({"error": "Rent record not found"}, status=404)
 
-    client = razorpay.Client(
-        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-    )
-    razorpay_order = client.order.create(
-        {
-            "amount": int(rent.amount * 100),
-            "currency": "INR",
-            "receipt": f"rent_{rent.id}",
-            "payment_capture": 1,
-        }
+    adapter = RazorpayAdapter()
+    razorpay_order = adapter.create_order(
+        amount=int(rent.amount * 100),
+        currency="INR",
+        receipt=f"rent_{rent.id}",
     )
 
     rent.razorpay_order_id = razorpay_order["id"]
