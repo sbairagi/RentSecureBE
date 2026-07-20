@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import Any, cast
 
@@ -15,11 +17,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 
 from core.models import User
-from notification.services.notification_service import NotificationService
-from notification.services.rent_notify_service import send_payout_notification
-from payments.adapters.cashfree import CashfreeAdapter
-from payments.adapters.razorpay import RazorpayAdapter
-from payments.services.payment_service import PaymentService
+from properties.services.payment_orchestrator import PaymentOrchestrator
 from shared.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
@@ -70,12 +68,7 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
         rent = serializer.save()
 
         try:
-            link = PaymentService(RazorpayAdapter()).create_payment_link(rent)
-            rent.payment_link = link
-            rent.save(update_fields=["payment_link"])
-            NotificationService().send_whatsapp_message(
-                rent.renter.phone if rent.renter else "", f"📩 Pay your rent: {link}"
-            )
+            PaymentOrchestrator.create_payment_link(rent)
         except Exception as e:
             logger.warning(f"Failed to create payment link for rent {rent.id}: {e}")
 
@@ -117,10 +110,8 @@ def retry_payout_api(request: DRFRequest, rent_id: int) -> Any:
         return Response({"error": "Payout not retryable"}, status=400)
 
     try:
-        PaymentService(CashfreeAdapter()).process_payout(rent)
+        PaymentOrchestrator.retry_payout(rent)
         rent.refresh_from_db()
-        if rent.payout_status == "SUCCESS":
-            send_payout_notification(rent)
         return Response(
             {"message": "Payout retry attempted", "status": rent.payout_status}
         )

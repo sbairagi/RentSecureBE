@@ -1,3 +1,3 @@
-Architecture Compliance: 100/100 (100%)
-Status: COMPLIANT
-Violations: 0 (CRITICAL: 0, ERROR: 0, WARNING: 0)
+Architecture Compliance: 86/100 (86%)
+Status: VIOLATIONS_DETECTED
+Violations: 2 (CRITICAL: 1, ERROR: 1, WARNING: 0)

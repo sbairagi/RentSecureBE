@@ -177,7 +177,7 @@ class TestRentRecordViewSetCreate:
 
         c = _make_client(owner)
         with patch(
-            "properties.views.rent_record_views.create_payment_link",
+            "properties.services.payment_orchestrator.PaymentOrchestrator.create_payment_link",
             side_effect=RuntimeError("payment provider down"),
         ):
             response = c.post(
@@ -354,12 +354,12 @@ class TestRetryPayoutAPI:
 
         c = _make_client(owner)
         with patch(
-            "properties.views.rent_record_views.process_rent_payout",
+            "properties.services.payment_orchestrator.PaymentOrchestrator.retry_payout",
             return_value=None,
         ):
             with patch.object(rent, "refresh_from_db"):
                 with patch(
-                    "properties.views.rent_record_views.send_payout_notification"
+                    "properties.services.payment_orchestrator.send_payout_notification"
                 ):
                     response = c.post(f"/properties/owner/retry_payout_api/{rent.id}/")
         assert response.status_code == 200
@@ -380,7 +380,7 @@ class TestRetryPayoutAPI:
 
         c = _make_client(owner)
         with patch(
-            "properties.views.rent_record_views.process_rent_payout",
+            "properties.services.payment_orchestrator.PaymentOrchestrator.retry_payout",
             side_effect=RuntimeError("cashfree down"),
         ):
             response = c.post(f"/properties/owner/retry_payout_api/{rent.id}/")

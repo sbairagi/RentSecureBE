@@ -1,9 +1,8 @@
 from datetime import date
 
 from notification.services.notification_service import NotificationService
-from payments.adapters.razorpay import RazorpayAdapter
-from payments.services.payment_service import PaymentService
 from properties.models import Renter, RentRecord
+from properties.services.payment_orchestrator import get_payment_gateway
 
 
 def auto_generate_rent_records() -> None:
@@ -19,7 +18,7 @@ def auto_generate_rent_records() -> None:
         )
 
         if created:
-            link = PaymentService(RazorpayAdapter()).create_payment_link(rent)
+            link = get_payment_gateway().create_payment_link(rent)
             rent.payment_link = link
             rent.save()
 

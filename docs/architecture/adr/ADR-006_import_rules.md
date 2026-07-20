@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-07-19
 **Deciders:** Chief Software Architect, Staff Engineer, Platform Team Lead
-**Supersedes:** ADR-006 (v1.0 — Import Rules)
+**Supersedes:** ADR-006 (v1.1 — Import Rules)
 
 ---
 
@@ -22,7 +22,7 @@ Additional dependency matrix inconsistencies in v1.0:
 - Row `ai/` listed `rent/` as a dependency but `rent/` did not exist
 - Matrix omitted `ai_assistant/` and `dashboard/` entirely
 
-The v1.1 import rules must eliminate the God-layer anti-pattern, correct the dependency matrix, and enforce boundaries via architecture tests.
+The v2.0 import rules must eliminate the God-layer anti-pattern, correct the dependency matrix, and enforce boundaries via architecture tests.
 
 ---
 
@@ -30,7 +30,7 @@ The v1.1 import rules must eliminate the God-layer anti-pattern, correct the dep
 
 RentSecureBE uses **import-linter with a corrected layer configuration** and **AST-based architecture tests** to enforce import boundaries.
 
-### Corrected Allowed Import Matrix (v1.1)
+### Corrected Allowed Import Matrix (v2.0)
 
 | Source | shared | platform | identity | subscription | property | payment | notification | document | finance | referral | dashboard |
 |--------|--------|----------|----------|--------------|----------|---------|--------------|----------|---------|----------|-----------|
@@ -161,7 +161,7 @@ RentSecureBE uses **import-linter with a corrected layer configuration** and **A
 
 ### Phase 0: Rewrite import-linter.ini
 - Remove `rentsecure_be` as allowed layer for all apps
-- Add all apps per v1.1 matrix
+- Add all apps per v2.0 matrix
 - Correct `payment/ → property/` dependency
 - Remove `rent/` row entirely
 - Add `ai_assistant/` row (deferred)
@@ -194,7 +194,7 @@ RentSecureBE uses **import-linter with a corrected layer configuration** and **A
 
 ## References
 
-- [Architecture v1.1 Release Candidate — Finding AD-06, CD-01](../../../ARCHITECTURE_V1.1_RELEASE_CANDIDATE.md)
+- [Architecture v2.0 Release Candidate — Finding AD-06, CD-01](../../../ARCHITECTURE_V2.0_RELEASE_CANDIDATE.md)
 - [Implementation Master Plan — Phase -1, Phase 0](../../../ARCHITECTURE_V1.1_IMPLEMENTATION_MASTER_PLAN.md)
 - [import-linter.ini](../../../import-linter.ini)
 - [Shared Kernel Rules](./ADR-005_shared_kernel_rules.md)

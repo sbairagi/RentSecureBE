@@ -1,6 +1,6 @@
 from typing import Any
 
-from payments.ports.payment_gateway import PaymentGateway
+from shared.ports.payment_gateway import PaymentGateway
 
 
 class PaymentService:

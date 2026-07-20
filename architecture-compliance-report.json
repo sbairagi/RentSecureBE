@@ -1,18 +1,18 @@
 {
   "version": "2.4.0",
-  "timestamp": "2026-07-14T12:00:51.998950",
+  "timestamp": "2026-07-20T21:08:57.605542",
   "repository": "/Users/sbairagi/Desktop/MVP Project/RentSecureBE",
-  "score": 100,
-  "status": "COMPLIANT",
+  "score": 86,
+  "status": "VIOLATIONS_DETECTED",
   "violations": {
-    "critical": 0,
-    "error": 0,
+    "critical": 1,
+    "error": 1,
     "warning": 0
   },
   "workflow_structure": 15,
-  "dependency_graph": 15,
+  "dependency_graph": 8,
   "security_controls": 14,
-  "quality_gates": 14,
+  "quality_gates": 7,
   "documentation_sync": 14,
   "protected_files": 14,
   "version_alignment": 14,
@@ -245,6 +245,7 @@
         "shard-validation",
         "contract-tests",
         "architecture",
+        "architecture-tests",
         "uml",
         "uml-validation"
       ],

@@ -4,22 +4,22 @@
 - **Version:** 2.4.0
 - **Architecture:** 2.4.0
 - **Pipeline:** 2.4.0
-- **Timestamp:** 2026-07-14T12:00:51.998857
-- **Score:** 100/100 (100%)
-- **Status:** ✅ COMPLIANT
+- **Timestamp:** 2026-07-20T21:08:57.605466
+- **Score:** 86/100 (86%)
+- **Status:** ❌ VIOLATIONS_DETECTED
 
 ## Summary
 
-Violations: 0 (CRITICAL: 0, ERROR: 0, WARNING: 0)
+Violations: 2 (CRITICAL: 1, ERROR: 1, WARNING: 0)
 
 ## Category Breakdown
 
 | Category | Score | Status |
 |----------|-------|--------|
 | Workflow Structure | 15/15 | PASS |
-| Dependency Graph | 15/15 | PASS |
+| Dependency Graph | 8/15 | FAIL |
 | Security Controls | 14/14 | PASS |
-| Quality Gates | 14/14 | PASS |
+| Quality Gates | 7/14 | FAIL |
 | Documentation Sync | 14/14 | PASS |
 | Protected Files | 14/14 | PASS |
 | Version Alignment | 14/14 | PASS |
@@ -59,9 +59,21 @@ Violations: 0 (CRITICAL: 0, ERROR: 0, WARNING: 0)
 - Stage 2i  │ Mutation Testing (Smoke) ← lint-fast
 - Stage 2j │ Migration Rollback Validation ← lint-fast
 - Stage 2d  │ Hypothesis Property Tests (Fast) ← lint-fast
-- Stage 3   │ Quality Gate (SonarCloud) ← test-shard-1, test-shard-2, test-shard-3, test-shard-4, shard-validation, contract-tests, architecture, uml, uml-validation
+- Stage 3   │ Quality Gate (SonarCloud) ← test-shard-1, test-shard-2, test-shard-3, test-shard-4, shard-validation, contract-tests, architecture, architecture-tests, uml, uml-validation
 - Stage 4   │ Deploy Readiness Check ← quality, security-fast, django-check
 - Stage 5   │ Deploy to Production ← deploy-readiness
+
+## Violations (2)
+
+### #1 🟠 [ERROR] extra_dependency
+
+Job 'quality' dependencies changed.
+  Expected: ['architecture', 'contract-tests', 'shard-validation', 'test-shard-1', 'test-shard-2', 'test-shard-3', 'test-shard-4', 'uml', 'uml-validation']
+  Actual:   ['architecture', 'architecture-tests', 'contract-tests', 'shard-validation', 'test-shard-1', 'test-shard-2', 'test-shard-3', 'test-shard-4', 'uml', 'uml-validation']
+
+### #2 🔴 [CRITICAL] quality_gate_bypassed
+
+QUALITY GATE BYPASS: The 'quality' job dependencies have been altered.
 
 
 ---
