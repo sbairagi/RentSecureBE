@@ -14,18 +14,14 @@ from django.conf import settings
 from django.http import HttpRequest, JsonResponse
 
 from core.models import OwnerBankDetails, User
-from core.services.bank_details_service import BankDetailsService
 from payments.adapters.cashfree import CashfreeAdapter
+from payments.services.bank_details_service import BankDetailsService
 from payments.services.payment_service import PaymentService
 
 logger = logging.getLogger(__name__)
 
 
 def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
-    """Create a Razorpay order for rent payment."""
-    from payments.adapters.razorpay import RazorpayAdapter  # nosonar
-    from properties.models.rent_record_models import RentRecord  # nosonar
-
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
 
@@ -33,9 +29,13 @@ def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     rent_id = data.get("rent_id")
 
     try:
+        from properties.models.rent_record_models import RentRecord
+
         rent = RentRecord.objects.get(id=rent_id)
-    except RentRecord.DoesNotExist:
+    except RentRecord.DoesNotExist:  # type: ignore[possibly-undefined]
         return JsonResponse({"error": "Rent record not found"}, status=404)
+
+    from payments.adapters.razorpay import RazorpayAdapter  # nosonar
 
     adapter = RazorpayAdapter()
     razorpay_order = adapter.create_order(
@@ -62,12 +62,6 @@ def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
 def update_owner_bank_details(
     request: Request, /, *args: Any, **kwargs: Any
 ) -> Response:
-    """Update owner bank details and register beneficiary with Cashfree.
-
-    Fixed: Added missing uuid import.
-    Fixed: Uses register_beneficiary from cashfree_service.
-    Fixed: Uses correct RentRecord field (owner) instead of renter__property__owner.
-    """
     data = request.data
     owner: User = cast(User, request.user)
 
@@ -98,5 +92,5 @@ def update_owner_bank_details(
     BankDetailsService.retry_failed_payouts(owner)
 
     return Response(
-        {"message": "Bank details updated & pending payouts marked for retry ✅"}
+        {"message": "Bank details updated & pending payouts marked for retry"}
     )

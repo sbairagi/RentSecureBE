@@ -1,23 +1,18 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from core.models import OwnerBankDetails, User
 from core.services.base import BaseService, ServiceResult
+from payments.utils.cashfree_payout import add_beneficiary
 from properties.models.rent_record_models import RentRecord
-from rentsecure_be.utils.cashfree_payout import add_beneficiary
+from shared.type_compat import override
+
+logger = logging.getLogger(__name__)
 
 
 class BankDetailsService(BaseService):
-    """Service for bank details workflows.
-
-    Expected responsibilities:
-    - Bank detail validation
-    - Secure storage coordination
-    - Bank detail retrieval for payouts
-    - Verification status management
-    """
-
     @staticmethod
     def validate_fields(data: dict[str, Any]) -> None:
         required_fields = ["account_number", "ifsc_code", "account_holder_name"]
@@ -59,5 +54,6 @@ class BankDetailsService(BaseService):
             payout_status="PENDING"
         )
 
+    @override
     def execute(self, *args: Any, **kwargs: Any) -> ServiceResult[Any]:
         raise NotImplementedError

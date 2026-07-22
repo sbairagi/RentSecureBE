@@ -11,7 +11,6 @@ from .views.auth_views import (
     ResetPasswordView,
     SendOTP,
 )
-from .views.bank_views import update_owner_bank_details
 from .views.subscription_views import (
     AddOnPurchaseViewSet,
     SubscriptionPlanViewSet,
@@ -44,7 +43,6 @@ urlpatterns = [
         RedirectView.as_view(url="/api/webhook/razorpay/", permanent=True),
         name="razorpay_webhook_redirect",
     ),
-    path("api/owner/update-bank-details/", update_owner_bank_details),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),
     path("", include(router.urls)),

@@ -1,23 +1,18 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from django.db.models import Sum
 
 from core.services.base import BaseService, ServiceResult
 from properties.models.rent_record_models import RentRecord
+from shared.type_compat import override
+
+logger = logging.getLogger(__name__)
 
 
 class OwnerReportingService(BaseService):
-    """Service for owner reporting workflows.
-
-    Expected responsibilities:
-    - Report data aggregation
-    - Report generation orchestration
-    - Export format handling
-    - Delivery scheduling
-    """
-
     @staticmethod
     def get_rent_inflow_summary(owner: Any) -> dict[str, Any]:
         total_received = (
@@ -61,5 +56,6 @@ class OwnerReportingService(BaseService):
             for r in rents
         ]
 
+    @override
     def execute(self, *args: Any, **kwargs: Any) -> ServiceResult[Any]:
         raise NotImplementedError

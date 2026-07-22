@@ -9,24 +9,15 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from django.conf import settings
-
 from core.models import OTP, User
 from core.services.auth_service import AuthService
 from core.services.otp_service import OTPService
 from core.services.password_service import PasswordService
 from core.services.referral_service import ReferralService
-from notification.services.notification_service import NotificationService
 from shared.exceptions import ValidationError
+from shared.type_compat import override
 
 logger = logging.getLogger(__name__)
-
-
-def send_otp(phone_number: str, code: str) -> None:
-    if settings.DEBUG:
-        print(f"[MOCK OTP to {phone_number}] Your OTP is {code}")
-    else:
-        NotificationService().send_otp(phone_number, code)
 
 
 class SendOTP(APIView):
@@ -104,10 +95,11 @@ class ChangePasswordView(generics.UpdateAPIView):
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return self.update(request, *args, **kwargs)
 
+    @override
     def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         user = request.user
-        old_password = request.data.get("old_password")
-        new_password = request.data.get("new_password")
+        old_password = request.data.get("old_password") or ""
+        new_password = request.data.get("new_password") or ""
 
         try:
             PasswordService.change_password(user, old_password, new_password)
@@ -126,7 +118,7 @@ class ResetPasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        new_password = request.data.get("new_password")
+        new_password = request.data.get("new_password") or ""
 
         try:
             PasswordService.reset_password(request.user, new_password)

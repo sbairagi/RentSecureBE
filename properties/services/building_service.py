@@ -10,6 +10,8 @@ from typing import Any, cast
 
 from rest_framework.exceptions import PermissionDenied
 
+from core.events.domain.publisher import DomainEventPublisher
+
 from ..constants import BUILDINGS_CACHE_TIMEOUT
 from ..feature_enforcer import FeatureEnforcer
 from ..repositories.building_repository import BuildingRepository
@@ -39,6 +41,25 @@ class BuildingService:
         building = Building.objects.create(owner=user, **validated_data)
         enforcer.increment("max_buildings")
         cache.delete(f"buildings_user_{user.id}")
+
+        from uuid import UUID
+
+        from django.db import transaction
+
+        from core.events.domain.property_events import BuildingCreated
+
+        event = BuildingCreated(
+            aggregate_id=UUID(int=building.pk),
+            building_id=UUID(int=building.pk),
+            owner_id=UUID(int=user.pk),
+            name=building.name,
+            city=building.city,
+        )
+
+        transaction.on_commit(
+            lambda: DomainEventPublisher.get_instance().publish(event)
+        )
+
         return building
 
     @staticmethod
@@ -52,10 +73,29 @@ class BuildingService:
             raise PermissionDenied(
                 "You do not have permission to update this building."
             )
+        changed_fields = list(validated_data.keys())
         for attr, value in validated_data.items():
             setattr(building, attr, value)
         building.save(update_fields=list(validated_data.keys()))
         cache.delete(f"buildings_user_{user.id}")
+
+        from uuid import UUID
+
+        from django.db import transaction
+
+        from core.events.domain.property_events import BuildingUpdated
+
+        event = BuildingUpdated(
+            aggregate_id=UUID(int=building.pk),
+            building_id=UUID(int=building.pk),
+            owner_id=UUID(int=user.pk),
+            changed_fields=changed_fields,
+        )
+
+        transaction.on_commit(
+            lambda: DomainEventPublisher.get_instance().publish(event)
+        )
+
         return building
 
     @staticmethod
@@ -72,6 +112,22 @@ class BuildingService:
         enforcer = FeatureEnforcer(user)
         enforcer.decrement("max_buildings")
         cache.delete(f"buildings_user_{user.id}")
+
+        from uuid import UUID
+
+        from django.db import transaction
+
+        from core.events.domain.property_events import BuildingArchived
+
+        event = BuildingArchived(
+            aggregate_id=UUID(int=building.pk),
+            building_id=UUID(int=building.pk),
+            owner_id=UUID(int=user.pk),
+        )
+
+        transaction.on_commit(
+            lambda: DomainEventPublisher.get_instance().publish(event)
+        )
 
     @staticmethod
     def get_owner_buildings(user: Any) -> Any:

@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from core.events.outbox import admin as _outbox_admin  # noqa: F401
+
 from .models import (
     AddOnPurchase,
     PlanFeatureLimit,

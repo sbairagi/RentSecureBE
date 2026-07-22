@@ -20,12 +20,15 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from payments.views.bank_views import update_owner_bank_details
+
 urlpatterns: list[object] = [
     path("admin/", admin.site.urls),
     path("api/webhook/", include("payments.urls")),
     path("api/", include("core.urls")),
     path("api/", include("properties.urls")),
     path("api/notifications/", include("notification.urls")),
+    path("api/owner/update-bank-details/", update_owner_bank_details),
     path("properties/", include("properties.urls")),
     path("documents/", include("documents.urls")),
 ]

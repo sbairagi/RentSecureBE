@@ -7,25 +7,15 @@ from django.conf import settings
 from django.utils import timezone
 
 from core.services.base import BaseService
-from notification.services.notification_service import NotificationService
+from core.signals import otp_created
 from shared.exceptions import ValidationError
 
 from ..models import OTP
 
 
 class OTPService(BaseService):
-    """Service for OTP workflows.
-
-    Expected responsibilities:
-    - OTP generation and storage
-    - OTP delivery via chosen channel
-    - OTP verification and rate limiting
-    - OTP expiration handling
-    """
-
     @staticmethod
     def send_otp(phone_number: str, referral_code: str = "") -> None:
-        # Prevent spamming (resend OTP limit: 60 seconds)
         recent_otp = (
             OTP.objects.filter(phone_number=phone_number)
             .order_by("-created_at")
@@ -63,4 +53,4 @@ def _deliver_otp(phone_number: str, code: str) -> None:
     if settings.DEBUG:
         print(f"[MOCK OTP to {phone_number}] Your OTP is {code}")
     else:
-        NotificationService().send_otp(phone_number, code)
+        otp_created.send(sender=None, phone_number=phone_number, code=code)

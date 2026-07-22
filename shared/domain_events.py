@@ -5,7 +5,7 @@ from typing import Any
 from uuid import uuid4
 
 
-@dataclass
+@dataclass(frozen=True)
 class BaseDomainEvent:
     event_id: str = field(default_factory=lambda: str(uuid4()))
     occurred_at: str = ""
@@ -13,7 +13,7 @@ class BaseDomainEvent:
 
     def __post_init__(self) -> None:
         if not self.occurred_at:
-            self.occurred_at = self._now()
+            object.__setattr__(self, "occurred_at", self._now())
 
     def _now(self) -> str:
         return ""

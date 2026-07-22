@@ -1,27 +1,26 @@
 # core/signals.py
-from typing import Any
 
 from django.db.models.signals import post_save
-from django.dispatch import receiver
+from django.dispatch import Signal, receiver
 
+from core.events.domain.publisher import DomainEventPublisher
 from core.models import User, UserProfile
-from notification.models import NotificationPreference
 
 from .models import PlanFeatureLimit, SubscriptionPlan, UserSubscription
+
+otp_created = Signal()
 
 
 @receiver(post_save, sender=User)
 def assign_default_plan(
-    sender: type[Any],
+    sender: type[object],
     instance: User,
     created: bool,
-    **kwargs: Any,
+    **kwargs: object,
 ) -> None:
     if created:
         if not hasattr(instance, "userprofile"):
             UserProfile.objects.create(user=instance)
-        if not hasattr(instance, "notification_preferences"):
-            NotificationPreference.objects.create(owner=instance)
         default_plan, _ = SubscriptionPlan.objects.get_or_create(
             name="free",
             defaults={
@@ -50,3 +49,21 @@ def assign_default_plan(
                 defaults={"value": value},
             )
         UserSubscription.objects.create(user=instance, plan=default_plan)
+
+        from uuid import UUID
+
+        from django.db import transaction
+
+        from core.events.domain.user_events import UserCreated
+
+        event = UserCreated(
+            aggregate_id=UUID(int=instance.pk),
+            user_id=UUID(int=instance.pk),
+            phone=getattr(instance, "phone", ""),
+            email=getattr(instance, "email", ""),
+            full_name=getattr(instance, "full_name", ""),
+        )
+
+        transaction.on_commit(
+            lambda: DomainEventPublisher.get_instance().publish(event)
+        )

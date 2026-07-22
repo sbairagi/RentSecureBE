@@ -2,17 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Protocol, TypeVar
 
+from core.shared.repositories.base import IRepository
+
 T = TypeVar("T")
 
-
-class Repository(Protocol[T]):
-    def get(self, id: Any) -> T | None: ...
-
-    def list(self, **filters: Any) -> list[T]: ...
-
-    def add(self, entity: T) -> T: ...
-
-    def remove(self, entity: T) -> None: ...
+Repository = IRepository
 
 
 class Service(Protocol):
