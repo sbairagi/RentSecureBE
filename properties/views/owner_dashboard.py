@@ -11,7 +11,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncMonth
 
-from ..models import RentRecord
+from ..models import PropertyTaxRecord, RentRecord
 
 
 @api_view(["GET"])
@@ -65,6 +65,14 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
         for item in rent_payment_trends
     ]
 
+    monthly_rent_trend = [
+        {
+            "month": item["month"].strftime("%b"),
+            "amount": float(item["total"] or 0),
+        }
+        for item in rent_payment_trends
+    ]
+
     rent_defaulters = rents.filter(
         Q(status=RentRecord.Status.PENDING),
         due_date__lt=today,
@@ -81,12 +89,51 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
         for rent in rent_defaulters
     ]
 
+    pending_rent = (
+        rents.exclude(status=RentRecord.Status.PAID).aggregate(total=Sum("amount"))[
+            "total"
+        ]
+        or 0
+    )
+
+    taxes = PropertyTaxRecord.objects.filter(property__owner=owner)
+
+    tax_paid_this_month = (
+        taxes.filter(paid=True, paid_date__gte=current_month).aggregate(
+            total=Sum("amount")
+        )["total"]
+        or 0
+    )
+
+    tax_trends = (
+        taxes.filter(
+            paid=True,
+            paid_date__gte=previous_six_months,
+        )
+        .annotate(month=TruncMonth("paid_date"))
+        .values("month")
+        .annotate(total=Sum("amount"))
+        .order_by("month")
+    )
+
+    monthly_tax_trend = [
+        {
+            "month": item["month"].strftime("%b"),
+            "amount": float(item["total"] or 0),
+        }
+        for item in tax_trends
+    ]
+
     summary = {
         "total_rent_collected": float(total_rent_collected),
         "rent_collected_this_month": float(rent_collected_this_month),
+        "tax_paid_this_month": float(tax_paid_this_month),
+        "pending_rent": float(pending_rent),
         "payouts": payouts,
         "upcoming_tax_dues": [],
         "rent_payment_trends": trend_data,
+        "monthly_rent_trend": monthly_rent_trend,
+        "monthly_tax_trend": monthly_tax_trend,
         "rent_defaulters": defaulters_data,
     }
 

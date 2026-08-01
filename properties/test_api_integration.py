@@ -541,6 +541,43 @@ class RentRecordViewSetAPITests(APITestCase):
         self.assertEqual(response.data["payouts"]["pending"], 1)
         self.assertEqual(len(response.data["rent_defaulters"]), 1)
         self.assertEqual(response.data["rent_defaulters"][0]["renter_name"], "Alice")
+        self.assertIn("tax_paid_this_month", response.data)
+        self.assertIn("pending_rent", response.data)
+        self.assertIn("monthly_rent_trend", response.data)
+        self.assertIn("monthly_tax_trend", response.data)
+
+    def test_owner_dashboard_summary_tax_and_pending_fields(self):
+        """Test owner dashboard summary includes tax and pending rent fields."""
+        today = date.today()
+        current_month = today.replace(day=1)
+        next_month = (current_month + timedelta(days=32)).replace(day=1)
+
+        RentRecord.objects.create(
+            renter=self.renter,
+            unit=self.unit,
+            due_date=current_month,
+            amount=10000,
+            paid_on=today,
+            status=RentRecord.Status.PAID,
+            payout_status="SUCCESS",
+        )
+
+        RentRecord.objects.create(
+            renter=self.renter,
+            unit=self.unit,
+            due_date=next_month,
+            amount=5000,
+            paid_on=None,
+            status=RentRecord.Status.PENDING,
+            payout_status="PENDING",
+        )
+
+        response = self.client.get("/api/owner/dashboard-summary/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(float(response.data["pending_rent"]), 5000.0)
+        self.assertEqual(float(response.data["rent_collected_this_month"]), 10000.0)
+        self.assertIsInstance(response.data["monthly_rent_trend"], list)
+        self.assertIsInstance(response.data["monthly_tax_trend"], list)
 
     def test_cannot_create_duplicate_rent_record(self):
         """Test cannot create duplicate rent record for same month"""
