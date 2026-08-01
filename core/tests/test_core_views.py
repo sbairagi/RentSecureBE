@@ -247,6 +247,7 @@ class UpdateOwnerAlertPreferencesTest(TestCase):
                 "receive_tax_alerts": False,
                 "receive_vacancy_alerts": True,
                 "receive_flagged_alerts": False,
+                "receive_voice_alerts": True,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -256,6 +257,7 @@ class UpdateOwnerAlertPreferencesTest(TestCase):
         self.assertEqual(profile.alert_frequency, "daily")
         self.assertFalse(profile.receive_tax_alerts)
         self.assertFalse(profile.receive_flagged_alerts)
+        self.assertTrue(profile.receive_voice_alerts)
 
     def test_update_alert_preferences_requires_auth(self):
         self.client.credentials()

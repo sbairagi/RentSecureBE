@@ -85,6 +85,7 @@ class UserProfile(models.Model):
     receive_tax_alerts = models.BooleanField(default=True)
     receive_vacancy_alerts = models.BooleanField(default=True)
     receive_flagged_alerts = models.BooleanField(default=True)
+    receive_voice_alerts = models.BooleanField(default=True)
 
 
 class NotificationPreference(UpsertMixin, models.Model):

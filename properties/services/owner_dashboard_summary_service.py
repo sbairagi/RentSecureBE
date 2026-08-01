@@ -203,6 +203,13 @@ def send_summary_to_owner(owner: User) -> bool:
     if not text_sent:
         return False
 
+    try:
+        profile = UserProfile.objects.get(user=owner)
+        if not profile.receive_voice_alerts:
+            return True
+    except UserProfile.DoesNotExist:
+        pass
+
     audio_path = _generate_voice_note(translated, lang)
     if audio_path:
         _send_whatsapp_audio(phone, audio_path)

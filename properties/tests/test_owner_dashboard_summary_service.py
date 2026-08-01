@@ -194,6 +194,44 @@ class OwnerDashboardSummaryServiceTests(TestCase):
         args, kwargs = mock_send.call_args
         self.assertIn("Hello DashboardOwner", args[1])
 
+    @patch("properties.services.owner_dashboard_summary_service._send_whatsapp_audio")
+    @patch("properties.services.owner_dashboard_summary_service._generate_voice_note")
+    @patch("properties.services.owner_dashboard_summary_service._send_whatsapp_message")
+    @patch(
+        "properties.services.owner_dashboard_summary_service._translate",
+        side_effect=lambda text, lang: text,
+    )
+    def test_send_summary_sends_voice_note_when_enabled(
+        self, mock_translate, mock_send_text, mock_voice_gen, mock_send_audio
+    ):
+        mock_send_text.return_value = True
+        mock_voice_gen.return_value = "/tmp/test.mp3"
+        result = send_summary_to_owner(self.owner)
+        self.assertTrue(result)
+        mock_voice_gen.assert_called_once()
+        mock_send_audio.assert_called_once_with(
+            self.owner.whatsapp_number, "/tmp/test.mp3"
+        )
+
+    @patch("properties.services.owner_dashboard_summary_service._send_whatsapp_audio")
+    @patch("properties.services.owner_dashboard_summary_service._generate_voice_note")
+    @patch("properties.services.owner_dashboard_summary_service._send_whatsapp_message")
+    @patch(
+        "properties.services.owner_dashboard_summary_service._translate",
+        side_effect=lambda text, lang: text,
+    )
+    def test_send_summary_skips_voice_note_when_disabled(
+        self, mock_translate, mock_send_text, mock_voice_gen, mock_send_audio
+    ):
+        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        profile.receive_voice_alerts = False
+        profile.save(update_fields=["receive_voice_alerts"])
+        mock_send_text.return_value = True
+        result = send_summary_to_owner(self.owner)
+        self.assertTrue(result)
+        mock_voice_gen.assert_not_called()
+        mock_send_audio.assert_not_called()
+
     @patch(
         "properties.services.owner_dashboard_summary_service._send_whatsapp_message",
         return_value=False,
