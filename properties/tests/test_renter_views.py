@@ -3,6 +3,7 @@
 from decimal import Decimal
 from unittest.mock import patch
 
+from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -736,3 +737,153 @@ class RenterViewSetIntegrationTests(TestCase):
         )
         self.assertEqual(response.status_code, 201)
         self.assertTrue(Renter.objects.filter(name="NewRenter").exists())
+
+
+class RenterViewSetSubmitRatingTests(TestCase):
+    """Cover submit_rating action."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.owner = User.objects.create_user(
+            username="rv_rate_owner",
+            password="p",
+            full_name="RvRateOwner",
+            phone="+1",
+        )
+        cls.plan = SubscriptionPlan.objects.create(
+            name="rv_rate_pro",
+            monthly_price=Decimal("29.99"),
+            yearly_price=Decimal("299.99"),
+        )
+        UserSubscription.objects.create(user=cls.owner, plan=cls.plan, is_active=True)
+        cls.building = Building.objects.create(
+            owner=cls.owner,
+            name="RvRateB",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        cls.unit = Unit.objects.create(
+            owner=cls.owner,
+            building=cls.building,
+            unit="RVRATE1",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+
+    def setUp(self):
+        self._c = _auth(self.owner)
+        cache.clear()
+
+    def test_active_renter_cannot_rate(self):
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="ActiveRenter",
+            phone="+911234567901",
+            email="activer@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/rate/",
+            {"rating": 5, "feedback": "good"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        renter.refresh_from_db()
+        self.assertIsNone(renter.rating)
+
+    def test_deactivated_renter_can_rate(self):
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="DeactivatedRenter",
+            phone="+911234567901",
+            email="deactr@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.DEACTIVATED,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/rate/",
+            {"rating": 4, "feedback": "nice stay"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        renter.refresh_from_db()
+        self.assertEqual(renter.rating, 4)
+        self.assertEqual(renter.feedback, "nice stay")
+        self.assertIsNotNone(renter.rated_at)
+
+    def test_revoked_renter_can_rate(self):
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="RevokedRenter",
+            phone="+911234567901",
+            email="revokedr@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.REVOKED,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/rate/",
+            {"rating": 3, "feedback": "ok"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        renter.refresh_from_db()
+        self.assertEqual(renter.rating, 3)
+
+    def test_notice_period_renter_can_rate(self):
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="NoticeRenter",
+            phone="+911234567901",
+            email="noticer@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.NOTICE_PERIOD,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/rate/",
+            {"rating": 5, "feedback": "great"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        renter.refresh_from_db()
+        self.assertEqual(renter.rating, 5)
+
+    def test_missing_rating_returns_400(self):
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="NoRatingRenter",
+            phone="+911234567901",
+            email="norating@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.DEACTIVATED,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/rate/",
+            {"feedback": "no rating"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_invalid_rating_out_of_range_returns_400(self):
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="BadRatingRenter",
+            phone="+911234567901",
+            email="badrating@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.DEACTIVATED,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/rate/",
+            {"rating": 6},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

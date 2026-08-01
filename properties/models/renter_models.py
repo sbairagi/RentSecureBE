@@ -124,6 +124,10 @@ class Renter(models.Model):
     )
     notice_start_date = models.DateField(null=True, blank=True)
 
+    rating = models.PositiveIntegerField(null=True, blank=True)
+    feedback = models.TextField(blank=True, null=True)
+    rated_at = models.DateTimeField(null=True, blank=True)
+
     final_invoice_path = models.CharField(max_length=255, blank=True)
 
     # Self-onboarding status

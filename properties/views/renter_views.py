@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -11,6 +12,8 @@ from rest_framework.serializers import BaseSerializer
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from core.models import User
 from rentsecure_be.type_compat import override
@@ -109,3 +112,46 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         enforcer.decrement("max_renters")
         update_unit_status(unit)
         cache.delete(f"renters_user_{self.request.user.id}")
+
+    @action(detail=True, methods=["post"], url_path="rate")
+    def submit_rating(self, request: Request, pk: int) -> Response:
+        renter = get_object_or_404(
+            Renter.objects.select_related("unit"), pk=pk, unit__owner=request.user
+        )
+
+        allowed_statuses = ["deactivated", "revoked", "notice_period"]
+        if renter.status not in allowed_statuses:
+            return Response(
+                {"error": "Rating allowed only after move-out."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        rating = request.data.get("rating")
+        feedback = request.data.get("feedback", "")
+
+        if rating is None:
+            return Response(
+                {"error": "Rating is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            rating_value = int(rating)
+        except (TypeError, ValueError):
+            return Response(
+                {"error": "Rating must be an integer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not 1 <= rating_value <= 5:
+            return Response(
+                {"error": "Rating must be between 1 and 5"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        renter.rating = rating_value
+        renter.feedback = feedback or ""
+        renter.rated_at = timezone.now()
+        renter.save(update_fields=["rating", "feedback", "rated_at"])
+
+        return Response({"message": "Thank you for your feedback!"})
