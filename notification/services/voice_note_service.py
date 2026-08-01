@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from notification.services.rent_notify_service import _owner_greeting_prefix  # nosonar
 from notification.services.voice_service import generate_voice_note  # nosonar
 from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
 from notification.services.whatsapp_service import (
@@ -28,8 +29,10 @@ def send_thank_you_voice_note(rent: Any) -> None:
     name: str = rent.renter.full_name
     amount = rent.amount
     date_str: str = rent.paid_on.strftime("%d %B") if rent.paid_on else ""
+    owner = rent.renter.unit.owner
+    greeting = _owner_greeting_prefix(owner)
     msg: str = (
-        f"Shukriya {name}! Aapne ₹{amount} rent {date_str} ko time se pehle "
+        f"{greeting}Shukriya {name}! Aapne ₹{amount} rent {date_str} ko time se pehle "
         "jama kiya. Aapki samay par payment ki hum sarahna karte hain."
     )
 
@@ -51,9 +54,11 @@ def send_late_rent_reminder(rent: Any) -> None:
     name: str = rent.renter.full_name
     amount = rent.amount
     due_date_str: str = rent.due_date.strftime("%d %B")
+    owner = rent.renter.unit.owner
+    greeting = _owner_greeting_prefix(owner)
 
     msg: str = (
-        f"Namaste {name}, aapka ₹{amount} rent {due_date_str} ko due tha. "
+        f"{greeting}Namaste {name}, aapka ₹{amount} rent {due_date_str} ko due tha. "
         "Kripya jald se jald jama karein. Dhanyawaad."
     )
 

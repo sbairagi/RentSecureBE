@@ -248,6 +248,7 @@ class UpdateOwnerAlertPreferencesTest(TestCase):
                 "receive_vacancy_alerts": True,
                 "receive_flagged_alerts": False,
                 "receive_voice_alerts": True,
+                "greeting_prefix": "from Gokul PG",
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -258,6 +259,7 @@ class UpdateOwnerAlertPreferencesTest(TestCase):
         self.assertFalse(profile.receive_tax_alerts)
         self.assertFalse(profile.receive_flagged_alerts)
         self.assertTrue(profile.receive_voice_alerts)
+        self.assertEqual(profile.greeting_prefix, "from Gokul PG")
 
     def test_update_alert_preferences_requires_auth(self):
         self.client.credentials()

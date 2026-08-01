@@ -101,6 +101,26 @@ class SendThankYouVoiceNoteTests(TestCase):
         self.rent.renter = None
         send_thank_you_voice_note(self.rent)
 
+    def test_send_voice_note_includes_greeting_prefix(self):
+        _vns.send_thank_you_voice_note = _ORIGINAL_SEND_THANK_YOU
+        with patch(
+            "notification.services.voice_note_service.send_whatsapp_audio"
+        ) as mock_send:
+            with patch(
+                "notification.services.voice_note_service.generate_voice_note"
+            ) as mock_generate:
+                mock_generate.return_value = "/tmp/test_audio.mp3"
+                mock_send.return_value = None
+                self.owner.userprofile.greeting_prefix = "from Gokul PG"
+                self.owner.userprofile.save()
+                from notification.services.voice_note_service import (
+                    send_thank_you_voice_note,
+                )
+
+                send_thank_you_voice_note(self.rent)
+                args, kwargs = mock_generate.call_args
+                self.assertIn("from Gokul PG", args[0])
+
 
 class SendLateRentReminderTests(TestCase):
     def setUp(self):
@@ -195,6 +215,26 @@ class SendLateRentReminderTests(TestCase):
                 log = RentReminderLog.objects.first()
                 self.assertEqual(log.renter, self.renter)
                 self.assertEqual(log.message_type, "LATE")
+
+    def test_send_late_reminder_includes_greeting_prefix(self):
+        _vns.send_late_rent_reminder = _ORIGINAL_SEND_LATE
+        with patch(
+            "notification.services.voice_note_service.send_whatsapp_audio"
+        ) as mock_send:
+            with patch(
+                "notification.services.voice_note_service.generate_voice_note"
+            ) as mock_generate:
+                mock_generate.return_value = "/tmp/test_audio.mp3"
+                mock_send.return_value = None
+                self.owner.userprofile.greeting_prefix = "from Gokul PG"
+                self.owner.userprofile.save()
+                from notification.services.voice_note_service import (
+                    send_late_rent_reminder,
+                )
+
+                send_late_rent_reminder(self.rent)
+                args, kwargs = mock_generate.call_args
+                self.assertIn("from Gokul PG", args[0])
 
 
 class AlertOwnerAboutDelayTests(TestCase):

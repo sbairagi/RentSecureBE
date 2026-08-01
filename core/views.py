@@ -558,6 +558,7 @@ def update_owner_alert_preferences(
     profile.receive_voice_alerts = data.get(
         "receive_voice_alerts", profile.receive_voice_alerts
     )
+    profile.greeting_prefix = data.get("greeting_prefix", profile.greeting_prefix)
     profile.save(
         update_fields=[
             "language_preference",
@@ -567,6 +568,7 @@ def update_owner_alert_preferences(
             "receive_vacancy_alerts",
             "receive_flagged_alerts",
             "receive_voice_alerts",
+            "greeting_prefix",
         ]
     )
     return Response({"success": True, "message": "Alert preferences updated."})

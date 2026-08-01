@@ -86,6 +86,11 @@ class UserProfile(models.Model):
     receive_vacancy_alerts = models.BooleanField(default=True)
     receive_flagged_alerts = models.BooleanField(default=True)
     receive_voice_alerts = models.BooleanField(default=True)
+    greeting_prefix = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Custom greeting for WhatsApp messages, e.g., 'from Gokul PG'",
+    )
 
 
 class NotificationPreference(UpsertMixin, models.Model):

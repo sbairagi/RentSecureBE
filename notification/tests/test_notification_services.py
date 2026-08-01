@@ -13,6 +13,7 @@ from notification.services.late_fees_notify_service import (
     notify_renter_about_late_fee,
 )
 from notification.services.rent_notify_service import (
+    _owner_greeting_prefix,
     _renter_lang,
     _renter_phone,
     notify_owner,
@@ -134,8 +135,12 @@ class RentNotifyServiceTest(TestCase):
         notify_owner(self.owner, "Test message")
         mock_whatsapp.assert_called()
 
+    @patch(
+        "notification.services.rent_notify_service._owner_greeting_prefix",
+        return_value="",
+    )
     @patch("notification.services.rent_notify_service.notify_renter")
-    def test_send_payout_notification_success(self, mock_notify):
+    def test_send_payout_notification_success(self, mock_notify, mock_greeting):
         rent = MagicMock()
         rent.payout_status = "SUCCESS"
         rent.amount = 15000
@@ -143,8 +148,12 @@ class RentNotifyServiceTest(TestCase):
         send_payout_notification(rent)
         mock_notify.assert_called_once()
 
+    @patch(
+        "notification.services.rent_notify_service._owner_greeting_prefix",
+        return_value="",
+    )
     @patch("notification.services.rent_notify_service.notify_renter")
-    def test_send_payout_notification_failed(self, mock_notify):
+    def test_send_payout_notification_failed(self, mock_notify, mock_greeting):
         rent = MagicMock()
         rent.payout_status = "FAILED"
         rent.amount = 15000
@@ -152,8 +161,12 @@ class RentNotifyServiceTest(TestCase):
         send_payout_notification(rent)
         mock_notify.assert_called_once()
 
+    @patch(
+        "notification.services.rent_notify_service._owner_greeting_prefix",
+        return_value="",
+    )
     @patch("notification.services.rent_notify_service.notify_renter")
-    def test_send_payout_notification_other_status(self, mock_notify):
+    def test_send_payout_notification_other_status(self, mock_notify, mock_greeting):
         rent = MagicMock()
         rent.payout_status = "PENDING"
         rent.id = 1
@@ -461,3 +474,49 @@ class RentNotifyServiceEdgeTests(TestCase):
         notify_owner_post_payout(rent)
         mock_whatsapp.assert_called_once()
         mock_voice.assert_called_once()
+
+    def test_owner_greeting_prefix_with_prefix(self):
+        owner = MagicMock()
+        profile = MagicMock()
+        profile.greeting_prefix = "from Gokul PG"
+        owner.profile = profile
+        owner.userprofile = None
+        greeting = _owner_greeting_prefix(owner)
+        self.assertIn("from Gokul PG", greeting)
+        self.assertIn("Namaste", greeting)
+
+    def test_owner_greeting_prefix_without_prefix(self):
+        owner = MagicMock()
+        profile = MagicMock()
+        profile.greeting_prefix = ""
+        owner.profile = profile
+        owner.userprofile = None
+        greeting = _owner_greeting_prefix(owner)
+        self.assertEqual(greeting, "\U0001f4e2 Namaste: ")
+
+    def test_owner_greeting_prefix_no_profile(self):
+        owner = MagicMock()
+        owner.profile = None
+        owner.userprofile = None
+        greeting = _owner_greeting_prefix(owner)
+        self.assertEqual(greeting, "\U0001f4e2 Namaste: ")
+
+    @patch("notification.services.rent_notify_service.notify_renter")
+    def test_send_payout_notification_includes_greeting_prefix(self, mock_notify):
+        owner = MagicMock()
+        profile = MagicMock()
+        profile.greeting_prefix = "from Gokul PG"
+        owner.profile = profile
+        owner.userprofile = None
+        renter = MagicMock()
+        renter.unit.owner = owner
+        rent = MagicMock()
+        rent.payout_status = "SUCCESS"
+        rent.amount = 15000
+        rent.renter = renter
+        rent.updated_at.date.return_value = "2024-01-05"
+        send_payout_notification(rent)
+        mock_notify.assert_called_once()
+        msg = mock_notify.call_args[0][1]
+        self.assertIn("from Gokul PG", msg)
+        self.assertIn("15000", msg)

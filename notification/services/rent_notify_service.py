@@ -39,6 +39,16 @@ def _renter_lang(renter: Any, default: str = "en") -> str:
     return default
 
 
+def _owner_greeting_prefix(owner: Any) -> str:
+    """Return the owner's greeting prefix for WhatsApp messages."""
+    profile = getattr(owner, "userprofile", None) or getattr(owner, "profile", None)
+    if profile is not None:
+        prefix = getattr(profile, "greeting_prefix", "") or ""
+        if isinstance(prefix, str) and prefix:
+            return f"\U0001f4e2 Namaste {prefix}: "
+    return "\U0001f4e2 Namaste: "
+
+
 def notify_renter(renter: Any, message: str) -> None:
     from notification.services.voice_service import generate_voice_note  # nosonar
     from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
@@ -110,14 +120,17 @@ def send_payout_notification(rent: Any) -> None:
     Sends a WhatsApp message to renter based on payout status.
     """
     try:
+        owner = rent.renter.unit.owner if rent.renter else None
+        greeting = _owner_greeting_prefix(owner) if owner else ""
+
         if rent.payout_status == "SUCCESS":
             msg = (
-                f"Namaste! Aapka ₹{rent.amount} rent "
+                f"{greeting}Aapka ₹{rent.amount} rent "
                 f"{rent.updated_at.date()} ko jama hua hai."
             )
         elif rent.payout_status == "FAILED":
             msg = (
-                f"⚠️ ₹{rent.amount} rent ka transfer fail ho gaya hai. "
+                f"{greeting}⚠️ ₹{rent.amount} rent ka transfer fail ho gaya hai. "
                 f"Kripya apna bank detail verify karein."
             )
         else:
