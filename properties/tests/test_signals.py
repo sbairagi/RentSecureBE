@@ -12,6 +12,7 @@ from notification.models import Notification
 from properties.models import (
     ArchivedRenter,
     Caretaker,
+    PropertyTaxRecord,
     Renter,
     RentRecord,
     Unit,
@@ -713,3 +714,48 @@ class TestIsOnboardingUpdate:
 
     def test_mixed_fields_returns_false(self):
         assert _is_onboarding_update(["onboarding_token", "name"]) is False
+
+
+# ---------------------------------------------------------------------------
+# 18. notify_owner_on_tax_paid
+# ---------------------------------------------------------------------------
+
+
+class TestNotifyOwnerOnTaxPaid:
+    def test_skips_when_not_paid(self):
+        tax = PropertyTaxRecord.objects.create(
+            property=BuildingFactory(),
+            amount="5000",
+            due_date=date.today(),
+            paid=False,
+        )
+        with patch("properties.signals.notify_owner_on_tax_paid") as mock_notify:
+            tax.save()
+        mock_notify.assert_not_called()
+
+    @patch("notification.services.rent_notify_service.notify_owner")
+    def test_calls_notify_owner_when_paid(self, mock_notify_owner):
+        owner = UserFactory()
+        PropertyTaxRecord.objects.create(
+            property=BuildingFactory(owner=owner),
+            amount="5000",
+            due_date=date.today(),
+            paid=True,
+            paid_date=date.today(),
+        )
+        mock_notify_owner.assert_called_once()
+        call_args = mock_notify_owner.call_args
+        assert call_args[0][0] == owner
+        assert "tax" in call_args[0][1].lower()
+
+    @patch("notification.services.rent_notify_service.notify_owner")
+    def test_skips_when_owner_has_no_whatsapp(self, mock_notify_owner):
+        owner = UserFactory(whatsapp_number="")
+        PropertyTaxRecord.objects.create(
+            property=BuildingFactory(owner=owner),
+            amount="5000",
+            due_date=date.today(),
+            paid=True,
+            paid_date=date.today(),
+        )
+        mock_notify_owner.assert_not_called()

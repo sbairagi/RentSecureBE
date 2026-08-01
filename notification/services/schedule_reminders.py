@@ -7,6 +7,9 @@ from django.utils.timezone import now
 
 from notification.services.voice_service import generate_voice_note  # nosonar
 from notification.services.whatsapp_service import send_whatsapp_audio  # nosonar
+from notification.services.whatsapp_service import (
+    send_whatsapp_message,  # nosonar; nosonar; nosonar
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,14 +63,21 @@ def process_rent_reminders() -> None:
     for rent in get_upcoming_rent_dues():
         phone = rent.renter.whatsapp_number or rent.renter.phone or ""
         lang = _safe_lang_for_renter(rent.renter)
-        if phone:
-            msg = generate_rent_reminder_msg(rent)
-            try:
-                audio_path = generate_voice_note(msg, lang)
-                if audio_path:
-                    send_whatsapp_audio(phone, audio_path)
-            except OSError:
-                logger.exception("Failed to send rent reminder for rent %s", rent.id)
+        if not phone:
+            continue
+
+        msg = generate_rent_reminder_msg(rent)
+        try:
+            send_whatsapp_message(phone, msg)
+        except Exception:
+            logger.exception("Failed to send rent reminder text for rent %s", rent.id)
+
+        try:
+            audio_path = generate_voice_note(msg, lang)
+            if audio_path:
+                send_whatsapp_audio(phone, audio_path)
+        except OSError:
+            logger.exception("Failed to send rent reminder audio for rent %s", rent.id)
 
 
 def process_tax_reminders() -> None:
@@ -78,16 +88,25 @@ def process_tax_reminders() -> None:
             getattr(getattr(owner, "profile", None), "language_preference", None)
             or "hi"
         )
-        if phone:
-            msg = generate_tax_reminder_msg(tax)
-            try:
-                audio_path = generate_voice_note(msg, lang)
-                if audio_path:
-                    send_whatsapp_audio(phone, audio_path)
-            except OSError:
-                logger.exception(
-                    "Failed to send tax reminder for tax record %s", tax.id
-                )
+        if not phone:
+            continue
+
+        msg = generate_tax_reminder_msg(tax)
+        try:
+            send_whatsapp_message(phone, msg)
+        except Exception:
+            logger.exception(
+                "Failed to send tax reminder text for tax record %s", tax.id
+            )
+
+        try:
+            audio_path = generate_voice_note(msg, lang)
+            if audio_path:
+                send_whatsapp_audio(phone, audio_path)
+        except OSError:
+            logger.exception(
+                "Failed to send tax reminder audio for tax record %s", tax.id
+            )
 
 
 # Step 4: Schedule Cron Job (Every Morning)

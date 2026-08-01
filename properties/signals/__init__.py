@@ -11,6 +11,7 @@ from properties.models import (
     ArchivedRenter,
     Building,
     Caretaker,
+    PropertyTaxRecord,
     Renter,
     RentRecord,
     Unit,
@@ -246,3 +247,31 @@ def _archive_renter_if_needed(instance: Renter) -> None:
     if ArchivedRenter.objects.filter(renter=instance).exists():
         return
     renter_archived.send(sender=Renter, instance=instance)
+
+
+@receiver(post_save, sender=PropertyTaxRecord)
+def notify_owner_on_tax_paid(
+    sender: type[PropertyTaxRecord], instance: PropertyTaxRecord, **kwargs: object
+) -> None:
+    if not instance.paid:
+        return
+
+    owner = instance.property.owner
+    phone = getattr(owner, "whatsapp_number", None) or ""
+    if not phone:
+        return
+
+    try:
+        from notification.services.rent_notify_service import notify_owner
+
+        msg = (
+            f"✅ Property tax of ₹{instance.amount} has been paid for "
+            f"{instance.property.name} on {instance.paid_date}."
+        )
+        notify_owner(owner, msg)
+    except Exception as exc:
+        logger.exception(
+            "Failed to send tax-paid notification for tax %s: %s",
+            instance.id,
+            exc,
+        )
