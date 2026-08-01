@@ -72,6 +72,19 @@ class UserProfile(models.Model):
     language_preference = models.CharField(
         max_length=2, default="en", choices=[("en", "English"), ("hi", "Hindi")]
     )
+    alert_frequency = models.CharField(
+        max_length=10,
+        choices=[
+            ("daily", "Daily"),
+            ("weekly", "Weekly"),
+            ("monthly", "Monthly"),
+        ],
+        default="weekly",
+    )
+    receive_rent_alerts = models.BooleanField(default=True)
+    receive_tax_alerts = models.BooleanField(default=True)
+    receive_vacancy_alerts = models.BooleanField(default=True)
+    receive_flagged_alerts = models.BooleanField(default=True)
 
 
 class NotificationPreference(UpsertMixin, models.Model):

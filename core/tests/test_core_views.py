@@ -8,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from core.models import OTP, OwnerBankDetails
+from core.models import OTP, OwnerBankDetails, UserProfile
 from core.views import download_rent_excel, owner_rent_records, rent_inflow_summary
 
 User = get_user_model()
@@ -221,3 +221,56 @@ class DownloadRentExcelTest(TestCase):
     def test_download_rent_excel_view_exists(self):
 
         self.assertTrue(callable(download_rent_excel))
+
+
+class UpdateOwnerAlertPreferencesTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="alert_user",
+            email="au@test.com",
+            password="testpass123",
+            full_name="Alert User",
+            phone="+919999999999",
+        )
+        refresh = RefreshToken.for_user(self.user)
+        self.access_token = str(refresh.access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+
+    def test_update_alert_preferences_success(self):
+        response = self.client.post(
+            f"{API_PREFIX}/api/owner/update-alert-preferences/",
+            {
+                "language_preference": "hi",
+                "alert_frequency": "daily",
+                "receive_rent_alerts": True,
+                "receive_tax_alerts": False,
+                "receive_vacancy_alerts": True,
+                "receive_flagged_alerts": False,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("success"))
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.language_preference, "hi")
+        self.assertEqual(profile.alert_frequency, "daily")
+        self.assertFalse(profile.receive_tax_alerts)
+        self.assertFalse(profile.receive_flagged_alerts)
+
+    def test_update_alert_preferences_requires_auth(self):
+        self.client.credentials()
+        response = self.client.post(
+            f"{API_PREFIX}/api/owner/update-alert-preferences/",
+            {"language_preference": "hi"},
+        )
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_update_alert_preferences_partial_update(self):
+        response = self.client.post(
+            f"{API_PREFIX}/api/owner/update-alert-preferences/",
+            {"alert_frequency": "monthly"},
+        )
+        self.assertEqual(response.status_code, 200)
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.alert_frequency, "monthly")
+        self.assertEqual(profile.language_preference, "en")

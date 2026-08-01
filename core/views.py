@@ -44,6 +44,7 @@ from .models import (
     SubscriptionPlan,
     UsageLimit,
     User,
+    UserProfile,
     UserSubscription,
 )
 from .serializers import (
@@ -516,6 +517,55 @@ def _process_rent_payment(rent: RentRecord) -> None:
         process_rent_payout(rent)
     except Exception as e:
         logger.exception(f"Failed to process payout for rent {rent.id}: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Alert Preferences
+# ---------------------------------------------------------------------------
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_owner_alert_preferences(
+    request: Request, /, *args: Any, **kwargs: Any
+) -> Response:
+    owner: User = cast(User, request.user)
+    try:
+        profile = owner.userprofile
+    except UserProfile.DoesNotExist:
+        return Response(
+            {"error": "UserProfile not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    data = request.data
+    profile.language_preference = data.get(
+        "language_preference", profile.language_preference
+    )
+    profile.alert_frequency = data.get("alert_frequency", profile.alert_frequency)
+    profile.receive_rent_alerts = data.get(
+        "receive_rent_alerts", profile.receive_rent_alerts
+    )
+    profile.receive_tax_alerts = data.get(
+        "receive_tax_alerts", profile.receive_tax_alerts
+    )
+    profile.receive_vacancy_alerts = data.get(
+        "receive_vacancy_alerts", profile.receive_vacancy_alerts
+    )
+    profile.receive_flagged_alerts = data.get(
+        "receive_flagged_alerts", profile.receive_flagged_alerts
+    )
+    profile.save(
+        update_fields=[
+            "language_preference",
+            "alert_frequency",
+            "receive_rent_alerts",
+            "receive_tax_alerts",
+            "receive_vacancy_alerts",
+            "receive_flagged_alerts",
+        ]
+    )
+    return Response({"success": True, "message": "Alert preferences updated."})
 
 
 # ---------------------------------------------------------------------------

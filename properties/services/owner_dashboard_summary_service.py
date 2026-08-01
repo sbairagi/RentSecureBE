@@ -30,37 +30,50 @@ class OwnerDashboardSummary(TypedDict):
 def build_owner_summary(owner: User) -> OwnerDashboardSummary:
     """Build the dashboard summary for the given owner.
 
-    Args:
-        owner: The property owner to summarize.
-
-    Returns:
-        A typed dict with vacant units, pending rent total,
-        overdue tax count, and flagged renter count.
+    Respects the owner's alert preferences from ``UserProfile`` so
+    disabled alert types are omitted from the payload.
     """
     from properties.models import PropertyTaxRecord, Renter, RentRecord, Unit
 
     today = timezone.now().date()
 
-    vacant_units: int = Unit.objects.filter(owner=owner, is_vacant=True).count()
+    try:
+        profile = UserProfile.objects.get(user=owner)
+    except UserProfile.DoesNotExist:
+        profile = None
 
-    pending_rent_amount: float = float(
-        RentRecord.objects.filter(
+    if profile is not None and not profile.receive_vacancy_alerts:
+        vacant_units = 0
+    else:
+        vacant_units = Unit.objects.filter(owner=owner, is_vacant=True).count()
+
+    if profile is not None and not profile.receive_rent_alerts:
+        pending_rent_amount = 0.0
+    else:
+        pending_rent_amount = float(
+            RentRecord.objects.filter(
+                unit__owner=owner,
+                status=RentRecord.Status.PENDING,
+            ).aggregate(total=Sum("amount"))["total"]
+            or 0
+        )
+
+    if profile is not None and not profile.receive_tax_alerts:
+        overdue_taxes = 0
+    else:
+        overdue_taxes = PropertyTaxRecord.objects.filter(
+            property__owner=owner,
+            paid=False,
+            due_date__lt=today,
+        ).count()
+
+    if profile is not None and not profile.receive_flagged_alerts:
+        flagged_renters = 0
+    else:
+        flagged_renters = Renter.objects.filter(
             unit__owner=owner,
-            status=RentRecord.Status.PENDING,
-        ).aggregate(total=Sum("amount"))["total"]
-        or 0
-    )
-
-    overdue_taxes: int = PropertyTaxRecord.objects.filter(
-        property__owner=owner,
-        paid=False,
-        due_date__lt=today,
-    ).count()
-
-    flagged_renters: int = Renter.objects.filter(
-        unit__owner=owner,
-        is_flagged=True,
-    ).count()
+            is_flagged=True,
+        ).count()
 
     return OwnerDashboardSummary(
         vacant_units=vacant_units,
@@ -97,16 +110,29 @@ def _get_owner_whatsapp(owner: User) -> str:
 
 
 def _build_summary_message(summary: OwnerDashboardSummary, owner_name: str) -> str:
-    """Format the dashboard summary for WhatsApp delivery."""
-    return (
-        f"\U0001f44b Hello {owner_name},\n\n"
-        f"Here is your RentSecure Summary:\n\n"
-        f"\U0001f3da Vacant Units: {summary['vacant_units']}\n"
-        f"\U0001f4b0 Pending Rents: \u20b9{summary['pending_rent_amount']:,.2f}\n"
-        f"\U0001f4c5 Overdue Taxes: {summary['overdue_taxes']}\n"
-        f"\U0001f6a9 Flagged Renters: {summary['flagged_renters']}\n\n"
-        f"\U0001f4cc To view more, visit your RentSecure dashboard."
-    )
+    """Format the dashboard summary for WhatsApp delivery.
+
+    Only includes sections with non-zero values so owners do not
+    receive noisy messages for categories they do not care about.
+    """
+    lines = [
+        f"\U0001f44b Hello {owner_name},",
+        "",
+        "Here is your RentSecure Summary:",
+        "",
+    ]
+    if summary["vacant_units"]:
+        lines.append(f"\U0001f3da Vacant Units: {summary['vacant_units']}")
+    if summary["pending_rent_amount"]:
+        amount = f"\u20b9{summary['pending_rent_amount']:,.2f}"
+        lines.append(f"\U0001f4b0 Pending Rents: {amount}")
+    if summary["overdue_taxes"]:
+        lines.append(f"\U0001f4c5 Overdue Taxes: {summary['overdue_taxes']}")
+    if summary["flagged_renters"]:
+        lines.append(f"\U0001f6a9 Flagged Renters: {summary['flagged_renters']}")
+    lines.append("")
+    lines.append("\U0001f4cc To view more, visit your RentSecure dashboard.")
+    return "\n".join(lines)
 
 
 def _translate(text: str, lang: str) -> str:
@@ -187,12 +213,30 @@ def send_summary_to_owner(owner: User) -> bool:
 def run_daily_owner_summaries() -> int:
     """Send dashboard summaries to all property owners.
 
+    Respects each owner's ``UserProfile.alert_frequency`` setting:
+    - ``daily``   → send every run
+    - ``weekly``  → send only on Mondays
+    - ``monthly`` → send only on the 1st of the month
+
     Returns:
         The number of owners for whom a notification was attempted.
     """
+    today = timezone.now().date()
+    frequency_map = {
+        "daily": True,
+        "weekly": today.weekday() == 0,
+        "monthly": today.day == 1,
+    }
+
     owners = User.objects.filter(units__isnull=False).distinct()
     count = 0
     for owner in owners:
+        try:
+            frequency = owner.userprofile.alert_frequency
+        except UserProfile.DoesNotExist:
+            frequency = "weekly"
+        if not frequency_map.get(frequency, False):
+            continue
         if send_summary_to_owner(owner):
             count += 1
     return count

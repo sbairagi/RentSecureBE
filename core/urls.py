@@ -17,6 +17,7 @@ from .views import (
     download_ca_summary,
     download_rent_excel,
     razorpay_webhook,
+    update_owner_alert_preferences,
     update_owner_bank_details,
 )
 
@@ -41,6 +42,7 @@ urlpatterns = [
         name="cashfree_payout_webhook",
     ),
     path("api/owner/update-bank-details/", update_owner_bank_details),
+    path("api/owner/update-alert-preferences/", update_owner_alert_preferences),
     path("api/rent/payment-callback/", razorpay_webhook),
     path("owner/rent-report/", download_rent_excel),
     path("owner/ca-summary/", download_ca_summary),

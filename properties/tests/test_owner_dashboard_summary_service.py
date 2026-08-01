@@ -1,6 +1,6 @@
 """Tests for owner dashboard summary service."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -15,6 +15,7 @@ from properties.services.owner_dashboard_summary_service import (
     _get_owner_name,
     _get_owner_whatsapp,
     build_owner_summary,
+    run_daily_owner_summaries,
     send_summary_to_owner,
 )
 
@@ -206,3 +207,82 @@ class OwnerDashboardSummaryServiceTests(TestCase):
         self.owner.save(update_fields=["whatsapp_number"])
         result = send_summary_to_owner(self.owner)
         self.assertFalse(result)
+
+    def test_build_owner_summary_respects_disabled_vacancy_alerts(self):
+        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        profile.receive_vacancy_alerts = False
+        profile.save(update_fields=["receive_vacancy_alerts"])
+        summary = build_owner_summary(self.owner)
+        self.assertEqual(summary["vacant_units"], 0)
+
+    def test_build_owner_summary_respects_disabled_rent_alerts(self):
+        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        profile.receive_rent_alerts = False
+        profile.save(update_fields=["receive_rent_alerts"])
+        summary = build_owner_summary(self.owner)
+        self.assertEqual(summary["pending_rent_amount"], 0.0)
+
+    def test_build_owner_summary_respects_disabled_tax_alerts(self):
+        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        profile.receive_tax_alerts = False
+        profile.save(update_fields=["receive_tax_alerts"])
+        summary = build_owner_summary(self.owner)
+        self.assertEqual(summary["overdue_taxes"], 0)
+
+    def test_build_owner_summary_respects_disabled_flagged_alerts(self):
+        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        profile.receive_flagged_alerts = False
+        profile.save(update_fields=["receive_flagged_alerts"])
+        summary = build_owner_summary(self.owner)
+        self.assertEqual(summary["flagged_renters"], 0)
+
+    def test_build_summary_message_omits_zero_sections(self):
+        summary = {
+            "vacant_units": 0,
+            "pending_rent_amount": 0.0,
+            "overdue_taxes": 0,
+            "flagged_renters": 0,
+        }
+        message = _build_summary_message(summary, "TestOwner")
+        self.assertNotIn("Vacant Units:", message)
+        self.assertNotIn("Pending Rents:", message)
+        self.assertNotIn("Overdue Taxes:", message)
+        self.assertNotIn("Flagged Renters:", message)
+        self.assertIn("Hello TestOwner", message)
+        self.assertIn("RentSecure dashboard", message)
+
+    @patch("properties.services.owner_dashboard_summary_service.send_summary_to_owner")
+    def test_run_daily_owner_summaries_respects_daily_frequency(self, mock_send):
+        mock_send.return_value = True
+        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        profile.alert_frequency = "daily"
+        profile.save(update_fields=["alert_frequency"])
+        count = run_daily_owner_summaries()
+        self.assertEqual(count, 1)
+        mock_send.assert_called_once_with(self.owner)
+
+    @patch("django.utils.timezone.now")
+    @patch("properties.services.owner_dashboard_summary_service.send_summary_to_owner")
+    def test_run_daily_owner_summaries_skips_weekly_on_non_monday(
+        self, mock_send, mock_now
+    ):
+        mock_now.return_value = datetime(2026, 8, 2, tzinfo=timezone.utc)
+        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        profile.alert_frequency = "weekly"
+        profile.save(update_fields=["alert_frequency"])
+        count = run_daily_owner_summaries()
+        self.assertEqual(count, 0)
+        mock_send.assert_not_called()
+
+    @patch("django.utils.timezone.now")
+    @patch("properties.services.owner_dashboard_summary_service.send_summary_to_owner")
+    def test_run_daily_owner_summaries_skips_monthly_on_non_first(
+        self, mock_send, mock_now
+    ):
+        mock_now.return_value = datetime(2026, 8, 2, tzinfo=timezone.utc)
+        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        profile.alert_frequency = "monthly"
+        profile.save(update_fields=["alert_frequency"])
+        count = run_daily_owner_summaries()
+        self.assertEqual(count, 0)
+        mock_send.assert_not_called()
