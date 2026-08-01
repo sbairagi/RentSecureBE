@@ -10,7 +10,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any, cast, override
 
 import razorpay  # type: ignore[import-untyped]
-from rest_framework import generics, permissions, viewsets
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -663,4 +663,37 @@ def download_rent_excel(request: Request, /, *args: Any, **kwargs: Any) -> HttpR
     file = generate_owner_rent_report(request.user)
     response = HttpResponse(file, content_type="application/vnd.ms-excel")
     response["Content-Disposition"] = 'attachment; filename="rent_report.xlsx"'
+    return response
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def download_ca_summary(request: Request, /, *args: Any, **kwargs: Any) -> HttpResponse:
+    """Download owner CA summary as CSV or JSON."""
+    from properties.services.ca_summary_service import (
+        generate_ca_summary_csv,
+        generate_ca_summary_json,
+    )
+
+    start_date = request.query_params.get("start")
+    end_date = request.query_params.get("end")
+    fmt = request.query_params.get("format", "csv").lower()
+
+    if not start_date or not end_date:
+        return Response(
+            {"error": "start and end query parameters are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if fmt == "json":
+        data = generate_ca_summary_json(request.user, start_date, end_date)
+        content_type = "application/json"
+        filename = f"ca_summary_{start_date}_to_{end_date}.json"
+    else:
+        data = generate_ca_summary_csv(request.user, start_date, end_date)
+        content_type = "text/csv"
+        filename = f"ca_summary_{start_date}_to_{end_date}.csv"
+
+    response = HttpResponse(data, content_type=content_type)
+    response["Content-Disposition"] = f"attachment; filename={filename}"
     return response

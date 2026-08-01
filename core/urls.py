@@ -14,6 +14,8 @@ from .views import (
     UsageLimitViewSet,
     UserSubscriptionViewSet,
     cashfree_payout_webhook,
+    download_ca_summary,
+    download_rent_excel,
     razorpay_webhook,
     update_owner_bank_details,
 )
@@ -40,6 +42,8 @@ urlpatterns = [
     ),
     path("api/owner/update-bank-details/", update_owner_bank_details),
     path("api/rent/payment-callback/", razorpay_webhook),
+    path("owner/rent-report/", download_rent_excel),
+    path("owner/ca-summary/", download_ca_summary),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),
     path("", include(router.urls)),

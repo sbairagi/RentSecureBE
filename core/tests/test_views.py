@@ -27,6 +27,7 @@ from core.views import (
     _process_rent_payment,
     cashfree_payout_webhook,
     create_rent_payment,
+    download_ca_summary,
     download_rent_excel,
     owner_rent_records,
     rent_inflow_summary,
@@ -1180,3 +1181,39 @@ class TestDownloadRentExcelView:
         assert response.status_code == 200
         assert response["Content-Type"] == "application/vnd.ms-excel"
         assert "attachment" in response["Content-Disposition"]
+
+
+# ===================================================================
+# download_ca_summary (no URL route, call directly)
+# ===================================================================
+
+
+class TestDownloadCaSummaryView:
+    @patch("properties.services.ca_summary_service.generate_ca_summary_csv")
+    def test_returns_csv_response(self, mock_csv, owner):
+        mock_csv.return_value = b"a,b,c\n1,2,3\n"
+        req = _make_django_request(user=owner, method="get")
+        req.GET = {"start": "2025-01-01", "end": "2025-03-31"}
+        with patch("rest_framework.request.Request.user", owner):
+            response = download_ca_summary(req)
+        assert response.status_code == 200
+        assert response["Content-Type"] == "text/csv"
+        assert "attachment" in response["Content-Disposition"]
+
+    @patch("properties.services.ca_summary_service.generate_ca_summary_json")
+    def test_returns_json_response(self, mock_json, owner):
+        mock_json.return_value = b'{"records": []}'
+        req = _make_django_request(user=owner, method="get")
+        req.GET = {"start": "2025-01-01", "end": "2025-03-31", "format": "json"}
+        with patch("rest_framework.request.Request.user", owner):
+            response = download_ca_summary(req)
+        assert response.status_code == 200
+        assert response["Content-Type"] == "application/json"
+        assert "attachment" in response["Content-Disposition"]
+
+    def test_missing_dates_returns_400(self, owner):
+        req = _make_django_request(user=owner, method="get")
+        req.GET = {}
+        with patch("rest_framework.request.Request.user", owner):
+            response = download_ca_summary(req)
+        assert response.status_code == 400
