@@ -1,3 +1,5 @@
+import os
+import tempfile
 from io import BytesIO
 from typing import Any, cast
 
@@ -123,6 +125,80 @@ class GenerateRentReceiptPdfViewSet(viewsets.ModelViewSet):
             f"attachment; filename=rent_receipt_{rent_record.id}.pdf"
         )
         return response
+
+
+class GenerateIncomeSummaryPdfViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=["get"], url_path="download")
+    def download_income_summary(self, request: HttpRequest) -> HttpResponse:
+        period = request.query_params.get("period", "monthly")
+        owner = cast(User, request.user)
+        try:
+            from properties.services.income_summary_service import (
+                generate_income_summary_pdf,
+            )
+
+            pdf_bytes = generate_income_summary_pdf(owner, period=period)
+        except Exception as e:
+            return Response(
+                {"error": "Failed to generate income summary", "details": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        filename = f"income_summary_{period}_{now().date()}.pdf"
+        response["Content-Disposition"] = f"attachment; filename={filename}"
+        return response
+
+    @action(detail=False, methods=["post"], url_path="send-whatsapp")
+    def send_income_summary_whatsapp(self, request: HttpRequest) -> Response:
+        from notification.services.whatsapp_service import send_whatsapp_file
+        from properties.services.income_summary_service import (
+            generate_income_summary_pdf,
+        )
+
+        period = request.data.get("period", "monthly")
+        owner = cast(User, request.user)
+        phone = getattr(owner, "whatsapp_number", None)
+
+        if not phone:
+            return Response(
+                {"detail": "WhatsApp number not found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            pdf_bytes = generate_income_summary_pdf(owner, period=period)
+            fd, path = tempfile.mkstemp(
+                suffix=".pdf", prefix=f"income_summary_{period}_"
+            )
+            try:
+                with os.fdopen(fd, "wb") as pdf_file:
+                    pdf_file.write(pdf_bytes)
+            except Exception:
+                os.close(fd)
+                raise
+
+            sent = send_whatsapp_file(phone, path, "application/pdf")
+        except Exception as exc:
+            return Response(
+                {"error": "Failed to send WhatsApp", "details": str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        finally:
+            if "path" in locals() and os.path.exists(path):
+                os.unlink(path)
+
+        if sent:
+            return Response(
+                {"detail": "Income summary sent via WhatsApp."},
+                status=status.HTTP_200_OK,
+            )
+        return Response(
+            {"detail": "Failed to send WhatsApp."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 def download_unit_history(request: HttpRequest, unit_id: int) -> HttpResponse:

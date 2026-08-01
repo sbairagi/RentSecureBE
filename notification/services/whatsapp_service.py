@@ -49,6 +49,26 @@ def send_whatsapp_audio(phone: str, audio_path: str) -> bool:
         return False
 
 
+def send_whatsapp_file(
+    phone: str, file_path: str, content_type: str = "application/pdf"
+) -> bool:
+    try:
+        media_url = upload_to_s3(file_path)
+
+        sid = getattr(settings, "TWILIO_SID", settings.TWILIO_ACCOUNT_SID)
+        token = getattr(settings, "TWILIO_TOKEN", settings.TWILIO_AUTH_TOKEN)
+        client = Client(sid, token)
+        client.messages.create(
+            media_url=[media_url],
+            from_=settings.TWILIO_WHATSAPP_NUMBER,
+            to=f"whatsapp:{phone}",
+        )
+        return True
+    except (TwilioRestException, OSError):
+        logger.exception("WhatsApp file send failed: %s")
+        return False
+
+
 def upload_to_s3(file_path: str) -> str | None:
     bucket_name = settings.AWS_S3_BUCKET_NAME
     if not bucket_name:

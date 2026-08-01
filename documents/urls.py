@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from django.urls import include, path
 
 from .views import (
+    GenerateIncomeSummaryPdfViewSet,
     GenerateRentAgreementPdfViewSet,
     GenerateRentReceiptPdfViewSet,
     GenerateUnitDossierPdfViewSet,
@@ -17,6 +18,9 @@ router.register(
 )
 router.register(
     r"rent_agreement", GenerateRentAgreementPdfViewSet, basename="rent-agreement-pdf"
+)
+router.register(
+    r"income_summary", GenerateIncomeSummaryPdfViewSet, basename="income-summary-pdf"
 )
 
 

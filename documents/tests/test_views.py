@@ -21,6 +21,7 @@ from django.urls import include, path  # noqa: E402
 
 from conftest import RenterFactory, RentRecordPaidFactory, UnitFactory
 from documents.views import (
+    GenerateIncomeSummaryPdfViewSet,
     GenerateRentAgreementPdfViewSet,
     GenerateRentReceiptPdfViewSet,
     GenerateUnitDossierPdfViewSet,
@@ -36,6 +37,9 @@ _router.register(
 )
 _router.register(
     r"rent_receipt", GenerateRentReceiptPdfViewSet, basename="rent-receipt-pdf"
+)
+_router.register(
+    r"income_summary", GenerateIncomeSummaryPdfViewSet, basename="income-summary-pdf"
 )
 # Provide error handler stubs so Django's handler resolver does not raise
 # AttributeError when respond to 404s raised inside test_client calls
@@ -435,3 +439,98 @@ class TestDownloadUnitHistory:
             == f'attachment; filename="unit_{unit.id}_history.pdf"'
         )
         mock_gen.assert_called_once_with(mock_unit_instance)
+
+
+# ---------------------------------------------------------------------------
+# GenerateIncomeSummaryPdfViewSet tests
+# ---------------------------------------------------------------------------
+class TestGenerateIncomeSummaryPdfViewSet:
+    pytestmark = pytest.mark.django_db
+
+    @staticmethod
+    def _doc_url(*parts: str) -> str:
+        return "/documents/income_summary/" + "/".join(parts) + "/"
+
+    @_http
+    def test_unauthenticated_returns_401(self, owner):
+        client = APIClient()
+        resp = client.get(self._doc_url("download"))
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    @_http
+    def test_success_returns_pdf(self, owner):
+        with patch(
+            "properties.services.income_summary_service.generate_income_summary_pdf"
+        ) as mock_gen:
+            mock_gen.return_value = b"%PDF-1.4 income"
+            client = APIClient()
+            client.force_authenticate(user=owner)
+            resp = client.get(self._doc_url("download"), {"period": "monthly"})
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp["Content-Type"] == "application/pdf"
+        assert resp["Content-Disposition"].startswith(
+            "attachment; filename=income_summary_monthly_"
+        )
+
+    @_http
+    def test_pdf_generation_exception_returns_500(self, owner):
+        with patch(
+            "properties.services.income_summary_service.generate_income_summary_pdf",
+            side_effect=RuntimeError("PDF engine crashed"),
+        ):
+            client = APIClient()
+            client.force_authenticate(user=owner)
+            resp = client.get(self._doc_url("download"))
+
+        assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        body = resp.json()
+        assert body["error"] == "Failed to generate income summary"
+        assert "PDF engine crashed" in body["details"]
+
+    @_http
+    def test_send_whatsapp_without_phone_returns_400(self, owner):
+        owner.whatsapp_number = ""
+        owner.save(update_fields=["whatsapp_number"])
+        client = APIClient()
+        client.force_authenticate(user=owner)
+        resp = client.post(self._doc_url("send-whatsapp"), data={"period": "monthly"})
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    @_http
+    def test_send_whatsapp_success_returns_200(self, owner):
+        owner.whatsapp_number = "+919876543210"
+        owner.save(update_fields=["whatsapp_number"])
+        with patch(
+            "properties.services.income_summary_service.generate_income_summary_pdf"
+        ) as mock_gen:
+            mock_gen.return_value = b"%PDF"
+            with patch(
+                "notification.services.whatsapp_service.send_whatsapp_file",
+                return_value=True,
+            ) as mock_send:
+                client = APIClient()
+                client.force_authenticate(user=owner)
+                resp = client.post(
+                    self._doc_url("send-whatsapp"), data={"period": "monthly"}
+                )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["detail"] == "Income summary sent via WhatsApp."
+        mock_send.assert_called_once()
+
+    @_http
+    def test_send_whatsapp_failure_returns_500(self, owner):
+        owner.whatsapp_number = "+919876543210"
+        owner.save(update_fields=["whatsapp_number"])
+        with patch(
+            "properties.services.income_summary_service.generate_income_summary_pdf",
+            side_effect=RuntimeError("boom"),
+        ):
+            client = APIClient()
+            client.force_authenticate(user=owner)
+            resp = client.post(
+                self._doc_url("send-whatsapp"), data={"period": "monthly"}
+            )
+
+        assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
