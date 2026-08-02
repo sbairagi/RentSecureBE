@@ -13,13 +13,13 @@ Dedup strategy:
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from django_celery_beat.models import PeriodicTask  # type: ignore[import-untyped]
 
 from django.db.models import QuerySet
-from django.utils.timezone import now
+from django.utils.timezone import get_default_timezone, make_aware, now
 
 from notification.services.voice_note_service import (
     alert_owner_about_delay,
@@ -76,7 +76,8 @@ def get_late_rent_records() -> QuerySet[RentRecord]:
 def _should_send_reminder(owner: Any) -> bool:
     """Check if reminders should be sent for this owner now.
 
-    Returns ``True`` if the current time matches the owner's preferred
+    Returns ``True`` if the current time is within the allowed window
+    (default ±5 minutes) of the owner's preferred
     :attr:`reminder_time`, or if the owner has no profile/default time.
     """
     try:
@@ -86,11 +87,11 @@ def _should_send_reminder(owner: Any) -> bool:
         reminder_time = profile.reminder_time
         if reminder_time is None:
             return True
-        current_time = now().time()
-        return (
-            current_time.hour == reminder_time.hour
-            and current_time.minute == reminder_time.minute
-        )
+        current_time = now()
+        reminder_dt = datetime.combine(current_time.date(), reminder_time)
+        reminder_dt = make_aware(reminder_dt, get_default_timezone())
+        diff = abs((current_time - reminder_dt).total_seconds())
+        return diff <= 300  # within 5 minutes
     except Exception:
         return True
 

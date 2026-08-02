@@ -1,6 +1,6 @@
 # tasks/schedule_reminders.py
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from django.utils.timezone import now
@@ -59,8 +59,39 @@ def _safe_whatsapp(owner: Any) -> str:
     return getattr(owner, "whatsapp_number", None) or ""
 
 
+def _should_send_reminder_for_owner(owner: Any) -> bool:
+    """Check if reminders should be sent for this owner now.
+
+    Returns ``True`` if the current time is within the allowed window
+    (default ±5 minutes) of the owner's preferred reminder_time,
+    or if the owner has no profile/default time.
+    """
+    try:
+        from django.utils.timezone import get_default_timezone, make_aware
+
+        from core.models import UserProfile
+
+        profile = UserProfile.objects.get(user=owner)
+        reminder_time = profile.reminder_time
+        if reminder_time is None:
+            return True
+        current_time = now()
+        reminder_dt = datetime.combine(current_time.date(), reminder_time)
+        reminder_dt = make_aware(reminder_dt, get_default_timezone())
+        diff = abs((current_time - reminder_dt).total_seconds())
+        return diff <= 300  # within 5 minutes
+    except Exception:
+        return True
+
+
 def process_rent_reminders() -> None:
     for rent in get_upcoming_rent_dues():
+        if rent.renter is None:
+            continue
+        owner = rent.renter.unit.owner
+        if not _should_send_reminder_for_owner(owner):
+            continue
+
         phone = rent.renter.whatsapp_number or rent.renter.phone or ""
         lang = _safe_lang_for_renter(rent.renter)
         if not phone:
@@ -83,6 +114,9 @@ def process_rent_reminders() -> None:
 def process_tax_reminders() -> None:
     for tax in get_upcoming_tax_dues():
         owner = tax.property.owner
+        if not _should_send_reminder_for_owner(owner):
+            continue
+
         phone = _safe_whatsapp(owner)
         lang = (
             getattr(getattr(owner, "profile", None), "language_preference", None)
