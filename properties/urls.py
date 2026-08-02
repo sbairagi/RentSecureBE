@@ -19,6 +19,7 @@ from .views import (
     owner_rent_overview,
     owner_rent_records,
     rent_history,
+    resend_rent_confirmation,
     retry_payout_api,
 )
 
@@ -49,6 +50,10 @@ urlpatterns = [
     path("", include(router.urls)),
     path("owner/rent-records/", owner_rent_records),
     path("rent-records/<int:rent_id>/invoice/", download_rent_invoice),
+    path(
+        "rent-records/<int:rent_id>/resend-confirmation/",
+        resend_rent_confirmation,
+    ),
     path("renter/rent-due/", get_latest_due_rent),
     path("renter/rent-history/", rent_history),
     path("owner/rents/", owner_rent_overview),

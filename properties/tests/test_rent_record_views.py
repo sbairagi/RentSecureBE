@@ -566,3 +566,71 @@ class TestOwnerRentOverviewAPI:
         response = c.get("/properties/owner/rents/")
         assert response.status_code == 200
         assert response.data == []
+
+
+# ===========================================================================
+# resend_rent_confirmation endpoint
+# ===========================================================================
+
+
+class TestResendRentConfirmationAPI:
+    """Covers resend_rent_confirmation endpoint."""
+
+    def test_owner_can_resend_confirmation(self, db):
+        """Owner can resend confirmation for their rent record."""
+        owner = UserFactory()
+        building = BuildingFactory(owner=owner)
+        unit = UnitFactory(owner=owner, building=building)
+        renter = RenterFactory(unit=unit)
+        rent = RentRecordFactory(unit=unit, renter=renter, status="PAID")
+
+        c = _make_client(owner)
+        with patch("properties.views.rent_reminder.send_whatsapp_message") as mock_send:
+            with patch(
+                "properties.views.rent_reminder.generate_voice_note",
+                return_value=None,
+            ):
+                response = c.post(
+                    f"/properties/rent-records/{rent.id}/resend-confirmation/"
+                )
+        assert response.status_code == 200
+        assert response.data["status"] == "Resent successfully."
+        mock_send.assert_called_once()
+
+    def test_other_owner_cannot_resend(self, db):
+        """Other owner cannot resend confirmation."""
+        owner = UserFactory()
+        other = UserFactory()
+        building = BuildingFactory(owner=owner)
+        unit = UnitFactory(owner=owner, building=building)
+        renter = RenterFactory(unit=unit)
+        rent = RentRecordFactory(unit=unit, renter=renter, status="PAID")
+
+        c = _make_client(other)
+        response = c.post(f"/properties/rent-records/{rent.id}/resend-confirmation/")
+        assert response.status_code == 403
+
+    def test_missing_renter_returns_400(self, db):
+        """Rent record without renter returns 400."""
+        owner = UserFactory()
+        building = BuildingFactory(owner=owner)
+        unit = UnitFactory(owner=owner, building=building)
+        rent = RentRecordFactory(unit=unit, renter=None, status="PAID")
+
+        c = _make_client(owner)
+        response = c.post(f"/properties/rent-records/{rent.id}/resend-confirmation/")
+        assert response.status_code == 400
+        assert "error" in response.data
+
+    def test_renter_without_phone_returns_400(self, db):
+        """Renter without phone number returns 400."""
+        owner = UserFactory()
+        building = BuildingFactory(owner=owner)
+        unit = UnitFactory(owner=owner, building=building)
+        renter = RenterFactory(unit=unit, phone="", whatsapp_number="")
+        rent = RentRecordFactory(unit=unit, renter=renter, status="PAID")
+
+        c = _make_client(owner)
+        response = c.post(f"/properties/rent-records/{rent.id}/resend-confirmation/")
+        assert response.status_code == 400
+        assert "error" in response.data

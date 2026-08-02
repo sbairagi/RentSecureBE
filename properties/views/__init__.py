@@ -17,6 +17,7 @@ from .rent_record_views import (
     rent_history,
     retry_payout_api,
 )
+from .rent_reminder import resend_rent_confirmation
 from .renter_views import RenterViewSet
 from .unit_views import (
     RentAgreementDraftViewSet,
@@ -42,6 +43,7 @@ __all__ = [
     "rent_history",
     "owner_rent_overview",
     "owner_dashboard_summary",
+    "resend_rent_confirmation",
     "ExtraChargeViewSet",
     "leegality_webhook",
     "my_rent_records",
