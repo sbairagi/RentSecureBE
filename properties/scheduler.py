@@ -14,7 +14,7 @@ Dedup strategy:
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from django_celery_beat.models import PeriodicTask  # type: ignore[import-untyped]
 
@@ -73,13 +73,43 @@ def get_late_rent_records() -> QuerySet[RentRecord]:
     ).exclude(renter_id__in=already_reminded_renter_ids)
 
 
+def _should_send_reminder(owner: Any) -> bool:
+    """Check if reminders should be sent for this owner now.
+
+    Returns ``True`` if the current time matches the owner's preferred
+    :attr:`reminder_time`, or if the owner has no profile/default time.
+    """
+    try:
+        from core.models import UserProfile
+
+        profile = UserProfile.objects.get(user=owner)
+        reminder_time = profile.reminder_time
+        if reminder_time is None:
+            return True
+        current_time = now().time()
+        return (
+            current_time.hour == reminder_time.hour
+            and current_time.minute == reminder_time.minute
+        )
+    except Exception:
+        return True
+
+
 def process_late_rent_followups() -> int:
     """Send late-rent notifications and bump the renter's late count.
+
+    Respects each owner's :attr:`core.models.UserProfile.reminder_time`
+    setting: reminders are only sent when the current time matches the
+    owner's preferred reminder time.
 
     Returns the number of renters processed.
     """
     processed = 0
     for rent in get_late_rent_records():
+        if rent.renter is not None:
+            owner = rent.renter.unit.owner
+            if not _should_send_reminder(owner):
+                continue
         send_late_rent_reminder(rent)
         alert_owner_about_delay(rent)
         if rent.renter is not None:

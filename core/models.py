@@ -6,6 +6,7 @@ from simple_history.models import HistoricalRecords
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 from rentsecure_be.type_compat import override
 
@@ -90,6 +91,10 @@ class UserProfile(models.Model):
         max_length=100,
         blank=True,
         help_text="Custom greeting for WhatsApp messages, e.g., 'from Gokul PG'",
+    )
+    reminder_time = models.TimeField(
+        default=timezone.datetime.strptime("09:00", "%H:%M").time(),
+        help_text="Preferred time to send WhatsApp rent and tax reminders",
     )
 
 
