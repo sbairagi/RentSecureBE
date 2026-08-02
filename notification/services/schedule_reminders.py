@@ -10,6 +10,10 @@ from notification.services.whatsapp_service import send_whatsapp_audio  # nosona
 from notification.services.whatsapp_service import (
     send_whatsapp_message,  # nosonar; nosonar; nosonar
 )
+from rentsecure_be.services.message_template_service import (
+    get_rent_reminder_msg,
+    get_tax_reminder_msg,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,24 +32,42 @@ def get_upcoming_tax_dues() -> Any:
     return PropertyTaxRecord.objects.filter(due_date=target_date, paid=False)
 
 
-def generate_rent_reminder_msg(rent: Any) -> str:
+def generate_rent_reminder_msg(rent: Any, lang: str = "en") -> str:
+    """Generate a localized rent reminder message.
 
+    Args:
+        rent: Rent record instance.
+        lang: Language code for translation.
+
+    Returns:
+        Localized reminder message string.
+    """
     if rent.renter is None:
         return ""
-    name = rent.renter.full_name
-    amount = rent.amount
-    due = rent.due_date.strftime("%d %B")
-    return (
-        f"Namaste {name}! Aapka ₹{amount} rent {due} ko due hai. "
-        "Kripya samay par jama karein."
+    return get_rent_reminder_msg(
+        name=rent.renter.full_name,
+        amount=rent.amount,
+        due_date=rent.due_date,
+        lang=lang,
     )
 
 
-def generate_tax_reminder_msg(tax: Any) -> str:
+def generate_tax_reminder_msg(tax: Any, lang: str = "en") -> str:
+    """Generate a localized tax reminder message.
 
-    amount = tax.amount
-    due = tax.due_date.strftime("%d %B")
-    return f"Kripya dhyaan dein – property tax ₹{amount} {due} tak jama karna hai."
+    Args:
+        tax: Property tax record instance.
+        lang: Language code for translation.
+
+    Returns:
+        Localized reminder message string.
+    """
+    return get_tax_reminder_msg(
+        name=getattr(tax.property.owner, "full_name", "Owner"),
+        amount=tax.amount,
+        due_date=tax.due_date,
+        lang=lang,
+    )
 
 
 def _safe_lang_for_renter(renter: Any, default: str = "hi") -> str:
@@ -122,7 +144,7 @@ def _send_rent_reminder_for_rent(rent: Any) -> None:
     if already_reminded:
         return
 
-    msg = generate_rent_reminder_msg(rent)
+    msg = generate_rent_reminder_msg(rent, lang=lang)
     try:
         send_whatsapp_message(phone, msg)
     except Exception:
@@ -161,7 +183,7 @@ def process_tax_reminders() -> None:
         if not phone:
             continue
 
-        msg = generate_tax_reminder_msg(tax)
+        msg = generate_tax_reminder_msg(tax, lang=lang)
         try:
             send_whatsapp_message(phone, msg)
         except Exception:
