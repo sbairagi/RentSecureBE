@@ -96,6 +96,10 @@ class UserProfile(models.Model):
         default=timezone.datetime.strptime("09:00", "%H:%M").time(),
         help_text="Preferred time to send WhatsApp rent and tax reminders",
     )
+    rent_reminders_enabled = models.BooleanField(
+        default=True,
+        help_text="Enable or disable WhatsApp rent reminders for this owner's renters",
+    )
 
 
 class NotificationPreference(UpsertMixin, models.Model):

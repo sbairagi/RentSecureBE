@@ -117,3 +117,15 @@ class ReminderTimeSchedulerTests(TestCase):
                 self.assertEqual(count, 1)
                 mock_send.assert_called_once_with(self.rent)
                 mock_alert.assert_called_once_with(self.rent)
+
+    def test_process_late_rent_followups_skips_when_disabled(self):
+        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        profile.reminder_time = timezone.now().time()
+        profile.rent_reminders_enabled = False
+        profile.save(update_fields=["reminder_time", "rent_reminders_enabled"])
+        with patch("properties.scheduler.send_late_rent_reminder") as mock_send:
+            with patch("properties.scheduler.alert_owner_about_delay") as mock_alert:
+                count = process_late_rent_followups()
+                self.assertEqual(count, 0)
+                mock_send.assert_not_called()
+                mock_alert.assert_not_called()

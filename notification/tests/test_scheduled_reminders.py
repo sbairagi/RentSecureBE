@@ -100,3 +100,13 @@ class ProcessRentRemindersDedupTests(TestCase):
         RentReminderLog.objects.create(renter=self.renter, message_type="DUE")
         process_rent_reminders()
         mock_send.assert_not_called()
+
+    @patch("notification.services.schedule_reminders.send_whatsapp_message")
+    @patch("notification.services.schedule_reminders.generate_voice_note")
+    def test_process_rent_reminders_skips_when_disabled(self, mock_voice, mock_send):
+        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        profile.rent_reminders_enabled = False
+        profile.save(update_fields=["rent_reminders_enabled"])
+        mock_voice.return_value = None
+        process_rent_reminders()
+        mock_send.assert_not_called()

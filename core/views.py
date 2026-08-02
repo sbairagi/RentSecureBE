@@ -561,6 +561,9 @@ def update_owner_alert_preferences(
     )
     profile.greeting_prefix = data.get("greeting_prefix", profile.greeting_prefix)
     profile.reminder_time = data.get("reminder_time", profile.reminder_time)
+    profile.rent_reminders_enabled = data.get(
+        "rent_reminders_enabled", profile.rent_reminders_enabled
+    )
     profile.save(
         update_fields=[
             "language_preference",
@@ -572,6 +575,7 @@ def update_owner_alert_preferences(
             "receive_voice_alerts",
             "greeting_prefix",
             "reminder_time",
+            "rent_reminders_enabled",
         ]
     )
     return Response({"success": True, "message": "Alert preferences updated."})

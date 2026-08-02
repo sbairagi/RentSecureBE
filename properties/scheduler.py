@@ -100,17 +100,24 @@ def process_late_rent_followups() -> int:
     """Send late-rent notifications and bump the renter's late count.
 
     Respects each owner's :attr:`core.models.UserProfile.reminder_time`
-    setting: reminders are only sent when the current time matches the
-    owner's preferred reminder time.
+    and :attr:`core.models.UserProfile.rent_reminders_enabled` settings.
 
     Returns the number of renters processed.
     """
+    from core.models import UserProfile
+
     processed = 0
     for rent in get_late_rent_records():
         if rent.renter is not None:
             owner = rent.renter.unit.owner
             if not _should_send_reminder(owner):
                 continue
+            try:
+                profile = UserProfile.objects.get(user=owner)
+                if not profile.rent_reminders_enabled:
+                    continue
+            except UserProfile.DoesNotExist:
+                pass
         send_late_rent_reminder(rent)
         alert_owner_about_delay(rent)
         if rent.renter is not None:

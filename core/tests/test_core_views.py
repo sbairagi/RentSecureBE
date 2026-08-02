@@ -250,6 +250,7 @@ class UpdateOwnerAlertPreferencesTest(TestCase):
                 "receive_voice_alerts": True,
                 "greeting_prefix": "from Gokul PG",
                 "reminder_time": "10:30",
+                "rent_reminders_enabled": False,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -262,6 +263,7 @@ class UpdateOwnerAlertPreferencesTest(TestCase):
         self.assertTrue(profile.receive_voice_alerts)
         self.assertEqual(profile.greeting_prefix, "from Gokul PG")
         self.assertEqual(profile.reminder_time.strftime("%H:%M"), "10:30")
+        self.assertFalse(profile.rent_reminders_enabled)
 
     def test_update_alert_preferences_requires_auth(self):
         self.client.credentials()

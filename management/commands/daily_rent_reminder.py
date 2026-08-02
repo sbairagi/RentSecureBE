@@ -35,6 +35,13 @@ class Command(BaseCommand):
             if not self._should_send_reminder(owner, current_time):
                 continue
 
+            try:
+                profile = UserProfile.objects.get(user=owner)
+                if not profile.rent_reminders_enabled:
+                    continue
+            except UserProfile.DoesNotExist:
+                pass
+
             already_reminded = RentReminderLog.objects.filter(
                 renter=renter,
                 message_type="DUE",
