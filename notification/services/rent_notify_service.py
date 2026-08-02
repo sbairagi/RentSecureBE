@@ -68,14 +68,24 @@ def notify_renter(renter: Any, message: str) -> None:
 
     try:
         if phone:
-            send_whatsapp_message(phone, translated_text)
+            send_whatsapp_message(
+                phone,
+                translated_text,
+                user=getattr(renter, "user", None),
+                rent_record=None,
+            )
     except Exception as e:
         logger.exception(f"WhatsApp text message failed for user {renter.id}: {e}")
 
     try:
         audio_path = generate_voice_note(translated_text, lang)
         if audio_path and phone:
-            send_whatsapp_audio(phone, audio_path)
+            send_whatsapp_audio(
+                phone,
+                audio_path,
+                user=getattr(renter, "user", None),
+                rent_record=None,
+            )
     except Exception as e:
         logger.exception(f"WhatsApp voice note failed for user {renter.id}: {e}")
 
@@ -103,14 +113,24 @@ def notify_owner(owner: Any, message: str) -> None:
 
     try:
         if phone:
-            send_whatsapp_message(phone, translated_text)
+            send_whatsapp_message(
+                phone,
+                translated_text,
+                user=owner,
+                rent_record=None,
+            )
     except Exception as e:
         logger.exception(f"WhatsApp text message failed for user {owner.id}: {e}")
 
     try:
         audio_path = generate_voice_note(translated_text, lang)
         if audio_path and phone:
-            send_whatsapp_audio(phone, audio_path)
+            send_whatsapp_audio(
+                phone,
+                audio_path,
+                user=owner,
+                rent_record=None,
+            )
     except Exception as e:
         logger.exception(f"WhatsApp voice note failed for user {owner.id}: {e}")
 
@@ -174,8 +194,18 @@ def notify_owner_post_payout(rent: Any) -> None:
 
     # 1. Send text
     if phone:
-        send_whatsapp_message(phone, translated_msg)
+        send_whatsapp_message(
+            phone,
+            translated_msg,
+            user=owner,
+            rent_record=rent,
+        )
 
     # 2. Send voice note
     if audio_path and phone:
-        send_whatsapp_audio(phone, audio_path)
+        send_whatsapp_audio(
+            phone,
+            audio_path,
+            user=owner,
+            rent_record=rent,
+        )

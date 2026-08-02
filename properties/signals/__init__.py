@@ -170,12 +170,22 @@ def handle_rent_payment(
                     paid_date=instance.updated_at,
                     lang=lang,
                 )
-                send_whatsapp_message(renter.whatsapp_number, msg)
+                send_whatsapp_message(
+                    renter.whatsapp_number,
+                    msg,
+                    user=getattr(renter, "user", None),
+                    rent_record=instance,
+                )
 
                 try:
                     audio_path = generate_voice_note(msg, lang)
                     if audio_path:
-                        send_whatsapp_audio(renter.whatsapp_number, audio_path)
+                        send_whatsapp_audio(
+                            renter.whatsapp_number,
+                            audio_path,
+                            user=getattr(renter, "user", None),
+                            rent_record=instance,
+                        )
                 except Exception:
                     logger.exception(
                         "Failed to send rent-paid audio for rent %s",
@@ -247,6 +257,8 @@ def notify_owner_if_unit_vacant(
                         f"Please assign a new renter or mark it as "
                         f"intentionally vacant from your dashboard."
                     ),
+                    user=owner,
+                    rent_record=None,
                 )
 
 

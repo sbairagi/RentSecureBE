@@ -8,7 +8,7 @@ and flagged renters.
 from __future__ import annotations
 
 import logging
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from django.db.models import Sum
 from django.utils import timezone
@@ -155,21 +155,35 @@ def _generate_voice_note(text: str, lang: str) -> str:
         return ""
 
 
-def _send_whatsapp_message(phone: str, text: str) -> bool:
+def _send_whatsapp_message(
+    phone: str,
+    text: str,
+    user: Any = None,
+    rent_record: Any = None,
+) -> bool:
     try:
         from notification.services.whatsapp_service import send_whatsapp_message
 
-        return bool(send_whatsapp_message(phone, text))
+        return bool(
+            send_whatsapp_message(phone, text, user=user, rent_record=rent_record)
+        )
     except Exception as exc:
         logger.exception("Failed to send WhatsApp to %s: %s", phone, exc)
         return False
 
 
-def _send_whatsapp_audio(phone: str, audio_path: str) -> bool:
+def _send_whatsapp_audio(
+    phone: str,
+    audio_path: str,
+    user: Any = None,
+    rent_record: Any = None,
+) -> bool:
     try:
         from notification.services.whatsapp_service import send_whatsapp_audio
 
-        return bool(send_whatsapp_audio(phone, audio_path))
+        return bool(
+            send_whatsapp_audio(phone, audio_path, user=user, rent_record=rent_record)
+        )
     except Exception as exc:
         logger.exception("Failed to send WhatsApp audio to %s: %s", phone, exc)
         return False
@@ -199,7 +213,7 @@ def send_summary_to_owner(owner: User) -> bool:
     message = _build_summary_message(summary, name)
     translated = _translate(message, lang)
 
-    text_sent = _send_whatsapp_message(phone, translated)
+    text_sent = _send_whatsapp_message(phone, translated, user=owner, rent_record=None)
     if not text_sent:
         return False
 
@@ -212,7 +226,7 @@ def send_summary_to_owner(owner: User) -> bool:
 
     audio_path = _generate_voice_note(translated, lang)
     if audio_path:
-        _send_whatsapp_audio(phone, audio_path)
+        _send_whatsapp_audio(phone, audio_path, user=owner, rent_record=None)
 
     return True
 

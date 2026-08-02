@@ -377,7 +377,10 @@ class ExtraChargeReminderNoAudioPathTest(TestCase):
         mock_msg.assert_called_once()
         mock_voice.assert_called_once()
         mock_audio.assert_called_once_with(
-            renter.whatsapp_number, "/tmp/test_audio.mp3"
+            renter.whatsapp_number,
+            "/tmp/test_audio.mp3",
+            user=getattr(renter, "user", None),
+            rent_record=None,
         )
 
 

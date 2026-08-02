@@ -25,5 +25,8 @@ def auto_generate_rent_records() -> None:
 
             # ✅ Send WhatsApp reminder
             send_whatsapp_message(
-                renter.phone, f"📩 Pay your rent for {today.strftime('%B')}:\n{link}"
+                renter.phone,
+                f"📩 Pay your rent for {today.strftime('%B')}:\n{link}",
+                user=getattr(renter, "user", None),
+                rent_record=rent,
             )

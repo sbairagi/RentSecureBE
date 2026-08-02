@@ -73,7 +73,10 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
             rent.payment_link = link
             rent.save(update_fields=["payment_link"])
             send_whatsapp_message(
-                rent.renter.phone if rent.renter else "", f"📩 Pay your rent: {link}"
+                rent.renter.phone if rent.renter else "",
+                f"📩 Pay your rent: {link}",
+                user=user,
+                rent_record=rent,
             )
         except Exception as e:
             logger.warning(f"Failed to create payment link for rent {rent.id}: {e}")

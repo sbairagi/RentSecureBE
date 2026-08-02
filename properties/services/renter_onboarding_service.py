@@ -58,7 +58,14 @@ def send_renter_onboarding_invite(renter: Renter) -> bool:
             f"you and your landlord."
         )
 
-        result: bool = bool(send_whatsapp_message(renter.phone, message))
+        result: bool = bool(
+            send_whatsapp_message(
+                renter.phone,
+                message,
+                user=getattr(renter, "user", None),
+                rent_record=None,
+            )
+        )
 
         if result:
             renter.onboarding_status = Renter.OnboardingStatus.LINK_SENT
@@ -106,7 +113,14 @@ def send_renter_onboarding_reminder(renter: Renter) -> bool:
             f"Questions? Contact your landlord or our support team."
         )
 
-        result: bool = bool(send_whatsapp_message(renter.phone, message))
+        result: bool = bool(
+            send_whatsapp_message(
+                renter.phone,
+                message,
+                user=getattr(renter, "user", None),
+                rent_record=None,
+            )
+        )
         logger.info("Onboarding reminder sent to renter %s", renter.id)
         return result
     except Exception as exc:
@@ -152,7 +166,14 @@ def notify_owner_renter_completed_kyc(renter: Renter) -> bool:
             f"payments from your dashboard."
         )
 
-        result: bool = bool(_send_whatsapp(whatsapp_number, message))
+        result: bool = bool(
+            _send_whatsapp(
+                whatsapp_number,
+                message,
+                user=owner,
+                rent_record=None,
+            )
+        )
         logger.info("KYC completion notification sent to owner %s", owner.id)
         return result
     except Exception as exc:

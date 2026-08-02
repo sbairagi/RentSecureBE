@@ -53,4 +53,6 @@ def _notify_owner_on_successful_retry(rent: RentRecord) -> None:
                 f"✅ Rent ₹{rent.amount} has now been credited "
                 "to your account (after retry)."
             ),
+            user=owner,
+            rent_record=rent,
         )

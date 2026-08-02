@@ -111,7 +111,13 @@ def send_income_summary_whatsapp(owner: User, period: str = "monthly") -> bool:
             logger.warning("Owner %s has no whatsapp_number", owner.username)
             return False
 
-        return send_whatsapp_file(phone, path, "application/pdf")
+        return send_whatsapp_file(
+            phone,
+            path,
+            "application/pdf",
+            user=owner,
+            rent_record=None,
+        )
     except Exception as exc:
         logger.exception(
             "Failed to send income summary WhatsApp to %s: %s",

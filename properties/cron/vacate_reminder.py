@@ -27,4 +27,9 @@ def send_vacate_reminders() -> None:
             f"{renter.revoked_on.date()}, but the tenant is still marked active.\n"
             f"Please update their status if they've vacated."
         )
-        send_whatsapp_message(owner.whatsapp_number, message)
+        send_whatsapp_message(
+            owner.whatsapp_number,
+            message,
+            user=owner,
+            rent_record=None,
+        )

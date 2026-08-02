@@ -41,7 +41,12 @@ def send_due_extra_charge_reminders(days_ahead: int = 0) -> int:
         translated_message = translate_msg(message, lang)
 
         try:
-            send_whatsapp_message(phone, translated_message)
+            send_whatsapp_message(
+                phone,
+                translated_message,
+                user=getattr(renter, "user", None),
+                rent_record=None,
+            )
         except Exception as e:
             logger.warning(f"Failed to send WhatsApp message to {phone}: {e}")
             continue
@@ -49,7 +54,12 @@ def send_due_extra_charge_reminders(days_ahead: int = 0) -> int:
         audio_path = generate_voice_note(translated_message, lang)
         if audio_path:
             try:
-                send_whatsapp_audio(phone, audio_path)
+                send_whatsapp_audio(
+                    phone,
+                    audio_path,
+                    user=getattr(renter, "user", None),
+                    rent_record=None,
+                )
             except Exception as e:
                 logger.warning(f"Failed to send WhatsApp audio to {phone}: {e}")
                 continue

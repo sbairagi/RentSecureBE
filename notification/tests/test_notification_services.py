@@ -7,6 +7,7 @@ from twilio.base.exceptions import TwilioRestException
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 
+from notification.models import WhatsAppLog
 from notification.services.extra_charge_reminders import send_due_extra_charge_reminders
 from notification.services.late_fees_notify_service import (
     notify_owner_about_late_fee,
@@ -86,6 +87,77 @@ class WhatsAppServiceTest(TestCase):
         ) as mock_send:
             send_agreement_via_whatsapp(renter, "https://example.com/agreement.pdf")
             mock_send.assert_called_once()
+
+
+class WhatsAppLoggingTest(TestCase):
+    def test_send_whatsapp_message_creates_log_on_success(self):
+        user = User.objects.create_user(
+            username="log_user",
+            email="log@test.com",
+            password="p",
+            full_name="Log",
+            phone="+1",
+        )
+        with patch("notification.services.whatsapp_service.Client") as mock_client:
+            mock_client.return_value.messages.create.return_value = MagicMock()
+            send_whatsapp_message(
+                "+911234567890",
+                "Hello",
+                user=user,
+                rent_record=None,
+            )
+        self.assertEqual(WhatsAppLog.objects.count(), 1)
+        log = WhatsAppLog.objects.first()
+        self.assertEqual(log.status, WhatsAppLog.SENT)
+        self.assertEqual(log.user, user)
+        self.assertEqual(log.message_type, WhatsAppLog.TEXT)
+
+    def test_send_whatsapp_message_creates_log_on_failure(self):
+        user = User.objects.create_user(
+            username="log_fail_user",
+            email="logfail@test.com",
+            password="p",
+            full_name="LogFail",
+            phone="+1",
+        )
+        with patch("notification.services.whatsapp_service.Client") as mock_client:
+            mock_client.return_value.messages.create.side_effect = TwilioRestException(
+                status=400, msg="API Error", uri="http://example.com"
+            )
+            send_whatsapp_message(
+                "+911234567890",
+                "Hello",
+                user=user,
+                rent_record=None,
+            )
+        self.assertEqual(WhatsAppLog.objects.count(), 1)
+        log = WhatsAppLog.objects.first()
+        self.assertEqual(log.status, WhatsAppLog.FAILED)
+        self.assertEqual(log.user, user)
+
+    @patch("notification.services.whatsapp_service.upload_to_s3")
+    def test_send_whatsapp_audio_creates_log_on_success(self, mock_upload):
+        user = User.objects.create_user(
+            username="log_audio_user",
+            email="logaudio@test.com",
+            password="p",
+            full_name="LogAudio",
+            phone="+1",
+        )
+        mock_upload.return_value = "https://bucket.s3.amazonaws.com/audio.mp3"
+        with patch("notification.services.whatsapp_service.Client") as mock_client:
+            mock_client.return_value.messages.create.return_value = MagicMock()
+            send_whatsapp_audio(
+                "+911234567890",
+                "/path/to/audio.mp3",
+                user=user,
+                rent_record=None,
+            )
+        self.assertEqual(WhatsAppLog.objects.count(), 1)
+        log = WhatsAppLog.objects.first()
+        self.assertEqual(log.status, WhatsAppLog.SENT)
+        self.assertEqual(log.message_type, WhatsAppLog.AUDIO)
+        self.assertEqual(log.user, user)
 
 
 class VoiceServiceTest(TestCase):

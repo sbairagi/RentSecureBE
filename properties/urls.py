@@ -19,6 +19,7 @@ from .views import (
     owner_rent_overview,
     owner_rent_records,
     rent_history,
+    rent_whatsapp_logs,
     resend_rent_confirmation,
     retry_payout_api,
 )
@@ -59,5 +60,9 @@ urlpatterns = [
     path("owner/rents/", owner_rent_overview),
     path("owner/dashboard-summary/", owner_dashboard_summary),
     path("owner/retry_payout_api/<int:rent_id>/", retry_payout_api),
+    path(
+        "rent-records/<int:rent_id>/whatsapp-logs/",
+        rent_whatsapp_logs,
+    ),
     path("leegality/webhook/", leegality_webhook),
 ]

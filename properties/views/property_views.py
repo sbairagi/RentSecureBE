@@ -67,6 +67,8 @@ def revoke_rent_agreement(request: DRFRequest, renter_id: int) -> Response:
             "⚠️ Your rent agreement has been revoked by the owner. "
             f"Reason: {renter.revocation_reason}"
         ),
+        user=getattr(renter, "user", None),
+        rent_record=None,
     )
 
     return Response({"success": True, "message": "Agreement revoked successfully"})

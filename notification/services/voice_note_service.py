@@ -38,7 +38,12 @@ def send_thank_you_voice_note(rent: Any) -> None:
 
     audio_path: str | None = generate_voice_note(msg, lang="hi")
     if audio_path is not None and rent.renter.whatsapp_number:
-        send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)
+        send_whatsapp_audio(
+            rent.renter.whatsapp_number,
+            audio_path,
+            user=getattr(rent.renter, "user", None),
+            rent_record=rent,
+        )
 
 
 def send_late_rent_reminder(rent: Any) -> None:
@@ -64,7 +69,12 @@ def send_late_rent_reminder(rent: Any) -> None:
 
     audio_path: str | None = generate_voice_note(msg, lang="hi")
     if audio_path is not None and rent.renter.whatsapp_number:
-        send_whatsapp_audio(rent.renter.whatsapp_number, audio_path)
+        send_whatsapp_audio(
+            rent.renter.whatsapp_number,
+            audio_path,
+            user=getattr(rent.renter, "user", None),
+            rent_record=rent,
+        )
 
     RentReminderLog.objects.create(
         renter=rent.renter,
@@ -83,4 +93,9 @@ def alert_owner_about_delay(rent: Any) -> None:
         f"has not paid rent ₹{rent.amount} due on {rent.due_date}."
     )
     if owner.whatsapp_number:
-        send_whatsapp_message(owner.whatsapp_number, msg)
+        send_whatsapp_message(
+            owner.whatsapp_number,
+            msg,
+            user=owner,
+            rent_record=rent,
+        )

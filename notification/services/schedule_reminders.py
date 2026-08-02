@@ -146,14 +146,24 @@ def _send_rent_reminder_for_rent(rent: Any) -> None:
 
     msg = generate_rent_reminder_msg(rent, lang=lang)
     try:
-        send_whatsapp_message(phone, msg)
+        send_whatsapp_message(
+            phone,
+            msg,
+            user=rent.renter.user if rent.renter else None,
+            rent_record=rent,
+        )
     except Exception:
         logger.exception("Failed to send rent reminder text for rent %s", rent.id)
 
     try:
         audio_path = generate_voice_note(msg, lang)
         if audio_path:
-            send_whatsapp_audio(phone, audio_path)
+            send_whatsapp_audio(
+                phone,
+                audio_path,
+                user=rent.renter.user if rent.renter else None,
+                rent_record=rent,
+            )
     except OSError:
         logger.exception("Failed to send rent reminder audio for rent %s", rent.id)
 
@@ -185,7 +195,7 @@ def process_tax_reminders() -> None:
 
         msg = generate_tax_reminder_msg(tax, lang=lang)
         try:
-            send_whatsapp_message(phone, msg)
+            send_whatsapp_message(phone, msg, user=owner, rent_record=None)
         except Exception:
             logger.exception(
                 "Failed to send tax reminder text for tax record %s", tax.id
@@ -194,7 +204,7 @@ def process_tax_reminders() -> None:
         try:
             audio_path = generate_voice_note(msg, lang)
             if audio_path:
-                send_whatsapp_audio(phone, audio_path)
+                send_whatsapp_audio(phone, audio_path, user=owner, rent_record=None)
         except OSError:
             logger.exception(
                 "Failed to send tax reminder audio for tax record %s", tax.id

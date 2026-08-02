@@ -16,7 +16,10 @@ def send_smart_alert(
     user_profile = getattr(user, "userprofile", None)
     if user_profile and user_profile.whatsapp_opt_in and user_profile.whatsapp_number:
         status["whatsapp"] = send_whatsapp_message(
-            user_profile.whatsapp_number, message
+            user_profile.whatsapp_number,
+            message,
+            user=user,
+            rent_record=None,
         )
 
     device_token: str | None = getattr(user, "device_token", None)

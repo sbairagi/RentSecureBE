@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from django.core.mail import send_mail
 from django.db.models import Sum
@@ -169,35 +169,68 @@ def _send_summary_email(
 
 
 def _send_summary_whatsapp(
-    owner: User, message_text: str, prefs: NotificationPreference, lang: str = "en"
+    owner: User,
+    message_text: str,
+    prefs: NotificationPreference,
+    lang: str = "en",
 ) -> bool:
     if not (prefs.monthly_summary_whatsapp and getattr(owner, "whatsapp_number", None)):
         return False
-    text_sent = _send_whatsapp_message(owner.whatsapp_number, message_text)
+    text_sent = _send_whatsapp_message(
+        owner.whatsapp_number,
+        message_text,
+        user=owner,
+        rent_record=None,
+    )
     if not text_sent:
         return False
     audio_path = _generate_voice_note(message_text, lang)
     if audio_path:
-        return _send_whatsapp_audio(owner.whatsapp_number, audio_path)
+        return _send_whatsapp_audio(
+            owner.whatsapp_number,
+            audio_path,
+            user=owner,
+            rent_record=None,
+        )
     return True
 
 
-def _send_whatsapp_message(phone: str, message_text: str) -> bool:
+def _send_whatsapp_message(
+    phone: str,
+    message_text: str,
+    user: Any = None,
+    rent_record: Any = None,
+) -> bool:
     try:
         from notification.services.whatsapp_service import send_whatsapp_message
 
-        result = send_whatsapp_message(phone, message_text)
+        result = send_whatsapp_message(
+            phone,
+            message_text,
+            user=user,
+            rent_record=rent_record,
+        )
         return bool(result)
     except Exception as exc:
         logger.exception("Failed to send WhatsApp to %s: %s", phone, exc)
         return False
 
 
-def _send_whatsapp_audio(phone: str, audio_path: str) -> bool:
+def _send_whatsapp_audio(
+    phone: str,
+    audio_path: str,
+    user: Any = None,
+    rent_record: Any = None,
+) -> bool:
     try:
         from notification.services.whatsapp_service import send_whatsapp_audio
 
-        result = send_whatsapp_audio(phone, audio_path)
+        result = send_whatsapp_audio(
+            phone,
+            audio_path,
+            user=user,
+            rent_record=rent_record,
+        )
         return bool(result)
     except Exception as exc:
         logger.exception("Failed to send WhatsApp audio to %s: %s", phone, exc)
