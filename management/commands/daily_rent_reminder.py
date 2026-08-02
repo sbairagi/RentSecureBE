@@ -7,6 +7,7 @@ from django.utils.timezone import now
 from core.models import UserProfile
 from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import Renter
+from properties.models.renter_models import RentReminderLog
 from rentsecure_be.type_compat import override
 
 
@@ -34,10 +35,19 @@ class Command(BaseCommand):
             if not self._should_send_reminder(owner, current_time):
                 continue
 
+            already_reminded = RentReminderLog.objects.filter(
+                renter=renter,
+                message_type="DUE",
+                sent_at__date=now().date(),
+            ).exists()
+            if already_reminded:
+                continue
+
             send_whatsapp_message(
                 renter.phone,
                 f"Reminder: Your rent is due in {days_left} days.",
             )
+            RentReminderLog.objects.create(renter=renter, message_type="DUE")
 
     def _should_send_reminder(self, owner: Any, current_time: Any) -> bool:
         try:

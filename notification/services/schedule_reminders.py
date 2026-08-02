@@ -85,6 +85,8 @@ def _should_send_reminder_for_owner(owner: Any) -> bool:
 
 
 def process_rent_reminders() -> None:
+    from properties.models.renter_models import RentReminderLog
+
     for rent in get_upcoming_rent_dues():
         if rent.renter is None:
             continue
@@ -95,6 +97,14 @@ def process_rent_reminders() -> None:
         phone = rent.renter.whatsapp_number or rent.renter.phone or ""
         lang = _safe_lang_for_renter(rent.renter)
         if not phone:
+            continue
+
+        already_reminded = RentReminderLog.objects.filter(
+            renter=rent.renter,
+            message_type="DUE",
+            sent_at__date=now().date(),
+        ).exists()
+        if already_reminded:
             continue
 
         msg = generate_rent_reminder_msg(rent)
@@ -109,6 +119,11 @@ def process_rent_reminders() -> None:
                 send_whatsapp_audio(phone, audio_path)
         except OSError:
             logger.exception("Failed to send rent reminder audio for rent %s", rent.id)
+
+        RentReminderLog.objects.create(
+            renter=rent.renter,
+            message_type="DUE",
+        )
 
 
 def process_tax_reminders() -> None:
