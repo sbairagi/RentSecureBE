@@ -280,3 +280,59 @@ class UpdateOwnerAlertPreferencesTest(TestCase):
         profile = UserProfile.objects.get(user=self.user)
         self.assertEqual(profile.alert_frequency, "monthly")
         self.assertEqual(profile.language_preference, "en")
+
+
+class ReminderTimeUpdateViewTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="reminder_user",
+            email="ru@test.com",
+            password="testpass123",
+            full_name="Reminder User",
+            phone="+919999999999",
+        )
+        refresh = RefreshToken.for_user(self.user)
+        self.access_token = str(refresh.access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+
+    def test_update_reminder_time_success(self):
+        response = self.client.post(
+            f"{API_PREFIX}/api/owner/reminder-time/",
+            {"reminder_time": "19:30"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get("success"))
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.reminder_time.strftime("%H:%M"), "19:30")
+
+    def test_update_reminder_time_with_seconds(self):
+        response = self.client.post(
+            f"{API_PREFIX}/api/owner/reminder-time/",
+            {"reminder_time": "19:30:00"},
+        )
+        self.assertEqual(response.status_code, 200)
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertEqual(profile.reminder_time.strftime("%H:%M:%S"), "19:30:00")
+
+    def test_update_reminder_time_requires_auth(self):
+        self.client.credentials()
+        response = self.client.post(
+            f"{API_PREFIX}/api/owner/reminder-time/",
+            {"reminder_time": "19:30"},
+        )
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_update_reminder_time_missing_field(self):
+        response = self.client.post(
+            f"{API_PREFIX}/api/owner/reminder-time/",
+            {},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_update_reminder_time_invalid_format(self):
+        response = self.client.post(
+            f"{API_PREFIX}/api/owner/reminder-time/",
+            {"reminder_time": "not-a-time"},
+        )
+        self.assertEqual(response.status_code, 400)

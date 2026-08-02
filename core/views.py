@@ -26,6 +26,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone
+from django.utils.dateparse import parse_time
 from django.views.decorators.csrf import csrf_exempt
 
 from notification.services.rent_notify_service import send_payout_notification
@@ -574,6 +575,43 @@ def update_owner_alert_preferences(
         ]
     )
     return Response({"success": True, "message": "Alert preferences updated."})
+
+
+class ReminderTimeUpdateView(APIView):
+    """Update the authenticated owner's reminder time."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, /, *args: Any, **kwargs: Any) -> Response:
+        reminder_time_str = request.data.get("reminder_time")
+        if not reminder_time_str:
+            return Response(
+                {"error": "reminder_time is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        reminder_time = parse_time(reminder_time_str)
+        if reminder_time is None:
+            return Response(
+                {"error": "Invalid time format. Use HH:MM or HH:MM:SS."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        owner: User = cast(User, request.user)
+        try:
+            profile = owner.userprofile
+        except UserProfile.DoesNotExist:
+            return Response(
+                {"error": "UserProfile not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        profile.reminder_time = reminder_time
+        profile.save(update_fields=["reminder_time"])
+        return Response(
+            {"success": True, "message": "Reminder time updated."},
+            status=status.HTTP_200_OK,
+        )
 
 
 # ---------------------------------------------------------------------------
