@@ -27,9 +27,13 @@ class WhatsAppLog(models.Model):
     )
     SENT = "SENT"
     FAILED = "FAILED"
+    RETRYING = "RETRYING"
+    PERMANENT_FAILED = "PERMANENT_FAILED"
     STATUS_CHOICES = (
         (SENT, "Sent"),
         (FAILED, "Failed"),
+        (RETRYING, "Retrying"),
+        (PERMANENT_FAILED, "Permanent Failed"),
     )
 
     rent_record = models.ForeignKey(
@@ -52,6 +56,7 @@ class WhatsAppLog(models.Model):
     media_url = models.URLField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=SENT)
     retry_count = models.IntegerField(default=0)
+    last_retry_at = models.DateTimeField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
