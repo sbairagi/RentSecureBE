@@ -29,3 +29,12 @@ TAX_REMINDER_TEMPLATES = {
         "कृपया वेळेत भरणा करा."
     ),
 }
+
+RENT_PAID_CONFIRMATION_TEMPLATES = {
+    "en": (
+        "Hi {name}, we have received your rent payment of ₹{amount} on {paid_date}. "
+        "Thank you!"
+    ),
+    "hi": ("{name} जी, ₹{amount} किराया {paid_date} को प्राप्त हुआ है। धन्यवाद!"),
+    "mr": ("{name}, तुमचं ₹{amount} भाडं {paid_date} रोजी मिळालं आहे. धन्यवाद!"),
+}

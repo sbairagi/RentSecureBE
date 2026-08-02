@@ -149,6 +149,45 @@ def handle_rent_payment(
                 message="We appreciate your on-time rent payment. Keep it up! 🏆",
             )
 
+        # Send multilingual rent paid confirmation via WhatsApp
+        try:
+            from notification.services.voice_service import generate_voice_note
+            from notification.services.whatsapp_service import (
+                send_whatsapp_audio,
+                send_whatsapp_message,
+            )
+            from rentsecure_be.services.message_template_service import (
+                get_rent_paid_confirmation_msg,
+            )
+
+            renter = instance.renter
+            if renter and renter.whatsapp_number:
+                user_profile = getattr(getattr(renter, "user", None), "profile", None)
+                lang = getattr(user_profile, "language_preference", None) or "en"
+                msg = get_rent_paid_confirmation_msg(
+                    name=renter.full_name,
+                    amount=instance.amount,
+                    paid_date=instance.updated_at,
+                    lang=lang,
+                )
+                send_whatsapp_message(renter.whatsapp_number, msg)
+
+                try:
+                    audio_path = generate_voice_note(msg, lang)
+                    if audio_path:
+                        send_whatsapp_audio(renter.whatsapp_number, audio_path)
+                except Exception:
+                    logger.exception(
+                        "Failed to send rent-paid audio for rent %s",
+                        instance.id,
+                    )
+        except Exception as exc:
+            logger.exception(
+                "Failed to send rent-paid confirmation for rent %s: %s",
+                instance.id,
+                exc,
+            )
+
         # Send rent receipt email to renter
         try:
             from properties.services.receipt_service import send_rent_receipt_on_payment
