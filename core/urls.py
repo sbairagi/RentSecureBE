@@ -18,6 +18,7 @@ from .views import (
     download_ca_summary,
     download_rent_excel,
     razorpay_webhook,
+    tax_saving_tips,
     update_owner_alert_preferences,
     update_owner_bank_details,
 )
@@ -48,6 +49,7 @@ urlpatterns = [
     path("api/rent/payment-callback/", razorpay_webhook),
     path("owner/rent-report/", download_rent_excel),
     path("owner/ca-summary/", download_ca_summary),
+    path("tax/tax-saving-tips/", tax_saving_tips),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),
     path("", include(router.urls)),

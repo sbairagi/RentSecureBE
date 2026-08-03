@@ -108,6 +108,26 @@ class UserProfile(models.Model):
         default=0,
         help_text="Other annual income for ITR calculations",
     )
+    elss_investment = models.PositiveIntegerField(
+        default=0,
+        help_text="Annual ELSS/PPF/LIC investment claimed under Section 80C",
+    )
+    has_health_insurance = models.BooleanField(
+        default=False,
+        help_text="Whether the user has active health insurance for Section 80D",
+    )
+    home_loan_interest = models.PositiveIntegerField(
+        default=0,
+        help_text="Annual home loan interest paid for Section 24(b) deduction",
+    )
+    rent_paid = models.PositiveIntegerField(
+        default=0,
+        help_text="Annual rent paid for Section 80GG deduction",
+    )
+    receives_hra = models.BooleanField(
+        default=False,
+        help_text="Whether the user receives House Rent Allowance (HRA)",
+    )
 
 
 class NotificationPreference(UpsertMixin, models.Model):
