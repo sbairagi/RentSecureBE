@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Any, cast
 
 from rest_framework import viewsets
@@ -153,6 +154,40 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
                 "collected_amount": collected["total"] or 0,
                 "collected_count": collected["count"] or 0,
                 "pending_count": pending,
+            }
+        )
+
+    @action(detail=False, methods=["get"], url_path="itr_summary")
+    def itr_summary(self, request: DRFRequest) -> Response:
+        user = cast(User, request.user)
+        if isinstance(user, AnonymousUser):
+            return Response(
+                {
+                    "fy": "",
+                    "total_rent": 0,
+                    "record_count": 0,
+                }
+            )
+
+        today = timezone.now().date()
+        fy_start_year = today.year if today.month >= 4 else today.year - 1
+        fy_start = datetime(fy_start_year, 4, 1).date()
+        fy_end = datetime(fy_start_year + 1, 3, 31).date()
+
+        rent_records = RentRecord.objects.filter(
+            unit__owner=user,
+            created_at__date__gte=fy_start,
+            created_at__date__lte=fy_end,
+            payout_status="SUCCESS",
+        )
+
+        totals = rent_records.aggregate(total=Sum("amount"), count=Count("id"))
+
+        return Response(
+            {
+                "fy": f"{fy_start.year}-{fy_end.year}",
+                "total_rent": totals["total"] or 0,
+                "record_count": totals["count"] or 0,
             }
         )
 

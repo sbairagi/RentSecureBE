@@ -634,3 +634,108 @@ class MonthlyRentSummaryTests(TestCase):
         self.assertEqual(data["collected_amount"], 0)
         self.assertEqual(data["collected_count"], 0)
         self.assertEqual(data["pending_count"], 0)
+
+
+class ITRSummaryTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.o = User.objects.create_user(
+            username="itr@t.com",
+            email="itr@t.com",
+            password="p",
+            full_name="ITR",
+            phone="+1",
+        )
+        cls.pp, _ = SubscriptionPlan.objects.get_or_create(
+            name="itr_pro",
+            defaults={
+                "monthly_price": Decimal("29.99"),
+                "yearly_price": Decimal("299.99"),
+                "features": "Pro",
+            },
+        )
+
+    def setUp(self):
+        UserSubscription.objects.update_or_create(
+            user=self.o, defaults={"plan": self.pp, "is_active": True}
+        )
+        b, _ = Building.objects.get_or_create(
+            owner=self.o,
+            name="ITRB",
+            defaults={
+                "address_line": "1 St",
+                "city": "C",
+                "state": "S",
+                "country": "CO",
+                "postal_code": "1",
+            },
+        )
+        self.u, _ = Unit.objects.get_or_create(
+            owner=self.o,
+            building=b,
+            unit="ITR101",
+            defaults={
+                "unit_type": "flat",
+                "address_line": "1 St",
+                "city": "C",
+                "state": "S",
+                "country": "CO",
+                "postal_code": "1",
+            },
+        )
+
+    def _auth(self):
+        c = APIClient()
+        c.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(self.o).access_token}"
+        )
+        return c
+
+    def test_itr_summary_returns_fy_totals(self):
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="ITR Renter",
+            phone="+911111111111",
+            rent_amount=10000,
+            start_date=date.today(),
+        )
+        RentRecord.objects.create(
+            renter=renter,
+            unit=self.u,
+            due_date=date.today(),
+            amount=10000,
+            payment_method="upi",
+            status=RentRecord.Status.PAID,
+            payout_status="SUCCESS",
+            created_at=timezone.now(),
+        )
+        RentRecord.objects.create(
+            renter=renter,
+            unit=self.u,
+            due_date=date(2025, 2, 1),
+            amount=5000,
+            payment_method="upi",
+            status=RentRecord.Status.PAID,
+            payout_status="SUCCESS",
+            created_at=timezone.now(),
+        )
+
+        response = self._auth().get("/properties/rent-records/itr_summary/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["total_rent"], 15000)
+        self.assertEqual(data["record_count"], 2)
+        today = timezone.now().date()
+        if today.month >= 4:
+            expected_fy = f"{today.year}-{today.year + 1}"
+        else:
+            expected_fy = f"{today.year - 1}-{today.year}"
+        self.assertEqual(data["fy"], expected_fy)
+
+    def test_itr_summary_empty_when_no_records(self):
+        response = self._auth().get("/properties/rent-records/itr_summary/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["total_rent"], 0)
+        self.assertEqual(data["record_count"], 0)
