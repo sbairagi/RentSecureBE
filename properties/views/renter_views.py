@@ -261,3 +261,28 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
                 "deactivated": data.get("deactivated", 0),
             }
         )
+
+    @action(detail=False, methods=["get"], url_path="recent_activity")
+    def recent_activity(self, request: Request) -> Response:
+        user = cast(User, request.user)
+        if isinstance(user, AnonymousUser):
+            return Response([])
+
+        recent_renters = Renter.objects.filter(
+            unit__owner=user, status_changed_at__isnull=False
+        ).order_by("-status_changed_at")[:10]
+
+        data = [
+            {
+                "name": renter.name,
+                "status": renter.status,
+                "changed_at": (
+                    renter.status_changed_at.strftime("%d %b %Y")
+                    if renter.status_changed_at
+                    else None
+                ),
+            }
+            for renter in recent_renters
+        ]
+
+        return Response(data)

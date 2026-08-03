@@ -122,6 +122,7 @@ class Renter(models.Model):
     status = models.CharField(
         max_length=20, choices=RenterStatus.choices, default=RenterStatus.ACTIVE
     )
+    status_changed_at = models.DateTimeField(null=True, blank=True)
     notice_start_date = models.DateField(null=True, blank=True)
 
     rating = models.PositiveIntegerField(null=True, blank=True)

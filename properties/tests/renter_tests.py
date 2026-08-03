@@ -429,3 +429,52 @@ class RenterViewSetLimitAndPermissionTests(TestCase):
         self.assertEqual(data["notice_period"], 0)
         self.assertEqual(data["revoked"], 0)
         self.assertEqual(data["deactivated"], 0)
+
+    def test_recent_activity_returns_ordered_status_changes(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        _old_renter = Renter.objects.create(
+            unit=self.u,
+            name="OldRenter",
+            email="old@t.com",
+            phone="+1555555555",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+            status=Renter.RenterStatus.ACTIVE,
+            status_changed_at=timezone.now() - timedelta(days=2),
+        )
+        _new_renter = Renter.objects.create(
+            unit=self.u,
+            name="NewRenter",
+            email="new@t.com",
+            phone="+1666666666",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+            status=Renter.RenterStatus.REVOKED,
+            status_changed_at=timezone.now() - timedelta(days=1),
+        )
+        response = self._auth(self.o).get("/properties/renters/recent_activity/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]["name"], "NewRenter")
+        self.assertEqual(data[0]["status"], "revoked")
+        self.assertEqual(data[1]["name"], "OldRenter")
+
+    def test_recent_activity_excludes_null_status_changed_at(self):
+        Renter.objects.create(
+            unit=self.u,
+            name="NoChangeRenter",
+            email="nc@t.com",
+            phone="+1777777777",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+            status=Renter.RenterStatus.ACTIVE,
+            status_changed_at=None,
+        )
+        response = self._auth(self.o).get("/properties/renters/recent_activity/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data), 0)

@@ -269,6 +269,22 @@ def notify_renter_status_change(
         )
 
 
+@receiver(pre_save, sender=Renter)
+def update_renter_status_changed_at(
+    sender: type[Renter], instance: Renter, **kwargs: object
+) -> None:
+    if not instance.pk:
+        return
+
+    try:
+        old = Renter.objects.get(pk=instance.pk)
+    except Renter.DoesNotExist:
+        return
+
+    if old.status != instance.status:
+        instance.status_changed_at = timezone.now()
+
+
 @receiver(post_save, sender=Renter)
 def notify_owner_if_unit_vacant(
     sender: type[Renter], instance: Renter, **kwargs: object
