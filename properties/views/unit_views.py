@@ -14,8 +14,11 @@ import logging
 from typing import TYPE_CHECKING, Any, cast
 
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 
 from django.conf import settings
@@ -102,6 +105,25 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
         instance.delete()
         enforcer.decrement("max_units")
         cache.delete(f"units_user_{self.request.user.id}")
+
+    @action(detail=False, methods=["get"], url_path="occupancy_stats")
+    def occupancy_stats(self, request: Request) -> Response:
+        user = cast(User, request.user)
+        if isinstance(user, AnonymousUser):
+            return Response({"total": 0, "occupied": 0, "vacant": 0})
+
+        qs = Unit.objects.filter(owner=user)
+        total = qs.count()
+        occupied = qs.filter(status=Unit.VacancyStatus.OCCUPIED).count()
+        vacant = total - occupied
+
+        return Response(
+            {
+                "total": total,
+                "occupied": occupied,
+                "vacant": vacant,
+            }
+        )
 
 
 class UnitImageViewSet(viewsets.ModelViewSet[UnitImage]):

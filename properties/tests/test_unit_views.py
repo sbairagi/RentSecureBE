@@ -3935,3 +3935,128 @@ class RentAgreementDraftPerformUpdateOwnerMismatchTests(TestCase):
 
         with self.assertRaises(PermissionDenied):
             view.perform_update(FakeSerializer())
+
+
+class UnitOccupancyStatsTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.owner = User.objects.create_user(
+            username="occ_owner", password="p", full_name="OccOwner", phone="+1"
+        )
+        cls.other = User.objects.create_user(
+            username="occ_other", password="p", full_name="OccOther", phone="+2"
+        )
+        cls.plan = SubscriptionPlan.objects.create(
+            name="occ_pro",
+            monthly_price=Decimal("29.99"),
+            yearly_price=Decimal("299.99"),
+        )
+        UserSubscription.objects.create(user=cls.owner, plan=cls.plan, is_active=True)
+        PlanFeatureLimit.objects.create(
+            plan=cls.plan, feature_key="max_units", value="10"
+        )
+        cls.building = Building.objects.create(
+            owner=cls.owner,
+            name="OCB",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+
+    def setUp(self):
+        self._c = _auth(self.owner)
+        cache.clear()
+
+    def test_occupancy_stats_returns_counts(self):
+        occupied_unit = Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="OCC1",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+            status=Unit.VacancyStatus.OCCUPIED,
+        )
+        _vacant_unit = Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="OCC2",
+            unit_type="flat",
+            address_line="2 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+            status=Unit.VacancyStatus.VACANT,
+        )
+        Renter.objects.create(
+            unit=occupied_unit,
+            name="OccRenter",
+            phone="+911111111111",
+            rent_amount=10000,
+            start_date=date.today(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+
+        response = self._c.get("/properties/units/occupancy_stats/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["total"], 2)
+        self.assertEqual(data["occupied"], 1)
+        self.assertEqual(data["vacant"], 1)
+
+    def test_occupancy_stats_empty_when_no_units(self):
+        response = self._c.get("/properties/units/occupancy_stats/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["total"], 0)
+        self.assertEqual(data["occupied"], 0)
+        self.assertEqual(data["vacant"], 0)
+
+    def test_occupancy_stats_isolated_per_owner(self):
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="OCC3",
+            unit_type="flat",
+            address_line="3 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="3",
+            status=Unit.VacancyStatus.OCCUPIED,
+        )
+        other_building = Building.objects.create(
+            owner=self.other,
+            name="OBO",
+            address_line="4 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="4",
+        )
+        Unit.objects.create(
+            owner=self.other,
+            building=other_building,
+            unit="OCC4",
+            unit_type="flat",
+            address_line="5 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="5",
+            status=Unit.VacancyStatus.OCCUPIED,
+        )
+
+        response = self._c.get("/properties/units/occupancy_stats/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["total"], 1)
+        self.assertEqual(data["occupied"], 1)
+        self.assertEqual(data["vacant"], 0)
