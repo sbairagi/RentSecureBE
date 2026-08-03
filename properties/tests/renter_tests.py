@@ -279,6 +279,13 @@ class RenterViewSetLimitAndPermissionTests(TestCase):
         self.assertEqual(renter.status, "notice_period")
 
     def test_other_user_cannot_update_renter_status(self):
+        attacker = User.objects.create_user(
+            username="att2@t.com",
+            email="att2@t.com",
+            password="p",
+            full_name="Attacker2",
+            phone="+2",
+        )
         renter = Renter.objects.create(
             unit=self.u,
             name="StatusRenter2",
@@ -287,7 +294,7 @@ class RenterViewSetLimitAndPermissionTests(TestCase):
             rent_amount=Decimal("1000"),
             start_date=date.today(),
         )
-        response = self._auth(self.ot).post(
+        response = self._auth(attacker).post(
             f"/properties/renters/{renter.id}/update-status/",
             {"status": "revoked"},
             follow=True,
