@@ -15,6 +15,7 @@ from .views import (
     UnitViewSet,
     contact_ca,
     download_rent_invoice,
+    get_itr_deduction_suggestions,
     get_latest_due_rent,
     itr_tracker_summary,
     leegality_webhook,
@@ -73,4 +74,5 @@ urlpatterns = [
     path("leegality/webhook/", leegality_webhook),
     path("itr/contact-ca/", contact_ca),
     path("itr/tracker/", itr_tracker_summary),
+    path("itr/deduction-suggestions/", get_itr_deduction_suggestions),
 ]
