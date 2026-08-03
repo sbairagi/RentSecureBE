@@ -272,19 +272,34 @@ def ca_partner_analytics(request: Request, /, *args: Any, **kwargs: Any) -> Resp
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    from_date = request.query_params.get("from")
-    to_date = request.query_params.get("to")
+    from_str = request.query_params.get("from")
+    to_str = request.query_params.get("to")
 
-    leads = CAConnectionRequest.objects.filter(ca_partner=ca)
-    if from_date and to_date:
-        try:
-            from_dt = timezone.make_aware(parse_datetime(from_date))
-            to_dt = timezone.make_aware(parse_datetime(to_date))
-            leads = leads.filter(requested_at__range=(from_dt, to_dt))
-        except Exception:
-            logger.exception(
-                "Invalid analytics date range: %s - %s", from_date, to_date
-            )
+    try:
+        to_dt = timezone.make_aware(parse_datetime(to_str)) if to_str else None
+    except Exception:
+        to_dt = None
+
+    try:
+        from_dt = timezone.make_aware(parse_datetime(from_str)) if from_str else None
+    except Exception:
+        from_dt = None
+
+    # Default date range: last 30 days
+    if not to_dt:
+        to_dt = timezone.now()
+    if not from_dt:
+        from_dt = to_dt - timezone.timedelta(days=30)
+
+    # Ensure from_date <= to_date
+    if from_dt > to_dt:
+        from_dt, to_dt = to_dt, from_dt
+
+    leads = CAConnectionRequest.objects.filter(
+        ca_partner=ca,
+        requested_at__gte=from_dt,
+        requested_at__lte=to_dt,
+    )
 
     total_leads = leads.count()
     contacted = leads.filter(contacted_at__isnull=False).count()
