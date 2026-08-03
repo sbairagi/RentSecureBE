@@ -13,6 +13,7 @@ from typing import Any, cast
 
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -20,6 +21,7 @@ from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
 
 from django.contrib.auth.models import AnonymousUser
+from django.core.cache import cache
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -114,7 +116,7 @@ class DownloadTaxFilesView(APIView):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def ca_leads_list(request: Request, /, *args: Any, **kwargs: Any) -> Response:
-    """Return all leads for the authenticated CA partner."""
+    """Return all leads for the authenticated CA partner with pagination."""
     try:
         ca = request.user.ca_partner_profile
     except CAPartner.DoesNotExist:
@@ -124,8 +126,12 @@ def ca_leads_list(request: Request, /, *args: Any, **kwargs: Any) -> Response:
         )
 
     leads = CAConnectionRequest.objects.filter(ca_partner=ca).order_by("-requested_at")
-    serializer = CAConnectionRequestSerializer(leads, many=True)
-    return Response(serializer.data)
+
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+    paginated_leads = paginator.paginate_queryset(leads, request)
+    serializer = CAConnectionRequestSerializer(paginated_leads, many=True)
+    return paginator.get_paginated_response(serializer.data)
 
 
 @api_view(["POST"])
@@ -301,6 +307,14 @@ def ca_partner_analytics(request: Request, /, *args: Any, **kwargs: Any) -> Resp
     if from_dt > to_dt:
         from_dt, to_dt = to_dt, from_dt
 
+    cache_key = (
+        f"ca_analytics:{request.user.id}:"
+        f"{from_dt.strftime('%Y%m%d')}:{to_dt.strftime('%Y%m%d')}"
+    )
+    cached_data = cache.get(cache_key)
+    if cached_data is not None:
+        return Response(cached_data)
+
     leads = CAConnectionRequest.objects.filter(
         ca_partner=ca,
         requested_at__gte=from_dt,
@@ -317,16 +331,17 @@ def ca_partner_analytics(request: Request, /, *args: Any, **kwargs: Any) -> Resp
     if ca.joined_at and from_dt <= ca.joined_at <= to_dt:
         ca_joined = 1
 
-    return Response(
-        {
-            "total_leads": total_leads,
-            "contacted_leads": contacted,
-            "converted_leads": converted,
-            "conversion_rate": round(conversion_rate, 2),
-            "total_ca_partners": ca_joined,
-            "total_clients": total_leads,
-        }
-    )
+    response_data = {
+        "total_leads": total_leads,
+        "contacted_leads": contacted,
+        "converted_leads": converted,
+        "conversion_rate": round(conversion_rate, 2),
+        "total_ca_partners": ca_joined,
+        "total_clients": total_leads,
+    }
+
+    cache.set(cache_key, response_data, timeout=300)
+    return Response(response_data)
 
 
 def mark_conversion(ca_connection_request: CAConnectionRequest) -> None:
