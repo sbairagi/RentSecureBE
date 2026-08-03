@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 import secrets
 import uuid
 from datetime import timedelta
@@ -37,6 +38,7 @@ from rentsecure_be.services.cashfree_service import (
 from rentsecure_be.utils.cashfree_payout import add_beneficiary
 from rentsecure_be.utils.export_utils import generate_owner_rent_report
 from rentsecure_be.utils.tax_advice_utils import suggest_tax_savings
+from rentsecure_be.utils.tax_report_pdf_utils import generate_tax_report_pdf
 
 from .models import (
     OTP,
@@ -806,3 +808,18 @@ def tax_saving_tips(request: Request, /, *args: Any, **kwargs: Any) -> Response:
     """Return personalized tax saving suggestions for the authenticated user."""
     tips = suggest_tax_savings(request.user)
     return Response({"tax_saving_tips": tips})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def download_tax_report(request: Request, /, *args: Any, **kwargs: Any) -> HttpResponse:
+    """Generate and return a downloadable income tax report PDF."""
+    pdf_path = generate_tax_report_pdf(request.user)
+    try:
+        with open(pdf_path, "rb") as f:
+            response = HttpResponse(f.read(), content_type="application/pdf")
+            response["Content-Disposition"] = 'attachment; filename="tax_report.pdf"'
+            return response
+    finally:
+        if os.path.exists(pdf_path):
+            os.remove(pdf_path)
