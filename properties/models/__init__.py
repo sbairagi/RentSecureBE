@@ -1,6 +1,7 @@
 from .building_models import Building
 from .caretaker_models import CareTaker as Caretaker
 from .extra_charge_models import ExtraCharge
+from .itr_ca_contact_models import ITRCAContactRequest
 from .property_tax_models import PropertyTaxRecord
 from .rent_record_models import RentRecord
 from .renter_models import (
@@ -29,4 +30,5 @@ __all__ = [
     "RentRecord",
     "ExtraCharge",
     "PropertyTaxRecord",
+    "ITRCAContactRequest",
 ]

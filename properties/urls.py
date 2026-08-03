@@ -13,6 +13,7 @@ from .views import (
     UnitDocumentViewSet,
     UnitImageViewSet,
     UnitViewSet,
+    contact_ca,
     download_rent_invoice,
     get_latest_due_rent,
     leegality_webhook,
@@ -69,4 +70,5 @@ urlpatterns = [
         rent_whatsapp_logs,
     ),
     path("leegality/webhook/", leegality_webhook),
+    path("itr/contact-ca/", contact_ca),
 ]
