@@ -14,7 +14,6 @@ import zipfile
 from typing import TYPE_CHECKING, Any
 
 from openpyxl import Workbook
-from weasyprint import HTML
 
 from django.core.files import File
 from django.db.models import QuerySet
@@ -95,6 +94,8 @@ def generate_tax_pdf(
     )
     fd, pdf_file = tempfile.mkstemp(suffix=".pdf", prefix=f"{user.username}_tax_{fy}_")
     os.close(fd)
+    from weasyprint import HTML  # nosonar
+
     HTML(string=html_string).write_pdf(pdf_file)
     return pdf_file
 

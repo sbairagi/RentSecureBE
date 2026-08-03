@@ -128,6 +128,19 @@ class UserProfile(models.Model):
         default=False,
         help_text="Whether the user receives House Rent Allowance (HRA)",
     )
+    is_nri = models.BooleanField(
+        default=False,
+        help_text="Whether the user is a Non-Resident Indian",
+    )
+    city = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="City for CA matchmaking",
+    )
+    total_investment_income = models.PositiveIntegerField(
+        default=0,
+        help_text="Total investment income for CA specialization matching",
+    )
 
 
 class NotificationPreference(UpsertMixin, models.Model):

@@ -10,9 +10,11 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
 
@@ -21,9 +23,10 @@ from django.http import FileResponse
 
 from core.models import User
 from properties.models import Unit
+from rentsecure_be.services.ca_matchmaking_service import match_ca
 from rentsecure_be.type_compat import override
 
-from .models import CAProfile, TaxSubmissionToCA
+from .models import CAConnectionRequest, CAProfile, TaxSubmissionToCA
 from .serializers import CAProfileSerializer, TaxSubmissionToCASerializer
 from .utils import create_tax_zip, generate_tax_excel, generate_tax_pdf
 
@@ -95,3 +98,58 @@ class DownloadTaxFilesView(APIView):
         return FileResponse(
             open(zip_file, "rb"), as_attachment=True, filename="tax_documents.zip"
         )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_matched_ca(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Return the best available CA partner for the authenticated user."""
+    user: User = cast(User, request.user)
+    ca = match_ca(user)
+
+    if not ca:
+        return Response(
+            {"message": "No CA available in your city at the moment."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    return Response(
+        {
+            "name": ca.name,
+            "firm": ca.firm_name,
+            "city": ca.city,
+            "email": ca.email,
+            "phone": ca.phone,
+            "specialization": ca.get_specialization_display(),
+            "experience": ca.experience_years,
+            "rating": ca.rating,
+            "price_range": ca.price_range,
+        }
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def request_ca_callback(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Create a CA connection request for the authenticated user."""
+    user: User = cast(User, request.user)
+    ca = match_ca(user)
+
+    if not ca:
+        return Response(
+            {"message": "No CA available in your city at the moment."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    message = request.data.get("message", "")
+    CAConnectionRequest.objects.create(user=user, ca=ca, message=message)
+
+    return Response(
+        {
+            "message": "CA callback requested successfully.",
+            "ca_name": ca.name,
+            "ca_phone": ca.phone,
+            "ca_email": ca.email,
+        },
+        status=status.HTTP_201_CREATED,
+    )

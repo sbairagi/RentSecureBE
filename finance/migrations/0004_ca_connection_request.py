@@ -1,0 +1,48 @@
+from django.conf import settings
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ("finance", "0003_ca_partner"),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="CAConnectionRequest",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("message", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "ca",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="finance.capartner",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ca_connection_requests",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+            ],
+            options={
+                "ordering": ["-created_at"],
+            },
+        ),
+    ]
