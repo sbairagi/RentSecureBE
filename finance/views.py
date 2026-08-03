@@ -8,6 +8,7 @@ shapes it produces.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, cast
 
 from rest_framework import permissions, status, viewsets
@@ -22,6 +23,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from core.models import User
 from notification.services.whatsapp_service import send_whatsapp_message
@@ -36,6 +38,8 @@ from .serializers import (
     TaxSubmissionToCASerializer,
 )
 from .utils import create_tax_zip, generate_tax_excel, generate_tax_pdf
+
+logger = logging.getLogger(__name__)
 
 
 class CAProfileViewSet(viewsets.ModelViewSet[CAProfile]):
@@ -151,7 +155,7 @@ def update_lead_status(
     lead.status = new_status
     lead.notes = notes
     if new_status == "CLOSED":
-        lead.converted_at = timezone.now()
+        mark_conversion(lead)
     lead.save()
     return Response({"message": "Lead updated successfully."})
 
@@ -273,7 +277,14 @@ def ca_partner_analytics(request: Request, /, *args: Any, **kwargs: Any) -> Resp
 
     leads = CAConnectionRequest.objects.filter(ca_partner=ca)
     if from_date and to_date:
-        leads = leads.filter(requested_at__range=[from_date, to_date])
+        try:
+            from_dt = timezone.make_aware(parse_datetime(from_date))
+            to_dt = timezone.make_aware(parse_datetime(to_date))
+            leads = leads.filter(requested_at__range=(from_dt, to_dt))
+        except Exception:
+            logger.exception(
+                "Invalid analytics date range: %s - %s", from_date, to_date
+            )
 
     total_leads = leads.count()
     contacted = leads.filter(contacted_at__isnull=False).count()
@@ -288,3 +299,9 @@ def ca_partner_analytics(request: Request, /, *args: Any, **kwargs: Any) -> Resp
             "conversion_rate": round(conversion_rate, 2),
         }
     )
+
+
+def mark_conversion(ca_connection_request: CAConnectionRequest) -> None:
+    """Mark a CA connection request as converted."""
+    ca_connection_request.converted_at = timezone.now()
+    ca_connection_request.save(update_fields=["converted_at"])
