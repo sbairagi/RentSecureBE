@@ -8,6 +8,7 @@ from .views import (
     ca_leads_list,
     get_matched_ca,
     request_ca_callback,
+    send_whatsapp_followup,
     update_lead_status,
 )
 
@@ -25,6 +26,13 @@ urlpatterns = [
     path("ca/callback-request/", request_ca_callback, name="ca-callback-request"),
     path("ca/leads/", ca_leads_list, name="ca-leads-list"),
     path(
-        "ca/leads/<int:lead_id>/update/", update_lead_status, name="update-lead-status"
+        "ca/leads/<int:lead_id>/update/",
+        update_lead_status,
+        name="update-lead-status",
+    ),
+    path(
+        "ca/leads/<int:lead_id>/whatsapp/",
+        send_whatsapp_followup,
+        name="send-whatsapp-followup",
     ),
 ]

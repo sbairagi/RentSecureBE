@@ -23,6 +23,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 
 from core.models import User
+from notification.services.whatsapp_service import send_whatsapp_message
 from properties.models import Unit
 from rentsecure_be.services.ca_matchmaking_service import match_ca
 from rentsecure_be.type_compat import override
@@ -150,6 +151,48 @@ def update_lead_status(
     lead.notes = notes
     lead.save()
     return Response({"message": "Lead updated successfully."})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def send_whatsapp_followup(
+    request: Request, lead_id: int, /, *args: Any, **kwargs: Any
+) -> Response:
+    """Send a WhatsApp follow-up message to the user linked to a lead."""
+    try:
+        ca = request.user.ca_partner_profile
+    except CAPartner.DoesNotExist:
+        return Response(
+            {"error": "CA partner profile not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    lead = get_object_or_404(CAConnectionRequest, id=lead_id, ca_partner=ca)
+    message = request.data.get("message")
+    if not message:
+        return Response(
+            {"error": "Message content required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    phone = getattr(lead.user, "whatsapp_number", None) or getattr(
+        lead.user, "userprofile", None
+    )
+    if hasattr(phone, "whatsapp_number"):
+        phone = phone.whatsapp_number
+    if not phone:
+        return Response(
+            {"error": "User does not have a WhatsApp number."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    sent = send_whatsapp_message(phone, message, user=lead.user)
+    if sent:
+        return Response({"message": "WhatsApp message sent successfully."})
+    return Response(
+        {"error": "Failed to send WhatsApp message."},
+        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
 
 
 @api_view(["GET"])
