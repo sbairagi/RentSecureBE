@@ -270,6 +270,11 @@ class RentAgreementDraft(models.Model):
 
 
 class PoliceVerification(models.Model):
+    class PoliceVerificationStatus(models.TextChoices):
+        NOT_STARTED = "not_started", "Not Started"
+        SUBMITTED = "submitted", "Submitted"
+        VERIFIED = "verified", "Verified"
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_index=True
     )
@@ -279,6 +284,13 @@ class PoliceVerification(models.Model):
     )
     generated_at = models.DateTimeField(auto_now_add=True)
     file = models.FileField(upload_to="rent_agreements/")
+    status = models.CharField(
+        max_length=20,
+        choices=PoliceVerificationStatus.choices,
+        default=PoliceVerificationStatus.NOT_STARTED,
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ("renter", "unit")

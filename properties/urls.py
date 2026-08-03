@@ -6,6 +6,7 @@ from .views import (
     BuildingViewSet,
     CaretakerViewSet,
     ExtraChargeViewSet,
+    PoliceVerificationViewSet,
     RentAgreementDraftViewSet,
     RenterViewSet,
     RentRecordViewSet,
@@ -32,6 +33,9 @@ router.register(r"caretakers", CaretakerViewSet, basename="caretakers")
 router.register(r"renters", RenterViewSet, basename="renters")
 router.register(r"rent-records", RentRecordViewSet, basename="rent-records")
 router.register(r"extra-charges", ExtraChargeViewSet, basename="extra-charges")
+router.register(
+    r"police-verifications", PoliceVerificationViewSet, basename="police-verifications"
+)
 
 # De-prioritized for now do not touch bellow end-point
 router.register(r"unit-images", UnitImageViewSet, basename="unit-images")

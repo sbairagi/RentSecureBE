@@ -2,6 +2,7 @@ from .building_views import BuildingViewSet
 from .caretaker_views import CaretakerViewSet
 from .extra_charge_views import ExtraChargeViewSet
 from .owner_dashboard import owner_dashboard_summary
+from .police_verification_views import PoliceVerificationViewSet
 from .property_views import (
     my_rent_records,
     revoke_rent_agreement,
@@ -51,4 +52,5 @@ __all__ = [
     "update_late_fee_policy",
     "revoke_rent_agreement",
     "unit_analytics",
+    "PoliceVerificationViewSet",
 ]
