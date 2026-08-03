@@ -2,7 +2,11 @@ from .building_views import BuildingViewSet
 from .caretaker_views import CaretakerViewSet
 from .extra_charge_views import ExtraChargeViewSet
 from .itr_views import contact_ca, extract_form16_data, get_itr_deduction_suggestions
-from .owner_dashboard import itr_tracker_summary, owner_dashboard_summary
+from .owner_dashboard import (
+    income_summary,
+    itr_tracker_summary,
+    owner_dashboard_summary,
+)
 from .police_verification_views import PoliceVerificationViewSet
 from .property_views import (
     my_rent_records,
@@ -57,5 +61,6 @@ __all__ = [
     "contact_ca",
     "extract_form16_data",
     "get_itr_deduction_suggestions",
+    "income_summary",
     "itr_tracker_summary",
 ]

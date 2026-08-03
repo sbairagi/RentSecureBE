@@ -12,6 +12,7 @@ from django.db.models import Q, Sum
 from django.db.models.functions import TruncMonth
 
 from ..models import ITRTracker, PropertyTaxRecord, RentRecord
+from ..services.tax_estimation_service import estimate_tax
 
 
 @api_view(["GET"])
@@ -138,6 +139,39 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
     }
 
     return Response(summary)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def income_summary(request: DRFRequest) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
+
+    owner = request.user
+    profile = getattr(owner, "userprofile", None) or getattr(owner, "profile", None)
+    salary = getattr(profile, "salary", 0) or 0
+    other_income = getattr(profile, "other_income", 0) or 0
+
+    rent_income = float(
+        RentRecord.objects.filter(unit__owner=owner, payout_status="SUCCESS").aggregate(
+            total=Sum("amount")
+        )["total"]
+        or 0
+    )
+
+    total_income = float(salary) + float(other_income) + rent_income
+    tax_estimate = estimate_tax(total_income)
+
+    return Response(
+        {
+            "rent_income": rent_income,
+            "salary": float(salary),
+            "other_income": float(other_income),
+            "total_income": total_income,
+            "estimated_tax": tax_estimate.tax,
+            "tax_brackets": tax_estimate.brackets,
+        }
+    )
 
 
 @api_view(["GET"])

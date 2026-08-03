@@ -18,6 +18,7 @@ from .views import (
     extract_form16_data,
     get_itr_deduction_suggestions,
     get_latest_due_rent,
+    income_summary,
     itr_tracker_summary,
     leegality_webhook,
     owner_dashboard_summary,
@@ -67,6 +68,7 @@ urlpatterns = [
     path("renter/rent-history/", rent_history),
     path("owner/rents/", owner_rent_overview),
     path("owner/dashboard-summary/", owner_dashboard_summary),
+    path("owner/income-summary/", income_summary),
     path("owner/retry_payout_api/<int:rent_id>/", retry_payout_api),
     path(
         "rent-records/<int:rent_id>/whatsapp-logs/",

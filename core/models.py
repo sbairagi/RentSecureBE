@@ -100,6 +100,14 @@ class UserProfile(models.Model):
         default=True,
         help_text="Enable or disable WhatsApp rent reminders for this owner's renters",
     )
+    salary = models.PositiveIntegerField(
+        default=0,
+        help_text="Annual salary income for ITR calculations",
+    )
+    other_income = models.PositiveIntegerField(
+        default=0,
+        help_text="Other annual income for ITR calculations",
+    )
 
 
 class NotificationPreference(UpsertMixin, models.Model):
