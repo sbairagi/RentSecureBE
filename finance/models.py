@@ -13,6 +13,13 @@ class CAPartner(models.Model):
         ("INVESTMENT_TAX", "Investment Advice"),
     ]
 
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="ca_partner_profile",
+        blank=True,
+        null=True,
+    )
     name = models.CharField(max_length=255)
     phone = models.CharField(max_length=15)
     email = models.EmailField()
@@ -39,21 +46,36 @@ class CAPartner(models.Model):
 class CAConnectionRequest(models.Model):
     """Stores a user's request to be connected with a matched CA."""
 
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("CONTACTED", "Contacted"),
+        ("CLOSED", "Closed"),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="ca_connection_requests",
     )
-    ca = models.ForeignKey(CAPartner, on_delete=models.SET_NULL, null=True)
-    message = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    ca_partner = models.ForeignKey(
+        "finance.CAPartner",
+        on_delete=models.CASCADE,
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="PENDING",
+        db_index=True,
+    )
+    notes = models.TextField(blank=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-requested_at"]
 
     @override
     def __str__(self) -> str:
-        return f"Connection request from {self.user} to {self.ca}"
+        return f"{self.user} -> {self.ca_partner} ({self.status})"
 
 
 class CAProfile(models.Model):

@@ -20,14 +20,19 @@ from rest_framework.views import APIView
 
 from django.contrib.auth.models import AnonymousUser
 from django.http import FileResponse
+from django.shortcuts import get_object_or_404
 
 from core.models import User
 from properties.models import Unit
 from rentsecure_be.services.ca_matchmaking_service import match_ca
 from rentsecure_be.type_compat import override
 
-from .models import CAConnectionRequest, CAProfile, TaxSubmissionToCA
-from .serializers import CAProfileSerializer, TaxSubmissionToCASerializer
+from .models import CAConnectionRequest, CAPartner, CAProfile, TaxSubmissionToCA
+from .serializers import (
+    CAConnectionRequestSerializer,
+    CAProfileSerializer,
+    TaxSubmissionToCASerializer,
+)
 from .utils import create_tax_zip, generate_tax_excel, generate_tax_pdf
 
 
@@ -98,6 +103,53 @@ class DownloadTaxFilesView(APIView):
         return FileResponse(
             open(zip_file, "rb"), as_attachment=True, filename="tax_documents.zip"
         )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def ca_leads_list(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Return all leads for the authenticated CA partner."""
+    try:
+        ca = request.user.ca_partner_profile
+    except CAPartner.DoesNotExist:
+        return Response(
+            {"error": "CA partner profile not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    leads = CAConnectionRequest.objects.filter(ca_partner=ca).order_by("-requested_at")
+    serializer = CAConnectionRequestSerializer(leads, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_lead_status(
+    request: Request, lead_id: int, /, *args: Any, **kwargs: Any
+) -> Response:
+    """Update the status and notes for a specific lead."""
+    try:
+        ca = request.user.ca_partner_profile
+    except CAPartner.DoesNotExist:
+        return Response(
+            {"error": "CA partner profile not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    lead = get_object_or_404(CAConnectionRequest, id=lead_id, ca_partner=ca)
+    new_status = request.data.get("status")
+    notes = request.data.get("notes", "")
+
+    if new_status not in dict(CAConnectionRequest.STATUS_CHOICES):
+        return Response(
+            {"error": "Invalid status."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    lead.status = new_status
+    lead.notes = notes
+    lead.save()
+    return Response({"message": "Lead updated successfully."})
 
 
 @api_view(["GET"])
