@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from typing import Any, cast
 
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -190,6 +190,30 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
                 "record_count": totals["count"] or 0,
             }
         )
+
+    @action(detail=False, methods=["post"], url_path="send_itr_summary")
+    def send_itr_summary(self, request: DRFRequest) -> Response:
+        user = cast(User, request.user)
+        if isinstance(user, AnonymousUser):
+            return Response(
+                {"error": "Unauthorized"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        try:
+            from notification.services.itr_notify_service import notify_itr_summary
+
+            notify_itr_summary(user)
+        except Exception:
+            logger.exception(
+                "Failed to send ITR summary notification for user %s", user.id
+            )
+            return Response(
+                {"error": "Failed to send ITR summary."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response({"message": "ITR summary sent successfully."})
 
 
 @api_view(["POST"])

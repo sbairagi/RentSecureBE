@@ -2,6 +2,7 @@
 
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -739,3 +740,12 @@ class ITRSummaryTests(TestCase):
         data = response.json()
         self.assertEqual(data["total_rent"], 0)
         self.assertEqual(data["record_count"], 0)
+
+    def test_send_itr_summary_returns_success(self):
+        with patch(
+            "notification.services.itr_notify_service.notify_itr_summary"
+        ) as mock_notify:
+            response = self._auth().post("/properties/rent-records/send_itr_summary/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["message"], "ITR summary sent successfully.")
+        mock_notify.assert_called_once_with(self.o)
