@@ -155,3 +155,34 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         renter.save(update_fields=["rating", "feedback", "rated_at"])
 
         return Response({"message": "Thank you for your feedback!"})
+
+    @action(detail=True, methods=["post"], url_path="update-status")
+    def update_status(self, request: Request, pk: int) -> Response:
+        renter = get_object_or_404(
+            Renter.objects.select_related("unit"), pk=pk, unit__owner=request.user
+        )
+
+        new_status = request.data.get("status")
+        allowed_statuses = [
+            Renter.RenterStatus.ACTIVE,
+            Renter.RenterStatus.NOTICE_PERIOD,
+            Renter.RenterStatus.REVOKED,
+            Renter.RenterStatus.DEACTIVATED,
+        ]
+        if new_status not in allowed_statuses:
+            return Response(
+                {"error": "Invalid status."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        renter.status = new_status
+        if new_status == Renter.RenterStatus.ACTIVE:
+            renter.is_flagged = False
+            renter.flagged_reason = ""
+            renter.is_agreement_revoked = False
+            renter.revocation_reason = ""
+            renter.revoked_by_owner = False
+            renter.revoked_on = None
+        renter.save()
+
+        return Response({"message": "Status updated successfully."})

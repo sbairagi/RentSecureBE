@@ -259,3 +259,53 @@ class RenterViewSetLimitAndPermissionTests(TestCase):
         )
         response = self._auth(attacker).delete(f"/properties/renters/{renter.id}/")
         self.assertEqual(response.status_code, 404)
+
+    def test_owner_can_update_renter_status(self):
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="StatusRenter",
+            email="sr@t.com",
+            phone="+1444444444",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+        )
+        response = self._auth(self.o).post(
+            f"/properties/renters/{renter.id}/update-status/",
+            {"status": "notice_period"},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        renter.refresh_from_db()
+        self.assertEqual(renter.status, "notice_period")
+
+    def test_other_user_cannot_update_renter_status(self):
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="StatusRenter2",
+            email="sr2@t.com",
+            phone="+1555555555",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+        )
+        response = self._auth(self.ot).post(
+            f"/properties/renters/{renter.id}/update-status/",
+            {"status": "revoked"},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_update_status_rejects_invalid_status(self):
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="StatusRenter3",
+            email="sr3@t.com",
+            phone="+1666666666",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+        )
+        response = self._auth(self.o).post(
+            f"/properties/renters/{renter.id}/update-status/",
+            {"status": "invalid_status"},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 400)
