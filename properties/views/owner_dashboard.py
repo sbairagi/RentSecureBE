@@ -11,7 +11,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncMonth
 
-from ..models import PropertyTaxRecord, RentRecord
+from ..models import ITRTracker, PropertyTaxRecord, RentRecord
 
 
 @api_view(["GET"])
@@ -138,3 +138,32 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
     }
 
     return Response(summary)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def itr_tracker_summary(request: DRFRequest) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
+
+    owner = request.user
+    tracker, _ = ITRTracker.objects.get_or_create(user=owner)
+
+    fy_start = tracker.fy_start
+    fy_end = tracker.fy_end
+    if fy_start and fy_end:
+        fy = f"{fy_start.year}-{fy_end.year}"
+    else:
+        today = date.today()
+        fy_start_year = today.year if today.month >= 4 else today.year - 1
+        fy = f"{fy_start_year}-{fy_start_year + 1}"
+
+    return Response(
+        {
+            "fy": fy,
+            "total_rent_income": float(tracker.total_rent_income or 0),
+            "total_deductions": float(tracker.total_deductions or 0),
+            "ca_review_status": tracker.ca_review_status,
+            "last_updated": tracker.last_updated,
+        }
+    )

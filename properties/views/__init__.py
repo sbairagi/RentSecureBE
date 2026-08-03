@@ -2,7 +2,7 @@ from .building_views import BuildingViewSet
 from .caretaker_views import CaretakerViewSet
 from .extra_charge_views import ExtraChargeViewSet
 from .itr_views import contact_ca
-from .owner_dashboard import owner_dashboard_summary
+from .owner_dashboard import itr_tracker_summary, owner_dashboard_summary
 from .police_verification_views import PoliceVerificationViewSet
 from .property_views import (
     my_rent_records,
@@ -55,4 +55,5 @@ __all__ = [
     "unit_analytics",
     "PoliceVerificationViewSet",
     "contact_ca",
+    "itr_tracker_summary",
 ]
