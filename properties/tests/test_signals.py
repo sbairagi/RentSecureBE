@@ -759,3 +759,54 @@ class TestNotifyOwnerOnTaxPaid:
             paid_date=date.today(),
         )
         mock_notify_owner.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# 15. notify_renter_status_change
+# ---------------------------------------------------------------------------
+
+
+class TestNotifyRenterStatusChange:
+    @patch(
+        "notification.services.renter_status_notify_service.send_renter_status_change_notification"
+    )
+    def test_notice_period_from_active_sends_notification(self, mock_notify, unit, db):
+        renter = RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
+        renter.status = Renter.RenterStatus.NOTICE_PERIOD
+        renter.save()
+        mock_notify.assert_called_once_with(renter, "active", "notice_period")
+
+    @patch(
+        "notification.services.renter_status_notify_service.send_renter_status_change_notification"
+    )
+    def test_revoked_from_active_sends_notification(self, mock_notify, unit, db):
+        renter = RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
+        renter.status = Renter.RenterStatus.REVOKED
+        renter.save()
+        mock_notify.assert_called_once_with(renter, "active", "revoked")
+
+    @patch(
+        "notification.services.renter_status_notify_service.send_renter_status_change_notification"
+    )
+    def test_deactivated_from_active_sends_notification(self, mock_notify, unit, db):
+        renter = RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
+        renter.status = Renter.RenterStatus.DEACTIVATED
+        renter.save()
+        mock_notify.assert_called_once_with(renter, "active", "deactivated")
+
+    @patch(
+        "notification.services.renter_status_notify_service.send_renter_status_change_notification"
+    )
+    def test_no_status_change_skips_notification(self, mock_notify, unit, db):
+        renter = RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
+        renter.save()
+        mock_notify.assert_not_called()
+
+    @patch(
+        "notification.services.renter_status_notify_service.send_renter_status_change_notification"
+    )
+    def test_active_from_notice_period_skips_notification(self, mock_notify, unit, db):
+        renter = RenterFactory(unit=unit, status=Renter.RenterStatus.NOTICE_PERIOD)
+        renter.status = Renter.RenterStatus.ACTIVE
+        renter.save()
+        mock_notify.assert_not_called()

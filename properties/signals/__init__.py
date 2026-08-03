@@ -2,7 +2,7 @@ import logging
 from collections.abc import Iterable
 from typing import cast
 
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -231,6 +231,41 @@ def update_renter_defaulter_status(rent: RentRecord) -> None:
                 )
         renter.save(
             update_fields=["missed_rents", "is_flagged", "flagged_reason", "updated_at"]
+        )
+
+
+@receiver(pre_save, sender=Renter)
+def notify_renter_status_change(
+    sender: type[Renter], instance: Renter, **kwargs: object
+) -> None:
+    if not instance.pk:
+        return
+
+    try:
+        old = Renter.objects.get(pk=instance.pk)
+    except Renter.DoesNotExist:
+        return
+
+    if old.status == instance.status:
+        return
+
+    if instance.status not in {
+        Renter.RenterStatus.NOTICE_PERIOD,
+        Renter.RenterStatus.REVOKED,
+        Renter.RenterStatus.DEACTIVATED,
+    }:
+        return
+
+    from notification.services.renter_status_notify_service import (
+        send_renter_status_change_notification,
+    )
+
+    try:
+        send_renter_status_change_notification(instance, old.status, instance.status)
+    except Exception:
+        logger.exception(
+            "Failed to send status change notification for renter %s",
+            instance.id,
         )
 
 
