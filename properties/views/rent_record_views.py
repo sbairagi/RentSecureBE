@@ -2,7 +2,7 @@ import logging
 from typing import Any, cast
 
 from rest_framework import viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request as DRFRequest
@@ -11,8 +11,10 @@ from rest_framework.serializers import BaseSerializer
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.db.models import Count, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from core.models import User
 from notification.services.rent_notify_service import send_payout_notification
@@ -115,6 +117,44 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
         instance.delete()
         enforcer.decrement("rent_records")
         cache.delete(f"rent_records_user_{self.request.user.id}")
+
+    @action(detail=False, methods=["get"], url_path="monthly_rent_summary")
+    def monthly_rent_summary(self, request: DRFRequest) -> Response:
+        user = cast(User, request.user)
+        if isinstance(user, AnonymousUser):
+            return Response(
+                {
+                    "month": "",
+                    "collected_amount": 0,
+                    "collected_count": 0,
+                    "pending_count": 0,
+                }
+            )
+
+        today = timezone.now()
+        this_month_start = today.replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
+
+        rent_records = RentRecord.objects.filter(
+            unit__owner=user,
+            created_at__gte=this_month_start,
+        )
+
+        collected = rent_records.filter(status=RentRecord.Status.PAID).aggregate(
+            total=Sum("amount"), count=Count("id")
+        )
+
+        pending = rent_records.filter(status=RentRecord.Status.PENDING).count()
+
+        return Response(
+            {
+                "month": today.strftime("%B %Y"),
+                "collected_amount": collected["total"] or 0,
+                "collected_count": collected["count"] or 0,
+                "pending_count": pending,
+            }
+        )
 
 
 @api_view(["POST"])

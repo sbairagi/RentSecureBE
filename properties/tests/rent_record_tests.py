@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 
 from core.models import PlanFeatureLimit, SubscriptionPlan, UserSubscription
 from properties.models import Building, Renter, RentRecord, Unit
@@ -533,3 +534,103 @@ class ExtraChargeViewSetTest(TestCase):
         self.assertEqual(
             self.client.post("/properties/extra-charges/", {}).status_code, 401
         )
+
+
+class MonthlyRentSummaryTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.o = User.objects.create_user(
+            username="mrs@t.com",
+            email="mrs@t.com",
+            password="p",
+            full_name="MRS",
+            phone="+1",
+        )
+        cls.pp, _ = SubscriptionPlan.objects.get_or_create(
+            name="mrs_pro",
+            defaults={
+                "monthly_price": Decimal("29.99"),
+                "yearly_price": Decimal("299.99"),
+                "features": "Pro",
+            },
+        )
+
+    def setUp(self):
+        UserSubscription.objects.update_or_create(
+            user=self.o, defaults={"plan": self.pp, "is_active": True}
+        )
+        b, _ = Building.objects.get_or_create(
+            owner=self.o,
+            name="MRSB",
+            defaults={
+                "address_line": "1 St",
+                "city": "C",
+                "state": "S",
+                "country": "CO",
+                "postal_code": "1",
+            },
+        )
+        self.u, _ = Unit.objects.get_or_create(
+            owner=self.o,
+            building=b,
+            unit="MRS101",
+            defaults={
+                "unit_type": "flat",
+                "address_line": "1 St",
+                "city": "C",
+                "state": "S",
+                "country": "CO",
+                "postal_code": "1",
+            },
+        )
+
+    def _auth(self):
+        c = APIClient()
+        c.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(self.o).access_token}"
+        )
+        return c
+
+    def test_monthly_summary_returns_collected_and_pending(self):
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="MRS Renter",
+            phone="+911111111111",
+            rent_amount=10000,
+            start_date=date.today(),
+        )
+        RentRecord.objects.create(
+            renter=renter,
+            unit=self.u,
+            due_date=date.today(),
+            amount=10000,
+            payment_method="upi",
+            status=RentRecord.Status.PAID,
+            created_at=timezone.now(),
+        )
+        RentRecord.objects.create(
+            renter=renter,
+            unit=self.u,
+            due_date=date(2025, 2, 1),
+            amount=5000,
+            payment_method="upi",
+            status=RentRecord.Status.PENDING,
+            created_at=timezone.now(),
+        )
+
+        response = self._auth().get("/properties/rent-records/monthly_rent_summary/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["collected_amount"], 10000)
+        self.assertEqual(data["collected_count"], 1)
+        self.assertEqual(data["pending_count"], 1)
+        self.assertEqual(data["month"], timezone.now().strftime("%B %Y"))
+
+    def test_monthly_summary_empty_when_no_records(self):
+        response = self._auth().get("/properties/rent-records/monthly_rent_summary/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["collected_amount"], 0)
+        self.assertEqual(data["collected_count"], 0)
+        self.assertEqual(data["pending_count"], 0)
