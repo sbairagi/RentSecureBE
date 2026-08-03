@@ -211,6 +211,41 @@ def process_tax_reminders() -> None:
             )
 
 
+def process_itr_reminders() -> None:
+    """Send monthly ITR reminders to all active owners."""
+    from django.contrib.auth import get_user_model
+
+    user_model = get_user_model()
+    current_month = now().strftime("%B %Y")
+
+    for user in user_model.objects.filter(is_active=True):
+        phone = _safe_whatsapp(user)
+        if not phone:
+            continue
+
+        lang = (
+            getattr(getattr(user, "profile", None), "language_preference", None) or "en"
+        )
+
+        message = (
+            f"📆 Hello {user.first_name or user.get_full_name() or ''}! "
+            f"It's time to log your rent income and deductions for {current_month}. "
+            f"Stay ITR-ready and save on taxes with RentSecure. 💸"
+        )
+
+        try:
+            send_whatsapp_message(phone, message, user=user, rent_record=None)
+        except Exception:
+            logger.exception("Failed to send ITR reminder text for user %s", user.id)
+
+        try:
+            audio_path = generate_voice_note(message, lang)
+            if audio_path:
+                send_whatsapp_audio(phone, audio_path, user=user, rent_record=None)
+        except OSError:
+            logger.exception("Failed to send ITR reminder audio for user %s", user.id)
+
+
 # Step 4: Schedule Cron Job (Every Morning)
 
 # cron: daily at 9AM

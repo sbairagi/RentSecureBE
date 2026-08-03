@@ -8,7 +8,10 @@ from django.utils.timezone import now
 
 from core.models import User, UserProfile
 from management.commands.send_scheduled_reminders import Command
-from notification.services.schedule_reminders import process_rent_reminders
+from notification.services.schedule_reminders import (
+    process_itr_reminders,
+    process_rent_reminders,
+)
 from properties.models import Building, Renter, RentRecord, Unit
 from properties.models.renter_models import RentReminderLog
 
@@ -109,4 +112,39 @@ class ProcessRentRemindersDedupTests(TestCase):
         profile.save(update_fields=["rent_reminders_enabled"])
         mock_voice.return_value = None
         process_rent_reminders()
+        mock_send.assert_not_called()
+
+
+class ProcessITRRemindersTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="itr_reminder_owner",
+            password="p",
+            full_name="ITROwner",
+            phone="+91",
+            whatsapp_number="+919876543210",
+            first_name="ITR",
+        )
+        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        profile.language_preference = "en"
+        profile.save(update_fields=["language_preference"])
+
+    @patch("notification.services.schedule_reminders.send_whatsapp_message")
+    @patch("notification.services.schedule_reminders.generate_voice_note")
+    def test_process_itr_reminders_sends_whatsapp_and_audio(
+        self, mock_voice, mock_send
+    ):
+        mock_send.return_value = True
+        mock_voice.return_value = None
+        process_itr_reminders()
+        mock_send.assert_called_once()
+        args, kwargs = mock_send.call_args
+        self.assertIn("ITR-ready", args[1])
+        self.assertEqual(kwargs["user"], self.owner)
+
+    @patch("notification.services.schedule_reminders.send_whatsapp_message")
+    def test_process_itr_reminders_skips_users_without_whatsapp(self, mock_send):
+        self.owner.whatsapp_number = ""
+        self.owner.save(update_fields=["whatsapp_number"])
+        process_itr_reminders()
         mock_send.assert_not_called()
