@@ -21,6 +21,7 @@ from rest_framework.views import APIView
 from django.contrib.auth.models import AnonymousUser
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from core.models import User
 from notification.services.whatsapp_service import send_whatsapp_message
@@ -149,6 +150,8 @@ def update_lead_status(
 
     lead.status = new_status
     lead.notes = notes
+    if new_status == "CLOSED":
+        lead.converted_at = timezone.now()
     lead.save()
     return Response({"message": "Lead updated successfully."})
 
@@ -188,6 +191,9 @@ def send_whatsapp_followup(
 
     sent = send_whatsapp_message(phone, message, user=lead.user)
     if sent:
+        lead.status = "CONTACTED"
+        lead.contacted_at = timezone.now()
+        lead.save(update_fields=["status", "contacted_at"])
         return Response({"message": "WhatsApp message sent successfully."})
     return Response(
         {"error": "Failed to send WhatsApp message."},
@@ -237,7 +243,7 @@ def request_ca_callback(request: Request, /, *args: Any, **kwargs: Any) -> Respo
         )
 
     message = request.data.get("message", "")
-    CAConnectionRequest.objects.create(user=user, ca=ca, message=message)
+    CAConnectionRequest.objects.create(user=user, ca_partner=ca, message=message)
 
     return Response(
         {
@@ -247,4 +253,38 @@ def request_ca_callback(request: Request, /, *args: Any, **kwargs: Any) -> Respo
             "ca_email": ca.email,
         },
         status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def ca_partner_analytics(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Return lead analytics for the authenticated CA partner."""
+    try:
+        ca = request.user.ca_partner_profile
+    except CAPartner.DoesNotExist:
+        return Response(
+            {"error": "CA partner profile not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    from_date = request.query_params.get("from")
+    to_date = request.query_params.get("to")
+
+    leads = CAConnectionRequest.objects.filter(ca_partner=ca)
+    if from_date and to_date:
+        leads = leads.filter(requested_at__range=[from_date, to_date])
+
+    total_leads = leads.count()
+    contacted = leads.filter(contacted_at__isnull=False).count()
+    converted = leads.filter(converted_at__isnull=False).count()
+    conversion_rate = (converted / total_leads * 100) if total_leads > 0 else 0.0
+
+    return Response(
+        {
+            "total_leads": total_leads,
+            "contacted_leads": contacted,
+            "converted_leads": converted,
+            "conversion_rate": round(conversion_rate, 2),
+        }
     )

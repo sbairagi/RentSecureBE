@@ -62,6 +62,8 @@ class CAConnectionRequest(models.Model):
         on_delete=models.CASCADE,
     )
     requested_at = models.DateTimeField(auto_now_add=True)
+    contacted_at = models.DateTimeField(null=True, blank=True)
+    converted_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,

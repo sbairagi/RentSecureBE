@@ -6,6 +6,7 @@ from .views import (
     DownloadTaxFilesView,
     TaxSubmissionToCAViewSet,
     ca_leads_list,
+    ca_partner_analytics,
     get_matched_ca,
     request_ca_callback,
     send_whatsapp_followup,
@@ -25,6 +26,7 @@ urlpatterns = [
     path("ca/match/", get_matched_ca, name="get-matched-ca"),
     path("ca/callback-request/", request_ca_callback, name="ca-callback-request"),
     path("ca/leads/", ca_leads_list, name="ca-leads-list"),
+    path("ca/analytics/", ca_partner_analytics, name="ca-partner-analytics"),
     path(
         "ca/leads/<int:lead_id>/update/",
         update_lead_status,
