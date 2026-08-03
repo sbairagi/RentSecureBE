@@ -749,3 +749,21 @@ class ITRSummaryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["message"], "ITR summary sent successfully.")
         mock_notify.assert_called_once_with(self.o)
+
+    def test_download_itr_summary_returns_pdf(self):
+        with patch(
+            "properties.services.itr_pdf_service.generate_itr_summary_pdf",
+            return_value=b"%PDF-1.4 fake pdf bytes",
+        ):
+            response = self._auth().get(
+                "/properties/rent-records/download_itr_summary/"
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn(
+            "attachment; filename=ITR_Summary_",
+            response["Content-Disposition"],
+        )
+        self.assertEqual(
+            b"".join(response.streaming_content), b"%PDF-1.4 fake pdf bytes"
+        )

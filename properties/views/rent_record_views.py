@@ -1,5 +1,6 @@
 import logging
-from datetime import datetime
+from datetime import date, datetime
+from io import BytesIO
 from typing import Any, cast
 
 from rest_framework import status, viewsets
@@ -214,6 +215,40 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
             )
 
         return Response({"message": "ITR summary sent successfully."})
+
+    @action(detail=False, methods=["get"], url_path="download_itr_summary")
+    def download_itr_summary(self, request: DRFRequest) -> FileResponse:
+        user = cast(User, request.user)
+        if isinstance(user, AnonymousUser):
+            return Response(
+                {"error": "Unauthorized"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        today = timezone.now().date()
+        fy_start_year = today.year if today.month >= 4 else today.year - 1
+        fy_start = date(fy_start_year, 4, 1)
+        fy_end = date(fy_start_year + 1, 3, 31)
+
+        try:
+            from properties.services.itr_pdf_service import generate_itr_summary_pdf
+
+            pdf_bytes = generate_itr_summary_pdf(user, fy_start, fy_end)
+        except Exception:
+            logger.exception("Failed to generate ITR summary PDF for user %s", user.id)
+            return Response(
+                {"error": "Failed to generate ITR summary PDF."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        response = FileResponse(
+            BytesIO(pdf_bytes),
+            content_type="application/pdf",
+        )
+        response["Content-Disposition"] = (
+            f"attachment; filename=ITR_Summary_{fy_start_year}-{fy_start_year + 1}.pdf"
+        )
+        return response
 
 
 @api_view(["POST"])

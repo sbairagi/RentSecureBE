@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ITR Summary Report</title>
+  <style>
+    body { font-family: 'Arial'; font-size: 14px; }
+    h1 { text-align: center; }
+    h2 { text-align: center; font-size: 16px; margin-bottom: 4px; }
+    .section { margin-top: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+    th { background: #f5f5f5; }
+    .total { font-weight: bold; margin-top: 10px; }
+    .meta { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <h1>ITR Summary Report</h1>
+  <h2>FY {{ fy_start.year }}-{{ fy_end.year }}</h2>
+
+  <div class="section">
+    <p class="meta"><strong>Owner Name:</strong> {{ owner.get_full_name }}</p>
+    <p class="meta"><strong>Email:</strong> {{ owner.email }}</p>
+    <p class="meta"><strong>Phone:</strong> {{ owner.phone|default:"-" }}</p>
+    <p class="meta"><strong>Report Generated:</strong> {{ fy_end|date:"d M Y" }}</p>
+  </div>
+
+  <div class="section">
+    <p class="meta"><strong>Total Rent Received:</strong> ₹{{ total_income|floatformat:2 }}</p>
+    <p class="meta"><strong>Number of Payments:</strong> {{ record_count }}</p>
+  </div>
+
+  <div class="section">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Unit</th>
+          <th>Renter</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rent in rent_records %}
+        <tr>
+          <td>{{ rent.created_at|date:"d-m-Y" }}</td>
+          <td>{{ rent.unit.unit }} ({{ rent.unit.unit_type|default:"-" }})</td>
+          <td>{{ rent.renter.name|default:"-" }}</td>
+          <td>₹{{ rent.amount|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" style="text-align:center;">No rent records found for this financial year.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section total">
+    <p><strong>Total Income for ITR:</strong> ₹{{ total_income|floatformat:2 }}</p>
+    <p><strong>Period:</strong> {{ fy_start|date:"d M Y" }} to {{ fy_end|date:"d M Y" }}</p>
+  </div>
+</body>
+</html>
