@@ -263,7 +263,11 @@ def request_ca_callback(request: Request, /, *args: Any, **kwargs: Any) -> Respo
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def ca_partner_analytics(request: Request, /, *args: Any, **kwargs: Any) -> Response:
-    """Return lead analytics for the authenticated CA partner."""
+    """Return lead analytics for the authenticated CA partner.
+
+    Supports optional ``start_date`` / ``end_date`` or ``from`` / ``to``
+    query parameters for filtering by date range.
+    """
     try:
         ca = request.user.ca_partner_profile
     except CAPartner.DoesNotExist:
@@ -272,8 +276,10 @@ def ca_partner_analytics(request: Request, /, *args: Any, **kwargs: Any) -> Resp
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    from_str = request.query_params.get("from")
-    to_str = request.query_params.get("to")
+    from_str = request.query_params.get("start_date") or request.query_params.get(
+        "from"
+    )
+    to_str = request.query_params.get("end_date") or request.query_params.get("to")
 
     try:
         to_dt = timezone.make_aware(parse_datetime(to_str)) if to_str else None
