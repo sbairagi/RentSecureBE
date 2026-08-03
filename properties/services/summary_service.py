@@ -140,7 +140,11 @@ def send_monthly_rent_summary_email(
     if prefs.monthly_summary_email and getattr(owner, "email", None):
         sent_any = _send_summary_email(owner, summary, translated_message) or sent_any
 
-    if send_whatsapp:
+    if (
+        send_whatsapp
+        and prefs.monthly_summary_whatsapp
+        and getattr(owner, "whatsapp_number", None)
+    ):
         sent_any = (
             _send_summary_whatsapp(owner, translated_message, prefs, lang) or sent_any
         )

@@ -210,7 +210,10 @@ class OwnerDashboardSummaryServiceTests(TestCase):
         self.assertTrue(result)
         mock_voice_gen.assert_called_once()
         mock_send_audio.assert_called_once_with(
-            self.owner.whatsapp_number, "/tmp/test.mp3"
+            self.owner.whatsapp_number,
+            "/tmp/test.mp3",
+            user=self.owner,
+            rent_record=None,
         )
 
     @patch("properties.services.owner_dashboard_summary_service._send_whatsapp_audio")
