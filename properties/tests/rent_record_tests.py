@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from core.models import SubscriptionPlan, UserSubscription
+from core.models import PlanFeatureLimit, SubscriptionPlan, UserSubscription
 from properties.models import Building, Renter, RentRecord, Unit
 
 User = get_user_model()
@@ -195,6 +195,156 @@ class RentRecordSerializerSecurityTests(TestCase):
         created_id = response.data["id"]
         created = RentRecord.objects.get(id=created_id)
         self.assertEqual(created.status, RentRecord.Status.PENDING)
+
+
+class RentRecordCreationStatusValidationTests(TestCase):
+    """Block rent record creation for revoked/deactivated renters."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.o = User.objects.create_user(
+            username="stat@t.com",
+            email="stat@t.com",
+            password="p",
+            full_name="Stat",
+            phone="+1",
+        )
+        cls.pp, _ = SubscriptionPlan.objects.get_or_create(
+            name="stat_pro",
+            defaults={
+                "monthly_price": Decimal("29.99"),
+                "yearly_price": Decimal("299.99"),
+                "features": "Pro",
+            },
+        )
+
+    def setUp(self):
+        UserSubscription.objects.update_or_create(
+            user=self.o, defaults={"plan": self.pp, "is_active": True}
+        )
+        PlanFeatureLimit.objects.get_or_create(
+            plan=self.pp, feature_key="rent_records", defaults={"value": "100"}
+        )
+        b, _ = Building.objects.get_or_create(
+            owner=self.o,
+            name="STATB",
+            defaults={
+                "address_line": "1 St",
+                "city": "C",
+                "state": "S",
+                "country": "CO",
+                "postal_code": "1",
+            },
+        )
+        self.u, _ = Unit.objects.get_or_create(
+            owner=self.o,
+            building=b,
+            unit="STAT101",
+            defaults={
+                "unit_type": "flat",
+                "address_line": "1 St",
+                "city": "C",
+                "state": "S",
+                "country": "CO",
+                "postal_code": "1",
+            },
+        )
+
+    def _auth(self):
+        c = APIClient()
+        c.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(self.o).access_token}"
+        )
+        return c
+
+    def test_active_renter_can_create_rent_record(self):
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="Active Renter",
+            phone="+911111111111",
+            rent_amount=10000,
+            start_date=date(2025, 1, 1),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        response = self._auth().post(
+            "/properties/rent-records/",
+            {
+                "renter": renter.id,
+                "unit": self.u.id,
+                "due_date": "2025-02-01",
+                "amount": 12000,
+                "payment_method": "upi",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+
+    def test_notice_period_renter_can_create_rent_record(self):
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="Notice Renter",
+            phone="+911111111112",
+            rent_amount=10000,
+            start_date=date(2025, 1, 1),
+            status=Renter.RenterStatus.NOTICE_PERIOD,
+        )
+        response = self._auth().post(
+            "/properties/rent-records/",
+            {
+                "renter": renter.id,
+                "unit": self.u.id,
+                "due_date": "2025-02-01",
+                "amount": 12000,
+                "payment_method": "upi",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+
+    def test_revoked_renter_cannot_create_rent_record(self):
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="Revoked Renter",
+            phone="+911111111113",
+            rent_amount=10000,
+            start_date=date(2025, 1, 1),
+            status=Renter.RenterStatus.REVOKED,
+        )
+        response = self._auth().post(
+            "/properties/rent-records/",
+            {
+                "renter": renter.id,
+                "unit": self.u.id,
+                "due_date": "2025-02-01",
+                "amount": 12000,
+                "payment_method": "upi",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_deactivated_renter_cannot_create_rent_record(self):
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="Deactivated Renter",
+            phone="+911111111114",
+            rent_amount=10000,
+            start_date=date(2025, 1, 1),
+            status=Renter.RenterStatus.DEACTIVATED,
+        )
+        response = self._auth().post(
+            "/properties/rent-records/",
+            {
+                "renter": renter.id,
+                "unit": self.u.id,
+                "due_date": "2025-02-01",
+                "amount": 12000,
+                "payment_method": "upi",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
 
 
 class RentRecordHistoryTests(TestCase):

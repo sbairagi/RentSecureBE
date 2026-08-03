@@ -57,6 +57,13 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
             raise PermissionDenied("You do not own this unit.")
         if renter is None or renter.unit != unit:
             raise ValidationError("Renter does not belong to the selected unit.")
+        if renter.status in {
+            Renter.RenterStatus.REVOKED,
+            Renter.RenterStatus.DEACTIVATED,
+        }:
+            raise ValidationError(
+                "Rent cannot be paid for revoked or deactivated renters."
+            )
         if RentRecord.objects.filter(
             renter=renter, due_date=serializer.validated_data.get("due_date")
         ).exists():
