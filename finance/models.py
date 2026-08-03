@@ -34,6 +34,7 @@ class CAPartner(models.Model):
     available = models.BooleanField(default=True, db_index=True)
     rating = models.FloatField(default=0.0)
     price_range = models.CharField(max_length=50)
+    joined_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-rating", "name"]

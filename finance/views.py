@@ -306,12 +306,19 @@ def ca_partner_analytics(request: Request, /, *args: Any, **kwargs: Any) -> Resp
     converted = leads.filter(converted_at__isnull=False).count()
     conversion_rate = (converted / total_leads * 100) if total_leads > 0 else 0.0
 
+    # CA partner joined count in date range
+    ca_joined = 0
+    if ca.joined_at and from_dt <= ca.joined_at <= to_dt:
+        ca_joined = 1
+
     return Response(
         {
             "total_leads": total_leads,
             "contacted_leads": contacted,
             "converted_leads": converted,
             "conversion_rate": round(conversion_rate, 2),
+            "total_ca_partners": ca_joined,
+            "total_clients": total_leads,
         }
     )
 
