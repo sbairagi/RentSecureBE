@@ -316,3 +316,62 @@ class RenterViewSetLimitAndPermissionTests(TestCase):
             follow=True,
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_owner_can_vacate_notice_period_renter(self):
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="VacateRenter",
+            email="vr@t.com",
+            phone="+1777777777",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+            status=Renter.RenterStatus.NOTICE_PERIOD,
+        )
+        response = self._auth(self.o).post(
+            f"/properties/renters/{renter.id}/vacate/",
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        renter.refresh_from_db()
+        self.assertEqual(renter.status, Renter.RenterStatus.DEACTIVATED)
+        self.assertEqual(renter.vacated_on, date.today())
+        self.assertFalse(renter.is_active)
+
+    def test_vacate_rejects_active_renter(self):
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="ActiveRenter",
+            email="ar@t.com",
+            phone="+1888888888",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        response = self._auth(self.o).post(
+            f"/properties/renters/{renter.id}/vacate/",
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_other_user_cannot_vacate_renter(self):
+        attacker = User.objects.create_user(
+            username="att3@t.com",
+            email="att3@t.com",
+            password="p",
+            full_name="Attacker3",
+            phone="+2",
+        )
+        renter = Renter.objects.create(
+            unit=self.u,
+            name="VacateRenter2",
+            email="vr2@t.com",
+            phone="+1999999999",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+            status=Renter.RenterStatus.NOTICE_PERIOD,
+        )
+        response = self._auth(attacker).post(
+            f"/properties/renters/{renter.id}/vacate/",
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 404)

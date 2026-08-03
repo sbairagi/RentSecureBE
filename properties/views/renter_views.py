@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any, cast
 
 from rest_framework import status, viewsets
@@ -12,6 +13,7 @@ from rest_framework.serializers import BaseSerializer
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -26,6 +28,8 @@ from ..utils.utils import check_feature_limit
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
+
+logger = logging.getLogger(__name__)
 
 
 class RenterViewSet(viewsets.ModelViewSet[Renter]):
@@ -186,3 +190,74 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         renter.save()
 
         return Response({"message": "Status updated successfully."})
+
+    @action(detail=True, methods=["post"], url_path="vacate")
+    def vacate(self, request: Request, pk: int) -> Response:
+        renter = get_object_or_404(
+            Renter.objects.select_related("unit"), pk=pk, unit__owner=request.user
+        )
+
+        if renter.status != Renter.RenterStatus.NOTICE_PERIOD:
+            return Response(
+                {"error": "Renter is not in notice period."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        renter.status = Renter.RenterStatus.DEACTIVATED
+        renter.vacated_on = timezone.now().date()
+        renter.is_active = False
+        renter.save()
+
+        try:
+            from notification.services.rent_notify_service import (
+                notify_owner,
+                notify_renter,
+            )
+
+            renter_msg = (
+                "You have been vacated from the property. "
+                "All records have been archived successfully."
+            )
+            owner_msg = (
+                f"Renter {renter.name} has been vacated from unit "
+                f"{renter.unit.unit}. The unit is now marked as vacant."
+            )
+
+            notify_renter(renter, renter_msg)
+            notify_owner(renter.unit.owner, owner_msg)
+        except Exception:
+            logger.exception(
+                "Failed to send vacate notifications for renter %s",
+                renter.id,
+            )
+
+        return Response({"message": "Renter vacated and archived successfully."})
+
+    @action(detail=False, methods=["get"], url_path="status_summary")
+    def status_summary(self, request: Request) -> Response:
+        user = cast(User, request.user)
+        if isinstance(user, AnonymousUser):
+            return Response(
+                {
+                    "active": 0,
+                    "notice_period": 0,
+                    "revoked": 0,
+                    "deactivated": 0,
+                }
+            )
+
+        summary = (
+            Renter.objects.filter(unit__owner=user)
+            .values("status")
+            .annotate(count=Count("id"))
+        )
+        data = {item["status"]: item["count"] for item in summary}
+
+        return Response(
+            {
+                "active": data.get("active", 0),
+                "notice_period": data.get("notice_period", 0),
+                "revoked": data.get("revoked", 0),
+                "deactivated": data.get("deactivated", 0),
+            }
+        )
