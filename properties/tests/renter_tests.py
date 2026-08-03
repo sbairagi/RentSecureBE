@@ -375,3 +375,57 @@ class RenterViewSetLimitAndPermissionTests(TestCase):
             follow=True,
         )
         self.assertEqual(response.status_code, 404)
+
+    def test_status_summary_returns_counts(self):
+        Renter.objects.create(
+            unit=self.u,
+            name="Active1",
+            email="a1@t.com",
+            phone="+1111111111",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        Renter.objects.create(
+            unit=self.u,
+            name="Notice1",
+            email="n1@t.com",
+            phone="+1222222222",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+            status=Renter.RenterStatus.NOTICE_PERIOD,
+        )
+        Renter.objects.create(
+            unit=self.u,
+            name="Revoked1",
+            email="r1@t.com",
+            phone="+1333333333",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+            status=Renter.RenterStatus.REVOKED,
+        )
+        Renter.objects.create(
+            unit=self.u,
+            name="Deactivated1",
+            email="d1@t.com",
+            phone="+1444444444",
+            rent_amount=Decimal("1000"),
+            start_date=date.today(),
+            status=Renter.RenterStatus.DEACTIVATED,
+        )
+        response = self._auth(self.o).get("/properties/renters/status_summary/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["active"], 1)
+        self.assertEqual(data["notice_period"], 1)
+        self.assertEqual(data["revoked"], 1)
+        self.assertEqual(data["deactivated"], 1)
+
+    def test_status_summary_empty_when_no_renters(self):
+        response = self._auth(self.o).get("/properties/renters/status_summary/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["active"], 0)
+        self.assertEqual(data["notice_period"], 0)
+        self.assertEqual(data["revoked"], 0)
+        self.assertEqual(data["deactivated"], 0)
