@@ -86,11 +86,15 @@ class ExtraChargeReminderTests(TestCase):
         mock_send_whatsapp_message.assert_called_once_with(
             self.renter.whatsapp_number,
             "translated message",
+            user=getattr(self.renter, "user", None),
+            rent_record=None,
         )
         mock_generate_voice_note.assert_called_once_with("translated message", "hi")
         mock_send_whatsapp_audio.assert_called_once_with(
             self.renter.whatsapp_number,
             "/tmp/fake.mp3",
+            user=getattr(self.renter, "user", None),
+            rent_record=None,
         )
 
     @patch("notification.services.extra_charge_reminders.send_whatsapp_message")

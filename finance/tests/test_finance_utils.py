@@ -327,7 +327,7 @@ class FinanceUtilsComprehensiveTest(TestCase):
     # ------------------------------------------------------------------
 
     @patch("finance.utils.render_to_string")
-    @patch("finance.utils.HTML")
+    @patch("weasyprint.HTML")
     def test_generate_tax_pdf_returns_pdf_path(self, mock_html_cls, mock_render):
         mock_render.return_value = "<html>tax</html>"
         mock_html_inst = MagicMock()

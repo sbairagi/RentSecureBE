@@ -75,7 +75,11 @@ class SendTaxRemindersTests(TestCase):
                     "notification.services.schedule_reminders.generate_voice_note",
                     return_value="/tmp/test.mp3",
                 ):
-                    self.command.handle()
+                    with patch(
+                        "notification.services.schedule_reminders._should_send_reminder_for_owner",
+                        return_value=True,
+                    ):
+                        self.command.handle()
         mock_send.assert_called_once()
         mock_audio.assert_called_once()
 

@@ -290,7 +290,7 @@ class TokenRefreshTest(TestCase):
         )
         refresh = RefreshToken.for_user(user)
         r = self.client.post(
-            f"{API_PREFIX}/api/token/refresh/", {"refresh": str(refresh)}, format="json"
+            f"{API_PREFIX}/token/refresh/", {"refresh": str(refresh)}, format="json"
         )
         self.assertEqual(r.status_code, 200)
         self.assertIn("access", r.data)
