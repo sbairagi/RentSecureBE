@@ -53,7 +53,11 @@ from .models import (
 )
 from .serializers import (
     AddOnPurchaseSerializer,
+    LoginSerializer,
     PlanFeatureLimitSerializer,
+    ProfileSerializer,
+    RegisterSerializer,
+    SocialAuthSerializer,
     SubscriptionPlanSerializer,
     UsageLimitSerializer,
     UserSubscriptionSerializer,
@@ -837,3 +841,284 @@ def download_tax_report(request: Request, /, *args: Any, **kwargs: Any) -> HttpR
     finally:
         if os.path.exists(pdf_path):
             os.remove(pdf_path)
+
+
+# ---------------------------------------------------------------------------
+# Authentication Endpoints
+# ---------------------------------------------------------------------------
+
+
+class LoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        password = serializer.validated_data["password"]
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        if not user.check_password(password):
+            return Response(
+                {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        if not user.is_active:
+            return Response(
+                {"error": "User is inactive"}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        refresh = RefreshToken.for_user(user)
+        group = user.groups.first()
+        role = group.name if group else "user"
+        return Response(
+            {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "user": {
+                    "id": user.pk,
+                    "phone": user.phone,
+                    "email": user.email,
+                    "firstName": user.first_name,
+                    "lastName": user.last_name,
+                    "fullName": user.full_name,
+                    "username": user.username,
+                    "role": role,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class RegisterView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        if data["password"] != data["confirmPassword"]:
+            return Response(
+                {"error": "Passwords do not match"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if User.objects.filter(email=data["email"]).exists():
+            return Response(
+                {"error": "Email already exists"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        base_username = data["phone"]
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}_{counter}"
+            counter += 1
+
+        user = User.objects.create(
+            username=username,
+            email=data["email"],
+            first_name=data["firstName"],
+            last_name=data["lastName"],
+            full_name=f"{data['firstName']} {data['lastName']}",
+            phone=data["phone"],
+        )
+        user.set_password(data["password"])
+        user.save()
+
+        group, _ = Group.objects.get_or_create(name=data["role"])
+        user.groups.add(group)
+
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "user": {
+                    "id": user.pk,
+                    "phone": user.phone,
+                    "email": user.email,
+                    "firstName": user.first_name,
+                    "lastName": user.last_name,
+                    "fullName": user.full_name,
+                    "username": user.username,
+                    "role": data["role"],
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class SocialAuthView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        serializer = SocialAuthSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        provider = serializer.validated_data["provider"]
+        serializer.validated_data["token"]
+
+        if provider == "google":
+            email = request.data.get("email", "")
+            full_name = request.data.get("name", "")
+        elif provider == "apple":
+            email = request.data.get("email", "")
+            full_name = request.data.get("name", "")
+        else:
+            return Response(
+                {"error": "Invalid provider"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not email:
+            return Response(
+                {"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                "username": email,
+                "full_name": full_name,
+                "phone": "",
+            },
+        )
+
+        if created:
+            user.set_unusable_password()
+            user.save()
+            group, _ = Group.objects.get_or_create(name="user")
+            user.groups.add(group)
+
+        refresh = RefreshToken.for_user(user)
+        group = user.groups.first()
+        role = group.name if group else "user"
+        return Response(
+            {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "user": {
+                    "id": user.pk,
+                    "phone": user.phone,
+                    "email": user.email,
+                    "firstName": user.first_name,
+                    "lastName": user.last_name,
+                    "fullName": user.full_name,
+                    "username": user.username,
+                    "role": role,
+                },
+                "isNewUser": created,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = request.user
+        serializer = ProfileSerializer(user)
+        return Response({"user": serializer.data}, status=status.HTTP_200_OK)
+
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = request.user
+        serializer = ProfileSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"user": serializer.data}, status=status.HTTP_200_OK)
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        try:
+            refresh_token = request.data.get("refresh")
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+        except Exception:
+            logger.exception("Logout failed")
+        return Response(
+            {"message": "Logged out successfully"}, status=status.HTTP_200_OK
+        )
+
+
+class LogoutAllDevicesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        try:
+            RefreshToken.for_user(request.user)
+            RefreshToken.blacklist()
+        except Exception:
+            logger.exception("Logout from all devices failed")
+        return Response(
+            {"message": "Logged out from all devices"}, status=status.HTTP_200_OK
+        )
+
+
+class BiometricSetupView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = request.user
+        user.userprofile.biometric_enabled = True
+        user.userprofile.save(update_fields=["biometric_enabled"])
+        return Response(
+            {"message": "Biometric enabled", "isBiometricEnabled": True},
+            status=status.HTTP_200_OK,
+        )
+
+
+class BiometricDisableView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = request.user
+        user.userprofile.biometric_enabled = False
+        user.userprofile.save(update_fields=["biometric_enabled"])
+        return Response(
+            {"message": "Biometric disabled", "isBiometricEnabled": False},
+            status=status.HTTP_200_OK,
+        )
+
+
+class DeviceRegisterView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return Response({"message": "Device registered"}, status=status.HTTP_200_OK)
+
+
+class AppVersionView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return Response(
+            {
+                "isUpdateRequired": False,
+                "isOptional": False,
+                "latestVersion": "1.0.0",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class MaintenanceView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return Response(
+            {
+                "isMaintenance": False,
+                "message": "",
+            },
+            status=status.HTTP_200_OK,
+        )

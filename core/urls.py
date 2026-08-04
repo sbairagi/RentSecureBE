@@ -5,12 +5,23 @@ from django.urls import include, path
 
 from .views import (
     AddOnPurchaseViewSet,
+    AppVersionView,
+    BiometricDisableView,
+    BiometricSetupView,
     ChangePasswordView,
+    DeviceRegisterView,
+    LoginView,
+    LogoutAllDevicesView,
+    LogoutView,
+    MaintenanceView,
     OwnerVerifyOTP,
+    ProfileView,
+    RegisterView,
     ReminderTimeUpdateView,
     RenterVerifyOTP,
     ResetPasswordView,
     SendOTP,
+    SocialAuthView,
     SubscriptionPlanViewSet,
     UsageLimitViewSet,
     UserSubscriptionViewSet,
@@ -34,11 +45,26 @@ router.register(r"usage-limits", UsageLimitViewSet)
 
 
 urlpatterns = [
-    # comman auth end-points
+    # common auth endpoints
     path("auth/send-otp/", SendOTP.as_view()),
     path("auth/owner/verify-otp/", OwnerVerifyOTP.as_view()),
     path("auth/renter/verify-otp/", RenterVerifyOTP.as_view()),
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("auth/login/", LoginView.as_view(), name="login"),
+    path("auth/register/", RegisterView.as_view(), name="register"),
+    path("auth/social/", SocialAuthView.as_view(), name="social-auth"),
+    path("auth/profile/", ProfileView.as_view(), name="profile"),
+    path("auth/logout/", LogoutView.as_view(), name="logout"),
+    path("auth/logout-all/", LogoutAllDevicesView.as_view(), name="logout-all"),
+    path("auth/biometric/setup/", BiometricSetupView.as_view(), name="biometric-setup"),
+    path(
+        "auth/biometric/disable/",
+        BiometricDisableView.as_view(),
+        name="biometric-disable",
+    ),
+    path("auth/device/register/", DeviceRegisterView.as_view(), name="device-register"),
+    path("auth/app/version/", AppVersionView.as_view(), name="app-version"),
+    path("auth/maintenance/", MaintenanceView.as_view(), name="maintenance"),
     path(
         "webhook/cashfree/payout/",
         cashfree_payout_webhook,

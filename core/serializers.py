@@ -15,9 +15,97 @@ from .models import (
 
 
 class UserSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ["id", "username", "email", "full_name", "phone"]
+        fields = [
+            "id",
+            "username",
+            "email",
+            "full_name",
+            "phone",
+            "role",
+            "permissions",
+        ]
+
+    def get_role(self, obj: User) -> str:
+        group = obj.groups.first()
+        return group.name if group else "user"
+
+    def get_permissions(self, obj: User) -> list[str]:
+        perms: set[str] = set()
+        for group in obj.groups.all():
+            perms.update(group.permissions.values_list("codename", flat=True))
+        return sorted(perms)
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+
+class RegisterSerializer(serializers.Serializer):
+    firstName = serializers.CharField()  # noqa: N815
+    lastName = serializers.CharField()  # noqa: N815
+    email = serializers.EmailField()
+    phone = serializers.CharField()
+    password = serializers.CharField()
+    confirmPassword = serializers.CharField()  # noqa: N815
+    role = serializers.ChoiceField(choices=["property_owner", "renter", "caretaker"])
+
+
+class SocialAuthSerializer(serializers.Serializer):
+    provider = serializers.ChoiceField(choices=["google", "apple"])
+    token = serializers.CharField()
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    password = serializers.CharField()
+    confirmPassword = serializers.CharField()  # noqa: N815
+
+
+class DeviceInfoSerializer(serializers.Serializer):
+    deviceId = serializers.CharField()  # noqa: N815
+    deviceModel = serializers.CharField()  # noqa: N815
+    deviceName = serializers.CharField()  # noqa: N815
+    platform = serializers.ChoiceField(choices=["ios", "android", "web"])
+    osVersion = serializers.CharField()  # noqa: N815
+    appVersion = serializers.CharField()  # noqa: N815
+    buildVersion = serializers.CharField()  # noqa: N815
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "email",
+            "full_name",
+            "phone",
+            "role",
+            "permissions",
+        ]
+
+    def get_role(self, obj: User) -> str:
+        group = obj.groups.first()
+        return group.name if group else "user"
+
+    def get_permissions(self, obj: User) -> list[str]:
+        perms: set[str] = set()
+        for group in obj.groups.all():
+            perms.update(group.permissions.values_list("codename", flat=True))
+        return sorted(perms)
 
 
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
