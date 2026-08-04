@@ -165,10 +165,24 @@ def _verify_otp_and_login(
     OTP.objects.filter(phone_number=phone).exclude(pk=otp.pk).delete()
 
     refresh = RefreshToken.for_user(user)
+    role = (
+        "owner"
+        if user.groups.filter(name="owner").exists()
+        else "renter" if user.groups.filter(name="renter").exists() else "user"
+    )
     return {
         "refresh": str(refresh),
         "access": str(refresh.access_token),
-        "user": {"id": user.pk, "phone": user.phone},
+        "user": {
+            "id": user.pk,
+            "phone": user.phone,
+            "email": user.email,
+            "firstName": user.first_name,
+            "lastName": user.last_name,
+            "fullName": user.full_name,
+            "username": user.username,
+            "role": role,
+        },
     }, 200
 
 
