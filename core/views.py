@@ -43,6 +43,8 @@ from rentsecure_be.utils.tax_report_pdf_utils import generate_tax_report_pdf
 from .models import (
     OTP,
     AddOnPurchase,
+    AppVersion,
+    MaintenanceMode,
     OwnerBankDetails,
     PlanFeatureLimit,
     SubscriptionPlan,
@@ -1101,11 +1103,14 @@ class AppVersionView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        version = AppVersion.get_active()
         return Response(
             {
-                "isUpdateRequired": False,
+                "isUpdateRequired": version.is_force_update,
                 "isOptional": False,
-                "latestVersion": "1.0.0",
+                "latestVersion": version.latest_version,
+                "minSupportedVersion": version.min_supported_version,
+                "storeUrl": version.store_url,
             },
             status=status.HTTP_200_OK,
         )
@@ -1115,10 +1120,125 @@ class MaintenanceView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        mode = MaintenanceMode.get_active()
         return Response(
             {
-                "isMaintenance": False,
-                "message": "",
+                "isMaintenance": mode.is_active,
+                "message": mode.message,
+                "scheduledAt": mode.scheduled_at,
             },
             status=status.HTTP_200_OK,
         )
+
+
+class BootstrapView(APIView):
+    """Single-call bootstrap endpoint that returns all data needed at app startup.
+
+    Response is the same for authenticated and unauthenticated callers:
+    - Maintenance status is always returned.
+    - App version info is always returned.
+    - If the caller is authenticated, user profile, subscription, feature limits,
+      add-ons, and dashboard summary are also returned.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        mode = MaintenanceMode.get_active()
+        version = AppVersion.get_active()
+
+        data: dict[str, Any] = {
+            "maintenance": {
+                "isMaintenance": mode.is_active,
+                "message": mode.message,
+                "scheduledAt": mode.scheduled_at,
+            },
+            "appVersion": {
+                "isUpdateRequired": version.is_force_update,
+                "isOptional": False,
+                "latestVersion": version.latest_version,
+                "minSupportedVersion": version.min_supported_version,
+                "storeUrl": version.store_url,
+            },
+        }
+
+        if request.user.is_authenticated:
+            user = request.user
+            role = (
+                "owner"
+                if user.groups.filter(name="owner").exists()
+                else "renter" if user.groups.filter(name="renter").exists() else "user"
+            )
+            perms: set[str] = set()
+            for group in user.groups.all():
+                perms.update(group.permissions.values_list("codename", flat=True))
+
+            data["user"] = {
+                "id": user.pk,
+                "phone": user.phone,
+                "email": user.email,
+                "firstName": user.first_name,
+                "lastName": user.last_name,
+                "fullName": user.full_name,
+                "username": user.username,
+                "role": role,
+                "permissions": sorted(perms),
+            }
+
+            try:
+                subscription = user.usersubscription
+                data["subscription"] = {
+                    "id": subscription.id,
+                    "user": subscription.user_id,
+                    "plan": {
+                        "id": subscription.plan_id,
+                        "name": subscription.plan.name if subscription.plan else "free",
+                        "monthly_price": (
+                            str(subscription.plan.monthly_price)
+                            if subscription.plan
+                            else "0"
+                        ),
+                        "yearly_price": (
+                            str(subscription.plan.yearly_price)
+                            if subscription.plan
+                            else "0"
+                        ),
+                        "features": (
+                            subscription.plan.features if subscription.plan else ""
+                        ),
+                        "is_active": (
+                            subscription.plan.is_active if subscription.plan else False
+                        ),
+                    },
+                    "start_date": str(subscription.start_date),
+                    "end_date": str(subscription.end_date),
+                    "is_active": subscription.is_active,
+                    "is_yearly": subscription.is_yearly,
+                    "tax_reminder_days_before": subscription.tax_reminder_days_before,
+                    "rent_reminder_days_before": subscription.rent_reminder_days_before,
+                    "created_at": subscription.created_at,
+                    "updated_at": subscription.updated_at,
+                }
+            except UserSubscription.DoesNotExist:
+                data["subscription"] = None
+
+            addons = AddOnPurchase.objects.filter(user=user)
+            data["addOns"] = AddOnPurchaseSerializer(addons, many=True).data
+
+            limits = UsageLimit.objects.filter(user=user)
+            data["featureLimits"] = UsageLimitSerializer(limits, many=True).data
+
+            from properties.views.owner_dashboard import owner_dashboard_summary
+
+            if role == "owner":
+                try:
+                    dashboard_response = owner_dashboard_summary(
+                        type("FakeRequest", (), {"user": user, "GET": {}})(),
+                    )
+                    data["dashboardSummary"] = dashboard_response.data
+                except Exception:  # noqa: BLE001
+                    data["dashboardSummary"] = None
+            else:
+                data["dashboardSummary"] = None
+
+        return Response(data, status=status.HTTP_200_OK)

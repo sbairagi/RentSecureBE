@@ -317,8 +317,88 @@ class UsageLimit(models.Model):
                 self.pk = existing.pk
                 self.__dict__.update(existing.__dict__)
                 return
-        return super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)  # type: ignore[misc, no-any-return]
 
     @override
     def __str__(self) -> str:
         return f"{self.user.username} - {self.feature_key}: {self.usage_count}"
+
+
+# ---------------------------------------------------------------------------
+# App Configuration Models
+# ---------------------------------------------------------------------------
+
+
+class AppVersion(models.Model):
+    """Single-row table that controls the minimum supported and latest app version."""
+
+    id = models.AutoField(primary_key=True)
+    min_supported_version = models.CharField(
+        max_length=20,
+        default="1.0.0",
+        help_text="Minimum supported version; users below this must force-update.",
+    )
+    latest_version = models.CharField(
+        max_length=20,
+        default="1.0.0",
+        help_text="Latest released version.",
+    )
+    is_force_update = models.BooleanField(
+        default=False,
+        help_text="If True, all users must update regardless of version.",
+    )
+    store_url = models.URLField(
+        blank=True,
+        help_text="URL to the app store page for forced updates.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "App Version"
+        verbose_name_plural = "App Version"
+
+    @override
+    def __str__(self) -> str:
+        return (
+            f"AppVersion(min={self.min_supported_version}, "
+            f"latest={self.latest_version})"
+        )
+
+    @classmethod
+    def get_active(cls) -> "AppVersion":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
+class MaintenanceMode(models.Model):
+    """Single-row table that controls the maintenance mode state."""
+
+    id = models.AutoField(primary_key=True)
+    is_active = models.BooleanField(
+        default=False,
+        help_text="Enable or disable maintenance mode.",
+    )
+    message = models.TextField(
+        blank=True,
+        default="",
+        help_text="Message displayed to users during maintenance.",
+    )
+    scheduled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Optional: when maintenance is scheduled to start.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Maintenance Mode"
+        verbose_name_plural = "Maintenance Mode"
+
+    @override
+    def __str__(self) -> str:
+        return f"MaintenanceMode(active={self.is_active})"
+
+    @classmethod
+    def get_active(cls) -> "MaintenanceMode":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

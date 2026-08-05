@@ -8,6 +8,7 @@ from .views import (
     AppVersionView,
     BiometricDisableView,
     BiometricSetupView,
+    BootstrapView,
     ChangePasswordView,
     DeviceRegisterView,
     LoginView,
@@ -65,6 +66,7 @@ urlpatterns = [
     path("auth/device/register/", DeviceRegisterView.as_view(), name="device-register"),
     path("auth/app/version/", AppVersionView.as_view(), name="app-version"),
     path("auth/maintenance/", MaintenanceView.as_view(), name="maintenance"),
+    path("auth/bootstrap/", BootstrapView.as_view(), name="bootstrap"),
     path(
         "webhook/cashfree/payout/",
         cashfree_payout_webhook,
