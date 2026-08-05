@@ -130,6 +130,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "simple_history",
     "fcm_django",
     "django_celery_beat",

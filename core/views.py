@@ -11,6 +11,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any, cast, override
 
 import razorpay  # type: ignore[import-untyped]
+import requests
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
@@ -18,12 +19,18 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.token_blacklist.models import (
+    BlacklistedToken,
+    OutstandingToken,
+)
 from rest_framework_simplejwt.tokens import RefreshToken
 from twilio.rest import Client
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, Group
+from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
+from django.db import transaction
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone
@@ -74,6 +81,41 @@ _ERROR_INVALID_METHOD = "Invalid method"
 
 
 # ---------------------------------------------------------------------------
+# Social Auth Token Verification
+# ---------------------------------------------------------------------------
+
+
+def _verify_google_token(id_token: str) -> tuple[str, str]:
+    tokeninfo_url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + id_token
+    try:
+        response = requests.get(tokeninfo_url, timeout=10)
+    except requests.RequestException as exc:
+        raise ImproperlyConfigured(
+            "Failed to contact Google token verification endpoint"
+        ) from exc
+
+    if response.status_code != 200:
+        raise ImproperlyConfigured("Invalid Google ID token")
+
+    data = response.json()
+    email = data.get("email", "")
+    name = data.get("name", "")
+
+    if not email:
+        raise ImproperlyConfigured("Email missing from Google token")
+
+    return email, name
+
+
+def _verify_apple_token(identity_token: str) -> tuple[str, str]:
+    raise ImproperlyConfigured(
+        "Apple social auth requires Apple identity token verification. "
+        "Configure APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_CLIENT_ID, and APPLE_PRIVATE_KEY "
+        "in settings to enable Apple sign-in."
+    )
+
+
+# ---------------------------------------------------------------------------
 # OTP / Authentication
 # ---------------------------------------------------------------------------
 
@@ -98,6 +140,14 @@ class SendOTP(APIView):
         if not phone:
             return Response({"error": "Phone number required"}, status=400)
 
+        client_ip = request.META.get("REMOTE_ADDR") or ""
+        otp_cache_key = f"otp_send_limit:{phone}:{client_ip}"
+        request_count = cache.get(otp_cache_key, 0)
+        if request_count >= 5:
+            return Response(
+                {"error": "Too many OTP requests. Try again later."}, status=429
+            )
+
         # Prevent spamming (resend OTP limit: 60 seconds)
         recent_otp = (
             OTP.objects.filter(phone_number=phone).order_by("-created_at").first()
@@ -110,6 +160,7 @@ class SendOTP(APIView):
         OTP.objects.create(phone_number=phone, code=code, referral_code=referral_code)
         send_otp(phone, code)
 
+        cache.set(otp_cache_key, request_count + 1, timeout=3600)
         return Response({"message": "OTP sent"}, status=200)
 
 
@@ -143,32 +194,38 @@ def _verify_otp_and_login(
     if not phone or not code:
         return {"error": "Phone and OTP required"}, 400
 
-    otp = (
-        OTP.objects.filter(phone_number=phone, code=code, is_verified=False)
-        .order_by("-created_at")
-        .first()
-    )
+    with transaction.atomic():
+        otp = (
+            OTP.objects.filter(phone_number=phone, code=code, is_verified=False)
+            .select_for_update()
+            .order_by("-created_at")
+            .first()
+        )
 
-    if not (otp and (timezone.now() - otp.created_at) < timedelta(minutes=5)):
-        return {"error": "Invalid or expired OTP"}, 400
+        if not (otp and (timezone.now() - otp.created_at) < timedelta(minutes=5)):
+            return {"error": "Invalid or expired OTP"}, 400
 
-    otp.is_verified = True
-    otp.save()
+        if otp.attempts >= OTP.MAX_OTP_ATTEMPTS:
+            return {"error": "Too many attempts. Request a new OTP."}, 429
 
-    user, _ = User.objects.get_or_create(phone=phone, defaults={"username": phone})
-    user.is_phone_verified = True
-    user.save()
+        otp.attempts += 1
+        otp.is_verified = True
+        otp.save(update_fields=["attempts", "is_verified"])
 
-    group, _ = Group.objects.get_or_create(name=group_name)
-    user.groups.add(group)
+        user, _ = User.objects.get_or_create(phone=phone, defaults={"username": phone})
+        user.is_phone_verified = True
+        user.save(update_fields=["is_phone_verified"])
 
-    # Referral logic
+        group, _ = Group.objects.get_or_create(name=group_name)
+        user.groups.add(group)
+
+        otp_pk = otp.pk
+
     error_response = _process_referral(otp, user)
     if error_response is not None:
         return {"error": "Invalid referral code"}, 400
 
-    # Delete old OTPs
-    OTP.objects.filter(phone_number=phone).exclude(pk=otp.pk).delete()
+    OTP.objects.filter(phone_number=phone).exclude(pk=otp_pk).delete()
 
     refresh = RefreshToken.for_user(user)
     role = (
@@ -242,9 +299,10 @@ class ChangePasswordView(generics.UpdateAPIView):
 
 
 class ResetPasswordView(APIView):
-    """Password reset — requires authentication to prevent account takeover.
+    """Authenticated password reset.
 
-    Users can only reset their own password.
+    Users can reset their own password while logged in without providing
+    the old password.
     """
 
     permission_classes = [IsAuthenticated]
@@ -259,6 +317,80 @@ class ResetPasswordView(APIView):
         user.set_password(new_password)
         user.save()
         return Response({"message": "Password reset successful."}, status=200)
+
+
+@api_view(["POST"])
+@permission_classes([permissions.AllowAny])
+def forgot_password(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    from core.models import PasswordResetToken
+
+    email = request.data.get("email")
+    if not email:
+        return Response({"error": "Email is required."}, status=400)
+
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response(
+            {"message": "If an account exists, a reset link has been sent."},
+            status=200,
+        )
+
+    token = PasswordResetToken.objects.create(user=user)
+    reset_url = f"{settings.FRONTEND_URL}/reset-password/{token.token}"
+
+    if settings.DEBUG:
+        print(f"[PASSWORD RESET] {email} -> {reset_url}")
+    else:
+        from django.core.mail import send_mail
+
+        send_mail(
+            subject="Password Reset",
+            message=f"Reset your password: {reset_url}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=True,
+        )
+
+    return Response(
+        {"message": "If an account exists, a reset link has been sent."},
+        status=200,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([permissions.AllowAny])
+def reset_password_confirm(
+    request: Request, token: str, /, *args: Any, **kwargs: Any
+) -> Response:
+    from core.models import PasswordResetToken
+
+    new_password = request.data.get("new_password")
+    confirm_password = request.data.get("confirmPassword")
+
+    if not new_password or not confirm_password:
+        return Response(
+            {"error": "new_password and confirmPassword are required."}, status=400
+        )
+
+    if new_password != confirm_password:
+        return Response({"error": "Passwords do not match."}, status=400)
+
+    try:
+        reset_token = PasswordResetToken.objects.get(token=token)
+    except PasswordResetToken.DoesNotExist:
+        return Response({"error": "Invalid reset token."}, status=400)
+
+    if not reset_token.is_valid():
+        return Response({"error": "Reset token has expired."}, status=400)
+
+    user = reset_token.user
+    user.set_password(new_password)
+    user.save()
+    reset_token.used_at = timezone.now()
+    reset_token.save(update_fields=["used_at"])
+
+    return Response({"message": "Password reset successful."}, status=200)
 
 
 # ---------------------------------------------------------------------------
@@ -964,18 +1096,33 @@ class SocialAuthView(APIView):
         serializer = SocialAuthSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         provider = serializer.validated_data["provider"]
-        serializer.validated_data["token"]
+        token = serializer.validated_data["token"]
 
-        if provider == "google":
-            email = request.data.get("email", "")
-            full_name = request.data.get("name", "")
-        elif provider == "apple":
-            email = request.data.get("email", "")
-            full_name = request.data.get("name", "")
-        else:
+        verified_email = ""
+        verified_name = ""
+
+        try:
+            if provider == "google":
+                verified_email, verified_name = _verify_google_token(token)
+            elif provider == "apple":
+                verified_email, verified_name = _verify_apple_token(token)
+            else:
+                return Response(
+                    {"error": "Invalid provider"}, status=status.HTTP_400_BAD_REQUEST
+                )
+        except ImproperlyConfigured as exc:
             return Response(
-                {"error": "Invalid provider"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        except Exception:
+            logger.exception("Social auth verification failed")
+            return Response(
+                {"error": "Failed to verify social token"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        email = verified_email or request.data.get("email", "")
+        full_name = verified_name or request.data.get("name", "")
 
         if not email:
             return Response(
@@ -1056,11 +1203,17 @@ class LogoutAllDevicesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        user = cast(User, request.user)
         try:
-            RefreshToken.for_user(request.user)
-            RefreshToken.blacklist()
+            outstanding_tokens = OutstandingToken.objects.filter(user=user)
+            for token in outstanding_tokens:
+                BlacklistedToken.objects.get_or_create(token=token)
         except Exception:
             logger.exception("Logout from all devices failed")
+            return Response(
+                {"error": "Failed to logout from all devices"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response(
             {"message": "Logged out from all devices"}, status=status.HTTP_200_OK
         )

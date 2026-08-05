@@ -5,6 +5,7 @@ from .itr_views import contact_ca, extract_form16_data, get_itr_deduction_sugges
 from .owner_dashboard import (
     income_summary,
     itr_tracker_summary,
+    owner_dashboard,
     owner_dashboard_summary,
 )
 from .police_verification_views import PoliceVerificationViewSet
@@ -48,6 +49,7 @@ __all__ = [
     "get_latest_due_rent",
     "rent_history",
     "owner_rent_overview",
+    "owner_dashboard",
     "owner_dashboard_summary",
     "resend_rent_confirmation",
     "rent_whatsapp_logs",

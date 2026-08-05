@@ -53,7 +53,7 @@ class RegisterSerializer(serializers.Serializer):
     phone = serializers.CharField()
     password = serializers.CharField()
     confirmPassword = serializers.CharField()  # noqa: N815
-    role = serializers.ChoiceField(choices=["property_owner", "renter", "caretaker"])
+    role = serializers.ChoiceField(choices=["renter", "caretaker"])
 
 
 class SocialAuthSerializer(serializers.Serializer):

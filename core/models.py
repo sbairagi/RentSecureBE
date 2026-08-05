@@ -1,4 +1,5 @@
 # mypy: disable-error-code="import-untyped"
+from datetime import timedelta
 from typing import Any
 
 from simple_history.models import HistoricalRecords
@@ -168,7 +169,30 @@ class OTP(models.Model):
     referral_code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     is_verified = models.BooleanField(default=False)
+    attempts = models.PositiveIntegerField(default=0)
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
+
+    MAX_OTP_ATTEMPTS = 5
+
+
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="password_reset_tokens",
+    )
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    def is_valid(self) -> bool:
+        return self.used_at is None and (timezone.now() - self.created_at) < timedelta(
+            hours=1
+        )
+
+    @override
+    def __str__(self) -> str:
+        return f"Password reset token for {self.user.email or self.user.username}"
 
 
 # models.py

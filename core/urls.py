@@ -30,7 +30,9 @@ from .views import (
     download_ca_summary,
     download_rent_excel,
     download_tax_report,
+    forgot_password,
     razorpay_webhook,
+    reset_password_confirm,
     tax_saving_tips,
     update_owner_alert_preferences,
     update_owner_bank_details,
@@ -81,6 +83,12 @@ urlpatterns = [
     path("tax/tax-report/", download_tax_report),
     path("tax/tax-saving-tips/", tax_saving_tips),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
+    path("forgot-password/", forgot_password, name="forgot-password"),
+    path(
+        "reset-password/<str:token>/",
+        reset_password_confirm,
+        name="reset-password-confirm",
+    ),
     path("reset-password/", ResetPasswordView.as_view(), name="reset-password"),
     path("", include(router.urls)),
 ]
