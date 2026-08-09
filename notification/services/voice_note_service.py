@@ -28,7 +28,12 @@ def send_thank_you_voice_note(rent: Any) -> None:
         return
     name: str = rent.renter.full_name
     amount = rent.amount
-    date_str: str = rent.paid_on.strftime("%d %B") if rent.paid_on else ""
+    paid_on = rent.paid_on
+    if isinstance(paid_on, str):
+        from datetime import datetime
+
+        paid_on = datetime.strptime(paid_on, "%Y-%m-%d").date()
+    date_str: str = paid_on.strftime("%d %B") if paid_on else ""
     owner = rent.renter.unit.owner
     greeting = _owner_greeting_prefix(owner)
     msg: str = (

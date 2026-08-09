@@ -90,19 +90,20 @@ def _verify_google_token(id_token: str) -> tuple[str, str]:
     try:
         response = requests.get(tokeninfo_url, timeout=10)
     except requests.RequestException as exc:
-        raise ImproperlyConfigured(
-            "Failed to contact Google token verification endpoint"
-        ) from exc
+        logger.warning("Failed to contact Google token verification endpoint: %s", exc)
+        return "", ""
 
     if response.status_code != 200:
-        raise ImproperlyConfigured("Invalid Google ID token")
+        logger.warning("Invalid Google ID token: status %s", response.status_code)
+        return "", ""
 
     data = response.json()
     email = data.get("email", "")
     name = data.get("name", "")
 
     if not email:
-        raise ImproperlyConfigured("Email missing from Google token")
+        logger.warning("Email missing from Google token")
+        return "", ""
 
     return email, name
 
@@ -1098,6 +1099,11 @@ class SocialAuthView(APIView):
         provider = serializer.validated_data["provider"]
         token = serializer.validated_data["token"]
 
+        if provider not in ("google", "apple"):
+            return Response(
+                {"error": "Invalid provider"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
         verified_email = ""
         verified_name = ""
 
@@ -1106,16 +1112,14 @@ class SocialAuthView(APIView):
                 verified_email, verified_name = _verify_google_token(token)
             elif provider == "apple":
                 verified_email, verified_name = _verify_apple_token(token)
-            else:
-                return Response(
-                    {"error": "Invalid provider"}, status=status.HTTP_400_BAD_REQUEST
-                )
         except ImproperlyConfigured as exc:
+            logger.warning("Social auth provider not configured: %s", exc)
             return Response(
-                {"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": str(exc)},
+                status=status.HTTP_501_NOT_IMPLEMENTED,
             )
         except Exception:
-            logger.exception("Social auth verification failed")
+            logger.exception("Social auth token verification failed")
             return Response(
                 {"error": "Failed to verify social token"},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -1129,42 +1133,49 @@ class SocialAuthView(APIView):
                 {"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                "username": email,
-                "full_name": full_name,
-                "phone": "",
-            },
-        )
-
-        if created:
-            user.set_unusable_password()
-            user.save()
-            group, _ = Group.objects.get_or_create(name="user")
-            user.groups.add(group)
-
-        refresh = RefreshToken.for_user(user)
-        group = user.groups.first()
-        role = group.name if group else "user"
-        return Response(
-            {
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-                "user": {
-                    "id": user.pk,
-                    "phone": user.phone,
-                    "email": user.email,
-                    "firstName": user.first_name,
-                    "lastName": user.last_name,
-                    "fullName": user.full_name,
-                    "username": user.username,
-                    "role": role,
+        try:
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={
+                    "username": email,
+                    "full_name": full_name,
+                    "phone": "",
                 },
-                "isNewUser": created,
-            },
-            status=status.HTTP_200_OK,
-        )
+            )
+
+            if created:
+                user.set_unusable_password()
+                user.save()
+                group, _ = Group.objects.get_or_create(name="user")
+                user.groups.add(group)
+
+            refresh = RefreshToken.for_user(user)
+            group = user.groups.first()
+            role = group.name if group else "user"
+            return Response(
+                {
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                    "user": {
+                        "id": user.pk,
+                        "phone": user.phone,
+                        "email": user.email,
+                        "firstName": user.first_name,
+                        "lastName": user.last_name,
+                        "fullName": user.full_name,
+                        "username": user.username,
+                        "role": role,
+                    },
+                    "isNewUser": created,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception:
+            logger.exception("Social auth user creation failed")
+            return Response(
+                {"error": "Failed to create or retrieve user account"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class ProfileView(APIView):

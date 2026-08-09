@@ -36,15 +36,92 @@ if not DEBUG:
     if len(parts) >= 2 and parts[0] == "django" and parts[1] == "insecure":
         raise ImproperlyConfigured("A secure SECRET_KEY must be set in production.")
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
-CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
-
-CORS_ALLOWED_ORIGINS = config(
-    "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://localhost:8081,http://localhost:19006,http://127.0.0.1:3000,http://127.0.0.1:8081,http://127.0.0.1:19006",
+# ---------------------------------------------------------------------------
+# ALLOWED_HOSTS
+# ---------------------------------------------------------------------------
+# Allow the dev server to respond on the LAN IP so an Expo Go app on a
+# phone on the same Wi-Fi can reach it. Set DJANGO_LOCAL_IP in your .env
+# to your machine's local address (e.g. 192.168.1.50).
+_raw_allowed_hosts = config(
+    "ALLOWED_HOSTS",
+    default="localhost,127.0.0.1",
     cast=Csv(),
 )
+_local_ip = config("DJANGO_LOCAL_IP", default="")
+if _local_ip:
+    _raw_allowed_hosts = list(_raw_allowed_hosts) + [_local_ip]
+ALLOWED_HOSTS = _raw_allowed_hosts
+
+# ---------------------------------------------------------------------------
+# CSRF trusted origins (relaxed only in DEBUG)
+# ---------------------------------------------------------------------------
+# In production set CSRF_TRUSTED_ORIGINS explicitly to your real domains.
+# In DEBUG we accept common local and Expo development origins so the
+# mobile app does not get 403 CSRF errors during local development.
+# Django 4.2+ supports wildcard ports via the :* suffix.
+if DEBUG:
+    _default_csrf_trusted = [
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "https://localhost:*",
+        "https://127.0.0.1:*",
+        "http://exp://*",
+        "http://192.168.*.*",
+        "http://10.*.*.*",
+        "http://172.16.*.*",
+    ]
+else:
+    _default_csrf_trusted = []
+CSRF_TRUSTED_ORIGINS = (
+    list(
+        config(
+            "CSRF_TRUSTED_ORIGINS",
+            default="",
+            cast=Csv(),
+        )
+    )
+    + _default_csrf_trusted
+)
+
+# ---------------------------------------------------------------------------
+# CORS (django-cors-headers)
+# ---------------------------------------------------------------------------
+# In DEBUG we allow every origin because Expo Go uses dynamic tunnel and
+# LAN URLs that are impossible to enumerate ahead of time.
+# In production we lock CORS down to an explicit allow-list via regex.
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOWED_ORIGINS = []
+    CORS_ALLOWED_ORIGIN_REGEXES = []
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = []
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^https://.*\.rentsecure\.com$",
+        r"^https://rentsecure\.com$",
+    ]
+
 CORS_ALLOW_CREDENTIALS = True
+
+# Explicitly allow the custom headers the mobile/web app sends.
+# Without this, the browser preflight (OPTIONS) rejects them even when
+# CORS_ALLOW_ALL_ORIGINS is True.
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "origin",
+    "referer",
+    "user-agent",
+    "x-requested-with",
+    "x-platform",
+    "x-language",
+    "x-timezone",
+    "x-app-version",
+    "x-device-id",
+    "x-correlation-id",
+]
 
 # Application URLs
 FRONTEND_URL = config("FRONTEND_URL", default="https://app.rentsecure.com")
@@ -143,6 +220,8 @@ INSTALLED_APPS = [
     "referral_and_earn",
     "documents",
     "smartbot",
+    "visitors",
+    "search",
     "django_extensions",
 ]
 

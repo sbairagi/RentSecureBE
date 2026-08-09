@@ -58,6 +58,8 @@ boto3==1.35.28
 openai==0.28.1
 # PostgreSQL production driver
 psycopg2-binary==2.9.10
+# CORS headers for cross-origin requests (Expo Go mobile dev)
+django-cors-headers==4.7.0
 # -----------------------------------------------------------------------------
 # B. DEVELOPMENT / CI / TEST DEPENDENCIES
 # -----------------------------------------------------------------------------
@@ -123,3 +125,333 @@ channels-redis==4.1.0
 # =============================================================================
     # pip-audit: subdependency explicitly fixed
 starlette==1.3.1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##########################################################################################################
+
+
+💍 Wedding Shopping Master Checklist
+
+1. 🌿 MEHENDI
+
+👰 Dulhan
+
+* Mehendi outfit / Lehenga  --> Shubham
+* Matching jewellery
+* Matching footwear
+* Bangles / Chooda style
+* Hair accessories / flowers
+* Dupatta
+* Potli / clutch
+
+🤵 Dulha
+
+* Mehendi outfit – Kurta/Pyjama
+* Matching jacket / Nehru jacket
+* Mojari
+* Accessories – watch, bracelet etc.
+
+💄 Makeup
+
+* Bride makeup --> Shubham
+* Groom grooming
+* Hair styling
+* Mehendi artist
+
+👨‍👩‍👧 Guests Dress Code
+
+* Family colour/theme
+* Close friends colour/theme
+* Bride/Groom side identification
+
+⸻
+
+🌼 2. HALDI
+
+👰 Dulhan
+
+* Haldi outfit --> Shubham
+* Floral jewellery
+* Floral hair accessories
+* Matching footwear
+* Dupatta
+* Light makeup --> Shubham
+
+🤵 Dulha
+
+* Haldi Kurta
+* Matching stole / jacket
+* Mojari
+* Floral accessories
+
+🌸 Theme
+
+* Haldi decoration colour
+* Bride’s family dress code
+* Groom’s family dress code
+* Friends’ dress code
+
+⸻
+
+💎 3. SAGAI / RING CEREMONY
+
+👰 Dulhan
+
+* Sagai outfit --> Shubham
+* Jewellery
+* Footwear
+* Clutch
+* Hair accessories
+* Dupatta
+
+🤵 Dulha
+
+* Sherwani / Indo-Western / Suit
+* Safa if required
+* Mojari / formal shoes
+* Watch
+* Pocket square
+
+💍 Special
+
+* Engagement rings
+* Ring ceremony accessories
+* Couple matching element
+
+💄 Makeup
+
+* Bride makeup
+* Bride hairstyle
+* Groom grooming
+
+⸻
+
+🎶 4. SANGEET
+
+Agar Sangeet separate function hai, toh:
+
+👰 Dulhan
+
+* Sangeet outfit --> Shubham
+* Jewellery
+* Footwear
+* Hair accessories
+* Clutch
+
+🤵 Dulha
+
+* Sangeet outfit
+* Matching jacket
+* Shoes/Mojari
+* Accessories
+
+💃 Dance
+
+* Couple performance outfit
+* Family performance dress code
+* Friends performance dress code
+
+⸻
+
+🥁 5. BARAAT
+
+🤵 Dulha — Main Groom Look
+
+* Main Sherwani
+* Safa / Pagdi
+* Kalgi
+* Mojari
+* Dupatta / Stole
+* Brooch
+* Sehra
+* Watch
+* Groom jewellery/accessories
+
+🐴 Baraat
+
+* Ghodi decoration
+* Baraat entry accessories
+* Family matching dress code
+* Friends matching dress code
+
+⸻
+
+👰 6. DULHAN MAIN WEDDING LOOK
+
+Bride
+
+* Main Wedding Lehenga
+* Bridal Dupatta
+* Jewellery set
+* Necklace
+* Earrings
+* Maang Tikka
+* Nath
+* Matha Patti
+* Bangles/Chooda
+* Kamarbandh
+* Payal
+* Ring
+* Bridal footwear
+* Bridal clutch/potli
+
+💄 Bridal Makeup
+
+* Bridal makeup
+* Hair styling
+* Dupatta setting
+* Nail/Manicure
+* Mehendi already done
+* Emergency makeup kit
+
+⸻
+
+❤️ 7. DULHA–DULHAN MATCHING LOOK
+
+Ye important hai bhai — bride aur groom ke outfits completely matching nahi, coordinated hone chahiye.
+
+* Lehenga ↔ Sherwani colour coordination
+* Groom stole ↔ Bride lehenga colour
+* Safa ↔ Bride outfit accent
+* Groom brooch ↔ Bride jewellery
+* Couple footwear coordination
+* Couple photo look
+* Couple entry look
+
+⸻
+
+🔥 8. PHERE / WEDDING CEREMONY
+
+Agar pheron ke liye separate traditional outfit rakhna hai:
+
+👰 Dulhan
+
+* Pheron outfit
+* Dupatta
+* Traditional jewellery
+* Footwear
+
+🤵 Dulha
+
+* Pheron outfit
+* Stole
+* Mojari
+
+Note: Agar main wedding lehenga hi pheron ke liye use karna hai, toh separate outfit ki zarurat nahi.
+
+⸻
+
+👑 9. RECEPTION
+
+👰 Dulhan
+
+* Reception Lehenga --> Shubham
+* Reception jewellery
+* Footwear
+* Clutch
+* Hair accessories
+* Dupatta
+
+🤵 Dulha
+
+* Reception Suit / Tuxedo / Indo-Western
+* Formal shoes
+* Watch
+* Pocket square
+* Tie/Bow tie
+
+💄 Makeup
+
+* Reception makeup
+* Hair styling
+* Touch-up kit
+
+⸻
+
+🎁 10. EXTRA SAREES — FUNCTION / GIFT
+
+Tumne specifically 2 sarees boli hain:
+
+* Saree #1 — Premium --> Shubham
+* Saree #2 — Premium --> Shubham
+* Matching blouse
+* Petticoat
+* Saree accessories
+* Matching jewellery/accessories
+
+Total: 2 Sarees
+
+⸻
+
+💄 11. MAKEUP & GROOMING MASTER LIST
+
+👰 Bride
+
+* Mehendi makeup
+* Haldi makeup
+* Sagai makeup
+* Sangeet makeup
+* Wedding/Bridal makeup
+* Reception makeup
+* Hair styling
+* Nail care
+* Facial/skincare
+* Emergency touch-up kit
+
+🤵 Groom
+
+* Mehendi grooming
+* Haldi grooming
+* Sagai grooming
+* Sangeet grooming
+* Wedding grooming
+* Reception grooming
+* Haircut
+* Beard styling/shave
+* Facial/cleanup
+* Groom touch-up kit
+
+⸻
+
+👗 12. ATTENDEES / FAMILY DRESS CODE
+
+Isko pehle decide kar lena, warna last moment pe confusion hota hai.
+
+Bride Side
+
+* Parents
+* Brothers
+* Sisters
+* Close relatives
+* Friends
+
+Groom Side
+
+* Parents
+* Brothers
+* Sisters
+* Close relatives
+* Friends
+
+Functions
+
+* Mehendi colour theme
+* Haldi colour theme
+* Sangeet colour theme
+* Wedding/Baraat colour theme
+* Reception colour theme
+
+⸻

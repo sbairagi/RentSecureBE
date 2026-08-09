@@ -13,7 +13,7 @@ from django.db.models.functions import TruncMonth
 
 from ..models import (
     Building,
-    CareTaker,
+    Caretaker,
     ITRTracker,
     PropertyTaxRecord,
     RentAgreementDraft,
@@ -184,7 +184,7 @@ def owner_dashboard(request: DRFRequest) -> Response:
         unit__owner=owner, status=Renter.RenterStatus.ACTIVE
     ).count()
 
-    caretakers_count = CareTaker.objects.filter(
+    caretakers_count = Caretaker.objects.filter(
         unit__owner=owner, is_active=True
     ).count()
 
