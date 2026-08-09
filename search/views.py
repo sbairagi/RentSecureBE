@@ -52,7 +52,8 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
         "title_fn": lambda obj: obj.name,
         "subtitle_fn": lambda obj: f"{obj.address_line}, {obj.city}",
         "status_fn": lambda obj: "Active" if not obj.is_archived else "Archived",
-        "updated_fn": lambda obj: obj.updated_at,
+        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
+        or getattr(obj, "created_at", None),
         "order_field": "-created_at",
     },
     "units": {
@@ -71,7 +72,8 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
         "title_fn": lambda obj: obj.building_name or obj.unit,
         "subtitle_fn": lambda obj: f"{obj.address_line}, {obj.city}",
         "status_fn": lambda obj: obj.get_status_display(),
-        "updated_fn": lambda obj: obj.updated_at,
+        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
+        or getattr(obj, "created_at", None),
         "order_field": "-created_at",
     },
     "renters": {
@@ -88,7 +90,8 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
             f" - {obj.unit.unit if obj.unit else ''}"
         ),
         "status_fn": lambda obj: obj.get_status_display(),
-        "updated_fn": lambda obj: obj.updated_at,
+        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
+        or getattr(obj, "created_at", None),
         "order_field": "-start_date",
     },
     "caretakers": {
@@ -105,7 +108,8 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
             f" - {obj.unit.unit if obj.unit else ''}"
         ),
         "status_fn": lambda obj: "Active" if obj.is_active else "Inactive",
-        "updated_fn": lambda obj: obj.updated_at,
+        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
+        or getattr(obj, "created_at", None),
         "order_field": "-joining_date",
     },
     "rent_records": {
@@ -121,7 +125,8 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
             f"{obj.unit.unit if obj.unit else ''}" f" | {obj.get_status_display()}"
         ),
         "status_fn": lambda obj: obj.get_status_display(),
-        "updated_fn": lambda obj: obj.updated_at,
+        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
+        or getattr(obj, "created_at", None),
         "order_field": "-due_date",
     },
     "visitors": {
@@ -138,7 +143,8 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
             f" - {obj.unit.unit if obj.unit else ''}"
         ),
         "status_fn": lambda obj: obj.get_status_display(),
-        "updated_fn": lambda obj: obj.updated_at,
+        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
+        or getattr(obj, "created_at", None),
         "order_field": "-created_at",
     },
     "agreements": {
