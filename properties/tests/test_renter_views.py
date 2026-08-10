@@ -1107,3 +1107,117 @@ class RenterAssignUnitTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(cache.get(f"renters_user_{self.owner.id}"))
+
+
+class RenterViewSetNoticePeriodTests(TestCase):
+    """Cover notice_start_date auto-set on status change."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.owner = User.objects.create_user(
+            username="rv_np_owner",
+            password="p",
+            full_name="RvNPOwner",
+            phone="+1",
+        )
+        cls.plan = SubscriptionPlan.objects.create(
+            name="rv_np_pro",
+            monthly_price=Decimal("29.99"),
+            yearly_price=Decimal("299.99"),
+        )
+        UserSubscription.objects.create(user=cls.owner, plan=cls.plan, is_active=True)
+        cls.building = Building.objects.create(
+            owner=cls.owner,
+            name="RvNPB",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        cls.unit = Unit.objects.create(
+            owner=cls.owner,
+            building=cls.building,
+            unit="RVNP1",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+
+    def setUp(self):
+        self._c = _auth(self.owner)
+        cache.clear()
+
+    def test_update_status_to_notice_period_sets_notice_start_date(self):
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="NoticePeriodRenter",
+            phone="+911234567901",
+            email="npr@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/update-status/",
+            {"status": "notice_period"},
+        )
+        self.assertEqual(response.status_code, 200)
+        renter.refresh_from_db()
+        self.assertEqual(renter.status, Renter.RenterStatus.NOTICE_PERIOD)
+        self.assertIsNotNone(renter.notice_start_date)
+        self.assertEqual(renter.notice_start_date, timezone.now().date())
+
+    def test_update_status_to_active_clears_notice_start_date(self):
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="ActiveRenter",
+            phone="+911234567902",
+            email="activenpr@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.NOTICE_PERIOD,
+            notice_start_date=timezone.now().date(),
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/update-status/",
+            {"status": "active"},
+        )
+        self.assertEqual(response.status_code, 200)
+        renter.refresh_from_db()
+        self.assertEqual(renter.status, Renter.RenterStatus.ACTIVE)
+        self.assertIsNone(renter.notice_start_date)
+
+    def test_list_returns_deactivated_renters(self):
+        Renter.objects.create(
+            unit=self.unit,
+            name="DeactivatedRenter",
+            phone="+911234567903",
+            email="deactr@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.DEACTIVATED,
+        )
+        response = self._c.get("/properties/renters/")
+        self.assertEqual(response.status_code, 200)
+        names = [r["name"] for r in response.data]
+        self.assertIn("DeactivatedRenter", names)
+
+    def test_list_returns_revoked_renters(self):
+        Renter.objects.create(
+            unit=self.unit,
+            name="RevokedRenter",
+            phone="+911234567904",
+            email="revokedr@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.REVOKED,
+        )
+        response = self._c.get("/properties/renters/")
+        self.assertEqual(response.status_code, 200)
+        names = [r["name"] for r in response.data]
+        self.assertIn("RevokedRenter", names)

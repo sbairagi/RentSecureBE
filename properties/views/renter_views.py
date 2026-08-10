@@ -50,20 +50,27 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
 
     permission_classes: list[type[IsAuthenticated]] = [IsAuthenticated]
     serializer_class = RenterSerializer
+    search_fields = ["name", "phone", "email"]
+    ordering_fields = [
+        "name",
+        "rent_amount",
+        "start_date",
+        "status",
+        "-start_date",
+        "-created_at",
+    ]
+    ordering = ["-start_date"]
 
     @override
     def get_queryset(self) -> QuerySet[Renter]:
-        """Return the active/notice-period renters owned by the user."""
+        """Return all renters owned by the user."""
         if isinstance(self.request.user, AnonymousUser):
             return Renter.objects.none()
         user = self.request.user
         cache_key: str = f"renters_user_{user.id}"
         renters: QuerySet[Renter] | None = cache.get(cache_key)
         if renters is None:
-            renters = Renter.objects.filter(
-                unit__owner=user,
-                status__in=["active", "notice_period"],
-            )
+            renters = Renter.objects.filter(unit__owner=user)
             cache.set(cache_key, renters, timeout=300)
         return renters
 
@@ -251,7 +258,22 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
             renter.revocation_reason = ""
             renter.revoked_by_owner = False
             renter.revoked_on = None
-        renter.save()
+            renter.notice_start_date = None
+        elif new_status == Renter.RenterStatus.NOTICE_PERIOD:
+            renter.notice_start_date = timezone.now().date()
+        renter.save(
+            update_fields=[
+                "status",
+                "notice_start_date",
+                "is_flagged",
+                "flagged_reason",
+                "is_agreement_revoked",
+                "revocation_reason",
+                "revoked_by_owner",
+                "revoked_on",
+                "updated_at",
+            ]
+        )
 
         return Response({"message": "Status updated successfully."})
 
