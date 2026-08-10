@@ -206,6 +206,73 @@ def owner_dashboard(request: DRFRequest) -> Response:
         or 0
     )
 
+    rent_expected = float(
+        rents.filter(due_date__gte=current_month).aggregate(total=Sum("amount"))[
+            "total"
+        ]
+        or 0
+    )
+
+    rent_collected = monthly_collection
+
+    rent_pending = float(
+        rents.filter(status=RentRecord.Status.PENDING).aggregate(total=Sum("amount"))[
+            "total"
+        ]
+        or 0
+    )
+
+    rent_overdue = float(
+        rents.filter(
+            Q(status=RentRecord.Status.OVERDUE)
+            | Q(status=RentRecord.Status.PENDING, due_date__lt=today)
+        ).aggregate(total=Sum("amount"))["total"]
+        or 0
+    )
+
+    overdue_renters_count = (
+        rents.filter(
+            Q(status=RentRecord.Status.OVERDUE)
+            | Q(status=RentRecord.Status.PENDING, due_date__lt=today)
+        )
+        .exclude(renter__isnull=True)
+        .values("renter")
+        .distinct()
+        .count()
+    )
+
+    late_fees_total = float(
+        rents.filter(due_date__gte=current_month).aggregate(total=Sum("late_fee"))[
+            "total"
+        ]
+        or 0
+    )
+
+    payment_status_breakdown = {
+        "paid": rents.filter(status=RentRecord.Status.PAID).count(),
+        "pending": rents.filter(status=RentRecord.Status.PENDING).count(),
+        "overdue": rents.filter(status=RentRecord.Status.OVERDUE).count(),
+        "cancelled": rents.filter(status=RentRecord.Status.CANCELLED).count(),
+    }
+
+    collection_rate = (
+        round((monthly_collection / rent_expected * 100), 1)
+        if rent_expected > 0
+        else 0.0
+    )
+
+    notice_period_renters = Renter.objects.filter(
+        unit__owner=owner, status=Renter.RenterStatus.NOTICE_PERIOD
+    ).count()
+
+    revoked_renters = Renter.objects.filter(
+        unit__owner=owner, status=Renter.RenterStatus.REVOKED
+    ).count()
+
+    deactivated_renters = Renter.objects.filter(
+        unit__owner=owner, status=Renter.RenterStatus.DEACTIVATED
+    ).count()
+
     # ----------------------------------------------------------------
     # Analytics Trends
     # ----------------------------------------------------------------
@@ -499,9 +566,21 @@ def owner_dashboard(request: DRFRequest) -> Response:
             "vacant_units": vacant_units,
             "active_renters": active_renters,
             "caretakers": caretakers_count,
+            "notice_period_renters": notice_period_renters,
+            "revoked_renters": revoked_renters,
+            "deactivated_renters": deactivated_renters,
+            "rent_expected": rent_expected,
+            "rent_collected": rent_collected,
+            "rent_pending": rent_pending,
+            "rent_overdue": rent_overdue,
+            "overdue_renters_count": overdue_renters_count,
+            "late_fees_total": late_fees_total,
             "monthly_collection": monthly_collection,
             "pending_collection": pending_collection,
+            "collection_rate": collection_rate,
+            "payment_status_breakdown": payment_status_breakdown,
             "occupancy_rate": round(occupancy_rate, 1),
+            "current_month": current_month.strftime("%B %Y"),
         },
         "analytics": {
             "monthly_rent_collection": monthly_rent_trend,

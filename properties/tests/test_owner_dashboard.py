@@ -221,3 +221,195 @@ class TestOwnerDashboard:
         assert response.status_code == 200
         tasks = response.data["pending_tasks"]
         assert tasks["pending_verification"] == 1
+
+    def test_owner_dashboard_renter_status_counts(
+        self, owner, subscription, building, unit
+    ):
+        Renter.objects.create(
+            unit=unit,
+            name="Notice Renter",
+            phone="+911234567890",
+            email="renter@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=owner.date_joined.date(),
+            status=Renter.RenterStatus.NOTICE_PERIOD,
+        )
+        Renter.objects.create(
+            unit=unit,
+            name="Revoked Renter",
+            phone="+911234567891",
+            email="revoked@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=owner.date_joined.date(),
+            status=Renter.RenterStatus.REVOKED,
+        )
+        Renter.objects.create(
+            unit=unit,
+            name="Deactivated Renter",
+            phone="+911234567892",
+            email="deactivated@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=owner.date_joined.date(),
+            status=Renter.RenterStatus.DEACTIVATED,
+        )
+        with override_settings(
+            ROOT_URLCONF="properties.tests.test_property_views_urls"
+        ):
+            client = APIClient()
+            client.force_authenticate(user=owner)
+            response = client.get("/owner/dashboard/")
+        assert response.status_code == 200
+        stats = response.data["stats"]
+        assert stats["notice_period_renters"] == 1
+        assert stats["revoked_renters"] == 1
+        assert stats["deactivated_renters"] == 1
+
+    def test_owner_dashboard_rent_expected_and_collected(
+        self, owner, subscription, building, unit
+    ):
+        renter = Renter.objects.create(
+            unit=unit,
+            name="Test Renter",
+            phone="+911234567890",
+            email="renter@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=owner.date_joined.date(),
+        )
+        RentRecord.objects.create(
+            unit=unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="upi",
+            status=RentRecord.Status.PAID,
+            due_date=owner.date_joined.date(),
+        )
+        with override_settings(
+            ROOT_URLCONF="properties.tests.test_property_views_urls"
+        ):
+            client = APIClient()
+            client.force_authenticate(user=owner)
+            response = client.get("/owner/dashboard/")
+        assert response.status_code == 200
+        stats = response.data["stats"]
+        assert stats["rent_expected"] == 10000.0
+        assert stats["rent_collected"] == 10000.0
+        assert stats["rent_pending"] == 0.0
+
+    def test_owner_dashboard_rent_overdue_and_late_fees(
+        self, owner, subscription, building, unit
+    ):
+        renter = Renter.objects.create(
+            unit=unit,
+            name="Test Renter",
+            phone="+911234567890",
+            email="renter@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=owner.date_joined.date(),
+        )
+        RentRecord.objects.create(
+            unit=unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="upi",
+            status=RentRecord.Status.OVERDUE,
+            due_date=owner.date_joined.date() - timedelta(days=5),
+            late_fee=Decimal("500"),
+        )
+        with override_settings(
+            ROOT_URLCONF="properties.tests.test_property_views_urls"
+        ):
+            client = APIClient()
+            client.force_authenticate(user=owner)
+            response = client.get("/owner/dashboard/")
+        assert response.status_code == 200
+        stats = response.data["stats"]
+        assert stats["rent_overdue"] == 10000.0
+        assert stats["overdue_renters_count"] == 1
+        assert stats["late_fees_total"] == 500.0
+
+    def test_owner_dashboard_payment_status_breakdown(
+        self, owner, subscription, building, unit
+    ):
+        renter = Renter.objects.create(
+            unit=unit,
+            name="Test Renter",
+            phone="+911234567890",
+            email="renter@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=owner.date_joined.date(),
+        )
+        RentRecord.objects.create(
+            unit=unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="upi",
+            status=RentRecord.Status.PAID,
+            due_date=owner.date_joined.date(),
+        )
+        RentRecord.objects.create(
+            unit=unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="upi",
+            status=RentRecord.Status.PENDING,
+            due_date=owner.date_joined.date() + timedelta(days=5),
+        )
+        with override_settings(
+            ROOT_URLCONF="properties.tests.test_property_views_urls"
+        ):
+            client = APIClient()
+            client.force_authenticate(user=owner)
+            response = client.get("/owner/dashboard/")
+        assert response.status_code == 200
+        stats = response.data["stats"]
+        assert stats["payment_status_breakdown"]["paid"] == 1
+        assert stats["payment_status_breakdown"]["pending"] == 1
+
+    def test_owner_dashboard_collection_rate(self, owner, subscription, building, unit):
+        renter = Renter.objects.create(
+            unit=unit,
+            name="Test Renter",
+            phone="+911234567890",
+            email="renter@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=owner.date_joined.date(),
+        )
+        RentRecord.objects.create(
+            unit=unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="upi",
+            status=RentRecord.Status.PAID,
+            due_date=owner.date_joined.date(),
+        )
+        RentRecord.objects.create(
+            unit=unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="upi",
+            status=RentRecord.Status.PENDING,
+            due_date=owner.date_joined.date() + timedelta(days=5),
+        )
+        with override_settings(
+            ROOT_URLCONF="properties.tests.test_property_views_urls"
+        ):
+            client = APIClient()
+            client.force_authenticate(user=owner)
+            response = client.get("/owner/dashboard/")
+        assert response.status_code == 200
+        stats = response.data["stats"]
+        assert stats["collection_rate"] == 50.0
+        assert stats["current_month"] is not None
+
+    def test_owner_dashboard_empty_dataset(self, owner, subscription):
+        with override_settings(
+            ROOT_URLCONF="properties.tests.test_property_views_urls"
+        ):
+            client = APIClient()
+            client.force_authenticate(user=owner)
+            response = client.get("/owner/dashboard/")
+        assert response.status_code == 200
+        stats = response.data["stats"]
+        assert stats["total_buildings"] == 0
+        assert stats["rent_expected"] == 0.0
+        assert stats["collection_rate"] == 0.0
