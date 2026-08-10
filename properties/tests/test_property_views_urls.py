@@ -2,6 +2,7 @@
 
 from django.urls import path
 
+from properties.views.owner_dashboard import owner_dashboard
 from properties.views.property_views import (
     my_rent_records,
     revoke_rent_agreement,
@@ -22,4 +23,5 @@ urlpatterns = [
         name="revoke-agreement",
     ),
     path("unit-analytics/", unit_analytics, name="unit-analytics"),
+    path("owner/dashboard/", owner_dashboard, name="owner-dashboard"),
 ]

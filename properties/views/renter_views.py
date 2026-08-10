@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Any, cast
 
 from rest_framework import status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -18,11 +18,20 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from core.models import User
+from notification.models import Notification
 from rentsecure_be.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
-from ..models import Renter, Unit
-from ..serializers import RenterSerializer
+from ..models import ExtraCharge, RentAgreementDraft, Renter, RentRecord, Unit
+from ..serializers import (
+    RenterAgreementSerializer,
+    RenterDocumentSerializer,
+    RenterExtraChargeSerializer,
+    RenterProfileSerializer,
+    RenterRentRecordDetailSerializer,
+    RenterRentRecordSerializer,
+    RenterSerializer,
+)
 from ..services.unit_service import update_unit_status
 from ..utils.utils import check_feature_limit
 
@@ -286,3 +295,278 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         ]
 
         return Response(data)
+
+
+# ---------------------------------------------------------------------------
+# Renter-scoped endpoints (current authenticated renter)
+# ---------------------------------------------------------------------------
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def renter_profile(request: Request) -> Response:
+    user = cast(User, request.user)
+    if isinstance(user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    renter = get_object_or_404(
+        Renter.objects.select_related("unit", "unit__building"),
+        user=user,
+        status__in=["active", "notice_period"],
+    )
+
+    cache_key = f"renter_profile_user_{user.id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+
+    serializer = RenterProfileSerializer(renter, context={"request": request})
+    data = serializer.data
+    cache.set(cache_key, data, timeout=120)
+    return Response(data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def renter_rent_records(request: Request) -> Response:
+    user = cast(User, request.user)
+    if isinstance(user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    renter = get_object_or_404(
+        Renter.objects.select_related("unit", "unit__building"),
+        user=user,
+        status__in=["active", "notice_period"],
+    )
+
+    try:
+        page = int(request.query_params.get("page", 1))
+        limit = int(request.query_params.get("limit", 20))
+    except (ValueError, TypeError):
+        page = 1
+        limit = 20
+
+    page = max(page, 1)
+    limit = max(min(limit, 100), 1)
+
+    rents_qs = (
+        RentRecord.objects.filter(renter=renter)
+        .select_related("unit", "renter", "renter__unit", "renter__unit__building")
+        .order_by("-due_date")
+    )
+
+    total = rents_qs.count()
+    total_pages = (total + limit - 1) // limit if total > 0 else 1
+
+    start = (page - 1) * limit
+    end = start + limit
+    page_qs = rents_qs[start:end]
+
+    serializer = RenterRentRecordDetailSerializer(
+        page_qs, many=True, context={"request": request}
+    )
+    return Response(
+        {
+            "data": serializer.data,
+            "meta": {
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "totalPages": total_pages,
+            },
+        }
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def renter_rent_record_detail(request: Request, rent_id: int) -> Response:
+    user = cast(User, request.user)
+    if isinstance(user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    renter = get_object_or_404(
+        Renter.objects.select_related("unit", "unit__building"),
+        user=user,
+        status__in=["active", "notice_period"],
+    )
+
+    rent = get_object_or_404(
+        RentRecord.objects.select_related("unit", "renter"),
+        pk=rent_id,
+        renter=renter,
+    )
+
+    serializer = RenterRentRecordDetailSerializer(rent, context={"request": request})
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def renter_agreement(request: Request) -> Response:
+    user = cast(User, request.user)
+    if isinstance(user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    renter = get_object_or_404(
+        Renter.objects.select_related("unit", "unit__building"),
+        user=user,
+        status__in=["active", "notice_period"],
+    )
+
+    agreement = get_object_or_404(
+        RentAgreementDraft.objects.select_related("renter", "unit", "unit__building"),
+        renter=renter,
+    )
+
+    cache_key = f"renter_agreement_user_{user.id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+
+    serializer = RenterAgreementSerializer(agreement, context={"request": request})
+    data = serializer.data
+    cache.set(cache_key, data, timeout=300)
+    return Response(data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def renter_documents(request: Request) -> Response:
+    user = cast(User, request.user)
+    if isinstance(user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    renter = get_object_or_404(
+        Renter.objects.select_related("unit", "unit__building"),
+        user=user,
+        status__in=["active", "notice_period"],
+    )
+
+    cache_key = f"renter_documents_user_{user.id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+
+    serializer = RenterDocumentSerializer(renter, context={"request": request})
+    data = serializer.data
+    cache.set(cache_key, data, timeout=300)
+    return Response(data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def renter_extra_charges(request: Request) -> Response:
+    user = cast(User, request.user)
+    if isinstance(user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    renter = get_object_or_404(
+        Renter.objects.select_related("unit", "unit__building"),
+        user=user,
+        status__in=["active", "notice_period"],
+    )
+
+    try:
+        page = int(request.query_params.get("page", 1))
+        limit = int(request.query_params.get("limit", 20))
+    except (ValueError, TypeError):
+        page = 1
+        limit = 20
+
+    page = max(page, 1)
+    limit = max(min(limit, 100), 1)
+
+    charges_qs = (
+        ExtraCharge.objects.filter(renter=renter)
+        .select_related("renter", "unit")
+        .order_by("-due_date")
+    )
+
+    total = charges_qs.count()
+    total_pages = (total + limit - 1) // limit if total > 0 else 1
+
+    start = (page - 1) * limit
+    end = start + limit
+    page_qs = charges_qs[start:end]
+
+    serializer = RenterExtraChargeSerializer(page_qs, many=True)
+    return Response(
+        {
+            "data": serializer.data,
+            "meta": {
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "totalPages": total_pages,
+            },
+        }
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def renter_dashboard(request: Request) -> Response:
+    user = cast(User, request.user)
+    if isinstance(user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    renter = get_object_or_404(
+        Renter.objects.select_related("unit", "unit__building"),
+        user=user,
+        status__in=["active", "notice_period"],
+    )
+
+    cache_key = f"renter_dashboard_user_{user.id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+
+    profile_serializer = RenterProfileSerializer(renter, context={"request": request})
+    profile_data = profile_serializer.data
+
+    current_rent = (
+        RentRecord.objects.filter(renter=renter, status__in=["pending", "overdue"])
+        .select_related("unit", "renter")
+        .order_by("-due_date")
+        .first()
+    )
+    current_rent_data = None
+    if current_rent:
+        current_rent_data = RenterRentRecordDetailSerializer(
+            current_rent, context={"request": request}
+        ).data
+
+    recent_payments = (
+        RentRecord.objects.filter(renter=renter)
+        .select_related("unit", "renter")
+        .order_by("-due_date")[:5]
+    )
+    recent_payments_data = RenterRentRecordSerializer(recent_payments, many=True).data
+
+    agreement = RentAgreementDraft.objects.filter(renter=renter).first()
+    agreement_data = None
+    if agreement:
+        agreement_data = RenterAgreementSerializer(
+            agreement, context={"request": request}
+        ).data
+
+    notifications_unread_count = Notification.objects.filter(
+        user=user, is_read=False, archived=False
+    ).count()
+
+    extra_charges_count = ExtraCharge.objects.filter(
+        renter=renter, status=ExtraCharge.Status.DUE
+    ).count()
+
+    dashboard_data = {
+        "profile": profile_data,
+        "current_rent": current_rent_data,
+        "recent_payments": recent_payments_data,
+        "agreement": agreement_data,
+        "notifications_unread_count": notifications_unread_count,
+        "extra_charges_count": extra_charges_count,
+    }
+
+    cache.set(cache_key, dashboard_data, timeout=60)
+    return Response(dashboard_data)

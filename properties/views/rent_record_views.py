@@ -285,7 +285,14 @@ def owner_rent_records(request: DRFRequest) -> Any:
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def download_rent_invoice(request: DRFRequest, rent_id: int) -> Any:
-    rent = get_object_or_404(RentRecord, id=rent_id, owner=cast(User, request.user))
+    user = cast(User, request.user)
+    renter = Renter.objects.filter(user=user).first()
+
+    if renter:
+        rent = get_object_or_404(RentRecord, id=rent_id, renter=renter)
+    else:
+        rent = get_object_or_404(RentRecord, id=rent_id, unit__owner=user)
+
     pdf_path = generate_rent_invoice_pdf(rent)
     return FileResponse(open(pdf_path, "rb"), content_type="application/pdf")
 

@@ -25,7 +25,16 @@ from .rent_record_views import (
     retry_payout_api,
 )
 from .rent_reminder import rent_whatsapp_logs, resend_rent_confirmation
-from .renter_views import RenterViewSet
+from .renter_views import (
+    RenterViewSet,
+    renter_agreement,
+    renter_dashboard,
+    renter_documents,
+    renter_extra_charges,
+    renter_profile,
+    renter_rent_record_detail,
+    renter_rent_records,
+)
 from .unit_views import (
     RentAgreementDraftViewSet,
     UnitDocumentViewSet,
@@ -65,4 +74,11 @@ __all__ = [
     "get_itr_deduction_suggestions",
     "income_summary",
     "itr_tracker_summary",
+    "renter_profile",
+    "renter_rent_records",
+    "renter_rent_record_detail",
+    "renter_agreement",
+    "renter_documents",
+    "renter_extra_charges",
+    "renter_dashboard",
 ]

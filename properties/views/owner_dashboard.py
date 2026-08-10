@@ -1,6 +1,6 @@
 # mypy: ignore-errors
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncMonth
+from django.utils import timezone
 
 from ..models import (
     Building,
@@ -244,14 +245,17 @@ def owner_dashboard(request: DRFRequest) -> Response:
         month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(
             days=1
         )
+        month_end_dt = timezone.make_aware(
+            datetime.combine(month_end, datetime.max.time())
+        )
         total_at_month = Unit.objects.filter(
-            owner=owner, is_archived=False, created_at__lte=month_end
+            owner=owner, is_archived=False, created_at__lte=month_end_dt
         ).count()
         occupied_at_month = Unit.objects.filter(
             owner=owner,
             is_archived=False,
             status=Unit.VacancyStatus.OCCUPIED,
-            created_at__lte=month_end,
+            created_at__lte=month_end_dt,
         ).count()
         rate = (occupied_at_month / total_at_month * 100) if total_at_month > 0 else 0.0
         occupancy_trend.append(
@@ -399,7 +403,7 @@ def owner_dashboard(request: DRFRequest) -> Response:
     ]
 
     pending_verification = Renter.objects.filter(
-        unit__owner=owner, kyc_status=Renter.KYCStatus.PENDING
+        unit__owner=owner, kyc_status=Renter.KYCStatus.NOT_STARTED
     ).count()
 
     # Maintenance requests - currently no dedicated model; return empty list
@@ -455,9 +459,22 @@ def owner_dashboard(request: DRFRequest) -> Response:
             "end_date": str(subscription.end_date),
             "is_active_subscription": subscription.is_active,
             "is_yearly": subscription.is_yearly,
+            "is_subscription_expired": (
+                subscription.end_date < date.today() if subscription.end_date else False
+            ),
         }
+        plan_limits = []
+        if subscription.plan is not None:
+            plan_limits = [
+                {
+                    "feature_key": limit.feature_key,
+                    "value": limit.value,
+                }
+                for limit in subscription.plan.limits.all()
+            ]
     except Exception:
         current_plan = None
+        plan_limits = []
 
     from core.models import UsageLimit
 
@@ -511,6 +528,7 @@ def owner_dashboard(request: DRFRequest) -> Response:
             "unread_count": unread_count,
         },
         "subscription": current_plan,
+        "plan_limits": plan_limits,
         "feature_usage": feature_usage,
         "payouts": {
             "success": rents.filter(payout_status="SUCCESS").count(),
