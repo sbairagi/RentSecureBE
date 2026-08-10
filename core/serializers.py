@@ -94,6 +94,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             "email",
             "full_name",
             "phone",
+            "is_phone_verified",
             "role",
             "permissions",
         ]

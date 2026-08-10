@@ -1497,6 +1497,53 @@ class DeviceRegisterView(APIView):
         return Response({"message": "Device registered"}, status=status.HTTP_200_OK)
 
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def deactivate_account(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    user = cast(User, request.user)
+    user.is_active = False
+    user.save(update_fields=["is_active"])
+
+    try:
+        outstanding_tokens = OutstandingToken.objects.filter(user=user)
+        for token in outstanding_tokens:
+            BlacklistedToken.objects.get_or_create(token=token)
+    except Exception:
+        logger.exception("Failed to blacklist tokens during deactivation")
+
+    return Response(
+        {"message": "Account deactivated successfully"}, status=status.HTTP_200_OK
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def delete_account(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    user = cast(User, request.user)
+    confirm = request.data.get("confirm")
+    if confirm is not True:
+        return Response(
+            {
+                "error": (
+                    "Confirmation required. Set confirm=true to delete your account."
+                ),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        outstanding_tokens = OutstandingToken.objects.filter(user=user)
+        for token in outstanding_tokens:
+            BlacklistedToken.objects.get_or_create(token=token)
+    except Exception:
+        logger.exception("Failed to blacklist tokens during account deletion")
+
+    user.delete()
+    return Response(
+        {"message": "Account deleted successfully"}, status=status.HTTP_200_OK
+    )
+
+
 class AppVersionView(APIView):
     permission_classes = [permissions.AllowAny]
 

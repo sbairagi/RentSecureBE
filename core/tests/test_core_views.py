@@ -338,3 +338,85 @@ class ReminderTimeUpdateViewTest(TestCase):
             {"reminder_time": "not-a-time"},
         )
         self.assertEqual(response.status_code, 400)
+
+
+class DeactivateAccountTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="deactivate_user",
+            email="du@test.com",
+            password="testpass123",
+            full_name="Deactivate User",
+            phone="+919999999999",
+        )
+        self.user.is_active = True
+        self.user.save()
+        refresh = RefreshToken.for_user(self.user)
+        self.access_token = str(refresh.access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+
+    def test_deactivate_account_success(self):
+        response = self.client.post(
+            f"{API_PREFIX}/auth/deactivate/",
+            {},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+
+    def test_deactivate_account_requires_auth(self):
+        self.client.credentials()
+        response = self.client.post(
+            f"{API_PREFIX}/auth/deactivate/",
+            {},
+            content_type="application/json",
+        )
+        self.assertNotEqual(response.status_code, 200)
+
+
+class DeleteAccountTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="delete_user",
+            email="delu@test.com",
+            password="testpass123",
+            full_name="Delete User",
+            phone="+919999999999",
+        )
+        refresh = RefreshToken.for_user(self.user)
+        self.access_token = str(refresh.access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+
+    def test_delete_account_requires_confirmation(self):
+        response = self.client.post(
+            f"{API_PREFIX}/auth/delete/",
+            {},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("confirm", response.json().get("error", ""))
+
+    def test_delete_account_success(self):
+        user_id = self.user.id
+        response = self.client.post(
+            f"{API_PREFIX}/auth/delete/",
+            {"confirm": True},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(id=user_id).exists())
+
+        history_model = User.history.model
+        history_model.objects.filter(history_user_id=user_id).delete()
+
+    def test_delete_account_requires_auth(self):
+        self.client.credentials()
+        response = self.client.post(
+            f"{API_PREFIX}/auth/delete/",
+            {"confirm": True},
+            content_type="application/json",
+        )
+        self.assertNotEqual(response.status_code, 200)

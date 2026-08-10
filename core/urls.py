@@ -34,6 +34,8 @@ from .views import (
     cashfree_payout_webhook,
     create_rent_payment,
     create_subscription_order,
+    deactivate_account,
+    delete_account,
     download_ca_summary,
     download_rent_excel,
     download_tax_report,
@@ -74,6 +76,8 @@ urlpatterns = [
     path("auth/profile/", ProfileView.as_view(), name="profile"),
     path("auth/logout/", LogoutView.as_view(), name="logout"),
     path("auth/logout-all/", LogoutAllDevicesView.as_view(), name="logout-all"),
+    path("auth/deactivate/", deactivate_account, name="deactivate-account"),
+    path("auth/delete/", delete_account, name="delete-account"),
     path("auth/biometric/setup/", BiometricSetupView.as_view(), name="biometric-setup"),
     path(
         "auth/biometric/disable/",
