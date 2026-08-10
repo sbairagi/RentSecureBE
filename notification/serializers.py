@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from core.models import NotificationPreference
+from core.models import NotificationPreference, UserProfile
 from notification.models import DeviceToken, Notification
 
 
@@ -105,16 +105,6 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
             "agreement_push",
             "subscription_push",
             "system_push",
-            "receive_rent_alerts",
-            "receive_tax_alerts",
-            "receive_vacancy_alerts",
-            "receive_flagged_alerts",
-            "receive_voice_alerts",
-            "language_preference",
-            "alert_frequency",
-            "greeting_prefix",
-            "reminder_time",
-            "rent_reminders_enabled",
         ]
         read_only_fields = ["id"]
 
@@ -136,6 +126,13 @@ class NotificationPreferenceUpdateSerializer(serializers.ModelSerializer):
             "agreement_push",
             "subscription_push",
             "system_push",
+        ]
+
+
+class UserProfilePreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = [
             "receive_rent_alerts",
             "receive_tax_alerts",
             "receive_vacancy_alerts",
@@ -147,3 +144,4 @@ class NotificationPreferenceUpdateSerializer(serializers.ModelSerializer):
             "reminder_time",
             "rent_reminders_enabled",
         ]
+        read_only_fields = fields

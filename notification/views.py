@@ -14,7 +14,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q
 from django.utils import timezone
 
-from core.models import NotificationPreference
+from core.models import NotificationPreference, UserProfile
 from notification.models import DeviceToken, Notification
 from notification.serializers import (
     DeviceTokenCreateSerializer,
@@ -23,6 +23,7 @@ from notification.serializers import (
     NotificationPreferenceUpdateSerializer,
     NotificationSerializer,
     UnreadCountSerializer,
+    UserProfilePreferenceSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -316,17 +317,28 @@ def notification_preferences(request: DRFRequest) -> Response:
         return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
     preference, _ = NotificationPreference.objects.get_or_create(owner=request.user)
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
 
     if request.method == "GET":
-        serializer = NotificationPreferenceSerializer(preference)
-        return Response(serializer.data)
+        pref_data = NotificationPreferenceSerializer(preference).data
+        profile_data = UserProfilePreferenceSerializer(profile).data
+        return Response({**pref_data, **profile_data})
 
     serializer = NotificationPreferenceUpdateSerializer(
         preference, data=request.data, partial=True
     )
     serializer.is_valid(raise_exception=True)
     serializer.save()
-    return Response(NotificationPreferenceSerializer(preference).data)
+
+    profile_serializer = UserProfilePreferenceSerializer(
+        profile, data=request.data, partial=True
+    )
+    profile_serializer.is_valid(raise_exception=True)
+    profile_serializer.save()
+
+    pref_data = NotificationPreferenceSerializer(preference).data
+    profile_data = UserProfilePreferenceSerializer(profile).data
+    return Response({**pref_data, **profile_data})
 
 
 # ---------------------------------------------------------------------------

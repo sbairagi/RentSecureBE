@@ -9,7 +9,9 @@ from ..models import Building
 
 class BuildingSerializer(serializers.ModelSerializer):
     units_count = serializers.IntegerField(read_only=True)
-    occupied_units_count = serializers.IntegerField(read_only=True)
+    occupied_units_count = serializers.IntegerField(
+        source="_occupied_units_count", read_only=True
+    )
 
     class Meta:
         model = Building

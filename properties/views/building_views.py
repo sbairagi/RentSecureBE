@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 
 from django.core.cache import cache
+from django.db.models import Count, Q
 
 from rentsecure_be.type_compat import override
 
@@ -30,7 +31,11 @@ class BuildingViewSet(viewsets.ModelViewSet[Building]):
 
         buildings = cache.get(cache_key)
         if buildings is None:
-            buildings = Building.objects.filter(owner=user)
+            buildings = Building.objects.filter(owner=user).annotate(
+                _occupied_units_count=Count(
+                    "units", filter=Q(units__is_vacant=False), distinct=True
+                )
+            )
             cache.set(cache_key, buildings, timeout=BUILDINGS_CACHE_TIMEOUT)
 
         if enforcer.is_expired() and enforcer.is_past_grace_period():
