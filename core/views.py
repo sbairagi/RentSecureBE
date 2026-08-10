@@ -9,12 +9,13 @@ import secrets
 import time
 import uuid
 from datetime import timedelta
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any, cast, override
 
 import razorpay  # type: ignore[import-untyped]
 import requests
 from rest_framework import generics, permissions, status, viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -56,6 +57,7 @@ from .models import (
     MaintenanceMode,
     OwnerBankDetails,
     PlanFeatureLimit,
+    SubscriptionPayment,
     SubscriptionPlan,
     UsageLimit,
     User,
@@ -69,6 +71,7 @@ from .serializers import (
     ProfileSerializer,
     RegisterSerializer,
     SocialAuthSerializer,
+    SubscriptionPaymentSerializer,
     SubscriptionPlanSerializer,
     UsageLimitSerializer,
     UserSubscriptionSerializer,
@@ -440,6 +443,80 @@ class UserSubscriptionViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You can't delete another user's subscription.")
         instance.delete()
 
+    @action(detail=True, methods=["post"])
+    def upgrade(self, request, pk=None):
+        """Upgrade to a higher plan."""
+        subscription = self.get_object()
+        target_plan_id = request.data.get("plan_id")
+        if not target_plan_id:
+            return Response({"error": "plan_id is required"}, status=400)
+        try:
+            target_plan = SubscriptionPlan.objects.get(
+                id=target_plan_id, is_active=True
+            )
+        except SubscriptionPlan.DoesNotExist:
+            return Response({"error": "Target plan not found"}, status=404)
+
+        plan_order = ["free", "pro", "elite"]
+        current_plan_name = subscription.plan.name if subscription.plan else "free"
+        current_plan_order = plan_order.index(current_plan_name)
+        target_plan_order = plan_order.index(target_plan.name)
+        if target_plan_order <= current_plan_order:
+            return Response({"error": "Can only upgrade to a higher plan"}, status=400)
+
+        subscription.plan = target_plan
+        subscription.is_active = True
+        subscription.start_date = timezone.now().date()
+        subscription.end_date = timezone.now().date() + timedelta(days=30)
+        subscription.save()
+        return Response(UserSubscriptionSerializer(subscription).data)
+
+    @action(detail=True, methods=["post"])
+    def downgrade(self, request, pk=None):
+        """Downgrade to a lower plan (effective at end of current cycle)."""
+        subscription = self.get_object()
+        target_plan_id = request.data.get("plan_id")
+        if not target_plan_id:
+            return Response({"error": "plan_id is required"}, status=400)
+        try:
+            target_plan = SubscriptionPlan.objects.get(
+                id=target_plan_id, is_active=True
+            )
+        except SubscriptionPlan.DoesNotExist:
+            return Response({"error": "Target plan not found"}, status=404)
+
+        plan_order = ["free", "pro", "elite"]
+        current_plan_name = subscription.plan.name if subscription.plan else "free"
+        current_plan_order = plan_order.index(current_plan_name)
+        target_plan_order = plan_order.index(target_plan.name)
+        if target_plan_order >= current_plan_order:
+            return Response({"error": "Can only downgrade to a lower plan"}, status=400)
+
+        subscription.plan = target_plan
+        subscription.is_active = True
+        subscription.end_date = timezone.now().date() + timedelta(days=30)
+        subscription.save()
+        return Response(UserSubscriptionSerializer(subscription).data)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        """Cancel subscription — keep access until end_date."""
+        subscription = self.get_object()
+        subscription.is_active = False
+        subscription.save(update_fields=["is_active", "updated_at"])
+        return Response({"message": "Subscription cancelled"}, status=200)
+
+    @action(detail=True, methods=["post"])
+    def renew(self, request, pk=None):
+        """Renew subscription — extend end_date by one billing cycle."""
+        subscription = self.get_object()
+        days = 365 if subscription.is_yearly else 30
+        subscription.start_date = timezone.now().date()
+        subscription.end_date = timezone.now().date() + timedelta(days=days)
+        subscription.is_active = True
+        subscription.save()
+        return Response(UserSubscriptionSerializer(subscription).data)
+
 
 class AddOnPurchaseViewSet(viewsets.ModelViewSet):
     queryset = AddOnPurchase.objects.all()
@@ -479,6 +556,20 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
         if isinstance(self.request.user, AnonymousUser):
             return self.queryset.none()
         return UsageLimit.objects.filter(user=self.request.user)
+
+
+class SubscriptionPaymentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = SubscriptionPayment.objects.all()
+    serializer_class = SubscriptionPaymentSerializer
+    permission_classes = [IsAuthenticated]
+
+    @override
+    def get_queryset(self) -> Any:
+        if isinstance(self.request.user, AnonymousUser):
+            return self.queryset.none()
+        return SubscriptionPayment.objects.filter(user=self.request.user).order_by(
+            "-created_at"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1462,3 +1553,305 @@ class LivenessCheckView(View):
                 "timestamp": int(time.time()),
             }
         )
+
+
+# ---------------------------------------------------------------------------
+# Subscription Payment Views
+# ---------------------------------------------------------------------------
+
+
+def _get_razorpay_client():
+    return razorpay.Client(
+        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_subscription_order(
+    request: Request, /, *args: Any, **kwargs: Any
+) -> Response:
+    """Create a Razorpay order for subscription/upgrade/add-on purchase."""
+    from properties.views.owner_dashboard import owner_dashboard_summary  # noqa: F401
+
+    plan_id = request.data.get("plan_id")
+    billing_cycle = request.data.get("billing_cycle", "monthly")
+    addon_data = request.data.get("addon_data")
+
+    if not plan_id and not addon_data:
+        return Response(
+            {"error": "plan_id or addon_data is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user: User = request.user
+
+    if plan_id:
+        try:
+            plan = SubscriptionPlan.objects.get(id=plan_id, is_active=True)
+        except SubscriptionPlan.DoesNotExist:
+            return Response(
+                {"error": "Plan not found or inactive"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        amount = plan.monthly_price if billing_cycle == "monthly" else plan.yearly_price
+        target_plan = plan
+    elif addon_data:
+        amount = Decimal(str(addon_data.get("amount", "0")))
+        target_plan = None
+    else:
+        return Response(
+            {"error": "Invalid request"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if amount <= 0:
+        return Response(
+            {"error": "Invalid amount"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        subscription = user.usersubscription
+    except UserSubscription.DoesNotExist:
+        subscription = None
+
+    client = _get_razorpay_client()
+    order_receipt = f"sub_{user.id}_{timezone.now().strftime('%Y%m%d%H%M%S')}"
+
+    razorpay_order = client.order.create(
+        {
+            "amount": int(amount * 100),
+            "currency": "INR",
+            "receipt": order_receipt,
+            "payment_capture": 1,
+            "notes": {
+                "user_id": str(user.id),
+                "billing_cycle": billing_cycle,
+                "plan_id": str(plan_id) if plan_id else "",
+            },
+        }
+    )
+
+    payment = SubscriptionPayment.objects.create(
+        user=user,
+        subscription=subscription,
+        razorpay_order_id=razorpay_order["id"],
+        amount=amount,
+        currency="INR",
+        status="pending",
+        billing_cycle=billing_cycle,
+        plan=target_plan,
+    )
+
+    return Response(
+        {
+            "order_id": razorpay_order["id"],
+            "amount": str(amount),
+            "currency": "INR",
+            "key_id": settings.RAZORPAY_KEY_ID,
+            "payment_id": payment.id,
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def verify_subscription_payment(
+    request: Request, /, *args: Any, **kwargs: Any
+) -> Response:
+    """Verify Razorpay subscription payment and activate plan."""
+    razorpay_order_id = request.data.get("razorpay_order_id")
+    razorpay_payment_id = request.data.get("razorpay_payment_id")
+    razorpay_signature = request.data.get("razorpay_signature")
+
+    if not all([razorpay_order_id, razorpay_payment_id, razorpay_signature]):
+        return Response(
+            {"error": "Missing payment verification fields"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    client = _get_razorpay_client()
+    try:
+        client.utility.verify_payment_signature(
+            {
+                "razorpay_order_id": razorpay_order_id,
+                "razorpay_payment_id": razorpay_payment_id,
+                "razorpay_signature": razorpay_signature,
+            }
+        )
+    except Exception as exc:
+        logger.warning("Razorpay signature verification failed: %s", exc)
+        return Response(
+            {"error": "Invalid payment signature"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        payment = SubscriptionPayment.objects.get(
+            razorpay_order_id=razorpay_order_id,
+            user=request.user,
+        )
+    except SubscriptionPayment.DoesNotExist:
+        return Response(
+            {"error": "Order not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if payment.status == "success":
+        return Response(
+            {
+                "status": "success",
+                "payment": SubscriptionPaymentSerializer(payment).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    try:
+        payment_data = client.order.fetch(razorpay_order_id)
+        if payment_data.get("status") == "paid":
+            payment.razorpay_payment_id = razorpay_payment_id
+            payment.razorpay_signature = razorpay_signature
+            payment.status = "success"
+            payment.paid_at = timezone.now()
+            payment.save(
+                update_fields=[
+                    "razorpay_payment_id",
+                    "razorpay_signature",
+                    "status",
+                    "paid_at",
+                ]
+            )
+
+            if payment.plan:
+                subscription, _ = UserSubscription.objects.update_or_create(
+                    user=payment.user,
+                    defaults={
+                        "plan": payment.plan,
+                        "is_active": True,
+                        "is_yearly": payment.billing_cycle == "yearly",
+                        "start_date": timezone.now().date(),
+                        "end_date": timezone.now().date()
+                        + timedelta(
+                            days=365 if payment.billing_cycle == "yearly" else 30
+                        ),
+                    },
+                )
+                payment.subscription = subscription
+                payment.save(update_fields=["subscription"])
+
+            return Response(
+                {
+                    "status": "success",
+                    "payment": SubscriptionPaymentSerializer(payment).data,
+                },
+                status=status.HTTP_200_OK,
+            )
+    except Exception as exc:
+        logger.exception("Failed to verify payment: %s", exc)
+
+    payment.status = "failed"
+    payment.failed_at = timezone.now()
+    payment.save(update_fields=["status", "failed_at"])
+
+    return Response(
+        {"error": "Payment verification failed"},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+@csrf_exempt
+def subscription_webhook(request: HttpRequest) -> JsonResponse:
+    """Handle subscription payment webhooks from Razorpay."""
+    if request.method != "POST":
+        return JsonResponse({"error": _ERROR_INVALID_METHOD}, status=405)
+
+    body = request.body
+    signature = request.headers.get("X-Razorpay-Signature")
+    signature_error = _require_signature(body, signature)
+    if signature_error:
+        return signature_error
+
+    event, payment_entity, parse_error = _parse_subscription_webhook(body)
+    if parse_error:
+        return parse_error
+
+    if payment_entity:
+        apply_error = _apply_payment_entity(payment_entity)
+        if apply_error:
+            return apply_error
+
+    return JsonResponse({"status": "ok"})
+
+
+def _require_signature(body: bytes, signature: str | None) -> JsonResponse | None:
+    webhook_secret = getattr(settings, "RAZORPAY_WEBHOOK_SECRET", None)
+    if not webhook_secret:
+        raise ImproperlyConfigured("RAZORPAY_WEBHOOK_SECRET is not set")
+    if not signature:
+        return JsonResponse({"error": "Missing signature!"}, status=400)
+    if not hmac.compare_digest(
+        hmac.new(webhook_secret.encode("utf-8"), body, hashlib.sha256).hexdigest(),
+        signature,
+    ):
+        logger.warning("Subscription webhook: invalid signature")
+        return JsonResponse({"error": "Invalid signature!"}, status=400)
+    return None
+
+
+def _parse_subscription_webhook(
+    body: bytes,
+) -> tuple[str | None, dict[str, Any] | None, JsonResponse | None]:
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError:
+        return None, None, JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    event = data.get("event")
+    if event != "payment.captured":
+        return event, None, None
+
+    try:
+        payment_entity = data["payload"]["payment"]["entity"]
+    except (KeyError, TypeError):
+        logger.warning("Subscription webhook: missing payment entity")
+        return (
+            event,
+            None,
+            JsonResponse({"error": "Missing payment entity"}, status=400),
+        )
+
+    return event, payment_entity, None
+
+
+def _apply_payment_entity(payment_entity: dict[str, Any]) -> JsonResponse | None:
+    razorpay_order_id = payment_entity.get("order_id")
+    razorpay_payment_id = payment_entity.get("id")
+    try:
+        payment = SubscriptionPayment.objects.get(razorpay_order_id=razorpay_order_id)
+    except SubscriptionPayment.DoesNotExist:
+        return JsonResponse({"error": "Order not found"}, status=404)
+
+    if payment.status != "success":
+        payment.razorpay_payment_id = razorpay_payment_id
+        payment.status = "success"
+        payment.paid_at = timezone.now()
+        payment.save(update_fields=["razorpay_payment_id", "status", "paid_at"])
+
+        if payment.plan:
+            subscription, _ = UserSubscription.objects.update_or_create(
+                user=payment.user,
+                defaults={
+                    "plan": payment.plan,
+                    "is_active": True,
+                    "is_yearly": payment.billing_cycle == "yearly",
+                    "start_date": timezone.now().date(),
+                    "end_date": timezone.now().date()
+                    + timedelta(days=365 if payment.billing_cycle == "yearly" else 30),
+                },
+            )
+            payment.subscription = subscription
+            payment.save(update_fields=["subscription"])
+
+    return None

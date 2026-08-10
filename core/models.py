@@ -356,6 +356,46 @@ class UsageLimit(models.Model):
 
 
 # ---------------------------------------------------------------------------
+# Subscription Payment Models
+# ---------------------------------------------------------------------------
+
+
+class SubscriptionPayment(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("processing", "Processing"),
+        ("success", "Success"),
+        ("failed", "Failed"),
+        ("cancelled", "Cancelled"),
+        ("expired", "Expired"),
+        ("refunded", "Refunded"),
+    ]
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="subscription_payments"
+    )
+    subscription = models.ForeignKey(
+        UserSubscription, on_delete=models.CASCADE, related_name="payments"
+    )
+    razorpay_order_id = models.CharField(max_length=100, unique=True, db_index=True)
+    razorpay_payment_id = models.CharField(max_length=100, blank=True, db_index=True)
+    razorpay_signature = models.CharField(max_length=256, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default="INR")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    billing_cycle = models.CharField(
+        max_length=10, choices=[("monthly", "Monthly"), ("yearly", "Yearly")]
+    )
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    failed_at = models.DateTimeField(null=True, blank=True)
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.user.username} - {self.razorpay_order_id} ({self.status})"
+
+
+# ---------------------------------------------------------------------------
 # App Configuration Models
 # ---------------------------------------------------------------------------
 

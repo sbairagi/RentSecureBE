@@ -18,6 +18,7 @@ from .views import (
     LogoutView,
     MaintenanceView,
     OwnerVerifyOTP,
+    PlanFeatureLimitViewSet,
     ProfileView,
     ReadinessCheckView,
     RegisterView,
@@ -26,19 +27,23 @@ from .views import (
     ResetPasswordView,
     SendOTP,
     SocialAuthView,
+    SubscriptionPaymentViewSet,
     SubscriptionPlanViewSet,
     UsageLimitViewSet,
     UserSubscriptionViewSet,
     cashfree_payout_webhook,
+    create_subscription_order,
     download_ca_summary,
     download_rent_excel,
     download_tax_report,
     forgot_password,
     razorpay_webhook,
     reset_password_confirm,
+    subscription_webhook,
     tax_saving_tips,
     update_owner_alert_preferences,
     update_owner_bank_details,
+    verify_subscription_payment,
 )
 
 # Subscription End-Points
@@ -47,7 +52,8 @@ router.register(r"subscription-plans", SubscriptionPlanViewSet)
 router.register(r"user-subscriptions", UserSubscriptionViewSet)
 router.register(r"addon-purchases", AddOnPurchaseViewSet)
 router.register(r"usage-limits", UsageLimitViewSet)
-# router.register(r'plan-feature-limits', PlanFeatureLimitViewSet)
+router.register(r"plan-feature-limits", PlanFeatureLimitViewSet)
+router.register(r"subscription-payments", SubscriptionPaymentViewSet)
 
 
 urlpatterns = [
@@ -85,6 +91,17 @@ urlpatterns = [
     path("api/owner/update-alert-preferences/", update_owner_alert_preferences),
     path("api/owner/reminder-time/", ReminderTimeUpdateView.as_view()),
     path("api/rent/payment-callback/", razorpay_webhook),
+    path(
+        "subscription-orders/create/",
+        create_subscription_order,
+        name="create-subscription-order",
+    ),
+    path(
+        "subscription-payments/verify/",
+        verify_subscription_payment,
+        name="verify-subscription-payment",
+    ),
+    path("subscription-webhook/", subscription_webhook, name="subscription-webhook"),
     path("owner/rent-report/", download_rent_excel),
     path("owner/ca-summary/", download_ca_summary),
     path("tax/tax-report/", download_tax_report),

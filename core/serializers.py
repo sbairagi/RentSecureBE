@@ -7,6 +7,7 @@ from rentsecure_be.type_compat import override
 from .models import (
     AddOnPurchase,
     PlanFeatureLimit,
+    SubscriptionPayment,
     SubscriptionPlan,
     UsageLimit,
     User,
@@ -154,3 +155,15 @@ class UsageLimitSerializer(serializers.ModelSerializer):
     class Meta:
         model = UsageLimit
         fields = "__all__"
+
+
+class SubscriptionPaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPayment
+        fields = "__all__"
+        read_only_fields = ("user", "created_at", "paid_at", "failed_at")
+
+    @override
+    def create(self, validated_data: dict[str, Any]) -> SubscriptionPayment:
+        validated_data["user"] = self.context["request"].user
+        return cast(SubscriptionPayment, super().create(validated_data))
