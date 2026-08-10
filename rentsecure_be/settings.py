@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import logging
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -184,14 +185,51 @@ ENABLE_PUSH_NOTIFICATION = config("ENABLE_PUSH_NOTIFICATION", default=True, cast
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "request_id": {
+            "()": "core.infrastructure.middleware.request_id.RequestIdFilter",
+        },
+    },
+    "formatters": {
+        "structured": {
+            "format": (
+                "[%(asctime)s] [%(levelname)s] [%(request_id)s] "
+                "%(name)s - %(message)s"
+            ),
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+        "simple": {
+            "format": "[%(asctime)s] [%(levelname)s] %(name)s - %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+    },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+            "filters": ["request_id"],
+            "formatter": "structured",
         },
     },
     "root": {
         "handlers": ["console"],
         "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "core": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 
@@ -232,6 +270,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.infrastructure.middleware.request_id.RequestIdMiddleware",
+    "core.infrastructure.middleware.request_id.CorrelationIdMiddleware",
+    "core.infrastructure.middleware.request_id.RequestLoggingMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",
@@ -325,7 +366,11 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-    )
+    ),
+    "EXCEPTION_HANDLER": (
+        "core.infrastructure.exceptions.exception_handler.exception_handler"
+    ),
+    "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
 }
 
 CACHES = {
@@ -389,3 +434,42 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
     "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True, cast=bool
 )
 SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=True, cast=bool)
+
+
+# ---------------------------------------------------------------------------
+# Observability: Sentry
+# ---------------------------------------------------------------------------
+# Install: pip install sentry-sdk
+# Set SENTRY_DSN in production .env to enable.
+def _before_sentry_event(event, hint):
+    if event.get("request"):
+        req = event["request"]
+        if req.get("headers"):
+            for key in list(req["headers"].keys()):
+                if key.lower() in ("authorization", "cookie", "x-csrf-token"):
+                    req["headers"][key] = "[REDACTED]"
+    return event
+
+
+SENTRY_DSN = config("SENTRY_DSN", default="")
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.django import DjangoIntegration
+        from sentry_sdk.integrations.logging import LoggingIntegration
+
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            environment=ENVIRONMENT,
+            release=f"rentsecure-be@{config('APP_VERSION', default='1.0.0')}",
+            integrations=[
+                DjangoIntegration(),
+                LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
+            ],
+            traces_sample_rate=0.0 if DEBUG else 0.1,
+            profiles_sample_rate=0.0 if DEBUG else 0.1,
+            send_default_pii=False,
+            before_send=_before_sentry_event,
+        )
+    except ImportError:
+        pass

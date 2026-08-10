@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import secrets
+import time
 import uuid
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, cast, override
@@ -30,11 +31,12 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, Group
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_time
+from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from notification.services.rent_notify_service import send_payout_notification
@@ -1406,3 +1408,57 @@ class BootstrapView(APIView):
                 data["dashboardSummary"] = None
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------------
+# Health Checks
+# ---------------------------------------------------------------------------
+
+
+class HealthCheckView(View):
+    """Liveness check - returns 200 if the app is running."""
+
+    def get(self, request):
+        return JsonResponse(
+            {
+                "status": "ok",
+                "service": "rentsecure-be",
+                "timestamp": int(time.time()),
+            }
+        )
+
+
+class ReadinessCheckView(View):
+    """Readiness check - verifies database connectivity."""
+
+    def get(self, request):
+        try:
+            connection.ensure_connection()
+            db_status = "ok"
+        except Exception as exc:
+            logger.error("Database readiness check failed: %s", exc)
+            db_status = "error"
+
+        response_data = {
+            "status": "ready" if db_status == "ok" else "not_ready",
+            "service": "rentsecure-be",
+            "checks": {
+                "database": db_status,
+            },
+            "timestamp": int(time.time()),
+        }
+        status_code = 200 if db_status == "ok" else 503
+        return JsonResponse(response_data, status=status_code)
+
+
+class LivenessCheckView(View):
+    """Liveness check - lightweight check that the app process is alive."""
+
+    def get(self, request):
+        return JsonResponse(
+            {
+                "status": "alive",
+                "service": "rentsecure-be",
+                "timestamp": int(time.time()),
+            }
+        )

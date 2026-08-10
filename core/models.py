@@ -148,12 +148,19 @@ class NotificationPreference(UpsertMixin, models.Model):
     owner = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="notification_preference"
     )
+    push_enabled = models.BooleanField(default=True)
+    rent_alerts_push = models.BooleanField(default=True)
     rent_alerts_whatsapp = models.BooleanField(default=True)
     rent_alerts_email = models.BooleanField(default=True)
     monthly_summary_email = models.BooleanField(default=True)
     monthly_summary_whatsapp = models.BooleanField(default=False)
     payout_alerts_whatsapp = models.BooleanField(default=True)
     payout_alerts_email = models.BooleanField(default=False)
+    maintenance_push = models.BooleanField(default=True)
+    visitor_push = models.BooleanField(default=True)
+    agreement_push = models.BooleanField(default=True)
+    subscription_push = models.BooleanField(default=True)
+    system_push = models.BooleanField(default=True)
 
     _upsert_filter_fields = ("owner",)
     _upsert_skip_fields = frozenset({"id", "owner"})

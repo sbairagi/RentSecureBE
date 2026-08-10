@@ -11,12 +11,15 @@ from .views import (
     BootstrapView,
     ChangePasswordView,
     DeviceRegisterView,
+    HealthCheckView,
+    LivenessCheckView,
     LoginView,
     LogoutAllDevicesView,
     LogoutView,
     MaintenanceView,
     OwnerVerifyOTP,
     ProfileView,
+    ReadinessCheckView,
     RegisterView,
     ReminderTimeUpdateView,
     RenterVerifyOTP,
@@ -48,6 +51,10 @@ router.register(r"usage-limits", UsageLimitViewSet)
 
 
 urlpatterns = [
+    # Health checks
+    path("health/", HealthCheckView.as_view(), name="health"),
+    path("health/readiness/", ReadinessCheckView.as_view(), name="health-readiness"),
+    path("health/liveness/", LivenessCheckView.as_view(), name="health-liveness"),
     # common auth endpoints
     path("auth/send-otp/", SendOTP.as_view()),
     path("auth/owner/verify-otp/", OwnerVerifyOTP.as_view()),

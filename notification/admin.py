@@ -2,14 +2,42 @@ from django.contrib import admin
 from django.urls import path
 from django.utils.html import format_html
 
-from .models import Notification, WhatsAppLog
+from core.models import NotificationPreference
+
+from .models import DeviceToken, Notification, WhatsAppLog
 
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ("user", "title", "is_read", "created_at")
-    search_fields = ("user__username", "title")
-    list_filter = ("is_read",)
+    list_display = (
+        "id",
+        "user",
+        "notification_type",
+        "title",
+        "is_read",
+        "priority",
+        "resource_type",
+        "resource_id",
+        "created_at",
+    )
+    search_fields = ("user__username", "title", "message", "resource_id")
+    list_filter = ("is_read", "notification_type", "priority", "created_at")
+    readonly_fields = ("created_at", "read_at", "delivered_at")
+
+
+@admin.register(DeviceToken)
+class DeviceTokenAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "platform", "active", "last_used", "created_at")
+    search_fields = ("user__username", "token", "fcm_token", "device_id")
+    list_filter = ("platform", "active", "created_at")
+    readonly_fields = ("last_used", "created_at")
+
+
+@admin.register(NotificationPreference)
+class NotificationPreferenceAdmin(admin.ModelAdmin):
+    list_display = ("id", "owner", "push_enabled", "rent_alerts_push")
+    search_fields = ("owner__username", "owner__email")
+    list_filter = ("push_enabled",)
 
 
 @admin.register(WhatsAppLog)
