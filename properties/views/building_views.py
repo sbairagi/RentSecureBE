@@ -1,8 +1,10 @@
 from typing import Any
 
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 
 from django.core.cache import cache
@@ -13,6 +15,7 @@ from ..constants import BUILDINGS_CACHE_TIMEOUT
 from ..feature_enforcer import FeatureEnforcer
 from ..models import Building
 from ..serializers import BuildingSerializer
+from ..services.unit_service import get_building_analytics
 
 
 class BuildingViewSet(viewsets.ModelViewSet[Building]):
@@ -70,3 +73,9 @@ class BuildingViewSet(viewsets.ModelViewSet[Building]):
         instance.delete()
         enforcer.decrement("max_buildings")
         cache.delete(f"buildings_user_{self.request.user.id}")
+
+    @action(detail=True, methods=["get"], url_path="analytics")
+    def analytics(self, request: Any, pk: str | None = None) -> Response:
+        building = self.get_object()
+        data = get_building_analytics(building)
+        return Response({"data": data})

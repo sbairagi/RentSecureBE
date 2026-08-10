@@ -5,11 +5,11 @@ from rest_framework import serializers
 from rentsecure_be.type_compat import override
 
 from ..models import Building
-from .unit_serializers import UnitSerializer
 
 
 class BuildingSerializer(serializers.ModelSerializer):
-    units = UnitSerializer(many=True, read_only=True)
+    units_count = serializers.IntegerField(read_only=True)
+    occupied_units_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Building

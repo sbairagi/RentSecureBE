@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from core.models import PlanFeatureLimit, SubscriptionPlan, UsageLimit, UserSubscription
-from properties.models import Building
+from properties.models import Building, Unit
 
 User = get_user_model()
 
@@ -184,3 +184,50 @@ class BuildingViewSetTest(TestCase):
     def test_no_delete_other(self):
         r = self._auth(self.other).delete(f"/properties/buildings/{self.b1.id}/")
         self.assertEqual(r.status_code, 404)
+
+    def test_analytics_returns_counts(self):
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.b1,
+            unit="A1",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+            unit_type=Unit.UnitType.FLAT,
+            status="occupied",
+            is_vacant=False,
+        )
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.b1,
+            unit="A2",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+            unit_type=Unit.UnitType.FLAT,
+            status="vacant",
+            is_vacant=True,
+        )
+        r = self._auth(self.owner).get(f"/api/buildings/{self.b1.id}/analytics/")
+        self.assertEqual(r.status_code, 200)
+        data = r.data["data"]
+        self.assertEqual(data["total_units"], 2)
+        self.assertEqual(data["occupied_units"], 1)
+        self.assertEqual(data["vacant_units"], 1)
+        self.assertEqual(data["building_id"], self.b1.id)
+
+    def test_analytics_other_owner_returns_404(self):
+        r = self._auth(self.other).get(f"/api/buildings/{self.b1.id}/analytics/")
+        self.assertEqual(r.status_code, 404)
+
+    def test_list_item_contains_unit_counts(self):
+        r = self._auth(self.owner).get("/properties/buildings/")
+        self.assertEqual(r.status_code, 200)
+        item = r.data[0]
+        self.assertIn("units_count", item)
+        self.assertIn("occupied_units_count", item)
+        self.assertNotIn("units", item)
