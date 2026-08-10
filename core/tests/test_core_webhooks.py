@@ -5,6 +5,8 @@ import hmac
 import json
 from unittest.mock import MagicMock, patch
 
+from rest_framework.test import APIRequestFactory, force_authenticate
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -293,23 +295,14 @@ class CreateRentPaymentTests(TestCase):
             start_date="2025-01-01",
         )
 
-    def _make_request(self, payload):
-        from django.test import RequestFactory
-
-        factory = RequestFactory()
-        req = factory.post(
-            "/test",
-            data=json.dumps(payload),
-            content_type="application/json",
-        )
+    def _make_request(self, payload, method="post"):
+        factory = APIRequestFactory()
+        req = getattr(factory, method)("/test", data=payload, format="json")
+        force_authenticate(req, self.user)
         return req
 
     def test_invalid_method_returns_405(self):
-        from django.test import RequestFactory
-
-        factory = RequestFactory()
-        req = factory.get("/test")
-        response = create_rent_payment(req)
+        response = create_rent_payment(self._make_request({}, method="get"))
         self.assertEqual(response.status_code, 405)
 
     def test_rent_not_found_returns_404(self):
@@ -332,7 +325,7 @@ class CreateRentPaymentTests(TestCase):
         )
         response = create_rent_payment(self._make_request({"rent_id": str(rent.id)}))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(json.loads(response.content)["order_id"], "order_123")
+        self.assertEqual(response.data["order_id"], "order_123")
         rent.refresh_from_db()
         self.assertEqual(rent.razorpay_order_id, "order_123")
 

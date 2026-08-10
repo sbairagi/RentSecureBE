@@ -32,6 +32,7 @@ from .views import (
     UsageLimitViewSet,
     UserSubscriptionViewSet,
     cashfree_payout_webhook,
+    create_rent_payment,
     create_subscription_order,
     download_ca_summary,
     download_rent_excel,
@@ -43,6 +44,7 @@ from .views import (
     tax_saving_tips,
     update_owner_alert_preferences,
     update_owner_bank_details,
+    verify_renter_rent_payment,
     verify_subscription_payment,
 )
 
@@ -90,6 +92,12 @@ urlpatterns = [
     path("api/owner/update-bank-details/", update_owner_bank_details),
     path("api/owner/update-alert-preferences/", update_owner_alert_preferences),
     path("api/owner/reminder-time/", ReminderTimeUpdateView.as_view()),
+    path("api/rent/payment/", create_rent_payment, name="create-rent-payment"),
+    path(
+        "api/rent/verify-payment/",
+        verify_renter_rent_payment,
+        name="verify-renter-rent-payment",
+    ),
     path("api/rent/payment-callback/", razorpay_webhook),
     path(
         "subscription-orders/create/",

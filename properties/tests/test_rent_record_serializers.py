@@ -253,8 +253,8 @@ class RentRecordSerializerCoverageTests(TestCase):
 
     def test_validate_rent_month_and_date_paid_earlier(self):
         allowed_fields = {
-            "rent_month",
-            "date_paid",
+            "due_date",
+            "paid_on",
             "notes",
             "adjustment_reason",
             "late_fee",
@@ -266,18 +266,18 @@ class RentRecordSerializerCoverageTests(TestCase):
             serializer = RentRecordSerializer(
                 self.rent_record,
                 data={
-                    "rent_month": date(2025, 3, 1).isoformat(),
-                    "date_paid": date(2025, 2, 1).isoformat(),
+                    "due_date": date(2025, 3, 1).isoformat(),
+                    "paid_on": date(2025, 2, 1).isoformat(),
                 },
                 context={"request": self._make_request(self.owner)},
                 partial=True,
             )
             from rest_framework import serializers as drf_serializers
 
-            serializer.fields["rent_month"] = drf_serializers.DateField(
+            serializer.fields["due_date"] = drf_serializers.DateField(
                 required=False, allow_null=True
             )
-            serializer.fields["date_paid"] = drf_serializers.DateField(
+            serializer.fields["paid_on"] = drf_serializers.DateField(
                 required=False, allow_null=True
             )
             self.assertFalse(serializer.is_valid())

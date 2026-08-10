@@ -633,24 +633,54 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"message": "Webhook received"}, status=200)
 
 
-def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
-    """Create a Razorpay order for rent payment."""
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_rent_payment(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Create a Razorpay order for rent payment.
+
+    The authenticated user must be either:
+    - the renter associated with the rent record, or
+    - the owner of the unit linked to the rent record.
+    """
     from properties.models.rent_record_models import RentRecord  # nosonar
 
     if request.method != "POST":
-        return JsonResponse({"error": _ERROR_INVALID_METHOD}, status=405)
+        return Response(
+            {"error": _ERROR_INVALID_METHOD}, status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
 
-    data = json.loads(request.body)
-    rent_id = data.get("rent_id")
+    user = cast(User, request.user)
+    rent_id = request.data.get("rent_id")
+
+    if not rent_id:
+        return Response(
+            {"error": "rent_id is required"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     try:
-        rent = RentRecord.objects.get(id=rent_id)
+        rent = RentRecord.objects.select_related("unit", "renter").get(id=rent_id)
     except RentRecord.DoesNotExist:
-        return JsonResponse({"error": "Rent record not found"}, status=404)
+        return Response(
+            {"error": "Rent record not found"}, status=status.HTTP_404_NOT_FOUND
+        )
 
-    client = razorpay.Client(
-        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-    )
+    renter = rent.renter
+    is_owner = renter and renter.unit and renter.unit.owner == user
+    is_renter = renter and renter.user == user
+
+    if not is_owner and not is_renter:
+        return Response(
+            {"error": "You do not have permission to pay this rent."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    if rent.payment_status == RentRecord.Status.PAID:
+        return Response(
+            {"error": "This rent has already been paid."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    client = _get_razorpay_client()
     razorpay_order = client.order.create(
         {
             "amount": int(rent.amount * 100),  # In paise
@@ -663,13 +693,124 @@ def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     rent.razorpay_order_id = razorpay_order["id"]
     rent.save(update_fields=["razorpay_order_id"])
 
-    return JsonResponse(
+    return Response(
         {
             "order_id": razorpay_order["id"],
-            "amount": rent.amount,
+            "amount": str(rent.amount),
             "currency": "INR",
             "key_id": settings.RAZORPAY_KEY_ID,
-        }
+            "rent_id": rent.id,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def verify_renter_rent_payment(
+    request: Request, /, *args: Any, **kwargs: Any
+) -> Response:
+    """Verify a Razorpay rent payment and update the RentRecord.
+
+    The authenticated user must be the renter or owner of the rent record.
+    The Razorpay signature is verified before any state change.
+    The backend webhook remains the source of truth; this endpoint provides
+    immediate UX feedback while the webhook processes asynchronously.
+    """
+    from properties.models.rent_record_models import RentRecord  # nosonar
+
+    razorpay_order_id = request.data.get("razorpay_order_id")
+    razorpay_payment_id = request.data.get("razorpay_payment_id")
+    razorpay_signature = request.data.get("razorpay_signature")
+
+    if not all([razorpay_order_id, razorpay_payment_id, razorpay_signature]):
+        return Response(
+            {"error": "Missing payment verification fields"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        rent = RentRecord.objects.select_related("unit", "renter").get(
+            razorpay_order_id=razorpay_order_id
+        )
+    except RentRecord.DoesNotExist:
+        return Response(
+            {"error": "Rent record not found for this order"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    renter = rent.renter
+    is_owner = renter and renter.unit and renter.unit.owner == request.user
+    is_renter = renter and renter.user == request.user
+
+    if not is_owner and not is_renter:
+        return Response(
+            {"error": "You do not have permission to verify this payment."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    client = _get_razorpay_client()
+    try:
+        client.utility.verify_payment_signature(
+            {
+                "razorpay_order_id": razorpay_order_id,
+                "razorpay_payment_id": razorpay_payment_id,
+                "razorpay_signature": razorpay_signature,
+            }
+        )
+    except Exception as exc:
+        logger.warning("Razorpay signature verification failed: %s", exc)
+        return Response(
+            {"error": "Invalid payment signature"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if rent.payment_status == RentRecord.Status.PAID:
+        return Response(
+            {
+                "status": "success",
+                "message": "Payment already verified.",
+                "rent_id": rent.id,
+                "payment_status": rent.payment_status,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    try:
+        payment_data = client.order.fetch(razorpay_order_id)
+        if payment_data.get("status") == "paid":
+            rent.payment_status = RentRecord.Status.PAID
+            rent.paid_on = timezone.now().date()
+            rent.transaction_id = razorpay_payment_id
+            rent.save(
+                update_fields=["status", "paid_on", "transaction_id", "updated_at"]
+            )
+
+            try:
+                from rentsecure_be.services.cashfree_service import process_rent_payout
+
+                process_rent_payout(rent)
+            except Exception:
+                logger.exception(
+                    "Failed to process payout for rent %s after verification", rent.id
+                )
+
+            return Response(
+                {
+                    "status": "success",
+                    "message": "Payment verified successfully.",
+                    "rent_id": rent.id,
+                    "payment_status": rent.payment_status,
+                    "paid_on": rent.paid_on,
+                },
+                status=status.HTTP_200_OK,
+            )
+    except Exception as exc:
+        logger.exception("Failed to verify payment for rent %s: %s", rent.id, exc)
+
+    return Response(
+        {"error": "Payment verification failed"},
+        status=status.HTTP_400_BAD_REQUEST,
     )
 
 

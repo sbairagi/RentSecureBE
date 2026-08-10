@@ -69,13 +69,11 @@ class RentRecordSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Amount paid cannot be negative.")
 
     def _validate_rent_month_and_date_paid(self, data: dict[str, Any]) -> None:
-        rent_month = data.get("rent_month") or getattr(
-            self.instance, "rent_month", None
-        )
-        date_paid = data.get("date_paid") or getattr(self.instance, "date_paid", None)
-        if rent_month and date_paid and date_paid < rent_month:
+        due_date = data.get("due_date") or getattr(self.instance, "due_date", None)
+        paid_on = data.get("paid_on") or getattr(self.instance, "paid_on", None)
+        if due_date and paid_on and paid_on < due_date:
             raise serializers.ValidationError(
-                "Date paid cannot be before the rent month."
+                "Date paid cannot be before the rent due date."
             )
 
     @override

@@ -11,12 +11,16 @@ client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_S
 def create_payment_link(rent_record: Any) -> str:
     renter = rent_record.renter
 
+    due_date = rent_record.due_date
+    month = due_date.strftime("%B") if due_date else ""
+    year = due_date.year if due_date else ""
+
     response = client.payment_link.create(
         {
             "amount": int(rent_record.amount * 100),  # in paise
             "currency": "INR",
             "accept_partial": False,
-            "description": f"Rent for {rent_record.month} {rent_record.year}",
+            "description": f"Rent for {month} {year}",
             "customer": {
                 "name": renter.name,
                 "contact": renter.phone,
