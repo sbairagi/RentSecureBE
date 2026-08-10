@@ -887,3 +887,223 @@ class RenterViewSetSubmitRatingTests(TestCase):
             {"rating": 6},
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class RenterAssignUnitTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.owner = User.objects.create_user(
+            username="assign_unit_owner",
+            password="p",
+            full_name="AssignUnitOwner",
+            phone="+1",
+        )
+        cls.other = User.objects.create_user(
+            username="assign_unit_other",
+            password="p",
+            full_name="AssignUnitOther",
+            phone="+2",
+        )
+        cls.plan = SubscriptionPlan.objects.create(
+            name="assign_unit_pro",
+            monthly_price=Decimal("29.99"),
+            yearly_price=Decimal("299.99"),
+        )
+        UserSubscription.objects.create(user=cls.owner, plan=cls.plan, is_active=True)
+        PlanFeatureLimit.objects.create(
+            plan=cls.plan, feature_key="max_renters", value="10"
+        )
+        cls.building_a = Building.objects.create(
+            owner=cls.owner,
+            name="AssignA",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        cls.building_b = Building.objects.create(
+            owner=cls.owner,
+            name="AssignB",
+            address_line="2 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+        )
+        cls.other_building = Building.objects.create(
+            owner=cls.other,
+            name="OtherAssignB",
+            address_line="3 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="3",
+        )
+        cls.unit_a = Unit.objects.create(
+            owner=cls.owner,
+            building=cls.building_a,
+            unit="A1",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        cls.unit_b = Unit.objects.create(
+            owner=cls.owner,
+            building=cls.building_b,
+            unit="B1",
+            unit_type="flat",
+            address_line="2 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+        )
+        cls.other_unit = Unit.objects.create(
+            owner=cls.other,
+            building=cls.other_building,
+            unit="O1",
+            unit_type="flat",
+            address_line="3 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="3",
+        )
+
+    def setUp(self):
+        self._c = _auth(self.owner)
+        cache.clear()
+
+    def test_assign_renter_to_new_unit_success(self):
+        renter = Renter.objects.create(
+            unit=self.unit_a,
+            name="AssignRenter",
+            phone="+911234567901",
+            email="assign@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/assign-unit/",
+            {"unit_id": self.unit_b.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        renter.refresh_from_db()
+        self.assertEqual(renter.unit_id, self.unit_b.id)
+        self.unit_a.refresh_from_db()
+        self.unit_b.refresh_from_db()
+        self.assertEqual(self.unit_a.status, Unit.VacancyStatus.VACANT)
+        self.assertEqual(self.unit_b.status, Unit.VacancyStatus.OCCUPIED)
+
+    def test_assign_renter_same_unit_returns_400(self):
+        renter = Renter.objects.create(
+            unit=self.unit_a,
+            name="SameUnitRenter",
+            phone="+911234567902",
+            email="same@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/assign-unit/",
+            {"unit_id": self.unit_a.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_assign_renter_to_other_user_unit_returns_404(self):
+        renter = Renter.objects.create(
+            unit=self.unit_a,
+            name="OtherUnitRenter",
+            phone="+911234567903",
+            email="otherunit@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/assign-unit/",
+            {"unit_id": self.other_unit.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_assign_renter_to_occupied_unit_returns_409(self):
+        Renter.objects.create(
+            unit=self.unit_b,
+            name="OccupantRenter",
+            phone="+911234567904",
+            email="occupant@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        renter = Renter.objects.create(
+            unit=self.unit_a,
+            name="ConflictRenter",
+            phone="+911234567905",
+            email="conflict@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/assign-unit/",
+            {"unit_id": self.unit_b.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+    def test_assign_renter_missing_unit_id_returns_400(self):
+        renter = Renter.objects.create(
+            unit=self.unit_a,
+            name="MissingIdRenter",
+            phone="+911234567906",
+            email="missingid@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/assign-unit/",
+            {},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_other_user_cannot_assign_renter(self):
+        renter = Renter.objects.create(
+            unit=self.unit_a,
+            name="CrossOwnerRenter",
+            phone="+911234567907",
+            email="cross@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        response = _auth(self.other).post(
+            f"/properties/renters/{renter.id}/assign-unit/",
+            {"unit_id": self.unit_b.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_assign_renter_clears_renter_cache(self):
+        renter = Renter.objects.create(
+            unit=self.unit_a,
+            name="CacheRenter",
+            phone="+911234567908",
+            email="cache@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status=Renter.RenterStatus.ACTIVE,
+        )
+        cache.set(f"renters_user_{self.owner.id}", [renter])
+        response = self._c.post(
+            f"/properties/renters/{renter.id}/assign-unit/",
+            {"unit_id": self.unit_b.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(cache.get(f"renters_user_{self.owner.id}"))

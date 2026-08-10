@@ -169,6 +169,61 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
 
         return Response({"message": "Thank you for your feedback!"})
 
+    @action(detail=True, methods=["post"], url_path="assign-unit")
+    def assign_unit(self, request: Request, pk: int) -> Response:
+        renter = get_object_or_404(
+            Renter.objects.select_related("unit"), pk=pk, unit__owner=request.user
+        )
+
+        unit_id = request.data.get("unit_id")
+        if not unit_id:
+            return Response(
+                {"error": "unit_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        new_unit = get_object_or_404(Unit, pk=unit_id, owner=request.user)
+
+        if renter.unit_id == new_unit.id:
+            return Response(
+                {"error": "Renter is already assigned to this unit."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        existing = Renter.objects.filter(
+            unit=new_unit, status__in=["active", "notice_period"]
+        ).exclude(pk=renter.pk)
+        if existing.exists():
+            return Response(
+                {"error": "The selected unit already has an active renter."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        old_unit = renter.unit
+        renter.unit = new_unit
+        renter.save(update_fields=["unit", "updated_at"])
+
+        try:
+            update_unit_status(old_unit)
+        except Exception:
+            logger.exception(
+                "Failed to update status for old unit %s after renter reassignment",
+                old_unit.id,
+            )
+
+        try:
+            update_unit_status(new_unit)
+        except Exception:
+            logger.exception(
+                "Failed to update status for new unit %s after renter reassignment",
+                new_unit.id,
+            )
+
+        cache.delete(f"renters_user_{request.user.id}")
+
+        serializer = RenterSerializer(renter, context={"request": request})
+        return Response(serializer.data)
+
     @action(detail=True, methods=["post"], url_path="update-status")
     def update_status(self, request: Request, pk: int) -> Response:
         renter = get_object_or_404(
