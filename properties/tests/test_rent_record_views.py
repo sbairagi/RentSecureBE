@@ -634,3 +634,141 @@ class TestResendRentConfirmationAPI:
         response = c.post(f"/properties/rent-records/{rent.id}/resend-confirmation/")
         assert response.status_code == 400
         assert "error" in response.data
+
+
+# ===========================================================================
+# Duplicate rent month prevention
+# ===========================================================================
+
+
+class TestDuplicateRentMonthPrevention:
+    """Covers unique_together (unit, due_date) enforcement."""
+
+    def test_duplicate_rent_month_returns_400(self, db):
+        """Creating two rent records for same unit+due_date returns 400."""
+        owner = UserFactory()
+        building = BuildingFactory(owner=owner)
+        unit = UnitFactory(owner=owner, building=building)
+        renter = RenterFactory(unit=unit)
+        due = date.today().replace(day=5)
+
+        plan = SubscriptionPlanFactory(name="dup_plan", monthly_price=Decimal("29.99"))
+        UserSubscriptionFactory(user=owner, plan=plan, is_active=True)
+        PlanFeatureLimitFactory(plan=plan, feature_key="rent_records", value="10")
+
+        RentRecordFactory(unit=unit, renter=renter, due_date=due)
+
+        c = _make_client(owner)
+        response = c.post(
+            "/properties/rent-records/",
+            {
+                "unit": unit.id,
+                "renter": renter.id,
+                "amount": "10000",
+                "payment_method": "upi",
+                "status": "PENDING",
+                "due_date": due.isoformat(),
+            },
+        )
+        assert response.status_code == 400
+        assert "unique" in str(response.data).lower()
+
+    def test_different_units_same_month_succeeds(self, db):
+        """Same due_date on different units is allowed."""
+        owner = UserFactory()
+        building = BuildingFactory(owner=owner)
+        unit_a = UnitFactory(owner=owner, building=building, unit="A101")
+        unit_b = UnitFactory(owner=owner, building=building, unit="B101")
+        renter_a = RenterFactory(unit=unit_a)
+        renter_b = RenterFactory(unit=unit_b)
+        due = date.today().replace(day=5)
+
+        plan = SubscriptionPlanFactory(name="diff_plan", monthly_price=Decimal("29.99"))
+        UserSubscriptionFactory(user=owner, plan=plan, is_active=True)
+        PlanFeatureLimitFactory(plan=plan, feature_key="rent_records", value="10")
+
+        c = _make_client(owner)
+        response_a = c.post(
+            "/properties/rent-records/",
+            {
+                "unit": unit_a.id,
+                "renter": renter_a.id,
+                "amount": "10000",
+                "payment_method": "upi",
+                "status": "PENDING",
+                "due_date": due.isoformat(),
+            },
+        )
+        response_b = c.post(
+            "/properties/rent-records/",
+            {
+                "unit": unit_b.id,
+                "renter": renter_b.id,
+                "amount": "12000",
+                "payment_method": "upi",
+                "status": "PENDING",
+                "due_date": due.isoformat(),
+            },
+        )
+        assert response_a.status_code == 201
+        assert response_b.status_code == 201
+
+
+# ===========================================================================
+# Renter-scoped rent record endpoints
+# ===========================================================================
+
+
+class TestRenterRentRecordsAPI:
+    """Covers renter_rent_records and renter_rent_record_detail."""
+
+    def test_renter_sees_own_records(self, db):
+        """Renter sees only their own rent records."""
+        owner = UserFactory()
+        building = BuildingFactory(owner=owner)
+        unit = UnitFactory(owner=owner, building=building)
+        renter = RenterFactory(unit=unit, user=owner)
+        RentRecordFactory(unit=unit, renter=renter, status="PENDING")
+        RentRecordFactory(unit=unit, renter=renter, status="PAID")
+
+        c = _make_client(owner)
+        response = c.get("/properties/renter/rent-records/")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["data"]) == 2
+
+    def test_renter_record_detail_returns_correct_fields(self, db):
+        """Renter detail returns fields matching RenterRentRecordDetailSerializer."""
+        owner = UserFactory()
+        building = BuildingFactory(owner=owner)
+        unit = UnitFactory(owner=owner, building=building)
+        renter = RenterFactory(unit=unit, user=owner)
+        rent = RentRecordFactory(unit=unit, renter=renter, status="PAID")
+
+        c = _make_client(owner)
+        response = c.get(f"/properties/renter/rent-records/{rent.id}/")
+        assert response.status_code == 200
+        data = response.json()
+        assert "due_date" in data
+        assert "amount" in data
+        assert "payment_status" in data
+        assert "unit_name" in data
+        assert "building_name" in data
+
+    def test_renter_cannot_see_other_renter_records(self, db):
+        """Renter detail returns 404 for another renter's record."""
+        owner = UserFactory()
+        other = UserFactory()
+        building = BuildingFactory(owner=owner)
+        unit = UnitFactory(owner=owner, building=building)
+        RenterFactory(unit=unit, user=owner)
+        other_building = BuildingFactory(owner=other)
+        other_unit = UnitFactory(owner=other, building=other_building)
+        other_renter = RenterFactory(unit=other_unit, user=other)
+        other_rent = RentRecordFactory(
+            unit=other_unit, renter=other_renter, status="PENDING"
+        )
+
+        c = _make_client(owner)
+        response = c.get(f"/properties/renter/rent-records/{other_rent.id}/")
+        assert response.status_code == 404

@@ -15,7 +15,6 @@ class RentRecordSerializer(serializers.ModelSerializer):
             "id",
             "created_at",
             "updated_at",
-            "owner",
             "payout_status",
             "status",
             "payout_reference",

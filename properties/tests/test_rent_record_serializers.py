@@ -322,3 +322,26 @@ class RentRecordSerializerCoverageTests(TestCase):
         updated = serializer.save()
         self.assertEqual(updated.notes, "Late fee waived")
         self.assertEqual(updated.late_fee, 500)
+
+    def test_serializer_initializes_without_owner_field_error(self):
+        from django.core.management import call_command
+
+        try:
+            call_command("check", "--deploy")
+        except SystemExit:
+            pass
+
+        serializer = RentRecordSerializer(
+            self.rent_record, context={"request": self._make_request(self.owner)}
+        )
+        self.assertIn("id", serializer.fields)
+        self.assertNotIn("owner", serializer.fields)
+
+    def test_serializer_read_only_fields_match_model_fields(self):
+        serializer = RentRecordSerializer(
+            self.rent_record, context={"request": self._make_request(self.owner)}
+        )
+        set(serializer.fields.keys())
+        model_field_names = {f.name for f in RentRecord._meta.get_fields()}
+        unknown_read_only = set(serializer.Meta.read_only_fields) - model_field_names
+        self.assertEqual(unknown_read_only, set())
