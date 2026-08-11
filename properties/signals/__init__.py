@@ -173,60 +173,66 @@ def handle_rent_payment(
         send_thank_you_voice_note(instance)
 
         if instance.renter and instance.renter.user:
-            Notification.objects.create(
-                user=instance.renter.user,
-                title="Thanks for Early Rent Payment",
-                message="We appreciate your on-time rent payment. Keep it up! 🏆",
-            )
-
-        # Send multilingual rent paid confirmation via WhatsApp
-        try:
-            from notification.services.voice_service import generate_voice_note
-            from notification.services.whatsapp_service import (
-                send_whatsapp_audio,
-                send_whatsapp_message,
-            )
+            from notification.services.orchestrator import dispatch_notification
             from rentsecure_be.services.message_template_service import (
                 get_rent_paid_confirmation_msg,
             )
 
             renter = instance.renter
-            if renter and renter.whatsapp_number:
-                user_profile = getattr(getattr(renter, "user", None), "profile", None)
-                lang = getattr(user_profile, "language_preference", None) or "en"
-                msg = get_rent_paid_confirmation_msg(
-                    name=renter.full_name,
-                    amount=instance.amount,
-                    paid_date=instance.updated_at,
-                    lang=lang,
-                )
-                send_whatsapp_message(
-                    renter.whatsapp_number,
-                    msg,
-                    user=getattr(renter, "user", None),
-                    rent_record=instance,
+            user_profile = getattr(getattr(renter, "user", None), "profile", None)
+            lang = getattr(user_profile, "language_preference", None) or "en"
+            msg = get_rent_paid_confirmation_msg(
+                name=renter.full_name,
+                amount=instance.amount,
+                paid_date=instance.updated_at,
+                lang=lang,
+            )
+
+            dispatch_notification(
+                user=instance.renter.user,
+                title="Thanks for Early Rent Payment",
+                message="We appreciate your on-time rent payment. Keep it up! 🏆",
+                notification_type=Notification.RENT_PAYMENT_SUCCESS,
+                resource_type="rent_record",
+                resource_id=str(instance.id),
+                channels=["push"],
+            )
+
+            try:
+                from notification.services.voice_service import generate_voice_note
+                from notification.services.whatsapp_service import (
+                    send_whatsapp_audio,
+                    send_whatsapp_message,
                 )
 
-                try:
-                    audio_path = generate_voice_note(msg, lang)
-                    if audio_path:
-                        send_whatsapp_audio(
-                            renter.whatsapp_number,
-                            audio_path,
-                            user=getattr(renter, "user", None),
-                            rent_record=instance,
-                        )
-                except Exception:
-                    logger.exception(
-                        "Failed to send rent-paid audio for rent %s",
-                        instance.id,
+                if renter.whatsapp_number:
+                    send_whatsapp_message(
+                        renter.whatsapp_number,
+                        msg,
+                        user=getattr(renter, "user", None),
+                        rent_record=instance,
                     )
-        except Exception as exc:
-            logger.exception(
-                "Failed to send rent-paid confirmation for rent %s: %s",
-                instance.id,
-                exc,
-            )
+
+                    try:
+                        audio_path = generate_voice_note(msg, lang)
+                        if audio_path:
+                            send_whatsapp_audio(
+                                renter.whatsapp_number,
+                                audio_path,
+                                user=getattr(renter, "user", None),
+                                rent_record=instance,
+                            )
+                    except Exception:
+                        logger.exception(
+                            "Failed to send rent-paid audio for rent %s",
+                            instance.id,
+                        )
+            except Exception as exc:
+                logger.exception(
+                    "Failed to send rent-paid confirmation for rent %s: %s",
+                    instance.id,
+                    exc,
+                )
 
         # Send rent receipt email to renter
         try:
@@ -286,12 +292,31 @@ def notify_renter_status_change(
     }:
         return
 
-    from notification.services.renter_status_notify_service import (
-        send_renter_status_change_notification,
-    )
+    from notification.services.orchestrator import dispatch_notification
+
+    status_messages: dict[str, str] = {
+        "notice_period": (
+            "You are now in NOTICE PERIOD. Please vacate the property "
+            "within 30 days."
+        ),
+        "revoked": "Your rent agreement has been revoked due to payment default.",
+        "deactivated": ("You have been deactivated and cannot make further payments."),
+    }
+
+    msg = status_messages.get(instance.status)
+    if not msg:
+        return
 
     try:
-        send_renter_status_change_notification(instance, old.status, instance.status)
+        if instance.user:
+            dispatch_notification(
+                user=instance.user,
+                title="Renter Status Update",
+                message=msg,
+                notification_type=Notification.RENTER_STATUS_CHANGE,
+                resource_type="renter",
+                resource_id=str(instance.id),
+            )
     except Exception:
         logger.exception(
             "Failed to send status change notification for renter %s",
@@ -324,23 +349,20 @@ def notify_owner_if_unit_vacant(
         unit = instance.unit
 
         if not Renter.objects.filter(unit=unit, status="active").exists():
-            from notification.services.whatsapp_service import send_whatsapp_message
+            from notification.services.orchestrator import dispatch_notification
 
-            profile = getattr(owner, "userprofile", None)
-            phone = (
-                getattr(profile, "whatsapp_number", None) if profile else None
-            ) or getattr(owner, "whatsapp_number", "")
-            if phone:
-                send_whatsapp_message(
-                    phone,
-                    (
-                        f"Unit {unit.unit} is now vacant. "
-                        f"Please assign a new renter or mark it as "
-                        f"intentionally vacant from your dashboard."
-                    ),
-                    user=owner,
-                    rent_record=None,
-                )
+            dispatch_notification(
+                user=owner,
+                title="Unit Vacant",
+                message=(
+                    f"Unit {unit.unit} is now vacant. "
+                    f"Please assign a new renter or mark it as "
+                    f"intentionally vacant from your dashboard."
+                ),
+                notification_type=Notification.SYSTEM_ALERT,
+                resource_type="unit",
+                resource_id=str(unit.id),
+            )
 
 
 @receiver(post_save, sender=Renter)
@@ -389,18 +411,22 @@ def notify_owner_on_tax_paid(
         return
 
     owner = instance.property.owner
-    phone = getattr(owner, "whatsapp_number", None) or ""
-    if not phone:
-        return
 
     try:
-        from notification.services.rent_notify_service import notify_owner
+        from notification.services.orchestrator import dispatch_notification
 
         msg = (
             f"✅ Property tax of ₹{instance.amount} has been paid for "
             f"{instance.property.name} on {instance.paid_date}."
         )
-        notify_owner(owner, msg)
+        dispatch_notification(
+            user=owner,
+            title="Property Tax Paid",
+            message=msg,
+            notification_type=Notification.TAX_REMINDER,
+            resource_type="property_tax",
+            resource_id=str(instance.id),
+        )
     except Exception as exc:
         logger.exception(
             "Failed to send tax-paid notification for tax %s: %s",

@@ -7,7 +7,8 @@ from firebase_admin import messaging
 
 from django.utils import timezone
 
-from notification.models import DeviceToken
+from core.models import NotificationPreference
+from notification.models import DeviceToken, Notification
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,38 @@ def send_fcm_notification(
     notification_type: str = "",
 ) -> bool:
     try:
+        pref, _ = NotificationPreference.objects.get_or_create(owner=user)
+        if not pref.push_enabled:
+            logger.info("Push disabled for user %s", user.pk)
+            return False
+
+        type_pref_map = {
+            Notification.RENT_DUE: "rent_alerts_push",
+            Notification.RENT_PAYMENT_SUCCESS: "rent_alerts_push",
+            Notification.RENT_PAYMENT_FAILED: "rent_alerts_push",
+            Notification.AGREEMENT_EXPIRING: "agreement_push",
+            Notification.AGREEMENT_SIGNED: "agreement_push",
+            Notification.MAINTENANCE_CREATED: "maintenance_push",
+            Notification.MAINTENANCE_UPDATED: "maintenance_push",
+            Notification.VISITOR_REQUEST: "visitor_push",
+            Notification.VISITOR_APPROVED: "visitor_push",
+            Notification.SUBSCRIPTION_EXPIRING: "subscription_push",
+            Notification.SUBSCRIPTION_EXPIRED: "subscription_push",
+            Notification.DOCUMENT_SHARED: "system_push",
+            Notification.SYSTEM_ALERT: "system_push",
+            Notification.PAYOUT_SUCCESS: "payout_alerts_whatsapp",
+            Notification.PAYOUT_FAILED: "payout_alerts_whatsapp",
+            Notification.RENTER_STATUS_CHANGE: "rent_alerts_push",
+            Notification.ITR_REMINDER: "system_push",
+            Notification.TAX_REMINDER: "system_push",
+            Notification.EXTRA_CHARGE_REMINDER: "rent_alerts_push",
+        }
+
+        pref_key = type_pref_map.get(notification_type)
+        if pref_key and not getattr(pref, pref_key, False):
+            logger.info("Push type %s disabled for user %s", notification_type, user.pk)
+            return False
+
         tokens = list(
             DeviceToken.objects.filter(user=user, active=True, fcm_token__isnull=False)
             .exclude(fcm_token="")
