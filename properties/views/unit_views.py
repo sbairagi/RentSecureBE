@@ -312,16 +312,116 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
 
     @override
     def get_queryset(self) -> QuerySet[RentAgreementDraft]:
-        """Return cached, owned agreement drafts."""
+        """Return cached, owned agreement drafts with search/filter/ordering."""
         if isinstance(self.request.user, AnonymousUser):
             return RentAgreementDraft.objects.none()
         user = self.request.user
-        cache_key: str = f"rent_drafts_user_{user.id}"
-        drafts: QuerySet[RentAgreementDraft] | None = cache.get(cache_key)
-        if drafts is None:
-            drafts = RentAgreementDraft.objects.filter(user=user)
-            cache.set(cache_key, drafts, timeout=300)
-        return drafts
+
+        if not self._agreement_has_active_filters():
+            cache_key: str = f"rent_drafts_user_{user.id}"
+            drafts: QuerySet[RentAgreementDraft] | None = cache.get(cache_key)
+            if drafts is None:
+                drafts = RentAgreementDraft.objects.filter(user=user).select_related(
+                    "renter", "unit", "unit__building"
+                )
+                cache.set(cache_key, drafts, timeout=300)
+            return drafts
+
+        return self._apply_agreement_filters(
+            RentAgreementDraft.objects.filter(user=user).select_related(
+                "renter", "unit", "unit__building"
+            )
+        )
+
+    def _agreement_has_active_filters(self) -> bool:
+        return any(
+            self.request.GET.get(param)
+            for param in (
+                "search",
+                "status",
+                "building",
+                "unit",
+                "renter",
+                "is_signed",
+                "ordering",
+            )
+        )
+
+    def _apply_agreement_filters(
+        self, queryset: QuerySet[RentAgreementDraft]
+    ) -> QuerySet[RentAgreementDraft]:
+        queryset = self._apply_agreement_search(queryset)
+        queryset = self._apply_agreement_status_filter(queryset)
+        queryset = self._apply_agreement_relation_filters(queryset)
+        return self._apply_agreement_ordering(queryset)
+
+    def _apply_agreement_search(
+        self, queryset: QuerySet[RentAgreementDraft]
+    ) -> QuerySet[RentAgreementDraft]:
+        search = self.request.GET.get("search")
+        if not search:
+            return queryset
+        return queryset.filter(
+            Q(renter__name__icontains=search)
+            | Q(unit__unit__icontains=search)
+            | Q(leegality_document_id__icontains=search)
+        )
+
+    def _apply_agreement_status_filter(
+        self, queryset: QuerySet[RentAgreementDraft]
+    ) -> QuerySet[RentAgreementDraft]:
+        status_param = self.request.GET.get("status")
+        if not status_param:
+            return queryset
+
+        status_map: dict[str, QuerySet[RentAgreementDraft]] = {
+            "draft": queryset.filter(owner_signed=False, renter_signed=False),
+            "pending_signature": queryset.filter(
+                owner_signed=False, renter_signed=False
+            ),
+            "partially_signed": queryset.filter(
+                Q(owner_signed=True, renter_signed=False)
+                | Q(owner_signed=False, renter_signed=True)
+            ),
+            "fully_signed": queryset.filter(owner_signed=True, renter_signed=True),
+            "active": queryset.filter(owner_signed=True, renter_signed=True),
+        }
+        return status_map.get(status_param, queryset)
+
+    def _apply_agreement_relation_filters(
+        self, queryset: QuerySet[RentAgreementDraft]
+    ) -> QuerySet[RentAgreementDraft]:
+        building_param = self.request.GET.get("building")
+        if building_param:
+            queryset = queryset.filter(unit__building_id=building_param)
+
+        unit_param = self.request.GET.get("unit")
+        if unit_param:
+            queryset = queryset.filter(unit_id=unit_param)
+
+        renter_param = self.request.GET.get("renter")
+        if renter_param:
+            queryset = queryset.filter(renter_id=renter_param)
+
+        is_signed = self.request.GET.get("is_signed")
+        if is_signed is not None:
+            signed = is_signed.lower() == "true"
+            if signed:
+                queryset = queryset.filter(owner_signed=True, renter_signed=True)
+            else:
+                queryset = queryset.filter(
+                    Q(owner_signed=False) | Q(renter_signed=False)
+                )
+
+        return queryset
+
+    def _apply_agreement_ordering(
+        self, queryset: QuerySet[RentAgreementDraft]
+    ) -> QuerySet[RentAgreementDraft]:
+        ordering = self.request.GET.get("ordering")
+        if ordering:
+            return queryset.order_by(ordering)
+        return queryset.order_by("-generated_at")
 
     @override
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
