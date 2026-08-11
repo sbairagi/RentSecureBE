@@ -2,7 +2,7 @@ import logging
 from collections.abc import Iterable
 from typing import cast
 
-from django.db.models.signals import post_delete, post_save, pre_save
+from django.db.models.signals import post_delete, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -11,6 +11,7 @@ from properties.models import (
     ArchivedRenter,
     Building,
     Caretaker,
+    CareTakerAssignmentLog,
     PropertyTaxRecord,
     Renter,
     RentRecord,
@@ -106,6 +107,35 @@ def update_caretaker_usage(
     sender: type[Caretaker], instance: Caretaker, **kwargs: object
 ) -> None:
     update_usage_count(instance.unit.owner, "max_caretakers", Caretaker)
+
+
+@receiver(post_save, sender=Caretaker)
+def log_caretaker_assignment(
+    sender: type[Caretaker], instance: Caretaker, created: bool, **kwargs: object
+) -> None:
+    if created:
+        CareTakerAssignmentLog.objects.create(
+            caretaker=instance,
+            action="assigned",
+            notes=f"Assigned to unit {instance.unit_id}",
+        )
+    else:
+        CareTakerAssignmentLog.objects.create(
+            caretaker=instance,
+            action="assigned",
+            notes=f"Reassigned to unit {instance.unit_id}",
+        )
+
+
+@receiver(pre_delete, sender=Caretaker)
+def log_caretaker_unassignment(
+    sender: type[Caretaker], instance: Caretaker, **kwargs: object
+) -> None:
+    CareTakerAssignmentLog.objects.create(
+        caretaker=instance,
+        action="unassigned",
+        notes=f"Unassigned from unit {instance.unit_id}",
+    )
 
 
 @receiver(post_save, sender=Renter)

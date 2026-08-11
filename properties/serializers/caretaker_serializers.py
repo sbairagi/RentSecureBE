@@ -12,9 +12,6 @@ class CaretakerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Caretaker
         fields = "__all__"
-        extra_kwargs = {
-            "id_proof": {"required": False},
-        }
 
     @override
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:

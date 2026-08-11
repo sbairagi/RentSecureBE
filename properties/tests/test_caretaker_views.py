@@ -154,15 +154,7 @@ class TestGetQueryset:
         qs = view.get_queryset()
         assert list(qs) == []
 
-    def test_authenticated_user_cache_hit(self, owner, unit, db):
-        cache.set(f"caretakers_user_{owner.id}", [1, 2, 3], timeout=300)
-        view = _make_view()
-        view.request = _make_request(owner)
-        result = view.get_queryset()
-        assert list(result) == [1, 2, 3]
-
-    def test_authenticated_user_cache_miss_sets_cache(self, owner, unit, db):
-        cache.clear()
+    def test_authenticated_user_sees_own_caretakers(self, owner, unit, db):
         Caretaker.objects.create(
             unit=unit,
             name="CT1",
@@ -173,9 +165,6 @@ class TestGetQueryset:
         view.request = _make_request(owner)
         result = view.get_queryset()
         assert result.count() == 1
-        cached = cache.get(f"caretakers_user_{owner.id}")
-        assert cached is not None
-        assert cached.count() == 1
 
     def test_other_user_sees_only_own_caretakers(
         self, owner, other_user, unit, other_unit, db
@@ -226,7 +215,7 @@ class TestCaretakerList:
         )
         response = api_client_other.get("/properties/caretakers/")
         assert response.status_code == 200
-        assert len(response.data) == 0
+        assert len(response.data["results"]) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -269,10 +258,9 @@ class TestPerformCreate:
             )
         assert response.status_code == 403
 
-    def test_create_success_clears_cache(
+    def test_create_success_returns_201(
         self, owner, unit, api_client_owner, plan, plan_feature_limit
     ):
-        cache.set(f"caretakers_user_{owner.id}", ["stale"], timeout=300)
         response = api_client_owner.post(
             "/properties/caretakers/",
             {
@@ -285,7 +273,6 @@ class TestPerformCreate:
             format="json",
         )
         assert response.status_code == 201
-        assert cache.get(f"caretakers_user_{owner.id}") is None
 
     def test_create_bad_request_missing_fields(self, api_client_owner):
         response = api_client_owner.post(
@@ -399,21 +386,21 @@ class TestPerformUpdate:
         with pytest.raises(PermissionDenied):
             view.perform_update(serializer)
 
-    def test_update_clears_cache_on_success_direct(self, owner, unit):
+    def test_update_own_caretaker_returns_200(self, api_client_owner, unit):
         ct = Caretaker.objects.create(
             unit=unit,
             name="CT1",
             phone="+911111111111",
             joining_date="2025-01-01",
         )
-        cache.set(f"caretakers_user_{owner.id}", ["stale"], timeout=300)
-        view = _make_view()
-        view.request = _make_request(owner, method="patch")
-        serializer = MagicMock()
-        serializer.instance = ct
-        serializer.validated_data = {"name": "CT1_Updated"}
-        view.perform_update(serializer)
-        assert cache.get(f"caretakers_user_{owner.id}") is None
+        response = api_client_owner.patch(
+            f"/properties/caretakers/{ct.id}/",
+            {"name": "CT1_Updated"},
+            format="json",
+        )
+        assert response.status_code == 200
+        ct.refresh_from_db()
+        assert ct.name == "CT1_Updated"
 
     def test_update_keeps_instance_unit_when_not_provided(
         self, owner, unit, api_client_owner
@@ -481,18 +468,17 @@ class TestPerformDestroy:
         with pytest.raises(PermissionDenied):
             view.perform_destroy(ct)
 
-    def test_delete_success_clears_cache_direct(self, owner, unit):
+    def test_delete_own_caretaker_returns_204_direct(self, owner, unit):
         ct = Caretaker.objects.create(
             unit=unit,
             name="CT1",
             phone="+911111111111",
             joining_date="2025-01-01",
         )
-        cache.set(f"caretakers_user_{owner.id}", ["stale"], timeout=300)
         view = _make_view()
         view.request = _make_request(owner, method="delete")
         view.perform_destroy(ct)
-        assert cache.get(f"caretakers_user_{owner.id}") is None
+        assert not Caretaker.objects.filter(pk=ct.pk).exists()
 
     def test_delete_own_caretaker_204(self, api_client_owner, unit):
         ct = Caretaker.objects.create(
@@ -723,50 +709,149 @@ class TestFeatureEnforcerIntegration:
 
 
 # ---------------------------------------------------------------------------
-# Tests for cache invalidation via direct method calls
+# Tests for search, filter, ordering, pagination
 # ---------------------------------------------------------------------------
 
 
-class TestCacheInvalidationDirect:
-    def test_create_clears_cache_direct(self, owner, unit):
-        cache.set(f"caretakers_user_{owner.id}", ["stale"], timeout=300)
-        view = _make_view()
-        view.request = _make_request(owner, method="post")
-        data = {"unit": unit, "name": "CT", "phone": "+911111111111"}
-        serializer = MagicMock()
-        serializer.validated_data = data
-        with patch.object(FeatureEnforcer, "can_create", return_value=True):
-            view.perform_create(serializer)
-        assert cache.get(f"caretakers_user_{owner.id}") is None
+class TestCaretakerQueryFeatures:
+    def test_search_by_name(self, api_client_owner, unit):
+        Caretaker.objects.create(
+            unit=unit,
+            name="Alice Smith",
+            phone="+911111111111",
+            joining_date="2025-01-01",
+        )
+        Caretaker.objects.create(
+            unit=unit,
+            name="Bob Jones",
+            phone="+922222222222",
+            joining_date="2025-01-02",
+        )
+        response = api_client_owner.get("/properties/caretakers/?search=Alice")
+        assert response.status_code == 200
+        assert len(response.data["results"]) == 1
+        assert response.data["results"][0]["name"] == "Alice Smith"
 
-    def test_update_clears_cache_direct(self, owner, unit):
+    def test_search_by_phone(self, api_client_owner, unit):
+        Caretaker.objects.create(
+            unit=unit, name="Alice", phone="+911111111111", joining_date="2025-01-01"
+        )
+        response = api_client_owner.get("/properties/caretakers/?search=111111")
+        assert response.status_code == 200
+        assert len(response.data["results"]) == 1
+
+    def test_filter_by_is_active(self, api_client_owner, unit):
+        Caretaker.objects.create(
+            unit=unit,
+            name="ActiveCT",
+            phone="+911111111111",
+            joining_date="2025-01-01",
+            is_active=True,
+        )
+        Caretaker.objects.create(
+            unit=unit,
+            name="InactiveCT",
+            phone="+922222222222",
+            joining_date="2025-01-01",
+            is_active=False,
+        )
+        response = api_client_owner.get("/properties/caretakers/?is_active=true")
+        assert response.status_code == 200
+        assert len(response.data["results"]) == 1
+        assert response.data["results"][0]["name"] == "ActiveCT"
+
+    def test_filter_by_unit(self, api_client_owner, unit, other_unit, other_user):
+        ct1 = Caretaker.objects.create(
+            unit=unit, name="CT1", phone="+911111111111", joining_date="2025-01-01"
+        )
+        Caretaker.objects.create(
+            unit=other_unit,
+            name="CT2",
+            phone="+922222222222",
+            joining_date="2025-01-01",
+        )
+        response = api_client_owner.get(f"/properties/caretakers/?unit={unit.id}")
+        assert response.status_code == 200
+        assert len(response.data["results"]) == 1
+        assert response.data["results"][0]["id"] == ct1.id
+
+    def test_ordering_by_joining_date(self, api_client_owner, unit):
+        Caretaker.objects.create(
+            unit=unit, name="CT1", phone="+911111111111", joining_date="2025-01-02"
+        )
+        Caretaker.objects.create(
+            unit=unit, name="CT2", phone="+922222222222", joining_date="2025-01-01"
+        )
+        response = api_client_owner.get("/properties/caretakers/?ordering=joining_date")
+        assert response.status_code == 200
+        assert response.data["results"][0]["name"] == "CT2"
+        assert response.data["results"][1]["name"] == "CT1"
+
+    def test_pagination(self, api_client_owner, unit):
+        for i in range(25):
+            Caretaker.objects.create(
+                unit=unit,
+                name=f"CT{i}",
+                phone=f"+91111111111{i:03d}",
+                joining_date="2025-01-01",
+            )
+        response = api_client_owner.get("/properties/caretakers/?limit=10&page=1")
+        assert response.status_code == 200
+        assert len(response.data["results"]) == 10
+        assert response.data["count"] == 25
+
+
+# ---------------------------------------------------------------------------
+# Tests for deactivate action
+# ---------------------------------------------------------------------------
+
+
+class TestCaretakerDeactivate:
+    def test_deactivate_sets_is_active_false_and_leaving_date(
+        self, api_client_owner, unit
+    ):
         ct = Caretaker.objects.create(
             unit=unit,
             name="CT1",
             phone="+911111111111",
             joining_date="2025-01-01",
+            is_active=True,
         )
-        cache.set(f"caretakers_user_{owner.id}", ["stale"], timeout=300)
-        view = _make_view()
-        view.request = _make_request(owner, method="patch")
-        serializer = MagicMock()
-        serializer.instance = ct
-        serializer.validated_data = {"name": "CT1_Updated"}
-        view.perform_update(serializer)
-        assert cache.get(f"caretakers_user_{owner.id}") is None
+        response = api_client_owner.post(f"/properties/caretakers/{ct.id}/deactivate/")
+        assert response.status_code == 200
+        ct.refresh_from_db()
+        assert ct.is_active is False
+        assert ct.leaving_date is not None
 
-    def test_delete_clears_cache_direct(self, owner, unit):
+    def test_deactivate_other_user_returns_404(self, api_client_other, owner, unit):
         ct = Caretaker.objects.create(
-            unit=unit,
-            name="CT1",
-            phone="+911111111111",
-            joining_date="2025-01-01",
+            unit=unit, name="CT1", phone="+911111111111", joining_date="2025-01-01"
         )
-        cache.set(f"caretakers_user_{owner.id}", ["stale"], timeout=300)
-        view = _make_view()
-        view.request = _make_request(owner, method="delete")
-        view.perform_destroy(ct)
-        assert cache.get(f"caretakers_user_{owner.id}") is None
+        response = api_client_other.post(f"/properties/caretakers/{ct.id}/deactivate/")
+        assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Tests for history action
+# ---------------------------------------------------------------------------
+
+
+class TestCaretakerHistory:
+    def test_history_returns_records(self, api_client_owner, unit):
+        ct = Caretaker.objects.create(
+            unit=unit, name="CT1", phone="+911111111111", joining_date="2025-01-01"
+        )
+        response = api_client_owner.get(f"/properties/caretakers/{ct.id}/history/")
+        assert response.status_code == 200
+        assert len(response.data) >= 1
+        assert response.data[0]["action"] == "+"
+
+    def test_history_other_user_returns_404(self, api_client_other, owner, unit):
+        ct = Caretaker.objects.create(
+            unit=unit, name="CT1", phone="+911111111111", joining_date="2025-01-01"
+        )
+        response = api_client_other.get(f"/properties/caretakers/{ct.id}/history/")
+        assert response.status_code == 404
 
 
 # ---------------------------------------------------------------------------
