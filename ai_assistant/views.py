@@ -1,259 +1,216 @@
-# ruff: noqa: I001
-# mypy: ignore-errors
-
 from __future__ import annotations
 
-import hashlib
-import hmac
-import json
-from datetime import date, timedelta
+import logging
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response
 
-from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
-from django.db.models import Sum
-from django.db.models.functions import TruncMonth
-from django.http import HttpRequest, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.utils import timezone
 
-from ai_assistant.services.finance_ai import analyze_financial_health
-from core.models import UserProfile
-from notification.services.whatsapp_service import send_whatsapp_message
-from properties.models import PropertyTaxRecord, Renter, RentRecord
-from smartbot.services.chatbot_service import handle_chat_message
+from ai_assistant.models import Conversation, Message
+from ai_assistant.serializers import (
+    ConversationDetailSerializer,
+    ConversationSerializer,
+)
+from ai_assistant.services.chat_service import generate_ai_response
+from properties.feature_enforcer import FeatureEnforcer
+
+logger = logging.getLogger(__name__)
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def ai_assistant_insights(request: DRFRequest) -> Response:
-    if isinstance(request.user, AnonymousUser):
-        return Response({"error": "Unauthorized"}, status=401)
-    owner = request.user
-    today = date.today()
+def _check_ai_access(user) -> tuple[Response | None, FeatureEnforcer | None]:
+    if isinstance(user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401), None
 
-    paid_rents = RentRecord.objects.filter(
-        renter__unit__owner=owner,
-        status=RentRecord.Status.PAID,
-        due_date__month=today.month,
-        due_date__year=today.year,
-    )
+    enforcer = FeatureEnforcer(user)
 
-    late_rents = RentRecord.objects.filter(
-        renter__unit__owner=owner,
-        due_date__lt=today,
-        payout_status="PENDING",
-    )
-
-    payouts = RentRecord.objects.filter(renter__unit__owner=owner)
-    success = payouts.filter(payout_status="SUCCESS").count()
-    failed = payouts.filter(payout_status="FAILED").count()
-
-    no_agreement = Renter.objects.filter(
-        unit__owner=owner,
-        rent_agreement="",
-        status__in=["active", "notice_period"],
-    )
-
-    no_police = Renter.objects.filter(
-        unit__owner=owner,
-        policeverification__isnull=True,
-        status__in=["active", "notice_period"],
-    )
-
-    upcoming_tax = PropertyTaxRecord.objects.filter(
-        property__owner=owner,
-        paid_date__isnull=True,
-    ).order_by("due_date")[:5]
-
-    return Response(
-        {
-            "total_rent_this_month": sum(r.amount for r in paid_rents),
-            "late_rent_count": late_rents.count(),
-            "payout_success_rate": f"{success} success / {failed} failed",
-            "missing_agreements": no_agreement.count(),
-            "missing_police_verifications": no_police.count(),
-            "upcoming_tax_dues": [
+    if not enforcer.can_create("ai_chat_messages"):
+        return (
+            Response(
                 {
-                    "property": tax.unit.name if hasattr(tax, "unit") else "",
-                    "due": getattr(tax, "rent_due_date", None)
-                    or getattr(tax, "due_date", None),
-                    "amount": tax.amount,
-                }
-                for tax in upcoming_tax
-            ],
-        }
-    )
+                    "error": "rate_limit_exceeded",
+                    "message": (
+                        "You have reached your monthly AI limit. "
+                        "Please upgrade your plan."
+                    ),
+                },
+                status=429,
+            ),
+            None,
+        )
 
-
-# <Card title="📊 Smart Insights">
-#   <Text>Total Rent This Month: ₹{data.total_rent_this_month}</Text>
-#   <Text>Late Payments: {data.late_rent_count}</Text>
-#   <Text>Payouts: {data.payout_success_rate}</Text>
-#   <Text>Missing Agreements: {data.missing_agreements}</Text>
-#   <Text>Police Verification Pending: {data.missing_police_verifications}</Text>
-# </Card>
-
-
-# dashboard/api.py
+    return None, enforcer
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def rent_analytics_data(request: DRFRequest) -> Response:
+def suggested_questions(request: DRFRequest) -> Response:
     if isinstance(request.user, AnonymousUser):
         return Response({"error": "Unauthorized"}, status=401)
-    owner = request.user
 
-    # Last 6 months
-    today = date.today()
-    start_date = today.replace(day=1) - timedelta(days=180)
+    questions = [
+        "How much rent is pending this month?",
+        "Which renters have overdue rent?",
+        "Which units are vacant?",
+        "How much rent was collected this month?",
+        "Which agreements are expiring soon?",
+        "Which maintenance requests are still open?",
+        "How many active renters do I have?",
+        "What is my payout status?",
+        "Show me my subscription details.",
+        "What is my next rent due?",
+    ]
 
-    monthly_rent = (
-        RentRecord.objects.filter(renter__unit__owner=owner, created_at__gte=start_date)
-        .annotate(month=TruncMonth("created_at"))
-        .values("month")
-        .annotate(total=Sum("amount"))
-        .order_by("month")
-    )
+    try:
+        _ = request.user.renter_profile
+        questions.extend(
+            [
+                "What is my next rent due?",
+                "Show my payment history.",
+                "Show my agreement status.",
+            ]
+        )
+    except Exception:
+        logger.debug("User has no renter profile", exc_info=True)
 
-    this_month = today.month
-    this_year = today.year
-
-    paid = (
-        RentRecord.objects.filter(
-            renter__unit__owner=owner,
-            due_date__month=this_month,
-            due_date__year=this_year,
-            status=RentRecord.Status.PAID,
-        ).aggregate(total=Sum("amount"))["total"]
-        or 0
-    )
-
-    unpaid = (
-        RentRecord.objects.filter(
-            renter__unit__owner=owner,
-            due_date__month=this_month,
-            due_date__year=this_year,
-            status=RentRecord.Status.PENDING,
-        ).aggregate(total=Sum("amount"))["total"]
-        or 0
-    )
-
-    return Response(
-        {"monthly_rent": list(monthly_rent), "paid": paid, "unpaid": unpaid}
-    )
-
-
-# npx expo install react-native-svg
-# npm install victory-native
-
-# import { VictoryBar, VictoryPie, VictoryLine } from 'victory-native';
-
-# // Monthly Bar Chart
-# <VictoryBar
-#   data={monthlyRent.map(item => ({
-#     x: item.month.slice(0, 7),
-#     y: item.total
-#   }))}
-#   style={{ data: { fill: "#4CAF50" } }}
-# />
-
-# // Paid vs Unpaid Pie Chart
-# <VictoryPie
-#   data={[
-#     { x: "Paid", y: paid },
-#     { x: "Unpaid", y: unpaid }
-#   ]}
-#   colorScale={["#4CAF50", "#FF5722"]}
-# />
-
-
-# views.py
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def financial_health_report(request: DRFRequest) -> Response:
-    if isinstance(request.user, AnonymousUser):
-        return Response({"error": "Unauthorized"}, status=401)
-    user = request.user
-
-    rent_records = RentRecord.objects.filter(renter__user=user)
-    tax_records = PropertyTaxRecord.objects.filter(property__owner=user)
-
-    analysis = analyze_financial_health(list(rent_records), list(tax_records))
-    return Response(analysis)
-
-
-# views.py
+    return Response({"questions": questions})
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def chat_with_assistant(request: DRFRequest) -> Response:
-    query = request.data.get("message", "")
-    response = handle_chat_message(user=request.user, message=query)
-    return Response({"reply": response})
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
 
+    error_response, enforcer = _check_ai_access(request.user)
+    if error_response is not None:
+        return error_response
 
-# // Simple chat interface
-# <FlatList
-#   data={messages}
-#   renderItem={({ item }) => (
-#     <Text style={{ alignSelf: item.sender === 'user' ? 'flex-end' : 'flex-start' }}>
-#       {item.text}
-# //     </Text>
-# //   )}
-# />
-# <TextInput
-#   value={input}
-# //   onChangeText={setInput}
-# //   onSubmitEditing={sendMessage}
-# // />
+    message_text = (request.data.get("message") or "").strip()
+    if not message_text:
+        return Response({"error": "Message is required."}, status=400)
 
+    conversation_id = request.data.get("conversation_id")
+    conversation = None
+    if conversation_id:
+        try:
+            conversation = Conversation.objects.get(
+                id=conversation_id, user=request.user
+            )
+        except Conversation.DoesNotExist:
+            return Response({"error": "Conversation not found."}, status=404)
 
-# Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
-# from WhatsApp/Meta webhook delivery. Those callers do not have browser
-# sessions and therefore cannot supply a CSRF token.
-# Security: WhatsApp webhook signature is verified below for authenticated delivery.
-def _verify_whatsapp_signature(request: HttpRequest) -> JsonResponse | None:
-    signature = request.headers.get("X-Hub-Signature-256")
-    webhook_secret = getattr(settings, "WHATSAPP_WEBHOOK_SECRET", None)
-    if webhook_secret and signature:
-        expected = (
-            "sha256="
-            + hmac.new(
-                webhook_secret.encode("utf-8"), request.body, hashlib.sha256
-            ).hexdigest()
+    if conversation is None:
+        conversation = Conversation.objects.create(
+            user=request.user,
+            title=message_text[:50],
         )
-        if not hmac.compare_digest(expected, signature):
-            return JsonResponse({"error": "Invalid signature!"}, status=400)
-    elif webhook_secret and not signature:
-        return JsonResponse({"error": "Missing signature!"}, status=400)
-    return None
 
+    Message.objects.create(
+        conversation=conversation,
+        role=Message.Role.USER,
+        content=message_text,
+    )
 
-@csrf_exempt
-@require_POST
-def whatsapp_webhook(request: HttpRequest) -> JsonResponse:
-    signature_error = _verify_whatsapp_signature(request)
-    if signature_error is not None:
-        return signature_error
-
-    payload = json.loads(request.body)
-    phone = payload.get("from")
-    message = payload.get("text")
+    history = list(
+        conversation.messages.order_by("timestamp").values("role", "content")[:20]
+    )
 
     try:
-        user = UserProfile.objects.get(whatsapp_number=phone)
-    except UserProfile.DoesNotExist:
-        return JsonResponse({"message": "User not found"}, status=404)
+        result = generate_ai_response(request.user, message_text, history)
+    except Exception:
+        logger.exception("AI response generation failed")
+        assistant_message = Message.objects.create(
+            conversation=conversation,
+            role=Message.Role.ASSISTANT,
+            content="I couldn't process your request. Please try again.",
+            is_error=True,
+            error_code="provider_failure",
+        )
+        enforcer.increment("ai_chat_messages")
+        conversation.updated_at = timezone.now()
+        conversation.save(update_fields=["updated_at"])
+        return Response(
+            {
+                "conversation_id": str(conversation.id),
+                "response": {
+                    "response": assistant_message.content,
+                    "tools_used": [],
+                    "data": {},
+                    "sources": [],
+                    "timestamp": assistant_message.timestamp.isoformat(),
+                    "is_error": True,
+                    "error_code": "provider_failure",
+                },
+            },
+            status=200,
+        )
 
-    reply = handle_chat_message(user, message)
-    send_whatsapp_message(phone, reply)
-    return JsonResponse({"message": "OK"})
+    assistant_message = Message.objects.create(
+        conversation=conversation,
+        role=Message.Role.ASSISTANT,
+        content=result["response"],
+        tools_used=result.get("tools_used", []),
+        data=result.get("data", {}),
+        sources=result.get("sources", []),
+    )
+
+    enforcer.increment("ai_chat_messages")
+    conversation.updated_at = timezone.now()
+    conversation.save(update_fields=["updated_at"])
+
+    return Response(
+        {
+            "conversation_id": str(conversation.id),
+            "response": {
+                "response": result["response"],
+                "tools_used": result.get("tools_used", []),
+                "data": result.get("data", {}),
+                "sources": result.get("sources", []),
+                "timestamp": assistant_message.timestamp.isoformat(),
+                "is_error": False,
+                "error_code": None,
+            },
+        }
+    )
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def conversations(request: DRFRequest) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
+
+    if request.method == "POST":
+        title = (request.data.get("title") or "").strip()
+        conversation = Conversation.objects.create(user=request.user, title=title[:255])
+        serializer = ConversationSerializer(conversation)
+        return Response(serializer.data, status=201)
+
+    conversations_qs = Conversation.objects.filter(user=request.user).order_by(
+        "-updated_at"
+    )
+    serializer = ConversationSerializer(conversations_qs, many=True)
+    return Response({"conversations": serializer.data})
+
+
+@api_view(["GET", "DELETE"])
+@permission_classes([IsAuthenticated])
+def conversation_detail(request: DRFRequest, pk: str) -> Response:
+    if isinstance(request.user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=401)
+
+    try:
+        conversation = Conversation.objects.get(id=pk, user=request.user)
+    except Conversation.DoesNotExist:
+        return Response({"error": "Conversation not found."}, status=404)
+
+    if request.method == "DELETE":
+        conversation.delete()
+        return Response(status=204)
+
+    serializer = ConversationDetailSerializer(conversation)
+    return Response(serializer.data)

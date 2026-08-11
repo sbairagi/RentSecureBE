@@ -258,6 +258,7 @@ INSTALLED_APPS = [
     "referral_and_earn",
     "documents",
     "smartbot",
+    "ai_assistant",
     "visitors",
     "search",
     "django_extensions",
@@ -371,6 +372,9 @@ REST_FRAMEWORK = {
         "core.infrastructure.exceptions.exception_handler.exception_handler"
     ),
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    "DEFAULT_THROTTLE_RATES": {
+        "ai_chat": "30/min",
+    },
 }
 
 CACHES = {

@@ -28,6 +28,7 @@ urlpatterns: list[object] = [
     path("api/notifications/", include("notification.urls")),
     path("api/finance/", include("finance.urls")),
     path("api/search/", include("search.urls")),
+    path("api/ai-assistant/", include("ai_assistant.urls")),
     path("properties/", include("properties.urls")),
     path("documents/", include("documents.urls")),
 ]

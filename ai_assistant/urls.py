@@ -1,7 +1,21 @@
-# urls.py
-
 from django.urls import path
 
-from .views import whatsapp_webhook
+from .views import (
+    chat_with_assistant,
+    conversation_detail,
+    conversations,
+    suggested_questions,
+)
 
-urlpatterns = [path("webhooks/whatsapp/", whatsapp_webhook, name="whatsapp_webhook")]
+app_name = "ai_assistant"
+
+urlpatterns = [
+    path("chat/", chat_with_assistant, name="chat"),
+    path("suggested-questions/", suggested_questions, name="suggested-questions"),
+    path("conversations/", conversations, name="conversations"),
+    path(
+        "conversations/<uuid:pk>/",
+        conversation_detail,
+        name="conversation-detail",
+    ),
+]
