@@ -420,3 +420,48 @@ class DeleteAccountTest(TestCase):
             content_type="application/json",
         )
         self.assertNotEqual(response.status_code, 200)
+
+
+class ProfileViewTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="profile_user",
+            email="pu@test.com",
+            password="testpass123",
+            full_name="Profile User",
+            phone="+919999999999",
+        )
+        refresh = RefreshToken.for_user(self.user)
+        self.access_token = str(refresh.access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+
+    def test_get_profile_returns_user_data(self):
+        response = self.client.get(f"{API_PREFIX}/auth/profile/")
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self.assertIn("user", data)
+        user_data = data["user"]
+        self.assertEqual(user_data["email"], "pu@test.com")
+        self.assertEqual(user_data["full_name"], "Profile User")
+        self.assertEqual(user_data["phone"], "+919999999999")
+        self.assertEqual(user_data["role"], "user")
+
+    def test_update_profile_partial(self):
+        response = self.client.put(
+            f"{API_PREFIX}/auth/profile/",
+            {"full_name": "Updated Name", "phone": "+919876543210"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self.assertEqual(data["user"]["full_name"], "Updated Name")
+        self.assertEqual(data["user"]["phone"], "+919876543210")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.full_name, "Updated Name")
+        self.assertEqual(self.user.phone, "+919876543210")
+
+    def test_get_profile_requires_auth(self):
+        self.client.credentials()
+        response = self.client.get(f"{API_PREFIX}/auth/profile/")
+        self.assertEqual(response.status_code, 401)

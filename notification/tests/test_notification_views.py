@@ -8,6 +8,7 @@ from notification.models import DeviceToken, Notification
 from notification.views import (
     get_notifications,
     mark_notification_read,
+    notification_preferences,
     register_fcm_token,
     save_device_token,
 )
@@ -124,5 +125,38 @@ class NotificationViewTests(TestCase):
     def test_register_fcm_token_anonymous_returns_401(self):
         response = register_fcm_token(
             _anon_request(method="POST", data={"token": "t", "type": "android"}),
+        )
+        self.assertEqual(response.status_code, 401)
+
+
+class NotificationPreferencesTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="notif_pref_user",
+            email="np@test.com",
+            password="p",
+            full_name="Notif Pref",
+            phone="+1",
+        )
+
+    def test_get_preferences_returns_merged_data(self):
+        response = notification_preferences(_jwt_request(self.user))
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self.assertIn("push_enabled", data)
+        self.assertIn("receive_rent_alerts", data)
+        self.assertIn("language_preference", data)
+
+    def test_update_preferences_partial(self):
+        response = notification_preferences(
+            _jwt_request(self.user, method="POST", data={"push_enabled": False}),
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self.assertFalse(data["push_enabled"])
+
+    def test_update_preferences_requires_auth(self):
+        response = notification_preferences(
+            _anon_request(method="POST", data={"push_enabled": False}),
         )
         self.assertEqual(response.status_code, 401)
