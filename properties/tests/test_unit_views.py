@@ -4060,3 +4060,255 @@ class UnitOccupancyStatsTests(TestCase):
         self.assertEqual(data["total"], 1)
         self.assertEqual(data["occupied"], 1)
         self.assertEqual(data["vacant"], 0)
+
+
+class TestUnitSearchFilterOrdering(TestCase):
+    """Tests for unit list search, filter, and ordering."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.owner = User.objects.create_user(
+            username="unit_sfo_owner",
+            password="p",
+            full_name="UnitSFOwner",
+            phone="+1",
+        )
+        cls.plan = SubscriptionPlan.objects.create(
+            name="unit_sfo_pro",
+            monthly_price=Decimal("29.99"),
+            yearly_price=Decimal("299.99"),
+        )
+        UserSubscription.objects.create(user=cls.owner, plan=cls.plan, is_active=True)
+        cls.building = Building.objects.create(
+            owner=cls.owner,
+            name="UnitSFOBuilding",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        token = RefreshToken.for_user(self.owner).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    def test_search_by_unit_number(self):
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="101",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+            status=Unit.VacancyStatus.OCCUPIED,
+        )
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="202",
+            unit_type="flat",
+            address_line="2 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+            status=Unit.VacancyStatus.VACANT,
+        )
+        response = self.client.get("/api/units/", {"search": "101"})
+        self.assertEqual(response.status_code, 200)
+        units = (
+            response.data
+            if isinstance(response.data, list)
+            else response.data.get("results", [])
+        )
+        unit_numbers = [u["unit"] for u in units]
+        self.assertIn("101", unit_numbers)
+        self.assertNotIn("202", unit_numbers)
+
+    def test_search_by_city(self):
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="101",
+            unit_type="flat",
+            address_line="1 St",
+            city="Mumbai",
+            state="S",
+            country="CO",
+            postal_code="1",
+            status=Unit.VacancyStatus.OCCUPIED,
+        )
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="202",
+            unit_type="flat",
+            address_line="2 St",
+            city="Delhi",
+            state="S",
+            country="CO",
+            postal_code="2",
+            status=Unit.VacancyStatus.VACANT,
+        )
+        response = self.client.get("/api/units/", {"search": "Mumbai"})
+        self.assertEqual(response.status_code, 200)
+        units = (
+            response.data
+            if isinstance(response.data, list)
+            else response.data.get("results", [])
+        )
+        unit_numbers = [u["unit"] for u in units]
+        self.assertIn("101", unit_numbers)
+        self.assertNotIn("202", unit_numbers)
+
+    def test_filter_by_status(self):
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="101",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+            status=Unit.VacancyStatus.OCCUPIED,
+        )
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="202",
+            unit_type="flat",
+            address_line="2 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+            status=Unit.VacancyStatus.VACANT,
+        )
+        response = self.client.get("/api/units/", {"status": "occupied"})
+        self.assertEqual(response.status_code, 200)
+        units = (
+            response.data
+            if isinstance(response.data, list)
+            else response.data.get("results", [])
+        )
+        unit_numbers = [u["unit"] for u in units]
+        self.assertIn("101", unit_numbers)
+        self.assertNotIn("202", unit_numbers)
+
+    def test_filter_by_unit_type(self):
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="101",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+            status=Unit.VacancyStatus.OCCUPIED,
+        )
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="202",
+            unit_type="commercial_shop",
+            address_line="2 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+            status=Unit.VacancyStatus.VACANT,
+        )
+        response = self.client.get("/api/units/", {"unit_type": "flat"})
+        self.assertEqual(response.status_code, 200)
+        units = (
+            response.data
+            if isinstance(response.data, list)
+            else response.data.get("results", [])
+        )
+        unit_numbers = [u["unit"] for u in units]
+        self.assertIn("101", unit_numbers)
+        self.assertNotIn("202", unit_numbers)
+
+    def test_ordering_by_unit(self):
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="Zebra",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+            status=Unit.VacancyStatus.OCCUPIED,
+        )
+        Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
+            unit="Alpha",
+            unit_type="flat",
+            address_line="2 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+            status=Unit.VacancyStatus.VACANT,
+        )
+        response = self.client.get("/api/units/", {"ordering": "unit"})
+        self.assertEqual(response.status_code, 200)
+        units = (
+            response.data
+            if isinstance(response.data, list)
+            else response.data.get("results", [])
+        )
+        unit_numbers = [u["unit"] for u in units]
+        self.assertEqual(unit_numbers[0], "Alpha")
+        self.assertEqual(unit_numbers[1], "Zebra")
+
+    def test_cross_owner_isolation(self):
+        other_owner = User.objects.create_user(
+            username="unit_other",
+            password="p",
+            full_name="Other",
+            phone="+2",
+        )
+        other_building = Building.objects.create(
+            owner=other_owner,
+            name="OtherBuilding",
+            address_line="3 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="3",
+        )
+        Unit.objects.create(
+            owner=other_owner,
+            building=other_building,
+            unit="OB1",
+            unit_type="flat",
+            address_line="3 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="3",
+            status=Unit.VacancyStatus.OCCUPIED,
+        )
+        response = self.client.get("/api/units/", {"search": "OB1"})
+        self.assertEqual(response.status_code, 200)
+        units = (
+            response.data
+            if isinstance(response.data, list)
+            else response.data.get("results", [])
+        )
+        self.assertEqual(len(units), 0)

@@ -9,6 +9,7 @@ from rest_framework.test import APIClient, APIRequestFactory, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 
 from core.models import PlanFeatureLimit, SubscriptionPlan, UserSubscription
 from properties.models import Building
@@ -265,3 +266,149 @@ class TestBuildingViewSetPerformDestroyDenied(APITestCase):
         with pytest.raises(PermissionDenied) as exc_info:
             view.perform_destroy(target)
         assert "permission" in str(exc_info.value).lower()
+
+
+class TestBuildingSearchFilterOrdering(APITestCase):
+    """Tests for building list search, filter, and ordering."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.owner = User.objects.create_user(
+            username="bld_sfo_owner",
+            password="p",
+            full_name="BldSFOwner",
+            phone="+1",
+        )
+        cls.plan = SubscriptionPlan.objects.create(
+            name="bld_sfo_pro",
+            monthly_price=Decimal("29.99"),
+            yearly_price=Decimal("299.99"),
+        )
+        UserSubscription.objects.create(user=cls.owner, plan=cls.plan, is_active=True)
+
+    def setUp(self):
+        cache.clear()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(self.owner).access_token}"
+        )
+
+    def test_search_by_name(self):
+        Building.objects.create(
+            owner=self.owner,
+            name="Sunshine Complex",
+            address_line="123 Main St",
+            city="Mumbai",
+            state="Maharashtra",
+            country="India",
+            postal_code="400001",
+        )
+        Building.objects.create(
+            owner=self.owner,
+            name="Green Valley",
+            address_line="456 Oak Ave",
+            city="Delhi",
+            state="Delhi",
+            country="India",
+            postal_code="110001",
+        )
+        response = self.client.get("/api/buildings/", {"search": "Sunshine"})
+        self.assertEqual(response.status_code, 200)
+        names = [b["name"] for b in response.data]
+        self.assertIn("Sunshine Complex", names)
+        self.assertNotIn("Green Valley", names)
+
+    def test_search_by_city(self):
+        Building.objects.create(
+            owner=self.owner,
+            name="Building A",
+            address_line="123 Main St",
+            city="Mumbai",
+            state="Maharashtra",
+            country="India",
+            postal_code="400001",
+        )
+        Building.objects.create(
+            owner=self.owner,
+            name="Building B",
+            address_line="456 Oak Ave",
+            city="Delhi",
+            state="Delhi",
+            country="India",
+            postal_code="110001",
+        )
+        response = self.client.get("/api/buildings/", {"search": "Mumbai"})
+        self.assertEqual(response.status_code, 200)
+        names = [b["name"] for b in response.data]
+        self.assertIn("Building A", names)
+        self.assertNotIn("Building B", names)
+
+    def test_filter_by_city(self):
+        Building.objects.create(
+            owner=self.owner,
+            name="Building A",
+            address_line="123 Main St",
+            city="Mumbai",
+            state="Maharashtra",
+            country="India",
+            postal_code="400001",
+        )
+        Building.objects.create(
+            owner=self.owner,
+            name="Building B",
+            address_line="456 Oak Ave",
+            city="Delhi",
+            state="Delhi",
+            country="India",
+            postal_code="110001",
+        )
+        response = self.client.get("/api/buildings/", {"city": "Mumbai"})
+        self.assertEqual(response.status_code, 200)
+        names = [b["name"] for b in response.data]
+        self.assertIn("Building A", names)
+        self.assertNotIn("Building B", names)
+
+    def test_ordering_by_name(self):
+        Building.objects.create(
+            owner=self.owner,
+            name="Zebra Building",
+            address_line="123 Main St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        Building.objects.create(
+            owner=self.owner,
+            name="Alpha Building",
+            address_line="456 Oak Ave",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+        )
+        response = self.client.get("/api/buildings/", {"ordering": "name"})
+        self.assertEqual(response.status_code, 200)
+        names = [b["name"] for b in response.data]
+        self.assertEqual(names[0], "Alpha Building")
+        self.assertEqual(names[1], "Zebra Building")
+
+    def test_cross_owner_isolation(self):
+        other_owner = User.objects.create_user(
+            username="bld_other",
+            password="p",
+            full_name="Other",
+            phone="+2",
+        )
+        Building.objects.create(
+            owner=other_owner,
+            name="Other Building",
+            address_line="789 Pine St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="3",
+        )
+        response = self.client.get("/api/buildings/", {"search": "Other Building"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)

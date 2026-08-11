@@ -13,7 +13,7 @@ from rest_framework.serializers import BaseSerializer
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -44,34 +44,64 @@ logger = logging.getLogger(__name__)
 class RenterViewSet(viewsets.ModelViewSet[Renter]):
     """CRUD for renters owned by the authenticated user.
 
-    Uses a per-user cache (5 minute TTL) for list views to reduce
-    database pressure on the dashboard.
+    Supports search, filtering, and ordering via query parameters:
+      - search: icontains across name, phone, email
+      - status: exact match on status
+      - building: filter by unit__building_id
+      - unit: filter by unit_id
+      - ordering: field ordering (default: -start_date)
     """
 
     permission_classes: list[type[IsAuthenticated]] = [IsAuthenticated]
     serializer_class = RenterSerializer
-    search_fields = ["name", "phone", "email"]
-    ordering_fields = [
-        "name",
-        "rent_amount",
-        "start_date",
-        "status",
-        "-start_date",
-        "-created_at",
-    ]
-    ordering = ["-start_date"]
 
     @override
     def get_queryset(self) -> QuerySet[Renter]:
-        """Return all renters owned by the user."""
+        """Return filtered, ordered renters owned by the user."""
         if isinstance(self.request.user, AnonymousUser):
             return Renter.objects.none()
         user = self.request.user
-        cache_key: str = f"renters_user_{user.id}"
-        renters: QuerySet[Renter] | None = cache.get(cache_key)
-        if renters is None:
+
+        has_filters = any(
+            self.request.GET.get(param)
+            for param in ("search", "status", "building", "unit", "ordering")
+        )
+
+        if has_filters:
             renters = Renter.objects.filter(unit__owner=user)
-            cache.set(cache_key, renters, timeout=300)
+        else:
+            cache_key: str = f"renters_user_{user.id}"
+            renters = cache.get(cache_key)
+            if renters is None:
+                renters = Renter.objects.filter(unit__owner=user)
+                cache.set(cache_key, renters, timeout=300)
+
+        search = self.request.GET.get("search")
+        if search:
+            renters = renters.filter(
+                Q(name__icontains=search)
+                | Q(phone__icontains=search)
+                | Q(email__icontains=search)
+            )
+
+        status_param = self.request.GET.get("status")
+        if status_param:
+            renters = renters.filter(status=status_param)
+
+        building_param = self.request.GET.get("building")
+        if building_param:
+            renters = renters.filter(unit__building_id=building_param)
+
+        unit_param = self.request.GET.get("unit")
+        if unit_param:
+            renters = renters.filter(unit_id=unit_param)
+
+        ordering = self.request.GET.get("ordering")
+        if ordering:
+            renters = renters.order_by(ordering)
+        else:
+            renters = renters.order_by("-start_date")
+
         return renters
 
     @override

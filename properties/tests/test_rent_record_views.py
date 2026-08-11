@@ -5,10 +5,13 @@ from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.test import TestCase
+from django.utils import timezone
 
 from conftest import (
     BuildingFactory,
@@ -21,7 +24,8 @@ from conftest import (
     UserFactory,
     UserSubscriptionFactory,
 )
-from properties.models import RentRecord
+from core.models import SubscriptionPlan, UserSubscription
+from properties.models import Building, Renter, RentRecord, Unit
 
 User = get_user_model()
 
@@ -772,3 +776,223 @@ class TestRenterRentRecordsAPI:
         c = _make_client(owner)
         response = c.get(f"/properties/renter/rent-records/{other_rent.id}/")
         assert response.status_code == 404
+
+
+class TestRentRecordSearchFilterOrdering(TestCase):
+    """Tests for rent record list search, filter, and ordering."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.owner = User.objects.create_user(
+            username="rr_sfo_owner",
+            password="p",
+            full_name="RRSFOwner",
+            phone="+1",
+        )
+        cls.plan = SubscriptionPlan.objects.create(
+            name="rr_sfo_pro",
+            monthly_price=Decimal("29.99"),
+            yearly_price=Decimal("299.99"),
+        )
+        UserSubscription.objects.create(user=cls.owner, plan=cls.plan, is_active=True)
+        cls.building = Building.objects.create(
+            owner=cls.owner,
+            name="RRBuilding",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        cls.unit = Unit.objects.create(
+            owner=cls.owner,
+            building=cls.building,
+            unit="RR1",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+            status=Unit.VacancyStatus.OCCUPIED,
+        )
+
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        token = RefreshToken.for_user(self.owner).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    def test_search_by_renter_name(self):
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="Alice Rent",
+            phone="+911111111111",
+            email="alice@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        RentRecord.objects.create(
+            unit=self.unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="online",
+            status=RentRecord.Status.PAID,
+            due_date=timezone.now().date(),
+        )
+        renter2 = Renter.objects.create(
+            unit=self.unit,
+            name="Bob Rent",
+            phone="+922222222222",
+            email="bob@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        RentRecord.objects.create(
+            unit=self.unit,
+            renter=renter2,
+            amount=Decimal("10000"),
+            payment_method="online",
+            status=RentRecord.Status.PAID,
+            due_date=timezone.now().date(),
+        )
+        response = self.client.get("/rent-records/", {"search": "Alice"})
+        self.assertEqual(response.status_code, 200)
+        records = (
+            response.data
+            if isinstance(response.data, list)
+            else response.data.get("results", [])
+        )
+        renter_names = [r["renter"]["name"] for r in records if "renter" in r]
+        self.assertIn("Alice Rent", renter_names)
+        self.assertNotIn("Bob Rent", renter_names)
+
+    def test_filter_by_status(self):
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="StatusRenter",
+            phone="+911111111111",
+            email="status@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        RentRecord.objects.create(
+            unit=self.unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="online",
+            status=RentRecord.Status.PAID,
+            due_date=timezone.now().date(),
+        )
+        RentRecord.objects.create(
+            unit=self.unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="online",
+            status=RentRecord.Status.PENDING,
+            due_date=timezone.now().date(),
+        )
+        response = self.client.get("/rent-records/", {"status": "PAID"})
+        self.assertEqual(response.status_code, 200)
+        records = (
+            response.data
+            if isinstance(response.data, list)
+            else response.data.get("results", [])
+        )
+        statuses = [r["status"] for r in records]
+        self.assertIn("PAID", statuses)
+        self.assertNotIn("PENDING", statuses)
+
+    def test_ordering_by_due_date(self):
+        renter = Renter.objects.create(
+            unit=self.unit,
+            name="OrderRenter",
+            phone="+911111111111",
+            email="order@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        RentRecord.objects.create(
+            unit=self.unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="online",
+            status=RentRecord.Status.PENDING,
+            due_date=date(2024, 5, 1),
+        )
+        RentRecord.objects.create(
+            unit=self.unit,
+            renter=renter,
+            amount=Decimal("10000"),
+            payment_method="online",
+            status=RentRecord.Status.PENDING,
+            due_date=date(2024, 4, 1),
+        )
+        response = self.client.get("/rent-records/", {"ordering": "due_date"})
+        self.assertEqual(response.status_code, 200)
+        records = (
+            response.data
+            if isinstance(response.data, list)
+            else response.data.get("results", [])
+        )
+        self.assertEqual(records[0]["due_date"], "2024-04-01")
+        self.assertEqual(records[1]["due_date"], "2024-05-01")
+
+    def test_cross_owner_isolation(self):
+        other_owner = User.objects.create_user(
+            username="rr_other",
+            password="p",
+            full_name="Other",
+            phone="+2",
+        )
+        other_building = Building.objects.create(
+            owner=other_owner,
+            name="OtherBuilding",
+            address_line="2 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+        )
+        other_unit = Unit.objects.create(
+            owner=other_owner,
+            building=other_building,
+            unit="OB1",
+            unit_type="flat",
+            address_line="2 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+            status=Unit.VacancyStatus.OCCUPIED,
+        )
+        other_renter = Renter.objects.create(
+            unit=other_unit,
+            name="OtherRenter",
+            phone="+922222222222",
+            email="other@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        RentRecord.objects.create(
+            unit=other_unit,
+            renter=other_renter,
+            amount=Decimal("10000"),
+            payment_method="online",
+            status=RentRecord.Status.PAID,
+            due_date=timezone.now().date(),
+        )
+        response = self.client.get("/rent-records/", {"search": "OtherRenter"})
+        self.assertEqual(response.status_code, 200)
+        records = (
+            response.data
+            if isinstance(response.data, list)
+            else response.data.get("results", [])
+        )
+        self.assertEqual(len(records), 0)

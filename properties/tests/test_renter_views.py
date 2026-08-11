@@ -1221,3 +1221,272 @@ class RenterViewSetNoticePeriodTests(TestCase):
         self.assertEqual(response.status_code, 200)
         names = [r["name"] for r in response.data]
         self.assertIn("RevokedRenter", names)
+
+
+class TestRenterSearchFilterOrdering:
+    """Tests for renter list search, filter, and ordering."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.owner = User.objects.create_user(
+            username="renter_sfo_owner",
+            password="p",
+            full_name="RenterSFOwner",
+            phone="+1",
+        )
+        cls.plan = SubscriptionPlan.objects.create(
+            name="renter_sfo_pro",
+            monthly_price=Decimal("29.99"),
+            yearly_price=Decimal("299.99"),
+        )
+        UserSubscription.objects.create(user=cls.owner, plan=cls.plan, is_active=True)
+        cls.building = Building.objects.create(
+            owner=cls.owner,
+            name="RenterSFOBuilding",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+        cls.unit = Unit.objects.create(
+            owner=cls.owner,
+            building=cls.building,
+            unit="RSFOU1",
+            unit_type="flat",
+            address_line="1 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="1",
+        )
+
+    def setUp(self):
+        cache.clear()
+        self._c = APIClient()
+        token = RefreshToken.for_user(self.owner).access_token
+        self._c.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    def test_search_by_name(self):
+        Renter.objects.create(
+            unit=self.unit,
+            name="Alice Search",
+            phone="+911111111111",
+            email="alice@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        Renter.objects.create(
+            unit=self.unit,
+            name="Bob Search",
+            phone="+922222222222",
+            email="bob@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        response = self._c.get("/properties/renters/", {"search": "Alice"})
+        self.assertEqual(response.status_code, 200)
+        names = [r["name"] for r in response.data]
+        self.assertIn("Alice Search", names)
+        self.assertNotIn("Bob Search", names)
+
+    def test_search_by_phone(self):
+        Renter.objects.create(
+            unit=self.unit,
+            name="PhoneRenter",
+            phone="+911111111111",
+            email="phone@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        response = self._c.get("/properties/renters/", {"search": "111111"})
+        self.assertEqual(response.status_code, 200)
+        names = [r["name"] for r in response.data]
+        self.assertIn("PhoneRenter", names)
+
+    def test_search_by_email(self):
+        Renter.objects.create(
+            unit=self.unit,
+            name="EmailRenter",
+            phone="+911111111112",
+            email="email_search@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        response = self._c.get("/properties/renters/", {"search": "email_search"})
+        self.assertEqual(response.status_code, 200)
+        names = [r["name"] for r in response.data]
+        self.assertIn("EmailRenter", names)
+
+    def test_filter_by_status(self):
+        Renter.objects.create(
+            unit=self.unit,
+            name="ActiveRenter",
+            phone="+911111111111",
+            email="active@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        Renter.objects.create(
+            unit=self.unit,
+            name="NoticeRenter",
+            phone="+922222222222",
+            email="notice@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="notice_period",
+        )
+        response = self._c.get("/properties/renters/", {"status": "active"})
+        self.assertEqual(response.status_code, 200)
+        names = [r["name"] for r in response.data]
+        self.assertIn("ActiveRenter", names)
+        self.assertNotIn("NoticeRenter", names)
+
+    def test_filter_by_building(self):
+        other_owner = User.objects.create_user(
+            username="renter_sfo_other",
+            password="p",
+            full_name="Other",
+            phone="+2",
+        )
+        other_building = Building.objects.create(
+            owner=other_owner,
+            name="OtherBuilding",
+            address_line="2 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+        )
+        other_unit = Unit.objects.create(
+            owner=other_owner,
+            building=other_building,
+            unit="OB1",
+            unit_type="flat",
+            address_line="2 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="2",
+        )
+        Renter.objects.create(
+            unit=self.unit,
+            name="TargetRenter",
+            phone="+911111111111",
+            email="target@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        Renter.objects.create(
+            unit=other_unit,
+            name="OtherRenter",
+            phone="+922222222222",
+            email="other@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        response = self._c.get(
+            "/properties/renters/", {"building": str(self.building.id)}
+        )
+        self.assertEqual(response.status_code, 200)
+        names = [r["name"] for r in response.data]
+        self.assertIn("TargetRenter", names)
+        self.assertNotIn("OtherRenter", names)
+
+    def test_ordering_by_name(self):
+        Renter.objects.create(
+            unit=self.unit,
+            name="Zebra",
+            phone="+911111111111",
+            email="z@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        Renter.objects.create(
+            unit=self.unit,
+            name="Alpha",
+            phone="+922222222222",
+            email="a@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        response = self._c.get("/properties/renters/", {"ordering": "name"})
+        self.assertEqual(response.status_code, 200)
+        names = [r["name"] for r in response.data]
+        self.assertEqual(names[0], "Alpha")
+        self.assertEqual(names[1], "Zebra")
+
+    def test_ordering_by_rent_amount(self):
+        Renter.objects.create(
+            unit=self.unit,
+            name="LowRent",
+            phone="+911111111111",
+            email="low@test.com",
+            rent_amount=Decimal("5000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        Renter.objects.create(
+            unit=self.unit,
+            name="HighRent",
+            phone="+922222222222",
+            email="high@test.com",
+            rent_amount=Decimal("15000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        response = self._c.get("/properties/renters/", {"ordering": "rent_amount"})
+        self.assertEqual(response.status_code, 200)
+        names = [r["name"] for r in response.data]
+        self.assertEqual(names[0], "LowRent")
+        self.assertEqual(names[1], "HighRent")
+
+    def test_cross_owner_isolation(self):
+        other_owner = User.objects.create_user(
+            username="renter_sfo_other2",
+            password="p",
+            full_name="Other2",
+            phone="+3",
+        )
+        other_building = Building.objects.create(
+            owner=other_owner,
+            name="OtherBuilding2",
+            address_line="3 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="3",
+        )
+        other_unit = Unit.objects.create(
+            owner=other_owner,
+            building=other_building,
+            unit="OB2",
+            unit_type="flat",
+            address_line="3 St",
+            city="C",
+            state="S",
+            country="CO",
+            postal_code="3",
+        )
+        Renter.objects.create(
+            unit=other_unit,
+            name="OtherOwnerRenter",
+            phone="+933333333333",
+            email="other2@test.com",
+            rent_amount=Decimal("10000"),
+            start_date=timezone.now().date(),
+            status="active",
+        )
+        response = self._c.get("/properties/renters/", {"search": "OtherOwnerRenter"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)

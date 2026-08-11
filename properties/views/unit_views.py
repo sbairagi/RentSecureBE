@@ -11,7 +11,7 @@ import hashlib
 import hmac
 import json
 import logging
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -25,6 +25,7 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
+from django.db.models import Q, QuerySet
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -42,15 +43,22 @@ from ..serializers import (
     UnitSerializer,
 )
 
-if TYPE_CHECKING:
-    from django.db.models import QuerySet
-
-
 logger = logging.getLogger(__name__)
 
 
 class UnitViewSet(viewsets.ModelViewSet[Unit]):
-    """CRUD for the :class:`Unit` model — owned by the authenticated user."""
+    """CRUD for the :class:`Unit` model — owned by the authenticated user.
+
+    Supports search, filtering, and ordering via query parameters:
+      - search: icontains across unit, building_name, address_line,
+                landmark, city, state
+      - building: filter by building_id
+      - city: filter by city
+      - status: filter by status (VACANT/OCCUPIED)
+      - unit_type: filter by unit_type
+      - is_archived: filter by is_archived
+      - ordering: field ordering (default: -created_at)
+    """
 
     serializer_class = UnitSerializer
     permission_classes: list[type[IsAuthenticated]] = [IsAuthenticated]
@@ -62,19 +70,77 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
         cache_key: str = f"units_user_{user.id}"
         enforcer = FeatureEnforcer(user)
 
-        units: QuerySet[Unit] | None = cache.get(cache_key)
-        if units is None:
+        has_filters = self._has_active_unit_filters()
+
+        if not has_filters:
+            units: QuerySet[Unit] | None = cache.get(cache_key)
+            if units is None:
+                units = Unit.objects.filter(owner=user)
+                cache.set(cache_key, units, timeout=UNITS_CACHE_TIMEOUT)
+        else:
             units = Unit.objects.filter(owner=user)
-            cache.set(cache_key, units, timeout=UNITS_CACHE_TIMEOUT)
 
         if enforcer.is_expired() and enforcer.is_past_grace_period():
             free_limit = enforcer.get_free_plan_limit("max_units")
             active_units = units.filter(is_archived=False)
             if free_limit == "unlimited":
-                return active_units
-            return active_units[:free_limit]
+                units = active_units
+            else:
+                units = active_units[:free_limit]
 
-        return units
+        return self._apply_unit_filters(units)
+
+    def _has_active_unit_filters(self) -> bool:
+        return any(
+            self.request.GET.get(param)
+            for param in (
+                "search",
+                "building",
+                "city",
+                "status",
+                "unit_type",
+                "is_archived",
+                "ordering",
+            )
+        )
+
+    def _apply_unit_filters(self, queryset: QuerySet[Unit]) -> QuerySet[Unit]:
+        search = self.request.GET.get("search")
+        if search:
+            queryset = queryset.filter(
+                Q(unit__icontains=search)
+                | Q(building_name__icontains=search)
+                | Q(address_line__icontains=search)
+                | Q(landmark__icontains=search)
+                | Q(city__icontains=search)
+                | Q(state__icontains=search)
+            )
+
+        building_param = self.request.GET.get("building")
+        if building_param:
+            queryset = queryset.filter(building_id=building_param)
+
+        city = self.request.GET.get("city")
+        if city:
+            queryset = queryset.filter(city__icontains=city)
+
+        status = self.request.GET.get("status")
+        if status:
+            queryset = queryset.filter(status=status)
+
+        unit_type = self.request.GET.get("unit_type")
+        if unit_type:
+            queryset = queryset.filter(unit_type=unit_type)
+
+        is_archived = self.request.GET.get("is_archived")
+        if is_archived is not None:
+            queryset = queryset.filter(is_archived=is_archived.lower() == "true")
+
+        ordering = self.request.GET.get("ordering")
+        if ordering:
+            queryset = queryset.order_by(ordering)
+
+        return queryset
 
     @override
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:

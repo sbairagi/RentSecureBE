@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 
 from django.core.cache import cache
-from django.db.models import Count, Q
+from django.db.models import Count, Q, QuerySet
 
 from rentsecure_be.type_compat import override
 
@@ -24,28 +24,87 @@ class BuildingViewSet(viewsets.ModelViewSet[Building]):
     permission_classes = [IsAuthenticated]
 
     @override
-    def get_queryset(self) -> Any:
+    def get_queryset(self) -> QuerySet[Building]:
         user = self.request.user
         cache_key = f"buildings_user_{user.id}"
         enforcer = FeatureEnforcer(user)
 
-        buildings = cache.get(cache_key)
-        if buildings is None:
+        has_filters = self._has_active_filters()
+
+        if not has_filters:
+            buildings = cache.get(cache_key)
+            if buildings is None:
+                buildings = Building.objects.filter(owner=user).annotate(
+                    _occupied_units_count=Count(
+                        "units", filter=Q(units__is_vacant=False), distinct=True
+                    )
+                )
+                cache.set(cache_key, buildings, timeout=BUILDINGS_CACHE_TIMEOUT)
+        else:
             buildings = Building.objects.filter(owner=user).annotate(
                 _occupied_units_count=Count(
                     "units", filter=Q(units__is_vacant=False), distinct=True
                 )
             )
-            cache.set(cache_key, buildings, timeout=BUILDINGS_CACHE_TIMEOUT)
 
         if enforcer.is_expired() and enforcer.is_past_grace_period():
             free_limit = enforcer.get_free_plan_limit("max_buildings")
             active_buildings = buildings.filter(is_archived=False)
             if free_limit == "unlimited":
-                return active_buildings
-            return active_buildings[:free_limit]
+                buildings = active_buildings
+            else:
+                buildings = active_buildings[:free_limit]
 
-        return buildings
+        return self._apply_building_filters(buildings)
+
+    def _has_active_filters(self) -> bool:
+        return any(
+            self.request.GET.get(param)
+            for param in (
+                "search",
+                "city",
+                "state",
+                "country",
+                "is_archived",
+                "ordering",
+            )
+        )
+
+    def _apply_building_filters(
+        self, queryset: QuerySet[Building]
+    ) -> QuerySet[Building]:
+        search = self.request.GET.get("search")
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search)
+                | Q(address_line__icontains=search)
+                | Q(city__icontains=search)
+                | Q(state__icontains=search)
+                | Q(country__icontains=search)
+                | Q(postal_code__icontains=search)
+            )
+
+        city = self.request.GET.get("city")
+        if city:
+            queryset = queryset.filter(city__icontains=city)
+
+        state = self.request.GET.get("state")
+        if state:
+            queryset = queryset.filter(state__icontains=state)
+
+        country = self.request.GET.get("country")
+        if country:
+            queryset = queryset.filter(country__icontains=country)
+
+        is_archived = self.request.GET.get("is_archived")
+        if is_archived is not None:
+            queryset = queryset.filter(is_archived=is_archived.lower() == "true")
+
+        ordering = self.request.GET.get("ordering")
+        if ordering:
+            queryset = queryset.order_by(ordering)
+
+        return queryset
 
     @override
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:

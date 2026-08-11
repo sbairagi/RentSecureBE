@@ -13,7 +13,7 @@ from rest_framework.serializers import BaseSerializer
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -34,6 +34,15 @@ logger = logging.getLogger(__name__)
 
 
 class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
+    """CRUD for rent records owned by the authenticated user.
+
+    Supports search, filtering, and ordering via query parameters:
+      - search: icontains across renter__name, unit__unit, transaction_id, notes
+      - status: filter by status (PENDING/PAID/OVERDUE/CANCELLED)
+      - unit: filter by unit_id
+      - ordering: field ordering (default: -due_date)
+    """
+
     permission_classes = [IsAuthenticated]
     serializer_class = RentRecordSerializer
 
@@ -42,13 +51,48 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
         user = self.request.user
         if isinstance(user, AnonymousUser):
             return RentRecord.objects.none()
-        cache_key = f"rent_records_user_{user.id}"
-        rent_records = cache.get(cache_key)
-        if rent_records is None:
+
+        has_filters = any(
+            self.request.GET.get(param)
+            for param in ("search", "status", "unit", "ordering")
+        )
+
+        if not has_filters:
+            cache_key = f"rent_records_user_{user.id}"
+            rent_records = cache.get(cache_key)
+            if rent_records is None:
+                rent_records = RentRecord.objects.filter(
+                    unit__owner=user
+                ).select_related("unit", "renter")
+                cache.set(cache_key, rent_records, timeout=300)
+        else:
             rent_records = RentRecord.objects.filter(unit__owner=user).select_related(
                 "unit", "renter"
             )
-            cache.set(cache_key, rent_records, timeout=300)
+
+        search = self.request.GET.get("search")
+        if search:
+            rent_records = rent_records.filter(
+                Q(renter__name__icontains=search)
+                | Q(unit__unit__icontains=search)
+                | Q(transaction_id__icontains=search)
+                | Q(notes__icontains=search)
+            )
+
+        status_param = self.request.GET.get("status")
+        if status_param:
+            rent_records = rent_records.filter(status=status_param)
+
+        unit_param = self.request.GET.get("unit")
+        if unit_param:
+            rent_records = rent_records.filter(unit_id=unit_param)
+
+        ordering = self.request.GET.get("ordering")
+        if ordering:
+            rent_records = rent_records.order_by(ordering)
+        else:
+            rent_records = rent_records.order_by("-due_date")
+
         return rent_records
 
     @override
