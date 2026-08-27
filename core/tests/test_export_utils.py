@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from rentsecure_be.utils.export_utils import generate_owner_rent_report
+from core.utils.export_utils import generate_owner_rent_report
 
 User = get_user_model()
 
@@ -21,7 +21,7 @@ class GenerateOwnerRentReportTest(TestCase):
             phone="+1",
         )
 
-    @patch("properties.models.rent_record_models.RentRecord")
+    @patch("core.utils.export_utils.RentRecord")
     def test_generate_report_returns_bytesio(self, mock_rent_record):
         mock_rent_record.objects.filter.return_value.select_related.return_value = []
         result = generate_owner_rent_report(self.owner)
@@ -29,7 +29,7 @@ class GenerateOwnerRentReportTest(TestCase):
         data = result.read()
         self.assertTrue(len(data) > 0)
 
-    @patch("properties.models.rent_record_models.RentRecord")
+    @patch("core.utils.export_utils.RentRecord")
     def test_generate_report_with_data(self, mock_rent_record):
         mock_rent = MagicMock()
         mock_rent.renter.property.title = "Test Building"
@@ -46,7 +46,7 @@ class GenerateOwnerRentReportTest(TestCase):
         data = result.read()
         self.assertTrue(b"Test Building" in data or len(data) > 0)
 
-    @patch("properties.models.rent_record_models.RentRecord")
+    @patch("core.utils.export_utils.RentRecord")
     def test_generate_report_empty(self, mock_rent_record):
         mock_rent_record.objects.filter.return_value.select_related.return_value = []
         result = generate_owner_rent_report(self.owner)

@@ -185,17 +185,9 @@ ENABLE_PUSH_NOTIFICATION = config("ENABLE_PUSH_NOTIFICATION", default=True, cast
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "filters": {
-        "request_id": {
-            "()": "core.infrastructure.middleware.request_id.RequestIdFilter",
-        },
-    },
     "formatters": {
         "structured": {
-            "format": (
-                "[%(asctime)s] [%(levelname)s] [%(request_id)s] "
-                "%(name)s - %(message)s"
-            ),
+            "format": ("[%(asctime)s] [%(levelname)s] " "%(name)s - %(message)s"),
             "datefmt": "%Y-%m-%d %H:%M:%S",
         },
         "simple": {
@@ -206,7 +198,6 @@ LOGGING = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "filters": ["request_id"],
             "formatter": "structured",
         },
     },
@@ -271,9 +262,6 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "core.infrastructure.middleware.request_id.RequestIdMiddleware",
-    "core.infrastructure.middleware.request_id.CorrelationIdMiddleware",
-    "core.infrastructure.middleware.request_id.RequestLoggingMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",
@@ -367,21 +355,7 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ),
-    "EXCEPTION_HANDLER": (
-        "core.infrastructure.exceptions.exception_handler.exception_handler"
-    ),
-    "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
-    "DEFAULT_THROTTLE_CLASSES": ("rest_framework.throttling.UserRateThrottle",),
-    "DEFAULT_THROTTLE_RATES": {
-        "user": "100/min",
-        "ai_chat": "30/min",
-        "login": "10/min",
-        "otp_verify": "10/min",
-        "register": "5/min",
-        "forgot_password": "5/min",
-        "social_auth": "10/min",
-    },
+    )
 }
 
 CACHES = {

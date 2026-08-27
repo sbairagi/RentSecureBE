@@ -1,5 +1,4 @@
 # mypy: disable-error-code="import-untyped"
-from datetime import timedelta
 from typing import Any
 
 from simple_history.models import HistoricalRecords
@@ -7,46 +6,8 @@ from simple_history.models import HistoricalRecords
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.utils import timezone
 
 from rentsecure_be.type_compat import override
-
-
-class UpsertMixin:
-    """Reusable upsert logic for models with a unique business key."""
-
-    _upsert_filter_fields: tuple[str, ...] = ()
-    _upsert_skip_fields: frozenset[str] = frozenset()
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        existing = self._find_existing_upsert_target()
-        if existing is not None:
-            self._copy_fields_to_existing(existing)
-            existing.save()
-            self.pk = existing.pk
-            self.__dict__.update(existing.__dict__)
-            return
-        return super().save(*args, **kwargs)  # type: ignore[misc, no-any-return]
-
-    def _find_existing_upsert_target(self) -> Any | None:
-        if self.pk is not None or not self._upsert_filter_fields:
-            return None
-        filter_kwargs = {
-            field: getattr(self, field) for field in self._upsert_filter_fields
-        }
-        if not all(value is not None for value in filter_kwargs.values()):
-            return None
-        return (
-            type(self)
-            .objects.filter(**filter_kwargs)  # type: ignore[attr-defined]
-            .first()
-        )
-
-    def _copy_fields_to_existing(self, existing: Any) -> None:
-        for field in self._meta.fields:  # type: ignore[attr-defined]
-            if field.name in self._upsert_skip_fields:
-                continue
-            setattr(existing, field.attname, getattr(self, field.attname))
 
 
 # User Models
@@ -74,96 +35,37 @@ class UserProfile(models.Model):
     language_preference = models.CharField(
         max_length=2, default="en", choices=[("en", "English"), ("hi", "Hindi")]
     )
-    alert_frequency = models.CharField(
-        max_length=10,
-        choices=[
-            ("daily", "Daily"),
-            ("weekly", "Weekly"),
-            ("monthly", "Monthly"),
-        ],
-        default="weekly",
-    )
-    receive_rent_alerts = models.BooleanField(default=True)
-    receive_tax_alerts = models.BooleanField(default=True)
-    receive_vacancy_alerts = models.BooleanField(default=True)
-    receive_flagged_alerts = models.BooleanField(default=True)
-    receive_voice_alerts = models.BooleanField(default=True)
-    greeting_prefix = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="Custom greeting for WhatsApp messages, e.g., 'from Gokul PG'",
-    )
-    reminder_time = models.TimeField(
-        default=timezone.datetime.strptime("09:00", "%H:%M").time(),
-        help_text="Preferred time to send WhatsApp rent and tax reminders",
-    )
-    rent_reminders_enabled = models.BooleanField(
-        default=True,
-        help_text="Enable or disable WhatsApp rent reminders for this owner's renters",
-    )
-    salary = models.PositiveIntegerField(
-        default=0,
-        help_text="Annual salary income for ITR calculations",
-    )
-    other_income = models.PositiveIntegerField(
-        default=0,
-        help_text="Other annual income for ITR calculations",
-    )
-    elss_investment = models.PositiveIntegerField(
-        default=0,
-        help_text="Annual ELSS/PPF/LIC investment claimed under Section 80C",
-    )
-    has_health_insurance = models.BooleanField(
-        default=False,
-        help_text="Whether the user has active health insurance for Section 80D",
-    )
-    home_loan_interest = models.PositiveIntegerField(
-        default=0,
-        help_text="Annual home loan interest paid for Section 24(b) deduction",
-    )
-    rent_paid = models.PositiveIntegerField(
-        default=0,
-        help_text="Annual rent paid for Section 80GG deduction",
-    )
-    receives_hra = models.BooleanField(
-        default=False,
-        help_text="Whether the user receives House Rent Allowance (HRA)",
-    )
-    is_nri = models.BooleanField(
-        default=False,
-        help_text="Whether the user is a Non-Resident Indian",
-    )
-    city = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="City for CA matchmaking",
-    )
-    total_investment_income = models.PositiveIntegerField(
-        default=0,
-        help_text="Total investment income for CA specialization matching",
-    )
 
 
-class NotificationPreference(UpsertMixin, models.Model):
+class NotificationPreference(models.Model):
     owner = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="notification_preference"
     )
-    push_enabled = models.BooleanField(default=True)
-    rent_alerts_push = models.BooleanField(default=True)
     rent_alerts_whatsapp = models.BooleanField(default=True)
     rent_alerts_email = models.BooleanField(default=True)
     monthly_summary_email = models.BooleanField(default=True)
     monthly_summary_whatsapp = models.BooleanField(default=False)
     payout_alerts_whatsapp = models.BooleanField(default=True)
     payout_alerts_email = models.BooleanField(default=False)
-    maintenance_push = models.BooleanField(default=True)
-    visitor_push = models.BooleanField(default=True)
-    agreement_push = models.BooleanField(default=True)
-    subscription_push = models.BooleanField(default=True)
-    system_push = models.BooleanField(default=True)
 
-    _upsert_filter_fields = ("owner",)
-    _upsert_skip_fields = frozenset({"id", "owner"})
+    @override
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Handle upsert for NotificationPreference
+        is_new = self.pk is None
+        if is_new and self.owner_id is not None:
+            existing = NotificationPreference.objects.filter(
+                owner_id=self.owner_id
+            ).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {"id", "owner"}:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
 
     @override
     def __str__(self) -> str:
@@ -176,30 +78,7 @@ class OTP(models.Model):
     referral_code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     is_verified = models.BooleanField(default=False)
-    attempts = models.PositiveIntegerField(default=0)
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
-
-    MAX_OTP_ATTEMPTS = 5
-
-
-class PasswordResetToken(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="password_reset_tokens",
-    )
-    token = models.CharField(max_length=64, unique=True, db_index=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    used_at = models.DateTimeField(null=True, blank=True)
-
-    def is_valid(self) -> bool:
-        return self.used_at is None and (timezone.now() - self.created_at) < timedelta(
-            hours=1
-        )
-
-    @override
-    def __str__(self) -> str:
-        return f"Password reset token for {self.user.email or self.user.username}"
 
 
 # models.py
@@ -221,7 +100,7 @@ class OwnerBankDetails(models.Model):
 
 
 #  Subscription Models
-class SubscriptionPlan(UpsertMixin, models.Model):
+class SubscriptionPlan(models.Model):
     PLAN_CHOICES = [
         ("free", "Free"),
         ("pro", "Pro"),
@@ -237,15 +116,29 @@ class SubscriptionPlan(UpsertMixin, models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    _upsert_filter_fields = ("name",)
-    _upsert_skip_fields = frozenset({"id", "name", "created_at", "updated_at"})
+    @override
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Handle upsert for SubscriptionPlan
+        is_new = self.pk is None
+        if is_new and self.name:
+            existing = SubscriptionPlan.objects.filter(name=self.name).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {"id", "name", "created_at", "updated_at"}:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
 
     @override
     def __str__(self) -> str:
         return self.name.capitalize()
 
 
-class UserSubscription(UpsertMixin, models.Model):
+class UserSubscription(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="usersubscription"
@@ -264,10 +157,28 @@ class UserSubscription(UpsertMixin, models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    _upsert_filter_fields = ("user",)
-    _upsert_skip_fields = frozenset(
-        {"id", "user", "start_date", "created_at", "updated_at"}
-    )
+    @override
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Handle upsert for UserSubscription
+        is_new = self.pk is None
+        if is_new and self.user_id is not None:
+            existing = UserSubscription.objects.filter(user_id=self.user_id).first()
+            if existing:
+                for field in self._meta.fields:
+                    if field.name in {
+                        "id",
+                        "user",
+                        "start_date",
+                        "created_at",
+                        "updated_at",
+                    }:
+                        continue
+                    setattr(existing, field.attname, getattr(self, field.attname))
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
 
     @override
     def __str__(self) -> str:
@@ -299,7 +210,7 @@ class AddOnPurchase(models.Model):
         return f"{self.name} - {self.user.username}"
 
 
-class PlanFeatureLimit(UpsertMixin, models.Model):
+class PlanFeatureLimit(models.Model):
     id = models.AutoField(primary_key=True)
     plan = models.ForeignKey(
         SubscriptionPlan, on_delete=models.CASCADE, related_name="limits"
@@ -310,8 +221,24 @@ class PlanFeatureLimit(UpsertMixin, models.Model):
     class Meta:
         unique_together = ("plan", "feature_key")
 
-    _upsert_filter_fields = ("plan", "feature_key")
-    _upsert_skip_fields = frozenset({"id", "plan", "feature_key"})
+    @override
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if (
+            self.pk is None  # type: ignore[unreachable]
+            and self.plan_id is not None
+            and self.feature_key
+        ):
+            existing = PlanFeatureLimit.objects.filter(  # type: ignore[unreachable]
+                plan_id=self.plan_id,
+                feature_key=self.feature_key,
+            ).first()
+            if existing:
+                existing.value = self.value
+                existing.save()
+                self.pk = existing.pk
+                self.__dict__.update(existing.__dict__)
+                return
+        return super().save(*args, **kwargs)
 
     @override
     def __str__(self) -> str:
@@ -348,128 +275,8 @@ class UsageLimit(models.Model):
                 self.pk = existing.pk
                 self.__dict__.update(existing.__dict__)
                 return
-        return super().save(*args, **kwargs)  # type: ignore[misc, no-any-return]
+        return super().save(*args, **kwargs)
 
     @override
     def __str__(self) -> str:
         return f"{self.user.username} - {self.feature_key}: {self.usage_count}"
-
-
-# ---------------------------------------------------------------------------
-# Subscription Payment Models
-# ---------------------------------------------------------------------------
-
-
-class SubscriptionPayment(models.Model):
-    STATUS_CHOICES = [
-        ("pending", "Pending"),
-        ("processing", "Processing"),
-        ("success", "Success"),
-        ("failed", "Failed"),
-        ("cancelled", "Cancelled"),
-        ("expired", "Expired"),
-        ("refunded", "Refunded"),
-    ]
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="subscription_payments"
-    )
-    subscription = models.ForeignKey(
-        UserSubscription, on_delete=models.CASCADE, related_name="payments"
-    )
-    razorpay_order_id = models.CharField(max_length=100, unique=True, db_index=True)
-    razorpay_payment_id = models.CharField(max_length=100, blank=True, db_index=True)
-    razorpay_signature = models.CharField(max_length=256, blank=True)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    currency = models.CharField(max_length=3, default="INR")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
-    billing_cycle = models.CharField(
-        max_length=10, choices=[("monthly", "Monthly"), ("yearly", "Yearly")]
-    )
-    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    paid_at = models.DateTimeField(null=True, blank=True)
-    failed_at = models.DateTimeField(null=True, blank=True)
-
-    @override
-    def __str__(self) -> str:
-        return f"{self.user.username} - {self.razorpay_order_id} ({self.status})"
-
-
-# ---------------------------------------------------------------------------
-# App Configuration Models
-# ---------------------------------------------------------------------------
-
-
-class AppVersion(models.Model):
-    """Single-row table that controls the minimum supported and latest app version."""
-
-    id = models.AutoField(primary_key=True)
-    min_supported_version = models.CharField(
-        max_length=20,
-        default="1.0.0",
-        help_text="Minimum supported version; users below this must force-update.",
-    )
-    latest_version = models.CharField(
-        max_length=20,
-        default="1.0.0",
-        help_text="Latest released version.",
-    )
-    is_force_update = models.BooleanField(
-        default=False,
-        help_text="If True, all users must update regardless of version.",
-    )
-    store_url = models.URLField(
-        blank=True,
-        help_text="URL to the app store page for forced updates.",
-    )
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "App Version"
-        verbose_name_plural = "App Version"
-
-    @override
-    def __str__(self) -> str:
-        return (
-            f"AppVersion(min={self.min_supported_version}, "
-            f"latest={self.latest_version})"
-        )
-
-    @classmethod
-    def get_active(cls) -> "AppVersion":
-        obj, _ = cls.objects.get_or_create(pk=1)
-        return obj
-
-
-class MaintenanceMode(models.Model):
-    """Single-row table that controls the maintenance mode state."""
-
-    id = models.AutoField(primary_key=True)
-    is_active = models.BooleanField(
-        default=False,
-        help_text="Enable or disable maintenance mode.",
-    )
-    message = models.TextField(
-        blank=True,
-        default="",
-        help_text="Message displayed to users during maintenance.",
-    )
-    scheduled_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Optional: when maintenance is scheduled to start.",
-    )
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Maintenance Mode"
-        verbose_name_plural = "Maintenance Mode"
-
-    @override
-    def __str__(self) -> str:
-        return f"MaintenanceMode(active={self.is_active})"
-
-    @classmethod
-    def get_active(cls) -> "MaintenanceMode":
-        obj, _ = cls.objects.get_or_create(pk=1)
-        return obj

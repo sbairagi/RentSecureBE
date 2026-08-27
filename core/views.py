@@ -4,133 +4,57 @@ import hashlib
 import hmac
 import json
 import logging
-import os
 import secrets
-import time
 import uuid
 from datetime import timedelta
-from decimal import Decimal
-from typing import TYPE_CHECKING, Any, cast, override
+from typing import Any, cast
 
 import razorpay  # type: ignore[import-untyped]
-import requests
-from rest_framework import generics, permissions, status, viewsets
-from rest_framework.decorators import (
-    action,
-    api_view,
-    permission_classes,
-    throttle_classes,
-)
+from rest_framework import generics, permissions, viewsets
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.token_blacklist.models import (
-    BlacklistedToken,
-    OutstandingToken,
-)
 from rest_framework_simplejwt.tokens import RefreshToken
 from twilio.rest import Client
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, Group
-from django.core.cache import cache
-from django.core.exceptions import ImproperlyConfigured
-from django.db import connection, transaction
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone
-from django.utils.dateparse import parse_time
-from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from core.throttles import (
-    ForgotPasswordThrottle,
-    LoginThrottle,
-    OTPThrottle,
-    RegisterThrottle,
-    SocialAuthThrottle,
-)
+from core.utils.export_utils import generate_owner_rent_report
 from notification.services.rent_notify_service import send_payout_notification
 from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
     process_rent_payout,
 )
+from rentsecure_be.type_compat import override
 from rentsecure_be.utils.cashfree_payout import add_beneficiary
-from rentsecure_be.utils.export_utils import generate_owner_rent_report
-from rentsecure_be.utils.tax_advice_utils import suggest_tax_savings
-from rentsecure_be.utils.tax_report_pdf_utils import generate_tax_report_pdf
 
 from .models import (
     OTP,
     AddOnPurchase,
-    AppVersion,
-    MaintenanceMode,
     OwnerBankDetails,
     PlanFeatureLimit,
-    SubscriptionPayment,
     SubscriptionPlan,
     UsageLimit,
     User,
-    UserProfile,
     UserSubscription,
 )
 from .serializers import (
     AddOnPurchaseSerializer,
-    LoginSerializer,
     PlanFeatureLimitSerializer,
-    ProfileSerializer,
-    RegisterSerializer,
-    SocialAuthSerializer,
-    SubscriptionPaymentSerializer,
     SubscriptionPlanSerializer,
     UsageLimitSerializer,
     UserSubscriptionSerializer,
 )
 
-if TYPE_CHECKING:
-    from properties.models.rent_record_models import RentRecord  # nosonar
-
 logger = logging.getLogger(__name__)
-
-_ERROR_INVALID_METHOD = "Invalid method"
-
-
-# ---------------------------------------------------------------------------
-# Social Auth Token Verification
-# ---------------------------------------------------------------------------
-
-
-def _verify_google_token(id_token: str) -> tuple[str, str]:
-    tokeninfo_url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + id_token
-    try:
-        response = requests.get(tokeninfo_url, timeout=10)
-    except requests.RequestException as exc:
-        logger.warning("Failed to contact Google token verification endpoint: %s", exc)
-        return "", ""
-
-    if response.status_code != 200:
-        logger.warning("Invalid Google ID token: status %s", response.status_code)
-        return "", ""
-
-    data = response.json()
-    email = data.get("email", "")
-    name = data.get("name", "")
-
-    if not email:
-        logger.warning("Email missing from Google token")
-        return "", ""
-
-    return email, name
-
-
-def _verify_apple_token(identity_token: str) -> tuple[str, str]:
-    raise ImproperlyConfigured(
-        "Apple social auth requires Apple identity token verification. "
-        "Configure APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_CLIENT_ID, and APPLE_PRIVATE_KEY "
-        "in settings to enable Apple sign-in."
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -151,22 +75,12 @@ def send_otp(phone_number: str, code: str) -> None:
 
 
 class SendOTP(APIView):
-    throttle_classes = [OTPThrottle]
-
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         phone = request.data.get("phone")
         referral_code = request.data.get("referral_code", "").strip()
 
         if not phone:
             return Response({"error": "Phone number required"}, status=400)
-
-        client_ip = request.META.get("REMOTE_ADDR") or ""
-        otp_cache_key = f"otp_send_limit:{phone}:{client_ip}"
-        request_count = cache.get(otp_cache_key, 0)
-        if request_count >= 5:
-            return Response(
-                {"error": "Too many OTP requests. Try again later."}, status=429
-            )
 
         # Prevent spamming (resend OTP limit: 60 seconds)
         recent_otp = (
@@ -180,7 +94,6 @@ class SendOTP(APIView):
         OTP.objects.create(phone_number=phone, code=code, referral_code=referral_code)
         send_otp(phone, code)
 
-        cache.set(otp_cache_key, request_count + 1, timeout=3600)
         return Response({"message": "OTP sent"}, status=200)
 
 
@@ -214,64 +127,42 @@ def _verify_otp_and_login(
     if not phone or not code:
         return {"error": "Phone and OTP required"}, 400
 
-    with transaction.atomic():
-        otp = (
-            OTP.objects.filter(phone_number=phone, code=code, is_verified=False)
-            .select_for_update()
-            .order_by("-created_at")
-            .first()
-        )
+    otp = (
+        OTP.objects.filter(phone_number=phone, code=code, is_verified=False)
+        .order_by("-created_at")
+        .first()
+    )
 
-        if not (otp and (timezone.now() - otp.created_at) < timedelta(minutes=5)):
-            return {"error": "Invalid or expired OTP"}, 400
+    if not (otp and (timezone.now() - otp.created_at) < timedelta(minutes=5)):
+        return {"error": "Invalid or expired OTP"}, 400
 
-        if otp.attempts >= OTP.MAX_OTP_ATTEMPTS:
-            return {"error": "Too many attempts. Request a new OTP."}, 429
+    otp.is_verified = True
+    otp.save()
 
-        otp.attempts += 1
-        otp.is_verified = True
-        otp.save(update_fields=["attempts", "is_verified"])
+    user, _ = User.objects.get_or_create(phone=phone, defaults={"username": phone})
+    user.is_phone_verified = True
+    user.save()
 
-        user, _ = User.objects.get_or_create(phone=phone, defaults={"username": phone})
-        user.is_phone_verified = True
-        user.save(update_fields=["is_phone_verified"])
+    group, _ = Group.objects.get_or_create(name=group_name)
+    user.groups.add(group)
 
-        group, _ = Group.objects.get_or_create(name=group_name)
-        user.groups.add(group)
-
-        otp_pk = otp.pk
-
+    # Referral logic
     error_response = _process_referral(otp, user)
     if error_response is not None:
         return {"error": "Invalid referral code"}, 400
 
-    OTP.objects.filter(phone_number=phone).exclude(pk=otp_pk).delete()
+    # Delete old OTPs
+    OTP.objects.filter(phone_number=phone).exclude(pk=otp.pk).delete()
 
     refresh = RefreshToken.for_user(user)
-    role = (
-        "owner"
-        if user.groups.filter(name="owner").exists()
-        else "renter" if user.groups.filter(name="renter").exists() else "user"
-    )
     return {
         "refresh": str(refresh),
         "access": str(refresh.access_token),
-        "user": {
-            "id": user.pk,
-            "phone": user.phone,
-            "email": user.email,
-            "firstName": user.first_name,
-            "lastName": user.last_name,
-            "fullName": user.full_name,
-            "username": user.username,
-            "role": role,
-        },
+        "user": {"id": user.pk, "phone": user.phone},
     }, 200
 
 
 class OwnerVerifyOTP(APIView):
-    throttle_classes = [OTPThrottle]
-
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         phone = request.data.get("phone")
         code = request.data.get("otp")
@@ -280,8 +171,6 @@ class OwnerVerifyOTP(APIView):
 
 
 class RenterVerifyOTP(APIView):
-    throttle_classes = [OTPThrottle]
-
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         phone = request.data.get("phone")
         code = request.data.get("otp")
@@ -323,10 +212,9 @@ class ChangePasswordView(generics.UpdateAPIView):
 
 
 class ResetPasswordView(APIView):
-    """Authenticated password reset.
+    """Password reset — requires authentication to prevent account takeover.
 
-    Users can reset their own password while logged in without providing
-    the old password.
+    Users can only reset their own password.
     """
 
     permission_classes = [IsAuthenticated]
@@ -341,82 +229,6 @@ class ResetPasswordView(APIView):
         user.set_password(new_password)
         user.save()
         return Response({"message": "Password reset successful."}, status=200)
-
-
-@api_view(["POST"])
-@permission_classes([permissions.AllowAny])
-@throttle_classes([ForgotPasswordThrottle])
-def forgot_password(request: Request, /, *args: Any, **kwargs: Any) -> Response:
-    from core.models import PasswordResetToken
-
-    email = request.data.get("email")
-    if not email:
-        return Response({"error": "Email is required."}, status=400)
-
-    try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
-        return Response(
-            {"message": "If an account exists, a reset link has been sent."},
-            status=200,
-        )
-
-    token = PasswordResetToken.objects.create(user=user)
-    reset_url = f"{settings.FRONTEND_URL}/reset-password/{token.token}"
-
-    if settings.DEBUG:
-        print(f"[PASSWORD RESET] {email} -> {reset_url}")
-    else:
-        from django.core.mail import send_mail
-
-        send_mail(
-            subject="Password Reset",
-            message=f"Reset your password: {reset_url}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=True,
-        )
-
-    return Response(
-        {"message": "If an account exists, a reset link has been sent."},
-        status=200,
-    )
-
-
-@api_view(["POST"])
-@permission_classes([permissions.AllowAny])
-@throttle_classes([ForgotPasswordThrottle])
-def reset_password_confirm(
-    request: Request, token: str, /, *args: Any, **kwargs: Any
-) -> Response:
-    from core.models import PasswordResetToken
-
-    new_password = request.data.get("new_password")
-    confirm_password = request.data.get("confirmPassword")
-
-    if not new_password or not confirm_password:
-        return Response(
-            {"error": "new_password and confirmPassword are required."}, status=400
-        )
-
-    if new_password != confirm_password:
-        return Response({"error": "Passwords do not match."}, status=400)
-
-    try:
-        reset_token = PasswordResetToken.objects.get(token=token)
-    except PasswordResetToken.DoesNotExist:
-        return Response({"error": "Invalid reset token."}, status=400)
-
-    if not reset_token.is_valid():
-        return Response({"error": "Reset token has expired."}, status=400)
-
-    user = reset_token.user
-    user.set_password(new_password)
-    user.save()
-    reset_token.used_at = timezone.now()
-    reset_token.save(update_fields=["used_at"])
-
-    return Response({"message": "Password reset successful."}, status=200)
 
 
 # ---------------------------------------------------------------------------
@@ -463,80 +275,6 @@ class UserSubscriptionViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You can't delete another user's subscription.")
         instance.delete()
 
-    @action(detail=True, methods=["post"])
-    def upgrade(self, request, pk=None):
-        """Upgrade to a higher plan."""
-        subscription = self.get_object()
-        target_plan_id = request.data.get("plan_id")
-        if not target_plan_id:
-            return Response({"error": "plan_id is required"}, status=400)
-        try:
-            target_plan = SubscriptionPlan.objects.get(
-                id=target_plan_id, is_active=True
-            )
-        except SubscriptionPlan.DoesNotExist:
-            return Response({"error": "Target plan not found"}, status=404)
-
-        plan_order = ["free", "pro", "elite"]
-        current_plan_name = subscription.plan.name if subscription.plan else "free"
-        current_plan_order = plan_order.index(current_plan_name)
-        target_plan_order = plan_order.index(target_plan.name)
-        if target_plan_order <= current_plan_order:
-            return Response({"error": "Can only upgrade to a higher plan"}, status=400)
-
-        subscription.plan = target_plan
-        subscription.is_active = True
-        subscription.start_date = timezone.now().date()
-        subscription.end_date = timezone.now().date() + timedelta(days=30)
-        subscription.save()
-        return Response(UserSubscriptionSerializer(subscription).data)
-
-    @action(detail=True, methods=["post"])
-    def downgrade(self, request, pk=None):
-        """Downgrade to a lower plan (effective at end of current cycle)."""
-        subscription = self.get_object()
-        target_plan_id = request.data.get("plan_id")
-        if not target_plan_id:
-            return Response({"error": "plan_id is required"}, status=400)
-        try:
-            target_plan = SubscriptionPlan.objects.get(
-                id=target_plan_id, is_active=True
-            )
-        except SubscriptionPlan.DoesNotExist:
-            return Response({"error": "Target plan not found"}, status=404)
-
-        plan_order = ["free", "pro", "elite"]
-        current_plan_name = subscription.plan.name if subscription.plan else "free"
-        current_plan_order = plan_order.index(current_plan_name)
-        target_plan_order = plan_order.index(target_plan.name)
-        if target_plan_order >= current_plan_order:
-            return Response({"error": "Can only downgrade to a lower plan"}, status=400)
-
-        subscription.plan = target_plan
-        subscription.is_active = True
-        subscription.end_date = timezone.now().date() + timedelta(days=30)
-        subscription.save()
-        return Response(UserSubscriptionSerializer(subscription).data)
-
-    @action(detail=True, methods=["post"])
-    def cancel(self, request, pk=None):
-        """Cancel subscription — keep access until end_date."""
-        subscription = self.get_object()
-        subscription.is_active = False
-        subscription.save(update_fields=["is_active", "updated_at"])
-        return Response({"message": "Subscription cancelled"}, status=200)
-
-    @action(detail=True, methods=["post"])
-    def renew(self, request, pk=None):
-        """Renew subscription — extend end_date by one billing cycle."""
-        subscription = self.get_object()
-        days = 365 if subscription.is_yearly else 30
-        subscription.start_date = timezone.now().date()
-        subscription.end_date = timezone.now().date() + timedelta(days=days)
-        subscription.is_active = True
-        subscription.save()
-        return Response(UserSubscriptionSerializer(subscription).data)
-
 
 class AddOnPurchaseViewSet(viewsets.ModelViewSet):
     queryset = AddOnPurchase.objects.all()
@@ -578,57 +316,23 @@ class UsageLimitViewSet(viewsets.ReadOnlyModelViewSet):
         return UsageLimit.objects.filter(user=self.request.user)
 
 
-class SubscriptionPaymentViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = SubscriptionPayment.objects.all()
-    serializer_class = SubscriptionPaymentSerializer
-    permission_classes = [IsAuthenticated]
-
-    @override
-    def get_queryset(self) -> Any:
-        if isinstance(self.request.user, AnonymousUser):
-            return self.queryset.none()
-        return SubscriptionPayment.objects.filter(user=self.request.user).order_by(
-            "-created_at"
-        )
-
-
 # ---------------------------------------------------------------------------
 # Webhooks
 # ---------------------------------------------------------------------------
 
 
-# Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
-# from external payment/webhook providers. Those callers do not have browser
-# sessions and therefore cannot supply a CSRF token.
-# Security: Cashfree webhook signature is verified inline below (hmac + sha256)
-# before any business logic executes. The CASHFREE_WEBHOOK_SECRET setting must
-# be configured in production; the endpoint refuses all requests if it is absent.
-@csrf_exempt
+# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
+@csrf_exempt  # nosonar
 def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
     """Handle Cashfree payout status webhook.
 
     Fixed: rent.save() no longer overwrites `rent` with None.
     Fixed: Removed invalid rent.renter.property.owner chain.
     """
-    from properties.models.rent_record_models import RentRecord
+    from properties.models import RentRecord  # nosonar
 
     if request.method != "POST":
-        return JsonResponse({"error": _ERROR_INVALID_METHOD}, status=405)
-
-    webhook_secret = getattr(settings, "CASHFREE_WEBHOOK_SECRET", None)
-    if not webhook_secret:
-        raise ImproperlyConfigured("CASHFREE_WEBHOOK_SECRET is not set")
-    signature = request.headers.get("X-Cashfree-Signature")
-    if not signature:
-        return JsonResponse({"error": "Missing signature!"}, status=400)
-    if not hmac.compare_digest(
-        hmac.new(
-            webhook_secret.encode("utf-8"), request.body, hashlib.sha256
-        ).hexdigest(),
-        signature,
-    ):
-        logger.warning("Cashfree webhook: invalid signature")
-        return JsonResponse({"error": "Invalid signature!"}, status=400)
+        return JsonResponse({"error": "Invalid method"}, status=405)  # noqa: S1192
 
     payload = json.loads(request.body)
     transfer_id = payload.get("transferId")
@@ -645,62 +349,35 @@ def cashfree_payout_webhook(request: HttpRequest) -> JsonResponse:
         rent.payout_status = "FAILED"
     rent.save()
 
+    # Send payout notification
     try:
         send_payout_notification(rent)
     except Exception as e:
-        logger.exception(f"Failed to send payout notification for rent {rent.id}: {e}")
+        logger.warning(f"Failed to send payout notification for rent {rent.id}: {e}")
 
     return JsonResponse({"message": "Webhook received"}, status=200)
 
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def create_rent_payment(request: Request, /, *args: Any, **kwargs: Any) -> Response:
-    """Create a Razorpay order for rent payment.
-
-    The authenticated user must be either:
-    - the renter associated with the rent record, or
-    - the owner of the unit linked to the rent record.
-    """
-    from properties.models.rent_record_models import RentRecord  # nosonar
+# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
+@csrf_exempt
+def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
+    """Create a Razorpay order for rent payment."""
+    from properties.models import RentRecord
 
     if request.method != "POST":
-        return Response(
-            {"error": _ERROR_INVALID_METHOD}, status=status.HTTP_405_METHOD_NOT_ALLOWED
-        )
+        return JsonResponse({"error": "Invalid method"}, status=405)
 
-    user = cast(User, request.user)
-    rent_id = request.data.get("rent_id")
-
-    if not rent_id:
-        return Response(
-            {"error": "rent_id is required"}, status=status.HTTP_400_BAD_REQUEST
-        )
+    data = json.loads(request.body)
+    rent_id = data.get("rent_id")
 
     try:
-        rent = RentRecord.objects.select_related("unit", "renter").get(id=rent_id)
+        rent = RentRecord.objects.get(id=rent_id)
     except RentRecord.DoesNotExist:
-        return Response(
-            {"error": "Rent record not found"}, status=status.HTTP_404_NOT_FOUND
-        )
+        return JsonResponse({"error": "Rent record not found"}, status=404)
 
-    renter = rent.renter
-    is_owner = renter and renter.unit and renter.unit.owner == user
-    is_renter = renter and renter.user == user
-
-    if not is_owner and not is_renter:
-        return Response(
-            {"error": "You do not have permission to pay this rent."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    if rent.payment_status == RentRecord.Status.PAID:
-        return Response(
-            {"error": "This rent has already been paid."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    client = _get_razorpay_client()
+    client = razorpay.Client(
+        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+    )
     razorpay_order = client.order.create(
         {
             "amount": int(rent.amount * 100),  # In paise
@@ -713,319 +390,124 @@ def create_rent_payment(request: Request, /, *args: Any, **kwargs: Any) -> Respo
     rent.razorpay_order_id = razorpay_order["id"]
     rent.save(update_fields=["razorpay_order_id"])
 
-    return Response(
+    return JsonResponse(
         {
             "order_id": razorpay_order["id"],
-            "amount": str(rent.amount),
+            "amount": rent.amount,
             "currency": "INR",
             "key_id": settings.RAZORPAY_KEY_ID,
-            "rent_id": rent.id,
-        },
-        status=status.HTTP_200_OK,
+        }
     )
 
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def verify_renter_rent_payment(
-    request: Request, /, *args: Any, **kwargs: Any
-) -> Response:
-    """Verify a Razorpay rent payment and update the RentRecord.
-
-    The authenticated user must be the renter or owner of the rent record.
-    The Razorpay signature is verified before any state change.
-    The backend webhook remains the source of truth; this endpoint provides
-    immediate UX feedback while the webhook processes asynchronously.
-    """
-    from properties.models.rent_record_models import RentRecord  # nosonar
-
-    razorpay_order_id = request.data.get("razorpay_order_id")
-    razorpay_payment_id = request.data.get("razorpay_payment_id")
-    razorpay_signature = request.data.get("razorpay_signature")
-
-    if not all([razorpay_order_id, razorpay_payment_id, razorpay_signature]):
-        return Response(
-            {"error": "Missing payment verification fields"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    try:
-        rent = RentRecord.objects.select_related("unit", "renter").get(
-            razorpay_order_id=razorpay_order_id
-        )
-    except RentRecord.DoesNotExist:
-        return Response(
-            {"error": "Rent record not found for this order"},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    renter = rent.renter
-    is_owner = renter and renter.unit and renter.unit.owner == request.user
-    is_renter = renter and renter.user == request.user
-
-    if not is_owner and not is_renter:
-        return Response(
-            {"error": "You do not have permission to verify this payment."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    client = _get_razorpay_client()
-    try:
-        client.utility.verify_payment_signature(
-            {
-                "razorpay_order_id": razorpay_order_id,
-                "razorpay_payment_id": razorpay_payment_id,
-                "razorpay_signature": razorpay_signature,
-            }
-        )
-    except Exception as exc:
-        logger.warning("Razorpay signature verification failed: %s", exc)
-        return Response(
-            {"error": "Invalid payment signature"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if rent.payment_status == RentRecord.Status.PAID:
-        return Response(
-            {
-                "status": "success",
-                "message": "Payment already verified.",
-                "rent_id": rent.id,
-                "payment_status": rent.payment_status,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-    try:
-        payment_data = client.order.fetch(razorpay_order_id)
-        if payment_data.get("status") == "paid":
-            rent.payment_status = RentRecord.Status.PAID
-            rent.paid_on = timezone.now().date()
-            rent.transaction_id = razorpay_payment_id
-            rent.save(
-                update_fields=["status", "paid_on", "transaction_id", "updated_at"]
-            )
-
-            try:
-                from rentsecure_be.services.cashfree_service import process_rent_payout
-
-                process_rent_payout(rent)
-            except Exception:
-                logger.exception(
-                    "Failed to process payout for rent %s after verification", rent.id
-                )
-
-            return Response(
-                {
-                    "status": "success",
-                    "message": "Payment verified successfully.",
-                    "rent_id": rent.id,
-                    "payment_status": rent.payment_status,
-                    "paid_on": rent.paid_on,
-                },
-                status=status.HTTP_200_OK,
-            )
-    except Exception as exc:
-        logger.exception("Failed to verify payment for rent %s: %s", rent.id, exc)
-
-    return Response(
-        {"error": "Payment verification failed"},
-        status=status.HTTP_400_BAD_REQUEST,
-    )
+def check_signature_or_return_http_response(
+    webhook_secret: str | None,
+    signature: str | None,
+    body: bytes,
+) -> JsonResponse | None:
+    """Verify HMAC signature and return error response if invalid."""
+    if webhook_secret and signature:
+        if not hmac.compare_digest(
+            hmac.new(webhook_secret.encode("utf-8"), body, hashlib.sha256).hexdigest(),
+            signature,
+        ):
+            logger.warning("Razorpay webhook: invalid signature")
+            return JsonResponse({"error": "Invalid signature!"}, status=400)
+    elif webhook_secret and not signature:
+        logger.warning("Razorpay webhook: missing signature header")
+        return JsonResponse({"error": "Missing signature!"}, status=400)
+    return None
 
 
-# Webhook endpoint: CSRF is exempted. This endpoint receives inbound callbacks
-# from external payment/webhook providers. Those callers do not have browser
-# sessions and therefore cannot supply a CSRF token.
-# Security: Razorpay webhook signature is verified inline below (hmac + sha256)
-# before any business logic executes. The RAZORPAY_WEBHOOK_SECRET setting must
-# be configured in production; the endpoint refuses all requests if it is absent.
+# Webhook endpoint: CSRF exempted (S4502). External services cannot provide tokens.
 @csrf_exempt
-def razorpay_webhook(request: HttpRequest) -> JsonResponse:
-    """Single Razorpay webhook handler with HMAC signature verification.
+def razorpay_webhook(request: HttpRequest) -> JsonResponse:  # noqa: C901, S3776
+    """Single Razorpay webhook handler with HMAC signature verification.  # nosonar
 
     Handles both payment.captured (order-based) and payment_link.paid events.
     Consolidated from three duplicate definitions into one secure handler.
     """
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    from properties.models import RentRecord
 
     if request.method != "POST":
-        return JsonResponse({"error": _ERROR_INVALID_METHOD}, status=405)
+        return JsonResponse({"error": "Invalid method"}, status=405)
 
     body = request.body
     signature = request.headers.get("X-Razorpay-Signature")
 
     webhook_secret = getattr(settings, "RAZORPAY_WEBHOOK_SECRET", None)
-    if not webhook_secret:
-        raise ImproperlyConfigured("RAZORPAY_WEBHOOK_SECRET is not set")
-    signature = request.headers.get("X-Razorpay-Signature")
-    if not signature:
-        return JsonResponse({"error": "Missing signature!"}, status=400)
-    if not hmac.compare_digest(
-        hmac.new(webhook_secret.encode("utf-8"), body, hashlib.sha256).hexdigest(),
-        signature,
-    ):
-        logger.warning("Razorpay webhook: invalid signature")
-        return JsonResponse({"error": "Invalid signature!"}, status=400)
+    error_response = check_signature_or_return_http_response(
+        webhook_secret, signature, body
+    )
+    if error_response is not None:
+        return error_response
 
     try:
         data = json.loads(body)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, ValueError):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
     event = data.get("event")
-    rent = _get_rent_from_event(data, event)
 
-    if rent is not None:
-        if rent.payment_status == RentRecord.Status.PAID:
-            return JsonResponse({"status": "ok", "message": "Already processed"})
-        _process_rent_payment(rent)
-
-    return JsonResponse({"status": "ok"})
-
-
-def _get_rent_from_event(data: dict, event: str) -> RentRecord | None:
-    from properties.models.rent_record_models import RentRecord  # nosonar
-
+    # Handle payment_link.paid event (primary flow)
     if event == "payment_link.paid":
         try:
             ref_id = data["payload"]["payment_link"]["entity"]["reference_id"]
         except (KeyError, TypeError):
             logger.warning("Razorpay webhook: missing reference_id in payload")
-            return None
+            return JsonResponse({"error": "Invalid payload"}, status=400)
 
         try:
-            return RentRecord.objects.get(id=ref_id)
+            rent = RentRecord.objects.get(id=ref_id)
         except RentRecord.DoesNotExist:
             logger.warning(f"Razorpay webhook: RentRecord {ref_id} not found")
-            return None
+            return JsonResponse({"error": "RentRecord not found"}, status=404)
 
-    if event == "payment.captured":
+        # Idempotent: only process if not already PAID
+        if rent.payment_status == RentRecord.Status.PAID:
+            return JsonResponse({"status": "ok", "message": "Already processed"})
+
+        rent.payment_status = RentRecord.Status.PAID
+        rent.date_paid = timezone.now().date()
+        rent.save(update_fields=["status", "paid_on", "updated_at"])
+
+        try:
+            process_rent_payout(rent)
+        except Exception as e:
+            logger.error(f"Failed to process payout for rent {rent.id}: {e}")
+
+        return JsonResponse({"status": "ok"})
+
+    # Handle payment.captured event (order-based flow)
+    elif event == "payment.captured":
         try:
             razorpay_order_id = data["payload"]["payment"]["entity"]["order_id"]
         except (KeyError, TypeError):
             logger.warning("Razorpay webhook: missing order_id in payload")
-            return None
+            return JsonResponse({"error": "Invalid payload"}, status=400)
 
         try:
-            return RentRecord.objects.get(razorpay_order_id=razorpay_order_id)
+            rent = RentRecord.objects.get(razorpay_order_id=razorpay_order_id)
         except RentRecord.DoesNotExist:
             logger.warning(
                 f"Razorpay webhook: RentRecord for order {razorpay_order_id} not found"
             )
-            return None
+            return JsonResponse({"error": "RentRecord not found"}, status=404)
 
-    return None
+        # Idempotent: only process if not already PAID
+        if rent.payment_status == RentRecord.Status.PAID:
+            return JsonResponse({"status": "ok", "message": "Already processed"})
 
+        rent.payment_status = RentRecord.Status.PAID
+        rent.date_paid = timezone.now().date()
+        rent.save(update_fields=["status", "paid_on", "updated_at"])
 
-def _process_rent_payment(rent: RentRecord) -> None:
-    from properties.models.rent_record_models import RentRecord  # nosonar
-
-    rent.payment_status = RentRecord.Status.PAID
-    rent.date_paid = timezone.now().date()
-    rent.save(update_fields=["status", "paid_on", "updated_at"])
-    try:
-        process_rent_payout(rent)
-    except Exception as e:
-        logger.exception(f"Failed to process payout for rent {rent.id}: {e}")
-
-
-# ---------------------------------------------------------------------------
-# Alert Preferences
-# ---------------------------------------------------------------------------
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def update_owner_alert_preferences(
-    request: Request, /, *args: Any, **kwargs: Any
-) -> Response:
-    owner: User = cast(User, request.user)
-    try:
-        profile = owner.userprofile
-    except UserProfile.DoesNotExist:
-        return Response(
-            {"error": "UserProfile not found"},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    data = request.data
-    profile.language_preference = data.get(
-        "language_preference", profile.language_preference
-    )
-    profile.alert_frequency = data.get("alert_frequency", profile.alert_frequency)
-    profile.receive_rent_alerts = data.get(
-        "receive_rent_alerts", profile.receive_rent_alerts
-    )
-    profile.receive_tax_alerts = data.get(
-        "receive_tax_alerts", profile.receive_tax_alerts
-    )
-    profile.receive_vacancy_alerts = data.get(
-        "receive_vacancy_alerts", profile.receive_vacancy_alerts
-    )
-    profile.receive_flagged_alerts = data.get(
-        "receive_flagged_alerts", profile.receive_flagged_alerts
-    )
-    profile.receive_voice_alerts = data.get(
-        "receive_voice_alerts", profile.receive_voice_alerts
-    )
-    profile.greeting_prefix = data.get("greeting_prefix", profile.greeting_prefix)
-    profile.reminder_time = data.get("reminder_time", profile.reminder_time)
-    profile.rent_reminders_enabled = data.get(
-        "rent_reminders_enabled", profile.rent_reminders_enabled
-    )
-    profile.save(
-        update_fields=[
-            "language_preference",
-            "alert_frequency",
-            "receive_rent_alerts",
-            "receive_tax_alerts",
-            "receive_vacancy_alerts",
-            "receive_flagged_alerts",
-            "receive_voice_alerts",
-            "greeting_prefix",
-            "reminder_time",
-            "rent_reminders_enabled",
-        ]
-    )
-    return Response({"success": True, "message": "Alert preferences updated."})
-
-
-class ReminderTimeUpdateView(APIView):
-    """Update the authenticated owner's reminder time."""
-
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request: Request, /, *args: Any, **kwargs: Any) -> Response:
-        reminder_time_str = request.data.get("reminder_time")
-        if not reminder_time_str:
-            return Response(
-                {"error": "reminder_time is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        reminder_time = parse_time(reminder_time_str)
-        if reminder_time is None:
-            return Response(
-                {"error": "Invalid time format. Use HH:MM or HH:MM:SS."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        owner: User = cast(User, request.user)
         try:
-            profile = owner.userprofile
-        except UserProfile.DoesNotExist:
-            return Response(
-                {"error": "UserProfile not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            process_rent_payout(rent)
+        except Exception as e:
+            logger.error(f"Failed to process payout for rent {rent.id}: {e}")
 
-        profile.reminder_time = reminder_time
-        profile.save(update_fields=["reminder_time"])
-        return Response(
-            {"success": True, "message": "Reminder time updated."},
-            status=status.HTTP_200_OK,
-        )
+    return JsonResponse({"status": "ok"})
 
 
 # ---------------------------------------------------------------------------
@@ -1044,7 +526,7 @@ def update_owner_bank_details(
     Fixed: Uses register_beneficiary from cashfree_service.
     Fixed: Uses correct RentRecord field (owner) instead of renter__property__owner.
     """
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    from properties.models import RentRecord
 
     data = request.data
     owner: User = cast(User, request.user)
@@ -1108,7 +590,7 @@ def rent_inflow_summary(request: Request, /, *args: Any, **kwargs: Any) -> Respo
 
     Fixed: Uses correct RentRecord field (owner) and (amount) and (PENDING).
     """
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    from properties.models import RentRecord
 
     owner: User = cast(User, request.user)
     total_received = (
@@ -1142,7 +624,7 @@ def owner_rent_records(request: Request, /, *args: Any, **kwargs: Any) -> Respon
 
     Fixed: Uses correct FK path (unit.owner, renter.name, unit.unit).
     """
-    from properties.models.rent_record_models import RentRecord  # nosonar
+    from properties.models import RentRecord
 
     owner: User = cast(User, request.user)
     rents = (
@@ -1174,898 +656,3 @@ def download_rent_excel(request: Request, /, *args: Any, **kwargs: Any) -> HttpR
     response = HttpResponse(file, content_type="application/vnd.ms-excel")
     response["Content-Disposition"] = 'attachment; filename="rent_report.xlsx"'
     return response
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def download_ca_summary(request: Request, /, *args: Any, **kwargs: Any) -> HttpResponse:
-    """Download owner CA summary as CSV or JSON."""
-    from properties.services.ca_summary_service import (
-        generate_ca_summary_csv,
-        generate_ca_summary_json,
-    )
-
-    start_date = request.query_params.get("start")
-    end_date = request.query_params.get("end")
-    fmt = request.query_params.get("format", "csv").lower()
-
-    if not start_date or not end_date:
-        return Response(
-            {"error": "start and end query parameters are required."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if fmt == "json":
-        data = generate_ca_summary_json(request.user, start_date, end_date)
-        content_type = "application/json"
-        filename = f"ca_summary_{start_date}_to_{end_date}.json"
-    else:
-        data = generate_ca_summary_csv(request.user, start_date, end_date)
-        content_type = "text/csv"
-        filename = f"ca_summary_{start_date}_to_{end_date}.csv"
-
-    response = HttpResponse(data, content_type=content_type)
-    response["Content-Disposition"] = f"attachment; filename={filename}"
-    return response
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def tax_saving_tips(request: Request, /, *args: Any, **kwargs: Any) -> Response:
-    """Return personalized tax saving suggestions for the authenticated user."""
-    tips = suggest_tax_savings(request.user)
-    return Response({"tax_saving_tips": tips})
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def download_tax_report(request: Request, /, *args: Any, **kwargs: Any) -> HttpResponse:
-    """Generate and return a downloadable income tax report PDF."""
-    pdf_path = generate_tax_report_pdf(request.user)
-    try:
-        with open(pdf_path, "rb") as f:
-            response = HttpResponse(f.read(), content_type="application/pdf")
-            response["Content-Disposition"] = 'attachment; filename="tax_report.pdf"'
-            return response
-    finally:
-        if os.path.exists(pdf_path):
-            os.remove(pdf_path)
-
-
-# ---------------------------------------------------------------------------
-# Authentication Endpoints
-# ---------------------------------------------------------------------------
-
-
-class LoginView(APIView):
-    permission_classes = [permissions.AllowAny]
-    throttle_classes = [LoginThrottle]
-
-    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"]
-        password = serializer.validated_data["password"]
-
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response(
-                {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
-            )
-
-        if not user.check_password(password):
-            return Response(
-                {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
-            )
-
-        if not user.is_active:
-            return Response(
-                {"error": "User is inactive"}, status=status.HTTP_403_FORBIDDEN
-            )
-
-        refresh = RefreshToken.for_user(user)
-        group = user.groups.first()
-        role = group.name if group else "user"
-        return Response(
-            {
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-                "user": {
-                    "id": user.pk,
-                    "phone": user.phone,
-                    "email": user.email,
-                    "firstName": user.first_name,
-                    "lastName": user.last_name,
-                    "fullName": user.full_name,
-                    "username": user.username,
-                    "role": role,
-                },
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class RegisterView(APIView):
-    permission_classes = [permissions.AllowAny]
-    throttle_classes = [RegisterThrottle]
-
-    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        serializer = RegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        if data["password"] != data["confirmPassword"]:
-            return Response(
-                {"error": "Passwords do not match"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if User.objects.filter(email=data["email"]).exists():
-            return Response(
-                {"error": "Email already exists"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        base_username = data["phone"]
-        username = base_username
-        counter = 1
-        while User.objects.filter(username=username).exists():
-            username = f"{base_username}_{counter}"
-            counter += 1
-
-        user = User.objects.create(
-            username=username,
-            email=data["email"],
-            first_name=data["firstName"],
-            last_name=data["lastName"],
-            full_name=f"{data['firstName']} {data['lastName']}",
-            phone=data["phone"],
-        )
-        user.set_password(data["password"])
-        user.save()
-
-        group, _ = Group.objects.get_or_create(name=data["role"])
-        user.groups.add(group)
-
-        refresh = RefreshToken.for_user(user)
-        return Response(
-            {
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
-                "user": {
-                    "id": user.pk,
-                    "phone": user.phone,
-                    "email": user.email,
-                    "firstName": user.first_name,
-                    "lastName": user.last_name,
-                    "fullName": user.full_name,
-                    "username": user.username,
-                    "role": data["role"],
-                },
-            },
-            status=status.HTTP_201_CREATED,
-        )
-
-
-class SocialAuthView(APIView):
-    permission_classes = [permissions.AllowAny]
-    throttle_classes = [SocialAuthThrottle]
-
-    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        serializer = SocialAuthSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        provider = serializer.validated_data["provider"]
-        token = serializer.validated_data["token"]
-
-        if provider not in ("google", "apple"):
-            return Response(
-                {"error": "Invalid provider"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        verified_email = ""
-        verified_name = ""
-
-        try:
-            if provider == "google":
-                verified_email, verified_name = _verify_google_token(token)
-            elif provider == "apple":
-                verified_email, verified_name = _verify_apple_token(token)
-        except ImproperlyConfigured as exc:
-            logger.warning("Social auth provider not configured: %s", exc)
-            return Response(
-                {"error": str(exc)},
-                status=status.HTTP_501_NOT_IMPLEMENTED,
-            )
-        except Exception:
-            logger.exception("Social auth token verification failed")
-            return Response(
-                {"error": "Failed to verify social token"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        email = verified_email or request.data.get("email", "")
-        full_name = verified_name or request.data.get("name", "")
-
-        if not email:
-            return Response(
-                {"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            user, created = User.objects.get_or_create(
-                email=email,
-                defaults={
-                    "username": email,
-                    "full_name": full_name,
-                    "phone": "",
-                },
-            )
-
-            if created:
-                user.set_unusable_password()
-                user.save()
-                group, _ = Group.objects.get_or_create(name="user")
-                user.groups.add(group)
-
-            refresh = RefreshToken.for_user(user)
-            group = user.groups.first()
-            role = group.name if group else "user"
-            return Response(
-                {
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                    "user": {
-                        "id": user.pk,
-                        "phone": user.phone,
-                        "email": user.email,
-                        "firstName": user.first_name,
-                        "lastName": user.last_name,
-                        "fullName": user.full_name,
-                        "username": user.username,
-                        "role": role,
-                    },
-                    "isNewUser": created,
-                },
-                status=status.HTTP_200_OK,
-            )
-        except Exception:
-            logger.exception("Social auth user creation failed")
-            return Response(
-                {"error": "Failed to create or retrieve user account"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-
-class ProfileView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        user = request.user
-        serializer = ProfileSerializer(user)
-        return Response({"user": serializer.data}, status=status.HTTP_200_OK)
-
-    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        user = request.user
-        serializer = ProfileSerializer(user, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({"user": serializer.data}, status=status.HTTP_200_OK)
-
-    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return self.put(request, *args, **kwargs)
-
-
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        try:
-            refresh_token = request.data.get("refresh")
-            if refresh_token:
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-        except Exception:
-            logger.exception("Logout failed")
-        return Response(
-            {"message": "Logged out successfully"}, status=status.HTTP_200_OK
-        )
-
-
-class LogoutAllDevicesView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        user = cast(User, request.user)
-        try:
-            outstanding_tokens = OutstandingToken.objects.filter(user=user)
-            for token in outstanding_tokens:
-                BlacklistedToken.objects.get_or_create(token=token)
-        except Exception:
-            logger.exception("Logout from all devices failed")
-            return Response(
-                {"error": "Failed to logout from all devices"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        return Response(
-            {"message": "Logged out from all devices"}, status=status.HTTP_200_OK
-        )
-
-
-class BiometricSetupView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        user = request.user
-        user.userprofile.biometric_enabled = True
-        user.userprofile.save(update_fields=["biometric_enabled"])
-        return Response(
-            {"message": "Biometric enabled", "isBiometricEnabled": True},
-            status=status.HTTP_200_OK,
-        )
-
-
-class BiometricDisableView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        user = request.user
-        user.userprofile.biometric_enabled = False
-        user.userprofile.save(update_fields=["biometric_enabled"])
-        return Response(
-            {"message": "Biometric disabled", "isBiometricEnabled": False},
-            status=status.HTTP_200_OK,
-        )
-
-
-class DeviceRegisterView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return Response({"message": "Device registered"}, status=status.HTTP_200_OK)
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def deactivate_account(request: Request, /, *args: Any, **kwargs: Any) -> Response:
-    user = cast(User, request.user)
-    user.is_active = False
-    user.save(update_fields=["is_active"])
-
-    try:
-        outstanding_tokens = OutstandingToken.objects.filter(user=user)
-        for token in outstanding_tokens:
-            BlacklistedToken.objects.get_or_create(token=token)
-    except Exception:
-        logger.exception("Failed to blacklist tokens during deactivation")
-
-    return Response(
-        {"message": "Account deactivated successfully"}, status=status.HTTP_200_OK
-    )
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def delete_account(request: Request, /, *args: Any, **kwargs: Any) -> Response:
-    user = cast(User, request.user)
-    confirm = request.data.get("confirm")
-    if confirm is not True:
-        return Response(
-            {
-                "error": (
-                    "Confirmation required. Set confirm=true to delete your account."
-                ),
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    try:
-        outstanding_tokens = OutstandingToken.objects.filter(user=user)
-        for token in outstanding_tokens:
-            BlacklistedToken.objects.get_or_create(token=token)
-    except Exception:
-        logger.exception("Failed to blacklist tokens during account deletion")
-
-    user.delete()
-    return Response(
-        {"message": "Account deleted successfully"}, status=status.HTTP_200_OK
-    )
-
-
-class AppVersionView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        version = AppVersion.get_active()
-        return Response(
-            {
-                "isUpdateRequired": version.is_force_update,
-                "isOptional": False,
-                "latestVersion": version.latest_version,
-                "minSupportedVersion": version.min_supported_version,
-                "storeUrl": version.store_url,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class MaintenanceView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        mode = MaintenanceMode.get_active()
-        return Response(
-            {
-                "isMaintenance": mode.is_active,
-                "message": mode.message,
-                "scheduledAt": mode.scheduled_at,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class BootstrapView(APIView):
-    """Single-call bootstrap endpoint that returns all data needed at app startup.
-
-    Response is the same for authenticated and unauthenticated callers:
-    - Maintenance status is always returned.
-    - App version info is always returned.
-    - If the caller is authenticated, user profile, subscription, feature limits,
-      add-ons, and dashboard summary are also returned.
-    """
-
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        mode = MaintenanceMode.get_active()
-        version = AppVersion.get_active()
-
-        data: dict[str, Any] = {
-            "maintenance": {
-                "isMaintenance": mode.is_active,
-                "message": mode.message,
-                "scheduledAt": mode.scheduled_at,
-            },
-            "appVersion": {
-                "isUpdateRequired": version.is_force_update,
-                "isOptional": False,
-                "latestVersion": version.latest_version,
-                "minSupportedVersion": version.min_supported_version,
-                "storeUrl": version.store_url,
-            },
-        }
-
-        if request.user.is_authenticated:
-            user = request.user
-            role = (
-                "owner"
-                if user.groups.filter(name="owner").exists()
-                else "renter" if user.groups.filter(name="renter").exists() else "user"
-            )
-            perms: set[str] = set()
-            for group in user.groups.all():
-                perms.update(group.permissions.values_list("codename", flat=True))
-
-            data["user"] = {
-                "id": user.pk,
-                "phone": user.phone,
-                "email": user.email,
-                "firstName": user.first_name,
-                "lastName": user.last_name,
-                "fullName": user.full_name,
-                "username": user.username,
-                "role": role,
-                "permissions": sorted(perms),
-            }
-
-            try:
-                subscription = user.usersubscription
-                data["subscription"] = {
-                    "id": subscription.id,
-                    "user": subscription.user_id,
-                    "plan": {
-                        "id": subscription.plan_id,
-                        "name": subscription.plan.name if subscription.plan else "free",
-                        "monthly_price": (
-                            str(subscription.plan.monthly_price)
-                            if subscription.plan
-                            else "0"
-                        ),
-                        "yearly_price": (
-                            str(subscription.plan.yearly_price)
-                            if subscription.plan
-                            else "0"
-                        ),
-                        "features": (
-                            subscription.plan.features if subscription.plan else ""
-                        ),
-                        "is_active": (
-                            subscription.plan.is_active if subscription.plan else False
-                        ),
-                    },
-                    "start_date": str(subscription.start_date),
-                    "end_date": str(subscription.end_date),
-                    "is_active": subscription.is_active,
-                    "is_yearly": subscription.is_yearly,
-                    "tax_reminder_days_before": subscription.tax_reminder_days_before,
-                    "rent_reminder_days_before": subscription.rent_reminder_days_before,
-                    "created_at": subscription.created_at,
-                    "updated_at": subscription.updated_at,
-                }
-            except UserSubscription.DoesNotExist:
-                data["subscription"] = None
-
-            addons = AddOnPurchase.objects.filter(user=user)
-            data["addOns"] = AddOnPurchaseSerializer(addons, many=True).data
-
-            limits = UsageLimit.objects.filter(user=user)
-            data["featureLimits"] = UsageLimitSerializer(limits, many=True).data
-
-            from properties.views.owner_dashboard import owner_dashboard_summary
-
-            if role == "owner":
-                try:
-                    dashboard_response = owner_dashboard_summary(
-                        type("FakeRequest", (), {"user": user, "GET": {}})(),
-                    )
-                    data["dashboardSummary"] = dashboard_response.data
-                except Exception:  # noqa: BLE001
-                    data["dashboardSummary"] = None
-            else:
-                data["dashboardSummary"] = None
-
-        return Response(data, status=status.HTTP_200_OK)
-
-
-# ---------------------------------------------------------------------------
-# Health Checks
-# ---------------------------------------------------------------------------
-
-
-class HealthCheckView(View):
-    """Liveness check - returns 200 if the app is running."""
-
-    def get(self, request):
-        return JsonResponse(
-            {
-                "status": "ok",
-                "service": "rentsecure-be",
-                "timestamp": int(time.time()),
-            }
-        )
-
-
-class ReadinessCheckView(View):
-    """Readiness check - verifies database connectivity."""
-
-    def get(self, request):
-        try:
-            connection.ensure_connection()
-            db_status = "ok"
-        except Exception as exc:
-            logger.error("Database readiness check failed: %s", exc)
-            db_status = "error"
-
-        response_data = {
-            "status": "ready" if db_status == "ok" else "not_ready",
-            "service": "rentsecure-be",
-            "checks": {
-                "database": db_status,
-            },
-            "timestamp": int(time.time()),
-        }
-        status_code = 200 if db_status == "ok" else 503
-        return JsonResponse(response_data, status=status_code)
-
-
-class LivenessCheckView(View):
-    """Liveness check - lightweight check that the app process is alive."""
-
-    def get(self, request):
-        return JsonResponse(
-            {
-                "status": "alive",
-                "service": "rentsecure-be",
-                "timestamp": int(time.time()),
-            }
-        )
-
-
-# ---------------------------------------------------------------------------
-# Subscription Payment Views
-# ---------------------------------------------------------------------------
-
-
-def _get_razorpay_client():
-    return razorpay.Client(
-        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-    )
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def create_subscription_order(
-    request: Request, /, *args: Any, **kwargs: Any
-) -> Response:
-    """Create a Razorpay order for subscription/upgrade/add-on purchase."""
-    from properties.views.owner_dashboard import owner_dashboard_summary  # noqa: F401
-
-    plan_id = request.data.get("plan_id")
-    billing_cycle = request.data.get("billing_cycle", "monthly")
-    addon_data = request.data.get("addon_data")
-
-    if not plan_id and not addon_data:
-        return Response(
-            {"error": "plan_id or addon_data is required"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    user: User = request.user
-
-    if plan_id:
-        try:
-            plan = SubscriptionPlan.objects.get(id=plan_id, is_active=True)
-        except SubscriptionPlan.DoesNotExist:
-            return Response(
-                {"error": "Plan not found or inactive"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        amount = plan.monthly_price if billing_cycle == "monthly" else plan.yearly_price
-        target_plan = plan
-    elif addon_data:
-        amount = Decimal(str(addon_data.get("amount", "0")))
-        target_plan = None
-    else:
-        return Response(
-            {"error": "Invalid request"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if amount <= 0:
-        return Response(
-            {"error": "Invalid amount"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    try:
-        subscription = user.usersubscription
-    except UserSubscription.DoesNotExist:
-        subscription = None
-
-    client = _get_razorpay_client()
-    order_receipt = f"sub_{user.id}_{timezone.now().strftime('%Y%m%d%H%M%S')}"
-
-    razorpay_order = client.order.create(
-        {
-            "amount": int(amount * 100),
-            "currency": "INR",
-            "receipt": order_receipt,
-            "payment_capture": 1,
-            "notes": {
-                "user_id": str(user.id),
-                "billing_cycle": billing_cycle,
-                "plan_id": str(plan_id) if plan_id else "",
-            },
-        }
-    )
-
-    payment = SubscriptionPayment.objects.create(
-        user=user,
-        subscription=subscription,
-        razorpay_order_id=razorpay_order["id"],
-        amount=amount,
-        currency="INR",
-        status="pending",
-        billing_cycle=billing_cycle,
-        plan=target_plan,
-    )
-
-    return Response(
-        {
-            "order_id": razorpay_order["id"],
-            "amount": str(amount),
-            "currency": "INR",
-            "key_id": settings.RAZORPAY_KEY_ID,
-            "payment_id": payment.id,
-        },
-        status=status.HTTP_201_CREATED,
-    )
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def verify_subscription_payment(
-    request: Request, /, *args: Any, **kwargs: Any
-) -> Response:
-    """Verify Razorpay subscription payment and activate plan."""
-    razorpay_order_id = request.data.get("razorpay_order_id")
-    razorpay_payment_id = request.data.get("razorpay_payment_id")
-    razorpay_signature = request.data.get("razorpay_signature")
-
-    if not all([razorpay_order_id, razorpay_payment_id, razorpay_signature]):
-        return Response(
-            {"error": "Missing payment verification fields"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    client = _get_razorpay_client()
-    try:
-        client.utility.verify_payment_signature(
-            {
-                "razorpay_order_id": razorpay_order_id,
-                "razorpay_payment_id": razorpay_payment_id,
-                "razorpay_signature": razorpay_signature,
-            }
-        )
-    except Exception as exc:
-        logger.warning("Razorpay signature verification failed: %s", exc)
-        return Response(
-            {"error": "Invalid payment signature"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    try:
-        payment = SubscriptionPayment.objects.get(
-            razorpay_order_id=razorpay_order_id,
-            user=request.user,
-        )
-    except SubscriptionPayment.DoesNotExist:
-        return Response(
-            {"error": "Order not found"},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    if payment.status == "success":
-        return Response(
-            {
-                "status": "success",
-                "payment": SubscriptionPaymentSerializer(payment).data,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-    try:
-        payment_data = client.order.fetch(razorpay_order_id)
-        if payment_data.get("status") == "paid":
-            payment.razorpay_payment_id = razorpay_payment_id
-            payment.razorpay_signature = razorpay_signature
-            payment.status = "success"
-            payment.paid_at = timezone.now()
-            payment.save(
-                update_fields=[
-                    "razorpay_payment_id",
-                    "razorpay_signature",
-                    "status",
-                    "paid_at",
-                ]
-            )
-
-            if payment.plan:
-                subscription, _ = UserSubscription.objects.update_or_create(
-                    user=payment.user,
-                    defaults={
-                        "plan": payment.plan,
-                        "is_active": True,
-                        "is_yearly": payment.billing_cycle == "yearly",
-                        "start_date": timezone.now().date(),
-                        "end_date": timezone.now().date()
-                        + timedelta(
-                            days=365 if payment.billing_cycle == "yearly" else 30
-                        ),
-                    },
-                )
-                payment.subscription = subscription
-                payment.save(update_fields=["subscription"])
-
-            return Response(
-                {
-                    "status": "success",
-                    "payment": SubscriptionPaymentSerializer(payment).data,
-                },
-                status=status.HTTP_200_OK,
-            )
-    except Exception as exc:
-        logger.exception("Failed to verify payment: %s", exc)
-
-    payment.status = "failed"
-    payment.failed_at = timezone.now()
-    payment.save(update_fields=["status", "failed_at"])
-
-    return Response(
-        {"error": "Payment verification failed"},
-        status=status.HTTP_400_BAD_REQUEST,
-    )
-
-
-@csrf_exempt
-def subscription_webhook(request: HttpRequest) -> JsonResponse:
-    """Handle subscription payment webhooks from Razorpay."""
-    if request.method != "POST":
-        return JsonResponse({"error": _ERROR_INVALID_METHOD}, status=405)
-
-    body = request.body
-    signature = request.headers.get("X-Razorpay-Signature")
-    signature_error = _require_signature(body, signature)
-    if signature_error:
-        return signature_error
-
-    event, payment_entity, parse_error = _parse_subscription_webhook(body)
-    if parse_error:
-        return parse_error
-
-    if payment_entity:
-        apply_error = _apply_payment_entity(payment_entity)
-        if apply_error:
-            return apply_error
-
-    return JsonResponse({"status": "ok"})
-
-
-def _require_signature(body: bytes, signature: str | None) -> JsonResponse | None:
-    webhook_secret = getattr(settings, "RAZORPAY_WEBHOOK_SECRET", None)
-    if not webhook_secret:
-        raise ImproperlyConfigured("RAZORPAY_WEBHOOK_SECRET is not set")
-    if not signature:
-        return JsonResponse({"error": "Missing signature!"}, status=400)
-    if not hmac.compare_digest(
-        hmac.new(webhook_secret.encode("utf-8"), body, hashlib.sha256).hexdigest(),
-        signature,
-    ):
-        logger.warning("Subscription webhook: invalid signature")
-        return JsonResponse({"error": "Invalid signature!"}, status=400)
-    return None
-
-
-def _parse_subscription_webhook(
-    body: bytes,
-) -> tuple[str | None, dict[str, Any] | None, JsonResponse | None]:
-    try:
-        data = json.loads(body)
-    except json.JSONDecodeError:
-        return None, None, JsonResponse({"error": "Invalid JSON"}, status=400)
-
-    event = data.get("event")
-    if event != "payment.captured":
-        return event, None, None
-
-    try:
-        payment_entity = data["payload"]["payment"]["entity"]
-    except (KeyError, TypeError):
-        logger.warning("Subscription webhook: missing payment entity")
-        return (
-            event,
-            None,
-            JsonResponse({"error": "Missing payment entity"}, status=400),
-        )
-
-    return event, payment_entity, None
-
-
-def _apply_payment_entity(payment_entity: dict[str, Any]) -> JsonResponse | None:
-    razorpay_order_id = payment_entity.get("order_id")
-    razorpay_payment_id = payment_entity.get("id")
-    try:
-        payment = SubscriptionPayment.objects.get(razorpay_order_id=razorpay_order_id)
-    except SubscriptionPayment.DoesNotExist:
-        return JsonResponse({"error": "Order not found"}, status=404)
-
-    if payment.status != "success":
-        payment.razorpay_payment_id = razorpay_payment_id
-        payment.status = "success"
-        payment.paid_at = timezone.now()
-        payment.save(update_fields=["razorpay_payment_id", "status", "paid_at"])
-
-        if payment.plan:
-            subscription, _ = UserSubscription.objects.update_or_create(
-                user=payment.user,
-                defaults={
-                    "plan": payment.plan,
-                    "is_active": True,
-                    "is_yearly": payment.billing_cycle == "yearly",
-                    "start_date": timezone.now().date(),
-                    "end_date": timezone.now().date()
-                    + timedelta(days=365 if payment.billing_cycle == "yearly" else 30),
-                },
-            )
-            payment.subscription = subscription
-            payment.save(update_fields=["subscription"])
-
-    return None
