@@ -1,0 +1,74 @@
+name: E2E Tests
+
+'on':
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-tests:
+    name: E2E Tests (Backend API + Security)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      USE_SQLITE: "True"
+      SECRET_KEY: "test-secret-key-e2e-ci-2026-abcdefghijklmnopqrstuvwxyz1234567890!"
+      DEBUG: "False"
+      DJANGO_ENV: test
+      ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      DATABASE_URL: "sqlite:///db_e2e_test.sqlite3"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411
+        with:
+          egress-policy: block
+          disable-sudo: true
+          allowed-endpoints: >
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            pypi.python.org:443
+            files.pythonhosted.org:443
+      - uses: ./.github/actions/setup-python-environment
+        with:
+          python-version: "3.12"
+          extra-packages: "pytest-django pytest-cov pytest-randomly"
+          cache-key-suffix: "-e2e-tests"
+      - name: Run E2E API flow tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          DJANGO_SETTINGS_MODULE=rentsecure_be.test_settings \
+            python -m pytest tests/test_e2e_flows/ tests/test_security_e2e/ \
+            -v --tb=short --randomly-seed=last \
+            --durations=20 \
+            -m "e2e or security"
+      - name: Upload E2E test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: e2e-test-results
+          path: |
+            .coverage
+            junit-results/
+          retention-days: 30
+      - name: Cleanup test database
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f db_e2e_test.sqlite3

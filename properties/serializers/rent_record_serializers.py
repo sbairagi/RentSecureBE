@@ -16,7 +16,6 @@ class RentRecordSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "payout_status",
-            "status",
             "payout_reference",
             "payment_link",
             "invoice_pdf",
@@ -26,7 +25,14 @@ class RentRecordSerializer(serializers.ModelSerializer):
             "payout_retry_count",
         ]
 
-    ALLOWED_UPDATE_FIELDS = {"notes", "adjustment_reason", "late_fee", "discount"}
+    ALLOWED_UPDATE_FIELDS = {
+        "notes",
+        "adjustment_reason",
+        "late_fee",
+        "discount",
+        "status",
+        "paid_on",
+    }
 
     @override
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:

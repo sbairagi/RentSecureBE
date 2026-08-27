@@ -1427,6 +1427,9 @@ class ProfileView(APIView):
         serializer.save()
         return Response({"user": serializer.data}, status=status.HTTP_200_OK)
 
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return self.put(request, *args, **kwargs)
+
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]

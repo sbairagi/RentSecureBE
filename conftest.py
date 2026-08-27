@@ -32,6 +32,7 @@ from decimal import Decimal
 import factory
 import pytest
 from faker import Faker
+from rest_framework.test import APIClient
 
 import django
 from django.contrib.auth import get_user_model
@@ -446,3 +447,74 @@ def caretaker(unit: Unit) -> Caretaker:
 @pytest.fixture  # type: ignore[misc, unused-ignore]
 def addon_purchase(user: User) -> AddOnPurchase:  # type: ignore[valid-type]
     return AddOnPurchaseFactory(user=user)
+
+
+# ---------------------------------------------------------------------------
+# E2E fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture  # type: ignore[misc, unused-ignore]
+def e2e_owner(db: Any) -> User:  # type: ignore[valid-type]
+    plan, _ = SubscriptionPlan.objects.get_or_create(
+        name="e2e_pro",
+        defaults={
+            "monthly_price": Decimal("29.99"),
+            "yearly_price": Decimal("299.99"),
+            "features": "E2E Pro Plan",
+            "is_active": True,
+        },
+    )
+    user = UserFactory(
+        username="e2e_owner",
+        email="e2e_owner@rentsecure.test",
+        full_name="E2E Owner",
+    )
+    UserSubscription.objects.create(
+        user=user,
+        plan=plan,
+        start_date=timezone.now().date(),
+        end_date=timezone.now().date() + timedelta(days=365),
+        is_active=True,
+        is_yearly=False,
+    )
+    return user
+
+
+@pytest.fixture  # type: ignore[misc, unused-ignore]
+def e2e_renter_user(db: Any) -> User:  # type: ignore[valid-type]
+    return UserFactory(
+        username="e2e_renter",
+        email="e2e_renter@rentsecure.test",
+        full_name="E2E Renter",
+    )
+
+
+@pytest.fixture  # type: ignore[misc, unused-ignore]
+def e2e_building(e2e_owner: User) -> Building:  # type: ignore[valid-type]
+    return BuildingFactory(owner=e2e_owner)
+
+
+@pytest.fixture  # type: ignore[misc, unused-ignore]
+def e2e_unit(e2e_building: Building) -> Unit:  # type: ignore[valid-type]
+    return UnitFactory(owner=e2e_building.owner, building=e2e_building)
+
+
+@pytest.fixture  # type: ignore[misc, unused-ignore]
+def e2e_renter(e2e_unit: Unit, e2e_renter_user: User) -> Renter:  # type: ignore[valid-type]
+    return RenterFactory(unit=e2e_unit, owner=e2e_unit.owner, user=e2e_renter_user)
+
+
+@pytest.fixture  # type: ignore[misc, unused-ignore]
+def e2e_rent_record(e2e_unit: Unit, e2e_renter: Renter) -> RentRecord:  # type: ignore[valid-type]
+    return RentRecordFactory(unit=e2e_unit, renter=e2e_renter)
+
+
+@pytest.fixture  # type: ignore[misc, unused-ignore]
+def e2e_authenticated_client(e2e_owner: User) -> APIClient:  # type: ignore[valid-type]
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    client = APIClient()
+    refresh = RefreshToken.for_user(e2e_owner)
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+    return client

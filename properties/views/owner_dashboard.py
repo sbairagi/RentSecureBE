@@ -12,6 +12,8 @@ from django.db.models import Q, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
+from core.models import UserSubscription
+
 from ..models import (
     Building,
     Caretaker,
@@ -30,7 +32,17 @@ from ..services.tax_estimation_service import estimate_tax
 def owner_dashboard_summary(request: DRFRequest) -> Response:
     if isinstance(request.user, AnonymousUser):
         return Response({"error": "Unauthorized"}, status=401)
-    owner = request.user
+
+    user = request.user
+    try:
+        sub = user.usersubscription
+        plan_name = str(sub.plan.name).lower() if sub.plan else "free"
+        if plan_name == "free":
+            return Response({"error": "Forbidden"}, status=403)
+    except UserSubscription.DoesNotExist:
+        return Response({"error": "Forbidden"}, status=403)
+
+    owner = user
     today = date.today()
     current_month = today.replace(day=1)
     previous_six_months = (current_month - timedelta(days=180)).replace(day=1)
