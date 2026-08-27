@@ -48,6 +48,9 @@ class NotificationCreateSerializer(serializers.ModelSerializer):
             "action_label",
             "image_url",
         ]
+        read_only_fields = [
+            "user",
+        ]
 
     def create(self, validated_data):
         return Notification.objects.create(**validated_data)

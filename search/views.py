@@ -52,8 +52,9 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
         "title_fn": lambda obj: obj.name,
         "subtitle_fn": lambda obj: f"{obj.address_line}, {obj.city}",
         "status_fn": lambda obj: "Active" if not obj.is_archived else "Archived",
-        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
-        or getattr(obj, "created_at", None),
+        "updated_fn": lambda obj: (
+            getattr(obj, "updated_at", None) or getattr(obj, "created_at", None)
+        ),
         "order_field": "-created_at",
     },
     "units": {
@@ -72,8 +73,9 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
         "title_fn": lambda obj: obj.building_name or obj.unit,
         "subtitle_fn": lambda obj: f"{obj.address_line}, {obj.city}",
         "status_fn": lambda obj: obj.get_status_display(),
-        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
-        or getattr(obj, "created_at", None),
+        "updated_fn": lambda obj: (
+            getattr(obj, "updated_at", None) or getattr(obj, "created_at", None)
+        ),
         "order_field": "-created_at",
     },
     "renters": {
@@ -90,8 +92,9 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
             f" - {obj.unit.unit if obj.unit else ''}"
         ),
         "status_fn": lambda obj: obj.get_status_display(),
-        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
-        or getattr(obj, "created_at", None),
+        "updated_fn": lambda obj: (
+            getattr(obj, "updated_at", None) or getattr(obj, "created_at", None)
+        ),
         "order_field": "-start_date",
     },
     "caretakers": {
@@ -108,8 +111,9 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
             f" - {obj.unit.unit if obj.unit else ''}"
         ),
         "status_fn": lambda obj: "Active" if obj.is_active else "Inactive",
-        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
-        or getattr(obj, "created_at", None),
+        "updated_fn": lambda obj: (
+            getattr(obj, "updated_at", None) or getattr(obj, "created_at", None)
+        ),
         "order_field": "-joining_date",
     },
     "rent_records": {
@@ -119,14 +123,15 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
         "serializer": RentRecordSerializer,
         "detail_route": "rent-records-detail",
         "title_fn": lambda obj: (
-            f"{obj.renter.name if obj.renter else 'Unknown'}" f" - {obj.due_date}"
+            f"{obj.renter.name if obj.renter else 'Unknown'} - {obj.due_date}"
         ),
         "subtitle_fn": lambda obj: (
-            f"{obj.unit.unit if obj.unit else ''}" f" | {obj.get_status_display()}"
+            f"{obj.unit.unit if obj.unit else ''} | {obj.get_status_display()}"
         ),
         "status_fn": lambda obj: obj.get_status_display(),
-        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
-        or getattr(obj, "created_at", None),
+        "updated_fn": lambda obj: (
+            getattr(obj, "updated_at", None) or getattr(obj, "created_at", None)
+        ),
         "order_field": "-due_date",
     },
     "visitors": {
@@ -143,8 +148,9 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
             f" - {obj.unit.unit if obj.unit else ''}"
         ),
         "status_fn": lambda obj: obj.get_status_display(),
-        "updated_fn": lambda obj: getattr(obj, "updated_at", None)
-        or getattr(obj, "created_at", None),
+        "updated_fn": lambda obj: (
+            getattr(obj, "updated_at", None) or getattr(obj, "created_at", None)
+        ),
         "order_field": "-created_at",
     },
     "agreements": {
@@ -235,6 +241,14 @@ def _search_resource_type(
         order_field = order_field.lstrip("-")
     elif ordering == "relevance":
         order_field = order_field
+
+    allowed_ordering = {
+        "newest",
+        "oldest",
+        "relevance",
+    }
+    if ordering not in allowed_ordering:
+        order_field = config["order_field"]
 
     search_qs = search_qs.order_by(order_field)
 

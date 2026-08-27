@@ -75,10 +75,10 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
         if not has_filters:
             units: QuerySet[Unit] | None = cache.get(cache_key)
             if units is None:
-                units = Unit.objects.filter(owner=user)
+                units = Unit.objects.filter(owner=user).select_related("building")
                 cache.set(cache_key, units, timeout=UNITS_CACHE_TIMEOUT)
         else:
-            units = Unit.objects.filter(owner=user)
+            units = Unit.objects.filter(owner=user).select_related("building")
 
         if enforcer.is_expired() and enforcer.is_past_grace_period():
             free_limit = enforcer.get_free_plan_limit("max_units")

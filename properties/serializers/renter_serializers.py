@@ -12,6 +12,12 @@ class RenterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Renter
         fields = "__all__"
+        read_only_fields = [
+            "id",
+            "user",
+            "created_at",
+            "updated_at",
+        ]
         extra_kwargs = {
             "id_proof": {"required": False},
             "rent_agreement": {"required": False},

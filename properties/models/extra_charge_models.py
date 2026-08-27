@@ -56,6 +56,8 @@ class ExtraCharge(models.Model):
         indexes = [
             models.Index(fields=["status"]),
             models.Index(fields=["due_date"]),
+            models.Index(fields=["unit", "status"]),
+            models.Index(fields=["renter", "status"]),
         ]
 
     @override

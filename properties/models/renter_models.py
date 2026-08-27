@@ -120,10 +120,13 @@ class Renter(models.Model):
     vacated_on = models.DateField(blank=True, null=True)
 
     status = models.CharField(
-        max_length=20, choices=RenterStatus.choices, default=RenterStatus.ACTIVE
+        max_length=20,
+        choices=RenterStatus.choices,
+        default=RenterStatus.ACTIVE,
+        db_index=True,
     )
     status_changed_at = models.DateTimeField(null=True, blank=True)
-    notice_start_date = models.DateField(null=True, blank=True)
+    notice_start_date = models.DateField(null=True, blank=True, db_index=True)
 
     rating = models.PositiveIntegerField(null=True, blank=True)
     feedback = models.TextField(blank=True, null=True)
@@ -148,12 +151,14 @@ class Renter(models.Model):
         choices=OnboardingStatus.choices,
         default=OnboardingStatus.PENDING,
         help_text="Renter self-onboarding progress",
+        db_index=True,
     )
     kyc_status = models.CharField(
         max_length=20,
         choices=KYCStatus.choices,
         default=KYCStatus.NOT_STARTED,
         help_text="KYC verification status",
+        db_index=True,
     )
     onboarding_token = models.CharField(
         max_length=255,
@@ -168,6 +173,10 @@ class Renter(models.Model):
     class Meta:
         unique_together = ("unit", "phone")
         ordering = ["-start_date"]
+        indexes = [
+            models.Index(fields=["unit", "status"]),
+            models.Index(fields=["unit", "is_active"]),
+        ]
 
     @override
     def clean(self) -> None:
@@ -280,7 +289,10 @@ class PoliceVerification(models.Model):
     )
     renter = models.OneToOneField(Renter, on_delete=models.CASCADE, db_index=True)
     unit = models.ForeignKey(
-        Unit, on_delete=models.CASCADE, related_name="police_verification"
+        Unit,
+        on_delete=models.CASCADE,
+        related_name="police_verification",
+        db_index=True,
     )
     generated_at = models.DateTimeField(auto_now_add=True)
     file = models.FileField(upload_to="rent_agreements/")
@@ -288,6 +300,7 @@ class PoliceVerification(models.Model):
         max_length=20,
         choices=PoliceVerificationStatus.choices,
         default=PoliceVerificationStatus.NOT_STARTED,
+        db_index=True,
     )
     submitted_at = models.DateTimeField(null=True, blank=True)
     verified_at = models.DateTimeField(null=True, blank=True)

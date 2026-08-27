@@ -47,11 +47,13 @@ logger = logging.getLogger(__name__)
 class CAProfileViewSet(viewsets.ModelViewSet[CAProfile]):
     """CRUD for the ``CAProfile`` model — used by owners to onboard their CA."""
 
-    queryset: Any = CAProfile.objects.all()
     serializer_class = CAProfileSerializer
     permission_classes: list[type[permissions.BasePermission]] = [
         permissions.IsAuthenticated
     ]
+
+    def get_queryset(self) -> Any:
+        return CAProfile.objects.filter(user=self.request.user)
 
     @override
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:

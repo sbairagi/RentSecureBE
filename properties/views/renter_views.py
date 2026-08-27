@@ -68,12 +68,12 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         )
 
         if has_filters:
-            renters = Renter.objects.filter(unit__owner=user)
+            renters = Renter.objects.filter(unit__owner=user).select_related("unit")
         else:
             cache_key: str = f"renters_user_{user.id}"
             renters = cache.get(cache_key)
             if renters is None:
-                renters = Renter.objects.filter(unit__owner=user)
+                renters = Renter.objects.filter(unit__owner=user).select_related("unit")
                 cache.set(cache_key, renters, timeout=300)
 
         search = self.request.GET.get("search")

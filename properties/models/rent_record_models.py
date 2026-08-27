@@ -46,6 +46,7 @@ class RentRecord(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         related_name="rent_records",
+        db_index=True,
         help_text="Renter who made the payment",
     )
     amount = models.DecimalField(
@@ -61,9 +62,10 @@ class RentRecord(models.Model):
         choices=Status.choices,
         default=Status.PENDING,
         help_text="Payment status",
+        db_index=True,
     )
     paid_on = models.DateField(
-        null=True, blank=True, help_text="Date when payment was made"
+        null=True, blank=True, help_text="Date when payment was made", db_index=True
     )
     due_date = models.DateField(help_text="Rent due date", db_index=True)
     late_fee = models.DecimalField(
@@ -77,7 +79,10 @@ class RentRecord(models.Model):
         max_length=100, blank=True, help_text="Payment gateway / bank ref"
     )
     payout_status = models.CharField(
-        max_length=20, default="PENDING", help_text="Payout transfer status"
+        max_length=20,
+        default="PENDING",
+        help_text="Payout transfer status",
+        db_index=True,
     )
     payout_reference = models.CharField(
         max_length=100, blank=True, help_text="Payout gateway reference"
@@ -114,6 +119,10 @@ class RentRecord(models.Model):
         ordering = ["-due_date"]
         verbose_name = "Rent Record"
         verbose_name_plural = "Rent Records"
+        indexes = [
+            models.Index(fields=["unit", "status", "due_date"]),
+            models.Index(fields=["unit", "payout_status"]),
+        ]
 
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
 

@@ -15,7 +15,12 @@ from typing import TYPE_CHECKING, Any, cast, override
 import razorpay  # type: ignore[import-untyped]
 import requests
 from rest_framework import generics, permissions, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import (
+    action,
+    api_view,
+    permission_classes,
+    throttle_classes,
+)
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -40,6 +45,13 @@ from django.utils.dateparse import parse_time
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
+from core.throttles import (
+    ForgotPasswordThrottle,
+    LoginThrottle,
+    OTPThrottle,
+    RegisterThrottle,
+    SocialAuthThrottle,
+)
 from notification.services.rent_notify_service import send_payout_notification
 from rentsecure_be.services.cashfree_service import (
     delete_beneficiary,
@@ -139,6 +151,8 @@ def send_otp(phone_number: str, code: str) -> None:
 
 
 class SendOTP(APIView):
+    throttle_classes = [OTPThrottle]
+
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         phone = request.data.get("phone")
         referral_code = request.data.get("referral_code", "").strip()
@@ -256,6 +270,8 @@ def _verify_otp_and_login(
 
 
 class OwnerVerifyOTP(APIView):
+    throttle_classes = [OTPThrottle]
+
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         phone = request.data.get("phone")
         code = request.data.get("otp")
@@ -264,6 +280,8 @@ class OwnerVerifyOTP(APIView):
 
 
 class RenterVerifyOTP(APIView):
+    throttle_classes = [OTPThrottle]
+
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         phone = request.data.get("phone")
         code = request.data.get("otp")
@@ -327,6 +345,7 @@ class ResetPasswordView(APIView):
 
 @api_view(["POST"])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([ForgotPasswordThrottle])
 def forgot_password(request: Request, /, *args: Any, **kwargs: Any) -> Response:
     from core.models import PasswordResetToken
 
@@ -366,6 +385,7 @@ def forgot_password(request: Request, /, *args: Any, **kwargs: Any) -> Response:
 
 @api_view(["POST"])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([ForgotPasswordThrottle])
 def reset_password_confirm(
     request: Request, token: str, /, *args: Any, **kwargs: Any
 ) -> Response:
@@ -1219,6 +1239,7 @@ def download_tax_report(request: Request, /, *args: Any, **kwargs: Any) -> HttpR
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [LoginThrottle]
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = LoginSerializer(data=request.data)
@@ -1267,6 +1288,7 @@ class LoginView(APIView):
 
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [RegisterThrottle]
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = RegisterSerializer(data=request.data)
@@ -1326,6 +1348,7 @@ class RegisterView(APIView):
 
 class SocialAuthView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [SocialAuthThrottle]
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         serializer = SocialAuthSerializer(data=request.data)

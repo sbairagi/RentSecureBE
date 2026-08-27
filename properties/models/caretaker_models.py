@@ -45,7 +45,9 @@ class CareTaker(models.Model):
     address = models.TextField(blank=True)
     joining_date = models.DateField(help_text="Date of joining", db_index=True)
     leaving_date = models.DateField(null=True, blank=True)
-    is_active = models.BooleanField(default=True, help_text="Currently active?")
+    is_active = models.BooleanField(
+        default=True, help_text="Currently active?", db_index=True
+    )
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

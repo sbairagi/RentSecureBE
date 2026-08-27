@@ -40,6 +40,12 @@ class GenerateRentAgreementPdfViewSet(viewsets.ViewSet):
                 {"detail": "Renter not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
+        if renter.unit.owner != request.user:
+            return Response(
+                {"detail": "You do not have permission to access this document."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         html_string = render_to_string(
             "rent_agreement.html",
             {
@@ -66,10 +72,14 @@ class GenerateUnitDossierPdfViewSet(viewsets.ViewSet):
     def generate_dossier_pdf(self, request: HttpRequest, pk: int) -> HttpResponse:
         from weasyprint import HTML
 
-        # Get Unit or return 404
         unit_obj = get_object_or_404(Unit, pk=pk)
 
-        # Get related data
+        if unit_obj.owner != request.user:
+            return Response(
+                {"detail": "You do not have permission to access this document."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         caretakers = unit_obj.caretakers.all()
         renters = unit_obj.renters.all()
         taxes = getattr(unit_obj, "tax_records", None)
@@ -83,7 +93,6 @@ class GenerateUnitDossierPdfViewSet(viewsets.ViewSet):
             "taxes": taxes,
         }
 
-        # Render HTML from template
         html_string = render_to_string("property_dossier.html", context)
 
         try:
@@ -101,9 +110,12 @@ class GenerateUnitDossierPdfViewSet(viewsets.ViewSet):
 
 
 class GenerateRentReceiptPdfViewSet(viewsets.ModelViewSet):
-    queryset = RentRecord.objects.all()
     serializer_class = RentRecordSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return RentRecord.objects.filter(unit__owner=user)
 
     @action(detail=True, methods=["get"], url_path="pdf_receipt")
     def pdf_receipt(self, request: HttpRequest, pk: int) -> HttpResponse:

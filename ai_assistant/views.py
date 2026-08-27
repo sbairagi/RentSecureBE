@@ -93,6 +93,10 @@ def chat_with_assistant(request: DRFRequest) -> Response:
     if not message_text:
         return Response({"error": "Message is required."}, status=400)
 
+    sanitized_message = message_text.replace("\x00", "")
+    if len(sanitized_message) > 2000:
+        return Response({"error": "Message too long."}, status=400)
+
     conversation_id = request.data.get("conversation_id")
     conversation = None
     if conversation_id:

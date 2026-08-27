@@ -23,6 +23,12 @@ class RentRecordSerializer(serializers.ModelSerializer):
             "payout_retries",
             "last_payout_retry",
             "payout_retry_count",
+            "status",
+            "payment_status",
+            "amount_paid",
+            "paid_on",
+            "renter",
+            "unit",
         ]
 
     ALLOWED_UPDATE_FIELDS = {

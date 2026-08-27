@@ -372,8 +372,15 @@ REST_FRAMEWORK = {
         "core.infrastructure.exceptions.exception_handler.exception_handler"
     ),
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    "DEFAULT_THROTTLE_CLASSES": ("rest_framework.throttling.UserRateThrottle",),
     "DEFAULT_THROTTLE_RATES": {
+        "user": "100/min",
         "ai_chat": "30/min",
+        "login": "10/min",
+        "otp_verify": "10/min",
+        "register": "5/min",
+        "forgot_password": "5/min",
+        "social_auth": "10/min",
     },
 }
 

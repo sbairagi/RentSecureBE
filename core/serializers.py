@@ -98,6 +98,9 @@ class ProfileSerializer(serializers.ModelSerializer):
             "role",
             "permissions",
         ]
+        read_only_fields = [
+            "is_phone_verified",
+        ]
 
     def get_role(self, obj: User) -> str:
         group = obj.groups.first()

@@ -12,6 +12,12 @@ class CaretakerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Caretaker
         fields = "__all__"
+        read_only_fields = [
+            "id",
+            "user",
+            "created_at",
+            "updated_at",
+        ]
 
     @override
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
