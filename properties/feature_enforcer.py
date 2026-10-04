@@ -57,6 +57,11 @@ class FeatureEnforcer:
             return None
         if isinstance(value, datetime):
             return value.date()
+        if isinstance(value, str):
+            try:
+                return datetime.strptime(value, "%Y-%m-%d").date()
+            except ValueError:
+                return None
         return value
 
     def is_expired(self) -> bool:

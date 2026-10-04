@@ -5,6 +5,7 @@ from typing import Any
 from django.utils import timezone
 
 from notification.models import Notification
+from notification.services import notifications as notification_services
 from notification.services.sms_service import send_sms
 from notification.services.whatsapp_service import send_whatsapp_message
 
@@ -42,6 +43,56 @@ def _send_sms(user: Any, message: str) -> bool:
     except Exception:
         logger.exception("SMS send failed for user %s", getattr(user, "pk", None))
         return False
+
+
+def _dispatch_push_notification(
+    user: Any,
+    title: str,
+    message: str,
+    notification_type: str,
+    channels: list[str] | None,
+) -> bool:
+    if "push" in (channels or []):
+        return False
+    try:
+        from core.models import NotificationPreference
+
+        pref, _ = NotificationPreference.objects.get_or_create(owner=user)
+        if pref.push_enabled:
+            type_pref_map = {
+                Notification.RENT_DUE: "rent_alerts_push",
+                Notification.RENT_PAYMENT_SUCCESS: "rent_alerts_push",
+                Notification.RENT_PAYMENT_FAILED: "rent_alerts_push",
+                Notification.AGREEMENT_EXPIRING: "agreement_push",
+                Notification.AGREEMENT_SIGNED: "agreement_push",
+                Notification.MAINTENANCE_CREATED: "maintenance_push",
+                Notification.MAINTENANCE_UPDATED: "maintenance_push",
+                Notification.VISITOR_REQUEST: "visitor_push",
+                Notification.VISITOR_APPROVED: "visitor_push",
+                Notification.SUBSCRIPTION_EXPIRING: "subscription_push",
+                Notification.SUBSCRIPTION_EXPIRED: "subscription_push",
+                Notification.DOCUMENT_SHARED: "system_push",
+                Notification.SYSTEM_ALERT: "system_push",
+                Notification.PAYOUT_SUCCESS: "rent_alerts_push",
+                Notification.PAYOUT_FAILED: "rent_alerts_push",
+                Notification.RENTER_STATUS_CHANGE: "rent_alerts_push",
+                Notification.ITR_REMINDER: "system_push",
+                Notification.TAX_REMINDER: "system_push",
+                Notification.EXTRA_CHARGE_REMINDER: "rent_alerts_push",
+            }
+            pref_key = type_pref_map.get(notification_type)
+            if not pref_key or getattr(pref, pref_key, False):
+                return bool(
+                    notification_services.send_fcm_notification(
+                        user, title, message, notification_type=notification_type
+                    )
+                )
+    except Exception:
+        logger.exception(
+            "Failed to check push preferences for user %s",
+            getattr(user, "pk", None),
+        )
+    return False
 
 
 def dispatch_notification(
@@ -93,6 +144,9 @@ def dispatch_notification(
         image_url=image_url,
     )
 
+    push_ok = _dispatch_push_notification(
+        user, title, message, notification_type, channels
+    )
     wa_ok = False
     sms_ok = False
 
@@ -103,6 +157,8 @@ def dispatch_notification(
         sms_ok = _send_sms(user, message)
 
     sent_channels: list[str] = []
+    if push_ok:
+        sent_channels.append("push")
     if wa_ok:
         sent_channels.append("whatsapp")
     if sms_ok:

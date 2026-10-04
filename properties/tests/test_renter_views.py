@@ -1,8 +1,10 @@
 """Comprehensive pytest tests for properties/views/renter_views.py."""
 
+import unittest
 from decimal import Decimal
 from unittest.mock import patch
 
+import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -1223,26 +1225,26 @@ class RenterViewSetNoticePeriodTests(TestCase):
         self.assertIn("RevokedRenter", names)
 
 
-class TestRenterSearchFilterOrdering:
+class TestRenterSearchFilterOrdering(unittest.TestCase):
     """Tests for renter list search, filter, and ordering."""
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.owner = User.objects.create_user(
+    pytestmark = pytest.mark.django_db
+
+    def setup_method(self, method):
+        self.owner = User.objects.create_user(
             username="renter_sfo_owner",
             password="p",
             full_name="RenterSFOwner",
             phone="+1",
         )
-        cls.plan = SubscriptionPlan.objects.create(
+        self.plan = SubscriptionPlan.objects.create(
             name="renter_sfo_pro",
             monthly_price=Decimal("29.99"),
             yearly_price=Decimal("299.99"),
         )
-        UserSubscription.objects.create(user=cls.owner, plan=cls.plan, is_active=True)
-        cls.building = Building.objects.create(
-            owner=cls.owner,
+        UserSubscription.objects.create(user=self.owner, plan=self.plan, is_active=True)
+        self.building = Building.objects.create(
+            owner=self.owner,
             name="RenterSFOBuilding",
             address_line="1 St",
             city="C",
@@ -1250,9 +1252,9 @@ class TestRenterSearchFilterOrdering:
             country="CO",
             postal_code="1",
         )
-        cls.unit = Unit.objects.create(
-            owner=cls.owner,
-            building=cls.building,
+        self.unit = Unit.objects.create(
+            owner=self.owner,
+            building=self.building,
             unit="RSFOU1",
             unit_type="flat",
             address_line="1 St",
@@ -1261,8 +1263,6 @@ class TestRenterSearchFilterOrdering:
             country="CO",
             postal_code="1",
         )
-
-    def setUp(self):
         cache.clear()
         self._c = APIClient()
         token = RefreshToken.for_user(self.owner).access_token

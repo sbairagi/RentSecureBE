@@ -45,7 +45,7 @@ def generate_rent_receipt_pdf(rent_record: RentRecord) -> bytes:
 
         html_string: str = render_to_string("pdf/rent_receipt.html", context)
         html = HTML(string=html_string)
-        pdf_bytes: bytes = html.write_pdf()
+        pdf_bytes: bytes = html.write_pdf() or b""
     except Exception as exc:
         logger.exception(
             "Failed to generate rent receipt PDF for rent %s: %s",

@@ -10,7 +10,7 @@ from datetime import timedelta
 from typing import Any, cast
 
 import razorpay  # type: ignore[import-untyped]
-from rest_framework import generics, permissions, viewsets
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -656,3 +656,128 @@ def download_rent_excel(request: Request, /, *args: Any, **kwargs: Any) -> HttpR
     response = HttpResponse(file, content_type="application/vnd.ms-excel")
     response["Content-Disposition"] = 'attachment; filename="rent_report.xlsx"'
     return response
+
+
+@api_view(["POST"])
+@permission_classes([permissions.AllowAny])
+def login_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Email/password login returning JWT tokens."""
+    from django.contrib.auth import authenticate
+
+    email = request.data.get("email")
+    password = request.data.get("password")
+    if not email or not password:
+        return Response(
+            {"error": "Email and password are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user = authenticate(request, username=email, password=password)
+    if not user:
+        try:
+            user_obj = User.objects.get(email=email)
+            user = authenticate(request, username=user_obj.username, password=password)
+        except User.DoesNotExist:
+            user = None
+
+    if not user:
+        return Response(
+            {"error": "Invalid credentials"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    refresh = RefreshToken.for_user(user)
+    return Response(
+        {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "full_name": user.full_name,
+            },
+        }
+    )
+
+
+@api_view(["GET", "PATCH", "PUT"])
+@permission_classes([IsAuthenticated])
+def profile_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Return or update the authenticated user's profile."""
+    user = request.user
+
+    if request.method in ("PATCH", "PUT"):
+        full_name = request.data.get("full_name")
+        if full_name is not None:
+            user.full_name = full_name
+            user.save(update_fields=["full_name"])
+        phone = request.data.get("phone")
+        if phone is not None:
+            user.phone = phone
+            user.save(update_fields=["phone"])
+
+    return Response(
+        {
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "full_name": user.full_name,
+                "phone": user.phone,
+                "is_phone_verified": user.is_phone_verified,
+            }
+        }
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def logout_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Blacklist the provided refresh token."""
+    refresh_token = request.data.get("refresh")
+    if not refresh_token:
+        return Response(
+            {"error": "Refresh token is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+    except Exception:
+        return Response(
+            {"error": "Invalid refresh token"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    return Response({"message": "Logged out successfully"})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def logout_all_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Blacklist all refresh tokens for the current user by rotating the password."""
+    user = request.user
+    # SimpleJWT does not track tokens, so we rotate the password to invalidate
+    # existing tokens
+    user.set_password(None)
+    user.save()
+    return Response({"message": "Logged out from all devices"})
+
+
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def bootstrap_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Return authentication status for the current request."""
+    if request.user.is_authenticated:
+        return Response(
+            {
+                "authenticated": True,
+                "user": {
+                    "id": request.user.id,
+                    "username": request.user.username,
+                    "email": request.user.email,
+                    "full_name": request.user.full_name,
+                },
+            }
+        )
+    return Response({"authenticated": False})

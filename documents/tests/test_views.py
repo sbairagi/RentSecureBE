@@ -188,6 +188,7 @@ class TestGenerateUnitDossierPdfViewSet:
         self, owner, unit: UnitFactory
     ):
         mock_unit = MagicMock()
+        mock_unit.owner = owner
         mock_unit.caretakers.all.return_value = []
         mock_unit.renters.all.return_value = []
 
@@ -245,6 +246,7 @@ class TestGenerateUnitDossierPdfViewSet:
         mock_tax_records.all.return_value = taxes_qs
 
         unit_obj = MagicMock()
+        unit_obj.owner = owner
         unit_obj.caretakers.all.return_value = []
         unit_obj.renters.all.return_value = []
         unit_obj.tax_records = mock_tax_records
@@ -278,6 +280,7 @@ class TestGenerateUnitDossierPdfViewSet:
                 mock_html_cls.return_value = mock_html_inst
 
                 mock_unit = MagicMock()
+                mock_unit.owner = owner
                 mock_unit.caretakers.all.return_value = []
                 mock_unit.renters.all.return_value = []
 
@@ -302,6 +305,7 @@ class TestGenerateUnitDossierPdfViewSet:
                 mock_html_cls.return_value = mock_html_inst
 
                 mock_unit = MagicMock()
+                mock_unit.owner = owner
                 mock_unit.caretakers.all.return_value = []
                 mock_unit.renters.all.return_value = []
 

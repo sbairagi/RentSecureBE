@@ -5,9 +5,14 @@ from rest_framework import serializers
 from rentsecure_be.type_compat import override
 
 from ..models import RentRecord
+from .renter_serializers import RenterSerializer
+from .unit_serializers import UnitSerializer
 
 
 class RentRecordSerializer(serializers.ModelSerializer):
+    renter = RenterSerializer(read_only=True)
+    unit = UnitSerializer(read_only=True)
+
     class Meta:
         model = RentRecord
         fields = "__all__"
@@ -27,8 +32,6 @@ class RentRecordSerializer(serializers.ModelSerializer):
             "payment_status",
             "amount_paid",
             "paid_on",
-            "renter",
-            "unit",
         ]
 
     ALLOWED_UPDATE_FIELDS = {
@@ -36,7 +39,6 @@ class RentRecordSerializer(serializers.ModelSerializer):
         "adjustment_reason",
         "late_fee",
         "discount",
-        "status",
         "paid_on",
     }
 

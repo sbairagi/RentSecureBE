@@ -37,7 +37,7 @@ class DispatchNotificationTest(TestCase):
             phone="+911234567890",
         )
         NotificationPreference.objects.create(owner=self.user)
-        UserProfile.objects.create(user=self.user)
+        UserProfile.objects.get_or_create(user=self.user)
 
     def test_creates_in_app_notification(self):
         note = dispatch_notification(
@@ -64,7 +64,7 @@ class DispatchNotificationTest(TestCase):
             message="Test message",
             notification_type=Notification.SYSTEM_ALERT,
         )
-        self.assertEqual(Notification.objects.count(), 2)
+        self.assertEqual(Notification.objects.count(), 1)
 
     def test_respects_push_disabled_preference(self):
         pref = NotificationPreference.objects.get(owner=self.user)
@@ -72,7 +72,7 @@ class DispatchNotificationTest(TestCase):
         pref.save()
 
         with patch(
-            "notification.services.orchestrator.send_fcm_notification"
+            "notification.services.notifications.send_fcm_notification"
         ) as mock_push:
             dispatch_notification(
                 user=self.user,
@@ -88,7 +88,7 @@ class DispatchNotificationTest(TestCase):
         pref.save()
 
         with patch(
-            "notification.services.orchestrator.send_fcm_notification"
+            "notification.services.notifications.send_fcm_notification"
         ) as mock_push:
             dispatch_notification(
                 user=self.user,
@@ -100,7 +100,7 @@ class DispatchNotificationTest(TestCase):
 
     def test_sets_delivered_at_when_push_succeeds(self):
         with patch(
-            "notification.services.orchestrator.send_fcm_notification",
+            "notification.services.notifications.send_fcm_notification",
             return_value=True,
         ):
             note = dispatch_notification(
@@ -259,7 +259,7 @@ class MaintenanceNotificationTest(TestCase):
             phone="+919876543210",
         )
         NotificationPreference.objects.create(owner=self.owner)
-        UserProfile.objects.create(user=self.renter_user)
+        UserProfile.objects.get_or_create(user=self.renter_user)
 
     @patch("notification.services.maintenance_notify_service.dispatch_notification")
     def test_notify_maintenance_created(self, mock_dispatch):

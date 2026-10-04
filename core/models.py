@@ -35,6 +35,10 @@ class UserProfile(models.Model):
     language_preference = models.CharField(
         max_length=2, default="en", choices=[("en", "English"), ("hi", "Hindi")]
     )
+    receive_flagged_alerts = models.BooleanField(default=True)
+    receive_tax_alerts = models.BooleanField(default=True)
+    receive_rent_alerts = models.BooleanField(default=True)
+    receive_vacancy_alerts = models.BooleanField(default=True)
 
 
 class NotificationPreference(models.Model):
@@ -47,6 +51,13 @@ class NotificationPreference(models.Model):
     monthly_summary_whatsapp = models.BooleanField(default=False)
     payout_alerts_whatsapp = models.BooleanField(default=True)
     payout_alerts_email = models.BooleanField(default=False)
+    push_enabled = models.BooleanField(default=True)
+    rent_alerts_push = models.BooleanField(default=True)
+    agreement_push = models.BooleanField(default=True)
+    maintenance_push = models.BooleanField(default=True)
+    visitor_push = models.BooleanField(default=True)
+    subscription_push = models.BooleanField(default=True)
+    system_push = models.BooleanField(default=True)
 
     @override
     def save(self, *args: Any, **kwargs: Any) -> None:

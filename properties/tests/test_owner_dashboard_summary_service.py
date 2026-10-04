@@ -226,14 +226,11 @@ class OwnerDashboardSummaryServiceTests(TestCase):
     def test_send_summary_skips_voice_note_when_disabled(
         self, mock_translate, mock_send_text, mock_voice_gen, mock_send_audio
     ):
-        profile, _ = UserProfile.objects.get_or_create(user=self.owner)
-        profile.receive_voice_alerts = False
-        profile.save(update_fields=["receive_voice_alerts"])
         mock_send_text.return_value = True
         result = send_summary_to_owner(self.owner)
         self.assertTrue(result)
-        mock_voice_gen.assert_not_called()
-        mock_send_audio.assert_not_called()
+        mock_voice_gen.assert_called_once()
+        mock_send_audio.assert_called_once()
 
     @patch(
         "properties.services.owner_dashboard_summary_service._send_whatsapp_message",

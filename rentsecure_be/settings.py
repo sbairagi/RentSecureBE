@@ -10,7 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-import logging
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -37,92 +36,8 @@ if not DEBUG:
     if len(parts) >= 2 and parts[0] == "django" and parts[1] == "insecure":
         raise ImproperlyConfigured("A secure SECRET_KEY must be set in production.")
 
-# ---------------------------------------------------------------------------
-# ALLOWED_HOSTS
-# ---------------------------------------------------------------------------
-# Allow the dev server to respond on the LAN IP so an Expo Go app on a
-# phone on the same Wi-Fi can reach it. Set DJANGO_LOCAL_IP in your .env
-# to your machine's local address (e.g. 192.168.1.50).
-_raw_allowed_hosts = config(
-    "ALLOWED_HOSTS",
-    default="localhost,127.0.0.1",
-    cast=Csv(),
-)
-_local_ip = config("DJANGO_LOCAL_IP", default="")
-if _local_ip:
-    _raw_allowed_hosts = list(_raw_allowed_hosts) + [_local_ip]
-ALLOWED_HOSTS = _raw_allowed_hosts
-
-# ---------------------------------------------------------------------------
-# CSRF trusted origins (relaxed only in DEBUG)
-# ---------------------------------------------------------------------------
-# In production set CSRF_TRUSTED_ORIGINS explicitly to your real domains.
-# In DEBUG we accept common local and Expo development origins so the
-# mobile app does not get 403 CSRF errors during local development.
-# Django 4.2+ supports wildcard ports via the :* suffix.
-if DEBUG:
-    _default_csrf_trusted = [
-        "http://localhost:*",
-        "http://127.0.0.1:*",
-        "https://localhost:*",
-        "https://127.0.0.1:*",
-        "http://exp://*",
-        "http://192.168.*.*",
-        "http://10.*.*.*",
-        "http://172.16.*.*",
-    ]
-else:
-    _default_csrf_trusted = []
-CSRF_TRUSTED_ORIGINS = (
-    list(
-        config(
-            "CSRF_TRUSTED_ORIGINS",
-            default="",
-            cast=Csv(),
-        )
-    )
-    + _default_csrf_trusted
-)
-
-# ---------------------------------------------------------------------------
-# CORS (django-cors-headers)
-# ---------------------------------------------------------------------------
-# In DEBUG we allow every origin because Expo Go uses dynamic tunnel and
-# LAN URLs that are impossible to enumerate ahead of time.
-# In production we lock CORS down to an explicit allow-list via regex.
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-    CORS_ALLOWED_ORIGINS = []
-    CORS_ALLOWED_ORIGIN_REGEXES = []
-else:
-    CORS_ALLOW_ALL_ORIGINS = False
-    CORS_ALLOWED_ORIGINS = []
-    CORS_ALLOWED_ORIGIN_REGEXES = [
-        r"^https://.*\.rentsecure\.com$",
-        r"^https://rentsecure\.com$",
-    ]
-
-CORS_ALLOW_CREDENTIALS = True
-
-# Explicitly allow the custom headers the mobile/web app sends.
-# Without this, the browser preflight (OPTIONS) rejects them even when
-# CORS_ALLOW_ALL_ORIGINS is True.
-CORS_ALLOW_HEADERS = [
-    "accept",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "origin",
-    "referer",
-    "user-agent",
-    "x-requested-with",
-    "x-platform",
-    "x-language",
-    "x-timezone",
-    "x-app-version",
-    "x-device-id",
-    "x-correlation-id",
-]
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
+CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
 
 # Application URLs
 FRONTEND_URL = config("FRONTEND_URL", default="https://app.rentsecure.com")
@@ -155,7 +70,6 @@ CASHFREE_PAYOUT_BASE_TEST_URL = config(
 CASHFREE_PAYOUT_BASE_URL = config(
     "CASHFREE_PAYOUT_BASE_URL", default="https://payout-api.cashfree.com"
 )
-CASHFREE_WEBHOOK_SECRET = config("CASHFREE_WEBHOOK_SECRET", default="")
 
 RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
 RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
@@ -166,61 +80,21 @@ LEEGALITY_API_KEY = config("LEEGALITY_API_KEY", default="")
 LEEGALITY_ORG_ID = config("LEEGALITY_ORG_ID", default="")
 LEEGALITY_WORKFLOW_ID = config("LEEGALITY_WORKFLOW_ID", default="")
 LEEGALITY_TEMPLATE_ID = config("LEEGALITY_TEMPLATE_ID", default="")
-LEEGALITY_WEBHOOK_SECRET = config("LEEGALITY_WEBHOOK_SECRET", default="")
 
 AWS_S3_BUCKET_NAME = config("AWS_S3_BUCKET_NAME", default="")
 AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="")
 
-# Feature flags for optional integrations
-ENABLE_RAZORPAY = config("ENABLE_RAZORPAY", default=False, cast=bool)
-ENABLE_CASHFREE = config("ENABLE_CASHFREE", default=False, cast=bool)
-ENABLE_WHATSAPP = config("ENABLE_WHATSAPP", default=False, cast=bool)
-WHATSAPP_WEBHOOK_SECRET = config("WHATSAPP_WEBHOOK_SECRET", default="")
-ENABLE_VOICE = config("ENABLE_VOICE", default=False, cast=bool)
-ENABLE_OPENAI = config("ENABLE_OPENAI", default=False, cast=bool)
-ENABLE_LEEGALITY = config("ENABLE_LEEGALITY", default=False, cast=bool)
-ENABLE_EMAIL = config("ENABLE_EMAIL", default=True, cast=bool)
-ENABLE_PUSH_NOTIFICATION = config("ENABLE_PUSH_NOTIFICATION", default=True, cast=bool)
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "formatters": {
-        "structured": {
-            "format": ("[%(asctime)s] [%(levelname)s] " "%(name)s - %(message)s"),
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        },
-        "simple": {
-            "format": "[%(asctime)s] [%(levelname)s] %(name)s - %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        },
-    },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "structured",
         },
     },
     "root": {
         "handlers": ["console"],
         "level": "INFO",
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "django.request": {
-            "handlers": ["console"],
-            "level": "WARNING",
-            "propagate": False,
-        },
-        "core": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
     },
 }
 
@@ -240,7 +114,6 @@ INSTALLED_APPS = [
     "simple_history",
     "fcm_django",
     "django_celery_beat",
-    "corsheaders",
     # custome app
     "core",
     "notification",
@@ -251,14 +124,13 @@ INSTALLED_APPS = [
     "smartbot",
     "ai_assistant",
     "visitors",
-    "search",
+    "ci_dashboard",
     "django_extensions",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -285,19 +157,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "rentsecure_be.wsgi.application"
-ASGI_APPLICATION = "rentsecure_be.asgi.application"
-
-# Channels
-INSTALLED_APPS += ["channels"]
-
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [config("REDIS_URL", default="redis://127.0.0.1:6379/0")],
-        },
-    },
-}
 
 
 # Database
@@ -338,7 +197,8 @@ AUTH_USER_MODEL = "core.User"
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": (
-            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+            "django.contrib.auth.password_validation."
+            "UserAttributeSimilarityValidator"
         ),
     },
     {
@@ -355,7 +215,15 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-    )
+    ),
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "5/min",
+        "user": "100/min",
+    },
 }
 
 CACHES = {
@@ -419,42 +287,3 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
     "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True, cast=bool
 )
 SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=True, cast=bool)
-
-
-# ---------------------------------------------------------------------------
-# Observability: Sentry
-# ---------------------------------------------------------------------------
-# Install: pip install sentry-sdk
-# Set SENTRY_DSN in production .env to enable.
-def _before_sentry_event(event, hint):
-    if event.get("request"):
-        req = event["request"]
-        if req.get("headers"):
-            for key in list(req["headers"].keys()):
-                if key.lower() in ("authorization", "cookie", "x-csrf-token"):
-                    req["headers"][key] = "[REDACTED]"
-    return event
-
-
-SENTRY_DSN = config("SENTRY_DSN", default="")
-if SENTRY_DSN:
-    try:
-        import sentry_sdk
-        from sentry_sdk.integrations.django import DjangoIntegration
-        from sentry_sdk.integrations.logging import LoggingIntegration
-
-        sentry_sdk.init(
-            dsn=SENTRY_DSN,
-            environment=ENVIRONMENT,
-            release=f"rentsecure-be@{config('APP_VERSION', default='1.0.0')}",
-            integrations=[
-                DjangoIntegration(),
-                LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
-            ],
-            traces_sample_rate=0.0 if DEBUG else 0.1,
-            profiles_sample_rate=0.0 if DEBUG else 0.1,
-            send_default_pii=False,
-            before_send=_before_sentry_event,
-        )
-    except ImportError:
-        pass

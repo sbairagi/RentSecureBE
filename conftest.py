@@ -383,6 +383,7 @@ def _rentsecure_test_defaults(db, monkeypatch):  # type: ignore[no-untyped-def]
     monkeypatch.setattr(
         "notification.services.whatsapp_service.Client", _FakeTwilioClient
     )
+    monkeypatch.setattr("notification.services.sms_service.Client", _FakeTwilioClient)
     monkeypatch.setattr(
         "properties.views.rent_record_views.create_payment_link",
         lambda rent: f"https://payments.test/rent/{rent.id}",

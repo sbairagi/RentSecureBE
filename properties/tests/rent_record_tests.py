@@ -65,6 +65,17 @@ class RentRecordViewSetTest(TestCase):
                 "postal_code": "1",
             },
         )
+        self.renter, _ = Renter.objects.get_or_create(
+            unit=self.u,
+            name="RRRenter",
+            defaults={
+                "phone": "+911234567890",
+                "email": "rr@test.com",
+                "rent_amount": Decimal("10000"),
+                "start_date": timezone.now().date(),
+                "status": "active",
+            },
+        )
 
     def _auth(self):
         c = APIClient()
@@ -193,6 +204,7 @@ class RentRecordSerializerSecurityTests(TestCase):
             },
             format="json",
         )
+        print("RESPONSE:", response.status_code, response.data)
         self.assertEqual(response.status_code, 201)
         created_id = response.data["id"]
         created = RentRecord.objects.get(id=created_id)

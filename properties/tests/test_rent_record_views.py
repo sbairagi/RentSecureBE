@@ -857,9 +857,9 @@ class TestRentRecordSearchFilterOrdering(TestCase):
             amount=Decimal("10000"),
             payment_method="online",
             status=RentRecord.Status.PAID,
-            due_date=timezone.now().date(),
+            due_date=timezone.now().date() + timedelta(days=30),
         )
-        response = self.client.get("/rent-records/", {"search": "Alice"})
+        response = self.client.get("/api/rent-records/", {"search": "Alice"})
         self.assertEqual(response.status_code, 200)
         records = (
             response.data
@@ -894,9 +894,9 @@ class TestRentRecordSearchFilterOrdering(TestCase):
             amount=Decimal("10000"),
             payment_method="online",
             status=RentRecord.Status.PENDING,
-            due_date=timezone.now().date(),
+            due_date=timezone.now().date() + timedelta(days=30),
         )
-        response = self.client.get("/rent-records/", {"status": "PAID"})
+        response = self.client.get("/api/rent-records/", {"status": "paid"})
         self.assertEqual(response.status_code, 200)
         records = (
             response.data
@@ -904,8 +904,8 @@ class TestRentRecordSearchFilterOrdering(TestCase):
             else response.data.get("results", [])
         )
         statuses = [r["status"] for r in records]
-        self.assertIn("PAID", statuses)
-        self.assertNotIn("PENDING", statuses)
+        self.assertIn("paid", statuses)
+        self.assertNotIn("pending", statuses)
 
     def test_ordering_by_due_date(self):
         renter = Renter.objects.create(
@@ -933,7 +933,7 @@ class TestRentRecordSearchFilterOrdering(TestCase):
             status=RentRecord.Status.PENDING,
             due_date=date(2024, 4, 1),
         )
-        response = self.client.get("/rent-records/", {"ordering": "due_date"})
+        response = self.client.get("/api/rent-records/", {"ordering": "due_date"})
         self.assertEqual(response.status_code, 200)
         records = (
             response.data
@@ -988,7 +988,7 @@ class TestRentRecordSearchFilterOrdering(TestCase):
             status=RentRecord.Status.PAID,
             due_date=timezone.now().date(),
         )
-        response = self.client.get("/rent-records/", {"search": "OtherRenter"})
+        response = self.client.get("/api/rent-records/", {"search": "OtherRenter"})
         self.assertEqual(response.status_code, 200)
         records = (
             response.data
