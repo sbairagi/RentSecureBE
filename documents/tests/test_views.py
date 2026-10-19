@@ -380,7 +380,8 @@ class TestGenerateRentReceiptPdfViewSet:
         assert resp["Content-Type"] == "application/pdf"
         assert (
             resp["Content-Disposition"]
-            == f"attachment; filename=rent_receipt_{rent_record.id}.pdf"
+            == f"attachment; filename=rent_receipt_{rent_record.id}_"
+            f"{rent_record.due_date:%Y%m}.pdf"
         )
 
     @_http
@@ -402,6 +403,10 @@ class TestGenerateRentReceiptPdfViewSet:
 
                 context = _render_context(mock_render)
                 assert context["rent_record"] == rent_record
+                assert context["receipt"].filename == (
+                    f"rent_receipt_{rent_record.id}_{rent_record.due_date:%Y%m}.pdf"
+                )
+                assert context["receipt"].payee == rent_record.renter.name
 
 
 # ---------------------------------------------------------------------------

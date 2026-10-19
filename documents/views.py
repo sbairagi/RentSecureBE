@@ -18,6 +18,7 @@ from core.models import User
 from properties.models import Renter, RentRecord, Unit
 from properties.serializers import RentRecordSerializer
 
+from .receipt import build_receipt
 from .utils import generate_unit_history_pdf
 
 # Create your views here.
@@ -128,14 +129,21 @@ class GenerateRentReceiptPdfViewSet(viewsets.ModelViewSet):
                 {"error": "Rent record not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        html_string = render_to_string("rent_recept.html", {"rent_record": rent_record})
-        html = HTML(string=html_string)
-        pdf_file = html.write_pdf()
+        receipt = build_receipt(rent_record)
+        html_string = render_to_string(
+            "receipt_card.html", {"receipt": receipt, "rent_record": rent_record}
+        )
+
+        try:
+            pdf_file = HTML(string=html_string).write_pdf()
+        except Exception as exc:
+            return Response(
+                {"error": "Failed to generate the rent receipt", "details": str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         response = HttpResponse(pdf_file, content_type="application/pdf")
-        response["Content-Disposition"] = (
-            f"attachment; filename=rent_receipt_{rent_record.id}.pdf"
-        )
+        response["Content-Disposition"] = f"attachment; filename={receipt.filename}"
         return response
 
 

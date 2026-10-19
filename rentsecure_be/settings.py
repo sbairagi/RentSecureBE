@@ -48,6 +48,9 @@ CORS_ALLOWED_ORIGINS = config(
     cast=Csv(),
 )
 CORS_ALLOW_CREDENTIALS = True
+# The web client reads the file name from ``Content-Disposition`` when it
+# downloads a PDF, so the header has to be readable cross-origin.
+CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 CORS_ALLOW_HEADERS = [
     "accept",
     "authorization",

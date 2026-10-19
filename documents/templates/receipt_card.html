@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rent receipt</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 46px 0 0;
+            background: #f5f6fb;
+            color: #20213a;
+            font-family: Inter, "Segoe UI", "DejaVu Sans", Helvetica, Arial, sans-serif;
+            -weasy-font-feature-settings: normal;
+        }
+        .card {
+            width: 460pt;
+            margin: 0 auto;
+            padding: 20pt 20pt 22pt;
+            border: 1pt solid #e9eaf1;
+            border-radius: 14pt;
+            background: #fcfcfe;
+        }
+        .brand {
+            display: table;
+            width: 100%;
+            padding-bottom: 13pt;
+            border-bottom: 1pt dashed #e9eaf1;
+        }
+        .brand-cell { display: table-cell; vertical-align: middle; }
+        .brand-cell.right { text-align: right; }
+        .mark {
+            display: inline-block;
+            width: 33pt;
+            height: 33pt;
+            border-radius: 10pt;
+            background: linear-gradient(145deg, #8179ff, #5148df);
+            text-align: center;
+            vertical-align: middle;
+        }
+        .mark svg { width: 18pt; height: 18pt; stroke: #fff; fill: none; stroke-width: 1.8; }
+        .brand-copy { display: inline-block; padding-left: 10pt; vertical-align: middle; }
+        .brand-copy b { display: block; font-size: 13pt; font-weight: 700; }
+        .brand-copy small { display: block; padding-top: 2pt; color: #85879a; font-size: 9pt; }
+        .pill {
+            display: inline-block;
+            padding: 4pt 9pt;
+            border-radius: 8pt;
+            font-size: 9pt;
+            font-weight: 700;
+        }
+        .pill.paid { color: #16816e; background: #e8f7f2; }
+        .pill.pending { color: #ad761d; background: #fff5df; }
+        .pill.overdue { color: #bd4f60; background: #fff0f2; }
+        .meta {
+            display: table;
+            width: 100%;
+            padding: 12pt 0 10pt;
+            border-bottom: 1pt solid #e9eaf1;
+            font-size: 10.5pt;
+        }
+        .meta .label { display: table-cell; color: #85879a; }
+        .meta .value { display: table-cell; text-align: right; font-weight: 700; }
+        .rows { padding: 10pt 0; }
+        .row { display: table; width: 100%; padding: 5pt 0; font-size: 10.5pt; }
+        .row .label { display: table-cell; color: #85879a; }
+        .row .value { display: table-cell; text-align: right; font-weight: 650; }
+        .due {
+            margin: 2pt 0 11pt;
+            padding: 11pt 13pt;
+            border: 1pt solid #e9eaf1;
+            border-radius: 10pt;
+            background: #fff;
+        }
+        .due .row { padding: 4pt 0; }
+        .total {
+            display: table;
+            width: 100%;
+            margin-top: 5pt;
+            padding: 12pt 13pt;
+            border-radius: 10pt;
+            background: #eeedff;
+        }
+        .total .label { display: table-cell; color: #5c58a8; font-size: 10.5pt; font-weight: 700; }
+        .total .value { display: table-cell; text-align: right; color: #5148df; font-size: 19pt; font-weight: 750; }
+        .foot {
+            margin-top: 12pt;
+            padding-top: 10pt;
+            border-top: 1pt dashed #e9eaf1;
+            color: #9a9bab;
+            font-size: 9pt;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="brand">
+            <div class="brand-cell">
+                <span class="mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2h-5v-7H9v7H4a2 2 0 0 1-2-2z"/></svg></span>
+                <span class="brand-copy"><b>SecureNest</b><small>Rent receipt</small></span>
+            </div>
+            <div class="brand-cell right"><span class="pill {{ receipt.status_tone }}">{{ receipt.status_label }}</span></div>
+        </div>
+        <div class="meta"><span class="label">Receipt no.</span><span class="value">{{ receipt.receipt_no }}</span></div>
+        <div class="rows">
+            <div class="row"><span class="label">Payee (renter)</span><span class="value">{{ receipt.payee }}</span></div>
+            <div class="row"><span class="label">Property &middot; Unit</span><span class="value">{{ receipt.property }}</span></div>
+            <div class="row"><span class="label">Rent period</span><span class="value">{{ receipt.period }}</span></div>
+            <div class="row"><span class="label">Due date</span><span class="value">{{ receipt.due_date }}</span></div>
+            <div class="row"><span class="label">Paid on</span><span class="value">{{ receipt.paid_on }}</span></div>
+            <div class="row"><span class="label">Payment mode</span><span class="value">{{ receipt.payment_method }}</span></div>
+        </div>
+        <div class="due">
+            <div class="row"><span class="label">Dues amount</span><span class="value">{{ receipt.dues_amount }}</span></div>
+            <div class="row"><span class="label">Paid amount</span><span class="value">{{ receipt.paid_amount }}</span></div>
+            <div class="row"><span class="label">Net balance</span><span class="value">{{ receipt.net_balance }}</span></div>
+        </div>
+        <div class="total"><span class="label">Amount paid by tenant</span><span class="value">{{ receipt.total_amount }}</span></div>
+        <div class="foot">Generated by SecureNest &middot; the downloaded PDF matches this receipt.</div>
+    </div>
+</body>
+</html>

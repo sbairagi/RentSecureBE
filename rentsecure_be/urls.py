@@ -31,6 +31,9 @@ urlpatterns: list[object] = [
     path("api/ai-assistant/", include("ai_assistant.urls")),
     path("properties/", include("properties.urls")),
     path("documents/", include("documents.urls")),
+    # The web client resolves every API path against the ``/api/`` base, so the
+    # document endpoints are also mounted there.
+    path("api/documents/", include("documents.urls")),
 ]
 
 

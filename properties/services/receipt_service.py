@@ -15,6 +15,8 @@ from weasyprint import HTML
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 
+from documents.receipt import build_receipt, receipt_filename
+
 if TYPE_CHECKING:
     from properties.models import RentRecord
 
@@ -36,14 +38,17 @@ def generate_rent_receipt_pdf(rent_record: RentRecord) -> bytes:
             logging context.
     """
     try:
+        receipt = build_receipt(rent_record)
         context: dict[str, Any] = {
+            "receipt": receipt,
             "rent": rent_record,
+            "rent_record": rent_record,
             "renter": rent_record.renter,
             "unit": rent_record.unit,
             "owner": rent_record.renter.unit.owner if rent_record.renter else None,
         }
 
-        html_string: str = render_to_string("pdf/rent_receipt.html", context)
+        html_string: str = render_to_string("receipt_card.html", context)
         html = HTML(string=html_string)
         pdf_bytes: bytes = html.write_pdf() or b""
     except Exception as exc:
@@ -106,8 +111,7 @@ def send_rent_receipt_email(rent_record: RentRecord) -> bool:
             to=email_to,
         )
 
-        receipt_month: str = rent_record.due_date.strftime("%Y%m")
-        filename: str = f"rent_receipt_{rent_record.id}_{receipt_month}.pdf"
+        filename: str = receipt_filename(rent_record)
         email.attach(filename, pdf_bytes, "application/pdf")
         email.send(fail_silently=False)
 
