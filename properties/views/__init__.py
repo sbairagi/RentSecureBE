@@ -2,6 +2,7 @@ from .building_views import BuildingViewSet
 from .caretaker_views import CaretakerViewSet
 from .extra_charge_views import ExtraChargeViewSet
 from .itr_views import contact_ca, extract_form16_data, get_itr_deduction_suggestions
+from .maintenance_views import MaintenanceRequestViewSet
 from .owner_dashboard import (
     income_summary,
     itr_tracker_summary,
@@ -35,6 +36,7 @@ from .renter_views import (
     renter_rent_record_detail,
     renter_rent_records,
 )
+from .reporting_views import download_owner_rent_report, owner_reports
 from .unit_views import (
     RentAgreementDraftViewSet,
     UnitDocumentViewSet,
@@ -45,6 +47,9 @@ from .unit_views import (
 
 __all__ = [
     "BuildingViewSet",
+    "MaintenanceRequestViewSet",
+    "owner_reports",
+    "download_owner_rent_report",
     "UnitViewSet",
     "UnitImageViewSet",
     "UnitDocumentViewSet",

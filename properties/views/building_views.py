@@ -115,7 +115,6 @@ class BuildingViewSet(viewsets.ModelViewSet[Building]):
             raise PermissionDenied("Building creation limit reached for your plan.")
 
         serializer.save(owner=user)
-        enforcer.increment("max_buildings")
         cache.delete(f"buildings_user_{user.id}")
 
     @override
@@ -133,9 +132,7 @@ class BuildingViewSet(viewsets.ModelViewSet[Building]):
             raise PermissionDenied(
                 "You do not have permission to delete this building."
             )
-        enforcer = FeatureEnforcer(self.request.user)
         instance.delete()
-        enforcer.decrement("max_buildings")
         cache.delete(f"buildings_user_{self.request.user.id}")
 
     @action(detail=True, methods=["get"], url_path="analytics")

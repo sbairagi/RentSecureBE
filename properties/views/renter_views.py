@@ -134,7 +134,6 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
             raise PermissionDenied("Renter limit reached for your plan.")
 
         serializer.save()
-        enforcer.increment("max_renters")
         update_unit_status(unit)
         cache.delete(f"renters_user_{self.request.user.id}")
 
@@ -157,9 +156,7 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         if instance.unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
         unit: Unit = instance.unit
-        enforcer = FeatureEnforcer(self.request.user)
         instance.delete()
-        enforcer.decrement("max_renters")
         update_unit_status(unit)
         cache.delete(f"renters_user_{self.request.user.id}")
 
@@ -618,11 +615,30 @@ def renter_dashboard(request: Request) -> Response:
     if isinstance(user, AnonymousUser):
         return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
-    renter = get_object_or_404(
-        Renter.objects.select_related("unit", "unit__building"),
-        user=user,
-        status__in=["active", "notice_period"],
+    renter = (
+        Renter.objects.select_related("unit", "unit__building")
+        .filter(
+            user=user,
+            status__in=["active", "notice_period"],
+        )
+        .first()
     )
+
+    if renter is None:
+        if not user.groups.filter(name="renter").exists():
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        dashboard_data = {
+            "profile": None,
+            "current_rent": None,
+            "recent_payments": [],
+            "agreement": None,
+            "notifications_unread_count": Notification.objects.filter(
+                user=user, is_read=False, archived=False
+            ).count(),
+            "extra_charges_count": 0,
+        }
+        return Response(dashboard_data)
 
     cache_key = f"renter_dashboard_user_{user.id}"
     cached = cache.get(cache_key)

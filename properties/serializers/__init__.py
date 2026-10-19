@@ -1,6 +1,7 @@
 from .building_serializers import BuildingSerializer
 from .caretaker_serializers import CaretakerSerializer
 from .extra_charge_serializers import ExtraChargeSerializer
+from .maintenance_serializers import MaintenanceRequestSerializer
 from .police_verification_serializers import PoliceVerificationSerializer
 from .rent_record_serializers import RentRecordSerializer
 from .renter_serializers import (
@@ -37,5 +38,6 @@ __all__ = [
     "RenterExtraChargeSerializer",
     "RentRecordSerializer",
     "ExtraChargeSerializer",
+    "MaintenanceRequestSerializer",
     "PoliceVerificationSerializer",
 ]

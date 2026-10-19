@@ -73,7 +73,6 @@ class CaretakerViewSet(viewsets.ModelViewSet[Caretaker]):
             raise PermissionDenied("Caretaker limit reached for your plan.")
 
         serializer.save()
-        enforcer.increment("max_caretakers")
 
     @override
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
@@ -89,9 +88,7 @@ class CaretakerViewSet(viewsets.ModelViewSet[Caretaker]):
     def perform_destroy(self, instance: Caretaker) -> None:
         if instance.unit.owner != self.request.user:
             raise PermissionDenied("You do not own the selected unit.")
-        enforcer = FeatureEnforcer(self.request.user)
         instance.delete()
-        enforcer.decrement("max_caretakers")
 
     @override
     @action(detail=True, methods=["post"])

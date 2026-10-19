@@ -37,11 +37,46 @@ if not DEBUG:
         raise ImproperlyConfigured("A secure SECRET_KEY must be set in production.")
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
-CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="http://localhost:8082,http://127.0.0.1:8082,http://localhost:3000,http://127.0.0.1:3000",
+    cast=Csv(),
+)
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:8082,http://127.0.0.1:8082,http://localhost:3000,http://127.0.0.1:3000",
+    cast=Csv(),
+)
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "x-app-version",
+    "x-correlation-id",
+    "x-device-id",
+    "x-language",
+    "x-platform",
+    "x-timezone",
+]
 
 # Application URLs
 FRONTEND_URL = config("FRONTEND_URL", default="https://app.rentsecure.com")
 BACKEND_URL = config("BACKEND_URL", default="http://localhost:8000")
+
+# Public app startup checks. These defaults keep local development available;
+# deployments can enable maintenance or require a newer client through env vars.
+APP_MAINTENANCE_MODE = config("APP_MAINTENANCE_MODE", default=False, cast=bool)
+APP_MAINTENANCE_MESSAGE = config(
+    "APP_MAINTENANCE_MESSAGE", default="The app is temporarily under maintenance."
+)
+APP_MAINTENANCE_SCHEDULED_AT = config("APP_MAINTENANCE_SCHEDULED_AT", default="")
+APP_LATEST_VERSION = config("APP_LATEST_VERSION", default="1.0.0")
+APP_MIN_SUPPORTED_VERSION = config("APP_MIN_SUPPORTED_VERSION", default="1.0.0")
+APP_STORE_URL = config("APP_STORE_URL", default="")
 
 # Email details
 EMAIL_BACKEND = config(
@@ -111,6 +146,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
+    "corsheaders",
     "simple_history",
     "fcm_django",
     "django_celery_beat",
@@ -129,6 +165,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

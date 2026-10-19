@@ -20,6 +20,7 @@ from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.utils import timezone
 
 from notification.models import Notification
@@ -30,6 +31,7 @@ User = get_user_model()
 API_PREFIX = "/api"
 
 
+@override_settings(SECURE_SSL_REDIRECT=False, ALLOWED_HOSTS=["testserver"])
 class RenterE2EFlowTests(E2EAPIClientMixin, APITestCase):
     """Complete renter end-to-end flow."""
 
@@ -53,6 +55,20 @@ class RenterE2EFlowTests(E2EAPIClientMixin, APITestCase):
             f"{API_PREFIX}/renter/dashboard/", token=self.renter_token
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_unassigned_renter_gets_empty_dashboard(self):
+        renter_user = self._create_renter_user("e2e_unassigned_renter")
+        self._ensure_group(renter_user, "renter")
+
+        response = self._get_json(
+            f"{API_PREFIX}/renter/dashboard/",
+            token=self._get_access_token(renter_user),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data["profile"])
+        self.assertIsNone(response.data["current_rent"])
+        self.assertEqual(response.data["recent_payments"], [])
 
     def test_renter_dashboard_requires_auth(self):
         response = self.client.get(f"{API_PREFIX}/renter/dashboard/")

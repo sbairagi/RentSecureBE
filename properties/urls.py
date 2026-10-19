@@ -6,6 +6,7 @@ from .views import (
     BuildingViewSet,
     CaretakerViewSet,
     ExtraChargeViewSet,
+    MaintenanceRequestViewSet,
     PoliceVerificationViewSet,
     RentAgreementDraftViewSet,
     RenterViewSet,
@@ -14,6 +15,7 @@ from .views import (
     UnitImageViewSet,
     UnitViewSet,
     contact_ca,
+    download_owner_rent_report,
     download_rent_invoice,
     extract_form16_data,
     get_itr_deduction_suggestions,
@@ -25,6 +27,7 @@ from .views import (
     owner_dashboard_summary,
     owner_rent_overview,
     owner_rent_records,
+    owner_reports,
     rent_history,
     rent_whatsapp_logs,
     renter_agreement,
@@ -41,6 +44,7 @@ from .views import (
 router = DefaultRouter()
 # Active end-point
 router.register(r"buildings", BuildingViewSet, basename="buildings")
+router.register(r"maintenance", MaintenanceRequestViewSet, basename="maintenance")
 router.register(r"units", UnitViewSet, basename="units")
 router.register(r"caretakers", CaretakerViewSet, basename="caretakers")
 router.register(r"renters", RenterViewSet, basename="renters")
@@ -84,6 +88,8 @@ urlpatterns = [
     path("owner/rents/", owner_rent_overview),
     path("owner/dashboard/", owner_dashboard),
     path("owner/dashboard-summary/", owner_dashboard_summary),
+    path("owner/reports/", owner_reports),
+    path("owner/rent-report/", download_owner_rent_report),
     path("owner/income-summary/", income_summary),
     path("owner/retry_payout_api/<int:rent_id>/", retry_payout_api),
     path(

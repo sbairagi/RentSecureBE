@@ -140,11 +140,6 @@ class UserProfilePreferenceSerializer(serializers.ModelSerializer):
             "receive_tax_alerts",
             "receive_vacancy_alerts",
             "receive_flagged_alerts",
-            "receive_voice_alerts",
             "language_preference",
-            "alert_frequency",
-            "greeting_prefix",
-            "reminder_time",
-            "rent_reminders_enabled",
         ]
         read_only_fields = fields

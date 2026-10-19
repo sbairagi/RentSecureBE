@@ -150,7 +150,6 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
             raise PermissionDenied("Unit creation limit reached for your plan.")
 
         serializer.save(owner=self.request.user)
-        enforcer.increment("max_units")
         cache.delete(f"units_user_{self.request.user.id}")
 
     @override
@@ -167,9 +166,7 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
         """Delete a unit and decrement the owner's quota."""
         if instance.owner != self.request.user:
             raise PermissionDenied("You do not have permission to delete this unit.")
-        enforcer = FeatureEnforcer(self.request.user)
         instance.delete()
-        enforcer.decrement("max_units")
         cache.delete(f"units_user_{self.request.user.id}")
 
     @action(detail=False, methods=["get"], url_path="occupancy_stats")

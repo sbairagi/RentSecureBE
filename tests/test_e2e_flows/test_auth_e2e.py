@@ -110,6 +110,8 @@ class AuthenticationE2EFlowTests(E2EAPIClientMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("access", response.data)
         self.assertIn("refresh", response.data)
+        self.assertIn("role", response.data["user"])
+        self.assertEqual(response.data["user"]["role"], "property_owner")
 
     def test_login_invalid_credentials(self):
         response = self.client.post(
@@ -132,6 +134,8 @@ class AuthenticationE2EFlowTests(E2EAPIClientMixin, APITestCase):
         response = self._get_json(f"{API_PREFIX}/auth/profile/", token=token)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["user"]["username"], self.owner.username)
+        self.assertIn("role", response.data["user"])
+        self.assertEqual(response.data["user"]["role"], "property_owner")
 
     def test_protected_endpoint_without_token(self):
         response = self.client.get(f"{API_PREFIX}/auth/profile/")

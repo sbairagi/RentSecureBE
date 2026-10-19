@@ -6,6 +6,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 
 from core.models import (
@@ -13,12 +14,83 @@ from core.models import (
     AddOnPurchase,
     SubscriptionPlan,
     UsageLimit,
+    UserProfile,
     UserSubscription,
 )
 
 User = get_user_model()
 
 API_PREFIX = "/api"
+
+
+@override_settings(SECURE_SSL_REDIRECT=False, ALLOWED_HOSTS=["testserver"])
+class UserRegistrationTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.payload = {
+            "firstName": "Test",
+            "lastName": "Renter",
+            "email": "new-renter@example.com",
+            "phone": "+919876543210",
+            "password": "StrongPassword!948",
+            "confirmPassword": "StrongPassword!948",
+            "role": "renter",
+        }
+
+    def test_register_creates_account_and_returns_tokens(self):
+        response = self.client.post(
+            f"{API_PREFIX}/auth/register/", self.payload, format="json"
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.data["access"])
+        self.assertTrue(response.data["refresh"])
+        self.assertEqual(response.data["user"]["role"], "renter")
+
+        user = User.objects.get(email="new-renter@example.com")
+        self.assertTrue(user.check_password("StrongPassword!948"))
+        self.assertTrue(user.groups.filter(name="renter").exists())
+        self.assertEqual(
+            UserProfile.objects.get(user=user).whatsapp_number, self.payload["phone"]
+        )
+
+    def test_register_rejects_duplicate_email(self):
+        first_response = self.client.post(
+            f"{API_PREFIX}/auth/register/", self.payload, format="json"
+        )
+        duplicate_response = self.client.post(
+            f"{API_PREFIX}/auth/register/", self.payload, format="json"
+        )
+
+        self.assertEqual(first_response.status_code, 201)
+        self.assertEqual(duplicate_response.status_code, 400)
+        self.assertIn("already exists", duplicate_response.data["error"])
+
+    def test_register_rejects_mismatched_passwords(self):
+        self.payload["confirmPassword"] = "another-password"
+
+        response = self.client.post(
+            f"{API_PREFIX}/auth/register/", self.payload, format="json"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(User.objects.filter(email=self.payload["email"]).count(), 0)
+
+    def test_bootstrap_checks_do_not_exhaust_signup_throttle(self):
+        cache.clear()
+        for _ in range(6):
+            self.assertEqual(
+                self.client.get(f"{API_PREFIX}/auth/maintenance/").status_code, 200
+            )
+            self.assertEqual(
+                self.client.get(f"{API_PREFIX}/auth/app/version/").status_code, 200
+            )
+
+        response = self.client.post(
+            f"{API_PREFIX}/auth/register/", self.payload, format="json"
+        )
+
+        self.assertEqual(response.status_code, 201)
 
 
 class SendOTPTest(TestCase):

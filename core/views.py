@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import logging
+import re
 import secrets
 import uuid
 from datetime import timedelta
@@ -11,7 +12,7 @@ from typing import Any, cast
 
 import razorpay  # type: ignore[import-untyped]
 from rest_framework import generics, permissions, status, viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -22,6 +23,9 @@ from twilio.rest import Client
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, Group
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone
@@ -44,6 +48,7 @@ from .models import (
     SubscriptionPlan,
     UsageLimit,
     User,
+    UserProfile,
     UserSubscription,
 )
 from .serializers import (
@@ -55,6 +60,43 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _get_user_role(user: User) -> str:
+    """Map a Django user to the frontend role contract used by navigation guards."""
+    if user.is_superuser or user.is_staff:
+        return "admin"
+
+    group_roles = {
+        "owner": "property_owner",
+        "property_owner": "property_owner",
+        "renter": "renter",
+        "caretaker": "caretaker",
+        "ca": "ca_partner",
+        "ca_partner": "ca_partner",
+        "support_executive": "support_executive",
+        "admin": "admin",
+    }
+    for group_name in user.groups.values_list("name", flat=True):
+        if group_name in group_roles:
+            return group_roles[group_name]
+
+    if UserSubscription.objects.filter(user=user).exists():
+        return "property_owner"
+
+    from finance.models import CAProfile
+    from properties.models import Caretaker, Renter
+
+    role_models = (
+        (Renter, "renter"),
+        (Caretaker, "caretaker"),
+        (CAProfile, "ca_partner"),
+    )
+    for model, role in role_models:
+        if model.objects.filter(user=user).exists():
+            return role
+
+    return "user"
 
 
 # ---------------------------------------------------------------------------
@@ -687,6 +729,7 @@ def login_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
         )
 
     refresh = RefreshToken.for_user(user)
+    user_role = _get_user_role(user)
     return Response(
         {
             "refresh": str(refresh),
@@ -696,8 +739,112 @@ def login_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
                 "username": user.username,
                 "email": user.email,
                 "full_name": user.full_name,
+                "role": user_role,
+                "permissions": list(user.get_all_permissions()),
             },
         }
+    )
+
+
+def _validated_registration_data(data: Any) -> tuple[dict[str, str] | None, str | None]:
+    """Normalize and validate the fields accepted by the signup form."""
+    first_name = str(data.get("firstName", data.get("first_name", ""))).strip()
+    last_name = str(data.get("lastName", data.get("last_name", ""))).strip()
+    email = str(data.get("email", "")).strip().lower()
+    phone = str(data.get("phone", "")).strip()
+    password = str(data.get("password", ""))
+    confirm_password = str(
+        data.get("confirmPassword", data.get("confirm_password", ""))
+    )
+    requested_role = str(data.get("role", "renter")).strip().lower()
+
+    if not all((first_name, last_name, email, phone, password, confirm_password)):
+        return None, "All signup fields are required."
+    if len(first_name) + len(last_name) > 100:
+        return None, "Name must be 100 characters or fewer."
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        return None, "Enter a valid email address."
+    if not re.fullmatch(r"\+?\d{9,15}", phone):
+        return None, "Enter a valid phone number with 9 to 15 digits."
+    if password != confirm_password:
+        return None, "Passwords do not match."
+    if requested_role not in {"property_owner", "renter", "caretaker"}:
+        return None, "Select a valid account type."
+    try:
+        validate_password(password)
+    except ValidationError as error:
+        return None, " ".join(error.messages)
+
+    return {
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "phone": phone,
+        "password": password,
+        "role": requested_role,
+    }, None
+
+
+@api_view(["POST"])
+@permission_classes([permissions.AllowAny])
+def register_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Create an account from the web signup form and return JWT tokens."""
+    registration_data, validation_error = _validated_registration_data(request.data)
+    if validation_error or registration_data is None:
+        return Response(
+            {"error": validation_error or "Invalid signup details."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    email = registration_data["email"]
+    phone = registration_data["phone"]
+    requested_role = registration_data["role"]
+    if (
+        User.objects.filter(email__iexact=email).exists()
+        or User.objects.filter(phone=phone).exists()
+    ):
+        return Response(
+            {"error": "An account with this email or phone number already exists."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    role_group = "owner" if requested_role == "property_owner" else requested_role
+    full_name = f"{registration_data['first_name']} {registration_data['last_name']}"
+    try:
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=registration_data["password"],
+                full_name=full_name,
+                phone=phone,
+                whatsapp_number=phone,
+            )
+            group, _ = Group.objects.get_or_create(name=role_group)
+            user.groups.add(group)
+            UserProfile.objects.filter(user=user).update(whatsapp_number=phone)
+    except IntegrityError:
+        return Response(
+            {"error": "An account with this email or phone number already exists."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    refresh = RefreshToken.for_user(user)
+    return Response(
+        {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "full_name": user.full_name,
+                "phone": user.phone,
+                "role": _get_user_role(user),
+                "permissions": list(user.get_all_permissions()),
+            },
+        },
+        status=status.HTTP_201_CREATED,
     )
 
 
@@ -714,9 +861,19 @@ def profile_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
             user.save(update_fields=["full_name"])
         phone = request.data.get("phone")
         if phone is not None:
+            phone_changed = phone != user.phone
+            previous_phone = user.phone
             user.phone = phone
-            user.save(update_fields=["phone"])
+            update_fields = ["phone"]
+            if phone_changed:
+                user.is_phone_verified = False
+                update_fields.append("is_phone_verified")
+                UserProfile.objects.filter(
+                    user=user, whatsapp_number=previous_phone
+                ).update(whatsapp_number=phone)
+            user.save(update_fields=update_fields)
 
+    user_role = _get_user_role(user)
     return Response(
         {
             "user": {
@@ -726,6 +883,8 @@ def profile_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
                 "full_name": user.full_name,
                 "phone": user.phone,
                 "is_phone_verified": user.is_phone_verified,
+                "role": user_role,
+                "permissions": list(user.get_all_permissions()),
             }
         }
     )
@@ -766,6 +925,7 @@ def logout_all_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
 
 @api_view(["GET"])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([])
 def bootstrap_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
     """Return authentication status for the current request."""
     if request.user.is_authenticated:
@@ -781,3 +941,34 @@ def bootstrap_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
             }
         )
     return Response({"authenticated": False})
+
+
+@api_view(["GET", "HEAD"])
+@permission_classes([permissions.AllowAny])
+@throttle_classes([])
+def maintenance_status_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Expose the maintenance state used by the client bootstrap checks."""
+    scheduled_at = settings.APP_MAINTENANCE_SCHEDULED_AT
+    return Response(
+        {
+            "isMaintenance": settings.APP_MAINTENANCE_MODE,
+            "message": settings.APP_MAINTENANCE_MESSAGE,
+            "scheduledAt": scheduled_at or None,
+        }
+    )
+
+
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+@throttle_classes([])
+def app_version_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
+    """Return the client version policy used by the app bootstrap checks."""
+    return Response(
+        {
+            "latestVersion": settings.APP_LATEST_VERSION,
+            "minSupportedVersion": settings.APP_MIN_SUPPORTED_VERSION,
+            "isUpdateRequired": False,
+            "isOptional": False,
+            "storeUrl": settings.APP_STORE_URL or None,
+        }
+    )
