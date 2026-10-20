@@ -179,12 +179,17 @@ class RentRecord(models.Model):
 
     @property
     def total_due(self) -> Decimal:
-        """Total billed for the month: rent + late fee - discount."""
-        return (
+        """Total billed for the month: rent + late fee - discount.
+
+        The bill never turns negative — a month that owes the renter money is
+        not a thing the ledger can show.
+        """
+        total = (
             (self.amount or Decimal("0"))
             + (self.late_fee or Decimal("0"))
             - (self.discount or Decimal("0"))
         )
+        return max(Decimal("0"), total)
 
     @property
     def balance(self) -> Decimal:
@@ -277,3 +282,84 @@ class RentRecordPart(models.Model):
     @override
     def __str__(self) -> str:
         return f"{self.rent_record} - {self.paid_on} - {self.amount}"
+
+
+class RentRecordAction(models.Model):
+    """One action a user took on a rent record.
+
+    The audit trail of ``django-simple-history`` records what the **data**
+    looks like after a change.  This records what the **user did** — the
+    reminder that was sent, the receipt that was delivered, the month that
+    was cancelled and why.  An action is kept even when it changed nothing
+    (a receipt that could not be delivered is still something the owner
+    did), and it is kept even when it failed.
+
+    Both trails are shown together in the history of a record, newest
+    first.
+    """
+
+    class Kind(models.TextChoices):
+        CREATED = "created", "Created"
+        EDITED = "edited", "Edited"
+        CANCELLED = "cancelled", "Cancelled"
+        RECEIPT_SENT = "receipt_sent", "Receipt sent"
+        REMINDER_SENT = "reminder_sent", "Reminder sent"
+
+    class Outcome(models.TextChoices):
+        RECORDED = "recorded", "Recorded"
+        SENT = "sent", "Sent"
+        FAILED = "failed", "Failed"
+
+    rent_record = models.ForeignKey(
+        RentRecord,
+        on_delete=models.CASCADE,
+        related_name="actions",
+        help_text="The record this action was taken on",
+    )
+    kind = models.CharField(
+        max_length=32,
+        choices=Kind.choices,
+        help_text="What the user did",
+    )
+    summary = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="One line that says what happened",
+    )
+    detail = models.TextField(
+        blank=True,
+        help_text="The numbers and the words behind the action",
+    )
+    outcome = models.CharField(
+        max_length=16,
+        choices=Outcome.choices,
+        default=Outcome.RECORDED,
+        help_text="How the action ended",
+    )
+    history_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="The audit entry this action explains — it is not listed twice",
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="rent_record_actions",
+        help_text="Who took the action",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        verbose_name = "Rent Record Action"
+        verbose_name_plural = "Rent Record Actions"
+        indexes = [models.Index(fields=["rent_record", "created_at"])]
+
+    @override
+    def __str__(self) -> str:
+        return (
+            f"{self.rent_record} - {self.get_kind_display()} "
+            f"- {self.created_at:%Y-%m-%d %H:%M}"
+        )

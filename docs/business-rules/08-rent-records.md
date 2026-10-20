@@ -24,6 +24,8 @@
 7. **Payout fields:** `payout_status`, `payout_reference`, retry counters, `razorpay_order_id`, `razorpay_payment_status`.
 8. **Invoice:** `invoice_number`, `invoice_pdf` after payment/receipt generation.
 9. **Late fee:** `late_fee`, `grace_days`, `rent_due_date`, `rent_due_day` — see `apply_late_fee_if_needed()` in utils.
+10. **Billing cycle:** a unit is billed **one month at a time** — the record that follows a settled month is due on the same day of the next month, clamped to the length of that month (31 January → 28/29 February). An open month blocks the next month — every open month of the unit, not only the newest one; a cancelled month lets the chain continue; a unit without a rent history may start at any date. See [`properties/services/rent_cycle.py`](../../properties/services/rent_cycle.py) and §2 of the binding document.
+11. **One record per unit per month:** the database guards the `(unit, due_date)` pair, and the API refuses a second record for it. A new record starts unpaid — a `paid_on` that arrives with it is ignored. A discount may not be larger than the bill it discounts, so the total of a month is never negative.
 
 ## Computed properties (for integrations)
 
@@ -37,6 +39,10 @@
 |--------|------|
 | GET/POST | `/api/rent-records/` |
 | GET | `/api/rent-records/{id}/invoice/` |
+| GET | `/api/rent-records/rules/` — the rules catalogue |
+| GET | `/api/rent-records/cycle/?unit=<id>` — the billing cycle of one unit |
+| GET | `/api/rent-records/ledger/` — one page of the ledger, the filter options and the pagination state |
+| GET | `/api/rent-records/{id}/history/` — the history of one record: the audit trail, the actions of the user and the part payments, merged, newest first, at most 50 entries |
 
 ## Post-payment (intended)
 
@@ -52,6 +58,7 @@ When `payment_status == PAID` (signals, if wired):
 - `properties/models/rent_record_models.py`
 - `properties/views/rent_record_views.py`
 - `properties/serializers/rent_record_serializers.py`
+- `properties/services/rent_cycle.py` — the billing cycle of a unit
 - `rentsecure_be/services/razorpay_service.py`
 
 ## See also

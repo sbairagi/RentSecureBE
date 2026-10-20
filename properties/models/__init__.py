@@ -6,7 +6,7 @@ from .itr_ca_contact_models import ITRCAContactRequest
 from .itr_tracker_models import ITRTracker
 from .maintenance_models import MaintenanceRequest
 from .property_tax_models import PropertyTaxRecord
-from .rent_record_models import RentRecord, RentRecordPart
+from .rent_record_models import RentRecord, RentRecordAction, RentRecordPart
 from .renter_models import (
     AgreementRevocationLog,
     ArchivedRenter,
@@ -33,6 +33,7 @@ __all__ = [
     "PoliceVerification",
     "RentRecord",
     "RentRecordPart",
+    "RentRecordAction",
     "ExtraCharge",
     "PropertyTaxRecord",
     "ITRCAContactRequest",

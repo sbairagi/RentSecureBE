@@ -17,6 +17,7 @@ from unittest.mock import patch
 
 from rest_framework.test import APIClient
 
+from django.core.cache import cache
 from django.test import TestCase
 
 from core.models import User
@@ -27,6 +28,9 @@ class RentLedgerViewTestBase(TestCase):
     """Shared fixtures: one owner with a unit, a renter and a rent record."""
 
     def setUp(self):
+        # The API throttles per user and the tests share the user ids of
+        # the rolled back rows — a fresh cache keeps every test its own quota.
+        cache.clear()
         self.client = APIClient()
         self.owner = User.objects.create_user(
             username="ledger_owner",

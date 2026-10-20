@@ -49,6 +49,11 @@ RENT_RULE_MESSAGES: dict[str, str] = {
         "Part payments are off for this unit — turn them on in the unit "
         "details to split the rent."
     ),
+    "cycle": (
+        "A unit is billed one month at a time — the month that follows a "
+        "settled month is the only one that may be created, and a month that "
+        "is still open has to be settled first."
+    ),
 }
 
 
@@ -100,6 +105,15 @@ def build_rent_rules() -> dict[str, Any]:
         "parts": {
             "enabled_hint": RENT_RULE_MESSAGES["parts_enabled"],
             "disabled_hint": RENT_RULE_MESSAGES["parts_disabled"],
+        },
+        # A unit is billed one month at a time.  The cycle of a unit is
+        # anchored on the due date of its most recent record: the next record
+        # is due on the same day of the following month, clamped to the length
+        # of that month.  The per-unit state comes from
+        # ``GET /api/rent-records/cycle/?unit=<id>``.
+        "cycle": {
+            "one_month_at_a_time": True,
+            "message": RENT_RULE_MESSAGES["cycle"],
         },
         # How a month is billed: the rent, plus the late fee, minus the
         # discount.  The client previews a form that is not saved yet with

@@ -17,6 +17,7 @@ from unittest.mock import patch
 
 from rest_framework.test import APIClient
 
+from django.core.cache import cache
 from django.test import TestCase
 
 from core.models import User
@@ -27,6 +28,9 @@ class RentCollectionTestBase(TestCase):
     """Shared fixtures: one owner with a unit, a renter and a rent record."""
 
     def setUp(self):
+        # The API throttles per user and the tests share the user ids of
+        # the rolled back rows — a fresh cache keeps every test its own quota.
+        cache.clear()
         self.client = APIClient()
         self.owner = User.objects.create_user(
             username="rent_collection_owner",
@@ -131,9 +135,16 @@ class RentRecordCreationTests(RentCollectionTestBase):
         body.update(overrides)
         return body
 
+    def settle_current_month(self):
+        """Settle the billed month — a unit is billed one month at a time."""
+        self.rent.status = RentRecord.Status.PAID
+        self.rent.amount_paid = Decimal("30000")
+        self.rent.save(update_fields=["status", "amount_paid"])
+
     @patch("notification.utils.send_whatsapp_message")
     @patch("rentsecure_be.services.razorpay_service.create_payment_link")
     def test_a_record_is_created_from_the_unit_and_renter_ids(self, _link, _whatsapp):
+        self.settle_current_month()
         response = self.client.post(
             "/api/rent-records/", self.create_body(), format="json"
         )
@@ -197,6 +208,7 @@ class RentRecordCreationTests(RentCollectionTestBase):
     @patch("notification.utils.send_whatsapp_message")
     @patch("rentsecure_be.services.razorpay_service.create_payment_link")
     def test_the_same_period_cannot_be_recorded_twice(self, _link, _whatsapp):
+        self.settle_current_month()
         response = self.client.post(
             "/api/rent-records/", self.create_body(), format="json"
         )
@@ -205,6 +217,15 @@ class RentRecordCreationTests(RentCollectionTestBase):
             "/api/rent-records/", self.create_body(), format="json"
         )
         self.assertEqual(again.status_code, 400)
+
+    @patch("notification.utils.send_whatsapp_message")
+    @patch("rentsecure_be.services.razorpay_service.create_payment_link")
+    def test_an_open_month_blocks_the_next_one(self, _link, _whatsapp):
+        response = self.client.post(
+            "/api/rent-records/", self.create_body(), format="json"
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("still open", str(response.json()))
 
 
 class CancelRentRecordTests(RentCollectionTestBase):

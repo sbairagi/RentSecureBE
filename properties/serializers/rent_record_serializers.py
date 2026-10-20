@@ -154,7 +154,6 @@ class RentRecordSerializer(serializers.ModelSerializer):
             "status",
             "payment_status",
             "amount_paid",
-            "paid_on",
             "parts",
             "total_due",
             "balance",
@@ -231,6 +230,10 @@ class RentRecordSerializer(serializers.ModelSerializer):
     @override
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         self._validate_update_fields(data)
+        # A new record starts unpaid, so the paid-on date is dropped before
+        # any other rule looks at it — a date that arrived with the record
+        # must not make it fail a rule it is not part of.
+        self._validate_paid_on_on_create(data)
         user = self.context["request"].user
         unit = data.get("unit") or getattr(self.instance, "unit", None)
         renter = data.get("renter") or getattr(self.instance, "renter", None)
@@ -240,8 +243,20 @@ class RentRecordSerializer(serializers.ModelSerializer):
         self._validate_amount_paid(data)
         self._validate_billed_amount(data)
         self._validate_charges(data)
+        self._validate_discount_cap(data)
         self._validate_rent_month_and_date_paid(data)
         return data
+
+    def _validate_paid_on_on_create(self, data: dict[str, Any]) -> None:
+        """A new record starts unpaid — the paid-on date belongs to a payment.
+
+        The date may be edited later (the rules allow it while the month is
+        open), but it may never arrive with the record itself: a record that
+        carries a paid-on date and no money would show a payment that never
+        happened.
+        """
+        if self.instance is None:
+            data.pop("paid_on", None)
 
     def _validate_billed_amount(self, data: dict[str, Any]) -> None:
         """A new record is billed for a positive amount, capped at ten lakhs."""
@@ -263,6 +278,32 @@ class RentRecordSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {field_name: message("charges_non_negative")}
                 )
+
+    def _validate_discount_cap(self, data: dict[str, Any]) -> None:
+        """A discount may never be larger than the bill it discounts.
+
+        Without this the bill would turn negative — a month that owes the
+        renter money.
+        """
+        discount = data.get("discount")
+        if discount is None:
+            return
+        amount = data.get("amount")
+        if amount is None:
+            amount = getattr(self.instance, "amount", None)
+        late_fee = data.get("late_fee")
+        if late_fee is None:
+            late_fee = getattr(self.instance, "late_fee", None)
+        bill = Decimal(amount or 0) + Decimal(late_fee or 0)
+        if Decimal(discount) > bill:
+            raise serializers.ValidationError(
+                {
+                    "discount": (
+                        "The discount cannot be more than the rent that was billed "
+                        f"({format_money(bill)})."
+                    )
+                }
+            )
 
     def _validate_update_fields(self, data: dict[str, Any]) -> None:
         if self.instance is None:

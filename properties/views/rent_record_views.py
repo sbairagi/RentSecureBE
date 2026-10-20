@@ -24,7 +24,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from core.models import User
-from documents.receipt import receipt_filename
+from documents.receipt import format_period, receipt_filename
 from notification.services.rent_notify_service import send_payout_notification
 from notification.services.whatsapp_service import send_whatsapp_message
 from rentsecure_be.services.cashfree_service import process_rent_payout
@@ -32,22 +32,41 @@ from rentsecure_be.services.razorpay_service import create_payment_link
 from rentsecure_be.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
-from ..models import Renter, RentRecord, Unit
+from ..models import Renter, RentRecord, RentRecordAction, Unit
 from ..serializers import (
     PartPaymentSerializer,
     RentRecordPartSerializer,
     RentRecordSerializer,
 )
+from ..services.rent_actions import latest_history_id, log_rent_action
 from ..services.rent_collection_service import (
     cancel_rent_record,
     record_part_payment,
     send_rent_receipt,
     send_rent_reminder,
 )
+from ..services.rent_cycle import build_cycle_state, cycle_violation
+from ..services.rent_history import build_rent_history
+from ..services.rent_ledger_query import build_ledger_page
+from ..services.rent_ledger_view import format_money
 from ..services.rent_rules import build_rent_rules
 from ..utils.utils import generate_rent_invoice_pdf
 
 logger = logging.getLogger(__name__)
+
+# The fields the owner may change, in the words the trail shows them in.
+EDIT_FIELD_LABELS = {
+    "notes": "the notes",
+    "adjustment_reason": "the adjustment reason",
+    "late_fee": "the late fee",
+    "discount": "the discount",
+    "paid_on": "the paid-on date",
+    "payment_method": "the payment mode",
+    "transaction_id": "the transaction reference",
+    "amount": "the rent amount",
+    "status": "the status",
+    "paid_on_date": "the paid-on date",
+}
 
 
 class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
@@ -133,10 +152,22 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
             raise ValidationError(
                 "Rent cannot be paid for revoked or deactivated renters."
             )
+        # The database guards the unit and the month (``unique_together``), so
+        # the check has to look at the very same pair — a renter may change
+        # between two records of the same unit and month.
         if RentRecord.objects.filter(
-            renter=renter, due_date=serializer.validated_data.get("due_date")
+            unit=unit, due_date=serializer.validated_data.get("due_date")
         ).exists():
-            raise ValidationError("Rent record for this month already exists.")
+            raise ValidationError(
+                "A rent record already exists for this unit and month."
+            )
+
+        # A unit is billed one month at a time: the month that follows a
+        # settled month is the only one that may be created, and a month that
+        # is still open has to be settled first.
+        violation = cycle_violation(unit, serializer.validated_data.get("due_date"))
+        if violation:
+            raise ValidationError(violation)
 
         enforcer = FeatureEnforcer(user)
         if not enforcer.can_create("rent_records"):
@@ -147,7 +178,13 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
         try:
             link = create_payment_link(rent)
             rent.payment_link = link
-            rent.save(update_fields=["payment_link"])
+            # The payment link is bookkeeping, not a change of the month —
+            # the trail of the record talks about the owner's actions.
+            rent.skip_history_when_saving = True
+            try:
+                rent.save(update_fields=["payment_link"])
+            finally:
+                del rent.skip_history_when_saving
             send_whatsapp_message(
                 rent.renter.phone if rent.renter else "",
                 f"📩 Pay your rent: {link}",
@@ -159,6 +196,19 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
 
         enforcer.increment("rent_records")
         cache.delete(f"rent_records_user_{user.id}")
+        # The creation is an action of the owner — it belongs in the trail
+        # of the record.
+        log_rent_action(
+            rent,
+            RentRecordAction.Kind.CREATED,
+            summary="Rent record created",
+            detail=(
+                f"{format_money(rent.amount)} billed for "
+                f"{format_period(rent.due_date) if rent.due_date else 'the month'}"
+            ),
+            actor=user,
+            history_id=latest_history_id(rent),
+        )
 
     @override
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
@@ -171,10 +221,29 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
             instance.unit if instance else None
         )
         if new_unit is None or new_unit.owner != user:
-            raise PermissionDenied("You do not own the selected unit.")
+            raise PermissionDenied("You do not own this rent record.")
 
-        serializer.save()
+        changed = sorted(
+            field
+            for field in serializer.validated_data
+            if field not in {"unit", "renter", "updated_at"}
+        )
+        rent = serializer.save()
         cache.delete(f"rent_records_user_{user.id}")
+        # The edit is an action of the owner — it belongs in the trail of the
+        # record, with the fields it touched.
+        log_rent_action(
+            rent,
+            RentRecordAction.Kind.EDITED,
+            summary="Details updated",
+            detail=(
+                "Changed: " + ", ".join(EDIT_FIELD_LABELS.get(f, f) for f in changed)
+                if changed
+                else "The record was saved without a change to its details"
+            ),
+            actor=user,
+            history_id=latest_history_id(rent),
+        )
 
     @override
     def perform_destroy(self, instance: RentRecord) -> None:
@@ -207,6 +276,49 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
         the API always agree on what a valid rent record is.
         """
         return Response(build_rent_rules(), status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"], url_path="ledger")
+    def ledger(self, request: DRFRequest) -> Response:
+        """The ledger of the owner — one page of rows, the filters and the pagination.
+
+        The ledger is queried on the server: the client sends the filters it
+        applied (``building``, ``unit``, ``status``), the search text and the
+        page it wants (``page``, ``page_size``), and the server answers with
+        the rows of that page, the grouped filter options and the state of the
+        pagination.
+        """
+        page = build_ledger_page(request.user, request.query_params)
+        rows = page.pop("results")
+        serializer = RentRecordSerializer(rows, many=True)
+        page["results"] = serializer.data
+        return Response(page, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"], url_path="cycle")
+    def cycle(self, request: DRFRequest) -> Response:
+        """The rent cycle of a unit — which month may be billed next.
+
+        A unit is billed one month at a time: the month that follows a
+        settled month is the only one that may be created, and a month that
+        is still open has to be settled first.
+        """
+        unit_id = request.query_params.get("unit")
+        if not unit_id:
+            return Response(
+                {"detail": "A unit is required to read the rent cycle."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        unit = get_object_or_404(Unit, pk=unit_id, owner=request.user)
+        return Response(build_cycle_state(unit), status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["get"], url_path="history")
+    def history(self, request: DRFRequest, pk: Any = None) -> Response:
+        """The history of one rent record — every change and every part payment.
+
+        The trail is the server's: the client renders the entries it gets and
+        never rebuilds one of its own.
+        """
+        rent = self._owned_record(pk)
+        return Response(build_rent_history(rent), status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"], url_path="cancel")
     def cancel(self, request: DRFRequest, pk: Any = None) -> Response:

@@ -158,7 +158,8 @@ def build_row_state(rent_record: RentRecord) -> dict[str, Any]:
         "allows_parts": allows_parts,
         "can_edit": not is_locked,
         "can_cancel": not is_locked and amount_paid == ZERO,
-        "can_remind": not is_settled and balance > ZERO,
+        # A cancelled month is voided — it never talks to the renter again.
+        "can_remind": not is_locked and balance > ZERO,
         # The settlement receipt only exists once the month is fully paid —
         # every part payment carries its own receipt automatically.
         "can_send_receipt": is_settled,

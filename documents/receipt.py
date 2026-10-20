@@ -50,6 +50,26 @@ STATUS_TONES: dict[str, str] = {
 
 DASH = "—"
 
+# The month names are fixed on purpose: ``strftime("%B")`` follows the locale
+# of the machine the server runs on, so the very same month could be written
+# "October" in one deployment and "Oktober" in another.  The ledger, the
+# receipt and the reminder all speak the same names because they share this
+# list.
+MONTH_NAMES: tuple[str, ...] = (
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+)
+
 
 @dataclass(frozen=True)
 class Receipt:
@@ -106,11 +126,23 @@ def format_date(value: Any) -> str:
     return value.strftime("%d %b %Y").replace(" 0", " ")
 
 
+def month_name(month: int) -> str:
+    """The name of a month (1-12), independent of the locale of the server.
+
+    Args:
+        month: The number of the month.
+
+    Returns:
+        The name of the month.
+    """
+    return MONTH_NAMES[month - 1]
+
+
 def format_period(value: Any) -> str:
     """Format the rent period the way the web client renders it."""
     if not value:
         return DASH
-    return value.strftime("%B %Y")
+    return f"{month_name(value.month)} {value.year}"
 
 
 def _period_slug(rent_record: Any) -> str:
