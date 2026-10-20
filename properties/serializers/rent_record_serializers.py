@@ -1,3 +1,12 @@
+"""The API projection of a rent record and of its part payments.
+
+The rules this serializer enforces are binding and documented in
+``properties/RENT_COLLECTION_BUSINESS_RULES.md``: a rent record is never
+deleted, a settled or cancelled record is locked, the late fee and the
+discount freeze once money has been received, and a billed amount is always
+positive.
+"""
+
 from decimal import Decimal
 from typing import Any, cast
 
@@ -6,6 +15,8 @@ from rest_framework import serializers
 from rentsecure_be.type_compat import override
 
 from ..models import RentRecord, RentRecordPart
+from ..services.rent_ledger_view import build_ledger_view, build_part_view, format_money
+from ..services.rent_rules import MAX_RENT_AMOUNT, message
 from .renter_serializers import RenterSerializer
 from .unit_serializers import UnitSerializer
 
@@ -15,6 +26,10 @@ class RentRecordPartSerializer(serializers.ModelSerializer):
 
     payment_method_label = serializers.SerializerMethodField()
     amount_display = serializers.SerializerMethodField()
+    sequence = serializers.SerializerMethodField()
+    cumulative_amount = serializers.SerializerMethodField()
+    receipt_filename = serializers.SerializerMethodField()
+    receipt = serializers.SerializerMethodField()
 
     class Meta:
         model = RentRecordPart
@@ -30,6 +45,10 @@ class RentRecordPartSerializer(serializers.ModelSerializer):
             "receipt_no",
             "receipt_pdf",
             "created_at",
+            "sequence",
+            "cumulative_amount",
+            "receipt_filename",
+            "receipt",
         ]
         read_only_fields = fields
 
@@ -40,6 +59,48 @@ class RentRecordPartSerializer(serializers.ModelSerializer):
     @override
     def get_amount_display(self, obj: RentRecordPart) -> str:
         return f"{obj.amount:,.2f}".rstrip("0").rstrip(".")
+
+    def _rent_record(self, obj: RentRecordPart) -> RentRecord:
+        """The record the part belongs to, without another query when possible."""
+        parent = self.parent
+        while parent is not None:
+            instance = getattr(parent, "instance", None)
+            if isinstance(instance, RentRecord):
+                return instance
+            parent = getattr(parent, "parent", None)
+        return obj.rent_record
+
+    def _part_view(self, obj: RentRecordPart) -> dict[str, Any]:
+        """The server-side view of a part, computed once per part."""
+        cache = getattr(self, "_part_views", None)
+        if cache is None:
+            cache = {}
+            self._part_views = cache
+        view = cache.get(obj.id)
+        if view is None:
+            view = build_part_view(self._rent_record(obj), obj)
+            cache[obj.id] = view
+        return view
+
+    @override
+    def get_sequence(self, obj: RentRecordPart) -> int:
+        """The 1-based position of the part inside its rent record."""
+        return int(self._part_view(obj)["sequence"])
+
+    @override
+    def get_cumulative_amount(self, obj: RentRecordPart) -> str:
+        """The total received up to and including this part."""
+        return str(self._part_view(obj)["cumulative_amount"])
+
+    @override
+    def get_receipt_filename(self, obj: RentRecordPart) -> str:
+        """The file name of the receipt of this part."""
+        return str(self._part_view(obj)["receipt_filename"])
+
+    @override
+    def get_receipt(self, obj: RentRecordPart) -> dict[str, Any]:
+        """The receipt card of this part — the very model the PDF is built from."""
+        return dict(self._part_view(obj)["receipt"])
 
 
 class PartPaymentSerializer(serializers.Serializer):
@@ -73,6 +134,7 @@ class RentRecordSerializer(serializers.ModelSerializer):
     balance = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     allow_partial_payments = serializers.SerializerMethodField()
     is_partially_paid = serializers.BooleanField(read_only=True)
+    ledger = serializers.SerializerMethodField()
 
     class Meta:
         model = RentRecord
@@ -156,6 +218,17 @@ class RentRecordSerializer(serializers.ModelSerializer):
         return bool(obj.allow_partial_payments)
 
     @override
+    def get_ledger(self, obj: RentRecord) -> dict[str, Any]:
+        """The ledger view of the record.
+
+        The server decides what a row shows — the badge set, the actions it
+        still allows, the charge breakdown, the payment progress, the bounds
+        of the next part payment and the receipt — so the client only has to
+        render it.
+        """
+        return build_ledger_view(obj)
+
+    @override
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         self._validate_update_fields(data)
         user = self.context["request"].user
@@ -165,8 +238,31 @@ class RentRecordSerializer(serializers.ModelSerializer):
         self._validate_renter_ownership(renter, user)
         self._validate_renter_unit_assignment(renter, unit)
         self._validate_amount_paid(data)
+        self._validate_billed_amount(data)
+        self._validate_charges(data)
         self._validate_rent_month_and_date_paid(data)
         return data
+
+    def _validate_billed_amount(self, data: dict[str, Any]) -> None:
+        """A new record is billed for a positive amount, capped at ten lakhs."""
+        if self.instance is not None:
+            return
+        amount = data.get("amount")
+        if amount is None or amount <= 0:
+            raise serializers.ValidationError({"amount": message("amount_required")})
+        if amount > MAX_RENT_AMOUNT:
+            raise serializers.ValidationError(
+                {"amount": message("amount_max", amount=format_money(MAX_RENT_AMOUNT))}
+            )
+
+    def _validate_charges(self, data: dict[str, Any]) -> None:
+        """The late fee and the discount are never negative."""
+        for field_name in ("late_fee", "discount"):
+            value = data.get(field_name)
+            if value is not None and value < 0:
+                raise serializers.ValidationError(
+                    {field_name: message("charges_non_negative")}
+                )
 
     def _validate_update_fields(self, data: dict[str, Any]) -> None:
         if self.instance is None:

@@ -16,4 +16,5 @@ Instructions are loaded in the order listed in `kilo.jsonc` `instructions` array
 8. `notifications.md` — notification module
 9. `finance.md` — finance/payment module
 10. `smartbot.md` — AI assistant module
-11. `onboarding.md` — onboarding guidance
+11. `rent-collection.md` — rent collection: the backend owns the rules
+12. `onboarding.md` — onboarding guidance

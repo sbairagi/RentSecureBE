@@ -44,6 +44,7 @@ from ..services.rent_collection_service import (
     send_rent_receipt,
     send_rent_reminder,
 )
+from ..services.rent_rules import build_rent_rules
 from ..utils.utils import generate_rent_invoice_pdf
 
 logger = logging.getLogger(__name__)
@@ -197,6 +198,15 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
 
     def _invalidate_caches(self) -> None:
         cache.delete(f"rent_records_user_{self.request.user.id}")
+
+    @action(detail=False, methods=["get"], url_path="rules")
+    def rules(self, request: DRFRequest) -> Response:
+        """The rent-collection rules the clients check their forms against.
+
+        The limits and the wording live on the server, so the web client and
+        the API always agree on what a valid rent record is.
+        """
+        return Response(build_rent_rules(), status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"], url_path="cancel")
     def cancel(self, request: DRFRequest, pk: Any = None) -> Response:
@@ -457,8 +467,10 @@ def retry_payout_api(request: DRFRequest, rent_id: int) -> Any:
 @permission_classes([IsAuthenticated])
 def owner_rent_records(request: DRFRequest) -> Any:
     owner = cast(User, request.user)
-    rents = RentRecord.objects.filter(unit__owner=owner).select_related(
-        "renter", "unit"
+    rents = (
+        RentRecord.objects.filter(unit__owner=owner)
+        .select_related("renter", "unit")
+        .prefetch_related("parts")
     )
     serializer = RentRecordSerializer(rents, many=True)
     return Response(serializer.data)

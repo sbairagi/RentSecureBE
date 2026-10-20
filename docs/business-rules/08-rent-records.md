@@ -1,5 +1,11 @@
 # Rent Record Rules
 
+> **Binding rules:** the rent collection workflow — the ledger row, part
+> payments, cancellation, receipts and the client contract — is documented in
+> [`properties/RENT_COLLECTION_BUSINESS_RULES.md`](../../properties/RENT_COLLECTION_BUSINESS_RULES.md).
+> Read it before changing anything in `properties/services/rent_ledger_view.py`,
+> `properties/services/rent_rules.py` or `properties/services/rent_collection_service.py`.
+
 ## Model
 
 `properties.models.RentRecord` — one payment obligation per renter per month.

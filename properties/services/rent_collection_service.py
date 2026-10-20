@@ -10,6 +10,9 @@ The rules implemented here mirror the approved "Rent collection" concept:
   exceed the remaining balance, and the paid-on date cannot be earlier
   than the rent due date;
 * the last part settles the month and issues the settlement receipt.
+
+The rules are binding and documented in
+``properties/RENT_COLLECTION_BUSINESS_RULES.md``.
 """
 
 from __future__ import annotations
@@ -30,6 +33,11 @@ from properties.services.receipt_service import (
     generate_rent_receipt_pdf,
     send_rent_part_receipt_email,
 )
+from properties.services.rent_ledger_view import (
+    PART_PAYMENT_MESSAGES,
+    format_money,
+    format_money_exact,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +45,8 @@ ZERO = Decimal("0")
 
 
 def _format_money(value: Any) -> str:
-    amount = int(Decimal(value or 0).quantize(Decimal("1")))
-    return f"₹{amount:,}"
+    """Render a money amount the way the ledger renders it (₹30,000)."""
+    return format_money(value)
 
 
 def _renter_phone(rent_record: RentRecord) -> str:
@@ -167,15 +175,14 @@ def record_part_payment(
             }
         )
     if amount is None or amount <= ZERO:
-        raise ValidationError({"error": "Part amount must be greater than zero."})
+        raise ValidationError({"error": PART_PAYMENT_MESSAGES["amount_required"]})
 
     balance = rent_record.balance
     if amount > balance:
         raise ValidationError(
             {
-                "error": (
-                    f"A part cannot be larger than the remaining balance of "
-                    f"{_format_money(balance)}."
+                "error": PART_PAYMENT_MESSAGES["amount_too_large"].format(
+                    balance=format_money_exact(balance)
                 )
             }
         )
@@ -183,7 +190,7 @@ def record_part_payment(
         raise ValidationError(
             {
                 "error": (
-                    "The paid-on date cannot be earlier than the rent due date "
+                    f"{PART_PAYMENT_MESSAGES['date_before_due']} "
                     f"({rent_record.due_date.strftime('%d %b %Y')})."
                 )
             }
