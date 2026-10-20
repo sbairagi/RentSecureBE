@@ -243,6 +243,15 @@ class RentRecordFactory(factory.django.DjangoModelFactory):  # type: ignore[misc
     )
     late_fee = Decimal("0")
     discount = Decimal("0")
+    # A settled record has received the money that was billed, so the ledger
+    # and the reporting agree with the status.
+    amount_paid = factory.LazyAttribute(
+        lambda obj: (
+            obj.amount
+            if str(obj.status or "").lower() == RentRecord.Status.PAID
+            else Decimal("0")
+        )
+    )
     notes = ""
     transaction_id = factory.LazyAttribute(lambda _: str(fake.uuid4())[:32])
     payout_status = "PENDING"

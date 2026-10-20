@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any
 
 from simple_history.models import HistoricalRecords  # type: ignore[import-untyped]
@@ -50,7 +51,13 @@ class RentRecord(models.Model):
         help_text="Renter who made the payment",
     )
     amount = models.DecimalField(
-        max_digits=10, decimal_places=2, help_text="Rent amount paid"
+        max_digits=10, decimal_places=2, help_text="Rent amount billed"
+    )
+    amount_paid = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Amount received so far (parts included)",
     )
     payment_method = models.CharField(
         max_length=50,
@@ -111,6 +118,26 @@ class RentRecord(models.Model):
     adjustment_reason = models.TextField(
         blank=True, help_text="Reason for late fee or adjustment"
     )
+    cancel_reason = models.TextField(
+        blank=True, help_text="Why the record was cancelled"
+    )
+    cancelled_at = models.DateTimeField(
+        null=True, blank=True, help_text="When the record was cancelled"
+    )
+    cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="cancelled_rent_records",
+        help_text="Who cancelled the record",
+    )
+    receipt_sent_at = models.DateTimeField(
+        null=True, blank=True, help_text="When the receipt was last sent"
+    )
+    last_reminded_at = models.DateTimeField(
+        null=True, blank=True, help_text="When a reminder was last sent"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -151,12 +178,30 @@ class RentRecord(models.Model):
         self.due_date = value
 
     @property
-    def amount_paid(self) -> Any:
-        return self.amount
+    def total_due(self) -> Decimal:
+        """Total billed for the month: rent + late fee - discount."""
+        return (
+            (self.amount or Decimal("0"))
+            + (self.late_fee or Decimal("0"))
+            - (self.discount or Decimal("0"))
+        )
 
-    @amount_paid.setter
-    def amount_paid(self, value: Any) -> None:
-        self.amount = value
+    @property
+    def balance(self) -> Decimal:
+        """What is still owed on this record."""
+        return max(Decimal("0"), self.total_due - (self.amount_paid or Decimal("0")))
+
+    @property
+    def is_partially_paid(self) -> bool:
+        """True when money came in but the month is not settled yet."""
+        return (
+            self.amount_paid or Decimal("0")
+        ) > 0 and self.status != self.Status.PAID
+
+    @property
+    def allow_partial_payments(self) -> bool:
+        """Whether the unit of this record allows part payments."""
+        return bool(getattr(self.unit, "allow_partial_payments", False))
 
     @override
     def clean(self) -> None:
@@ -167,6 +212,68 @@ class RentRecord(models.Model):
         if self.amount < 0:
             raise ValidationError("Rent amount cannot be negative.")
 
+        if self.amount_paid < 0:
+            raise ValidationError("Amount paid cannot be negative.")
+
     @override
     def __str__(self) -> str:
         return f"{self.unit} - {self.due_date} - {self.status}"
+
+
+class RentRecordPart(models.Model):
+    """One part payment received against a monthly rent record.
+
+    A rent record stays a single row per unit per month; every instalment
+    is a child row so the ledger can show the progress, the receipt can
+    name the part it belongs to, and the audit trail keeps each amount,
+    date, mode and reference.
+    """
+
+    rent_record = models.ForeignKey(
+        RentRecord,
+        on_delete=models.CASCADE,
+        related_name="parts",
+        help_text="Monthly record this part belongs to",
+    )
+    amount = models.DecimalField(
+        max_digits=10, decimal_places=2, help_text="Amount received in this part"
+    )
+    paid_on = models.DateField(help_text="Date the part was received", db_index=True)
+    payment_method = models.CharField(
+        max_length=50,
+        choices=RentRecord.PaymentMethod.choices,
+        default=RentRecord.PaymentMethod.CASH,
+        help_text="Mode of payment used for this part",
+    )
+    transaction_id = models.CharField(
+        max_length=100, blank=True, help_text="Payment gateway / bank ref"
+    )
+    note = models.TextField(blank=True, help_text="Note for this part")
+    receipt_no = models.CharField(
+        max_length=120, blank=True, help_text="Receipt file name for this part"
+    )
+    receipt_pdf = models.FileField(
+        upload_to="invoices/parts/",
+        blank=True,
+        null=True,
+        help_text="Generated part receipt PDF",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="rent_record_parts",
+        help_text="Who recorded this part",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["paid_on", "id"]
+        verbose_name = "Rent Record Part"
+        verbose_name_plural = "Rent Record Parts"
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.rent_record} - {self.paid_on} - {self.amount}"

@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from django.db.models import Q, Sum
+from django.db.models import F, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
 from django.utils import timezone
@@ -64,7 +64,7 @@ def owner_reports(request: Request) -> Response:
     ).exclude(status=RentRecord.Status.CANCELLED)
     rent_summary = rent_rows.aggregate(
         expected=Sum("amount"),
-        collected=Sum("amount", filter=Q(status=RentRecord.Status.PAID)),
+        collected=Sum("amount_paid", filter=Q(status=RentRecord.Status.PAID)),
     )
     expected = float(rent_summary["expected"] or 0)
     collected = float(rent_summary["collected"] or 0)
@@ -79,7 +79,7 @@ def owner_reports(request: Request) -> Response:
             unit_id__in=unit_ids,
             status=RentRecord.Status.PAID,
             due_date__range=(previous_start, start - timedelta(days=1)),
-        ).aggregate(total=Sum("amount"))["total"]
+        ).aggregate(total=Sum("amount_paid"))["total"]
         or 0
     )
 
@@ -88,7 +88,7 @@ def owner_reports(request: Request) -> Response:
         .values("month")
         .annotate(
             expected=Sum("amount"),
-            collected=Sum("amount", filter=Q(status=RentRecord.Status.PAID)),
+            collected=Sum("amount_paid", filter=Q(status=RentRecord.Status.PAID)),
         )
         .order_by("month")
     )
@@ -132,7 +132,14 @@ def owner_reports(request: Request) -> Response:
             MaintenanceRequest.Status.CLOSED,
         ]
     ).count()
-    overdue_amount = float(overdue_rows.aggregate(total=Sum("amount"))["total"] or 0)
+    # The overdue bucket is the money still to collect: total billed minus
+    # what has already been received on those records.
+    overdue_amount = float(
+        overdue_rows.aggregate(
+            total=Sum(F("amount") + F("late_fee") - F("discount")) - Sum("amount_paid")
+        )["total"]
+        or 0
+    )
 
     return Response(
         {

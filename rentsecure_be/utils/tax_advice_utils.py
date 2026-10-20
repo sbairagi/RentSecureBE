@@ -29,7 +29,7 @@ def get_rent_income(user: AbstractUser) -> int:
 
     total = (
         RentRecord.objects.filter(unit__owner=user, status="PAID").aggregate(
-            total=Sum("amount")
+            total=Sum("amount_paid")
         )["total"]
         or 0
     )

@@ -15,9 +15,15 @@ def create_payment_link(rent_record: Any) -> str:
     month = due_date.strftime("%B") if due_date else ""
     year = due_date.year if due_date else ""
 
+    # Ask for what is still outstanding: the billed total minus the parts
+    # that already landed.
+    outstanding = getattr(rent_record, "balance", None)
+    if outstanding is None:
+        outstanding = rent_record.amount
+
     response = client.payment_link.create(
         {
-            "amount": int(rent_record.amount * 100),  # in paise
+            "amount": int(outstanding * 100),  # in paise
             "currency": "INR",
             "accept_partial": False,
             "description": f"Rent for {month} {year}",

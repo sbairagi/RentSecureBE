@@ -182,6 +182,12 @@ class Unit(models.Model):
         default=True, help_text="Enable automated agreement expiry reminders"
     )
 
+    # Rent Collection Settings
+    allow_partial_payments = models.BooleanField(
+        default=False,
+        help_text="Allow the month to be settled in instalments (part payments)",
+    )
+
     # Additional Information
     maintenance_notes = models.TextField(
         blank=True, help_text="Internal notes about maintenance or issues"
@@ -284,10 +290,10 @@ class Unit(models.Model):
         end_date = date(end_year, 3, 31)
         total = RentRecord.objects.filter(
             renter__unit=self,
-            status="PAID",
+            status__iexact=RentRecord.Status.PAID,
             paid_on__gte=start_date,
             paid_on__lte=end_date,
-        ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+        ).aggregate(total=Sum("amount_paid"))["total"] or Decimal("0")
         return total
 
     def tax_paid_for_fy(self, fy: str) -> Decimal:

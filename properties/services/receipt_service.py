@@ -10,12 +10,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from weasyprint import HTML
-
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 
-from documents.receipt import build_receipt, receipt_filename
+from documents.receipt import build_receipt
 
 if TYPE_CHECKING:
     from properties.models import RentRecord
@@ -23,11 +21,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def generate_rent_receipt_pdf(rent_record: RentRecord) -> bytes:
+def generate_rent_receipt_pdf(rent_record: RentRecord, part: Any = None) -> bytes:
     """Render the HTML receipt template to PDF bytes.
 
     Args:
-        rent_record: The paid :class:`RentRecord` to render.
+        rent_record: The :class:`RentRecord` to render.
+        part: Optional :class:`RentRecordPart` — when given the receipt
+            describes that instalment instead of the whole month.
 
     Returns:
         The raw PDF bytes — callers can either attach to an email or
@@ -38,7 +38,9 @@ def generate_rent_receipt_pdf(rent_record: RentRecord) -> bytes:
             logging context.
     """
     try:
-        receipt = build_receipt(rent_record)
+        from weasyprint import HTML
+
+        receipt = build_receipt(rent_record, part)
         context: dict[str, Any] = {
             "receipt": receipt,
             "rent": rent_record,
@@ -62,11 +64,13 @@ def generate_rent_receipt_pdf(rent_record: RentRecord) -> bytes:
         return pdf_bytes
 
 
-def send_rent_receipt_email(rent_record: RentRecord) -> bool:
+def send_rent_receipt_email(rent_record: RentRecord, part: Any = None) -> bool:
     """Send the rent receipt email with PDF attachment to the renter.
 
     Args:
         rent_record: The :class:`RentRecord` to email a receipt for.
+        part: Optional :class:`RentRecordPart` — when given the email
+            carries the receipt of that instalment instead of the month.
 
     Returns:
         ``True`` on successful send, ``False`` otherwise.
@@ -86,21 +90,22 @@ def send_rent_receipt_email(rent_record: RentRecord) -> bool:
         return False
 
     try:
-        pdf_bytes: bytes = generate_rent_receipt_pdf(rent_record)
+        receipt = build_receipt(rent_record, part)
+        pdf_bytes: bytes = generate_rent_receipt_pdf(rent_record, part)
 
         month_year: str = rent_record.due_date.strftime("%B %Y")
-        subject: str = f"Rent Receipt - {month_year} | ₹{rent_record.amount}"
+        subject: str = f"Rent Receipt - {month_year} | {receipt.total_amount}"
 
         body: str = (
             f"Dear {renter.name},\n\n"
             f"Please find attached your rent receipt for {month_year}.\n\n"
             f"Property: {rent_record.unit.unit}\n"
-            f"Amount: ₹{rent_record.amount}\n"
-            f"Date Paid: {rent_record.paid_on}\n"
-            f"Payment Status: {rent_record.get_status_display()}\n\n"
-            f"Thank you for your timely payment!\n\n"
-            f"Best regards,\n"
-            f"RentSecure Team"
+            f"Amount: {receipt.total_amount}\n"
+            f"Date Paid: {receipt.paid_on}\n"
+            f"Payment Status: {receipt.status_label}\n\n"
+            "Thank you for your timely payment!\n\n"
+            "Best regards,\n"
+            "RentSecure Team"
         )
 
         email_to: list[str] = [renter.email] if renter.email else []
@@ -111,7 +116,7 @@ def send_rent_receipt_email(rent_record: RentRecord) -> bool:
             to=email_to,
         )
 
-        filename: str = receipt_filename(rent_record)
+        filename: str = receipt.filename
         email.attach(filename, pdf_bytes, "application/pdf")
         email.send(fail_silently=False)
 
@@ -125,6 +130,23 @@ def send_rent_receipt_email(rent_record: RentRecord) -> bool:
         return False
     else:
         return True
+
+
+def send_rent_part_receipt_email(rent_record: RentRecord, part: Any) -> bool:
+    """Send the receipt of a single part payment to the renter.
+
+    A part payment always carries its own receipt, so the renter is never
+    left without proof of what was paid.  The settlement receipt is sent
+    separately once the month is fully paid.
+
+    Args:
+        rent_record: The :class:`RentRecord` the part belongs to.
+        part: The :class:`RentRecordPart` that was just recorded.
+
+    Returns:
+        ``True`` on successful send, ``False`` otherwise.
+    """
+    return send_rent_receipt_email(rent_record, part)
 
 
 def send_rent_receipt_on_payment(rent_record: RentRecord) -> bool:

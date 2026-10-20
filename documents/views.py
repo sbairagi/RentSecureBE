@@ -129,7 +129,17 @@ class GenerateRentReceiptPdfViewSet(viewsets.ModelViewSet):
                 {"error": "Rent record not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        receipt = build_receipt(rent_record)
+        part = None
+        part_id = request.GET.get("part")
+        if part_id:
+            part = rent_record.parts.filter(pk=part_id).first()
+            if part is None:
+                return Response(
+                    {"error": "Part payment not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+        receipt = build_receipt(rent_record, part)
         html_string = render_to_string(
             "receipt_card.html", {"receipt": receipt, "rent_record": rent_record}
         )

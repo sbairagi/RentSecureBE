@@ -1,11 +1,16 @@
 import logging
 from datetime import date, datetime
+from decimal import Decimal
 from io import BytesIO
 from typing import Any, cast
 
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import (
+    MethodNotAllowed,
+    PermissionDenied,
+    ValidationError,
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response
@@ -19,15 +24,26 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from core.models import User
+from documents.receipt import receipt_filename
 from notification.services.rent_notify_service import send_payout_notification
-from notification.utils import send_whatsapp_message
+from notification.services.whatsapp_service import send_whatsapp_message
 from rentsecure_be.services.cashfree_service import process_rent_payout
 from rentsecure_be.services.razorpay_service import create_payment_link
 from rentsecure_be.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
 from ..models import Renter, RentRecord, Unit
-from ..serializers import RentRecordSerializer
+from ..serializers import (
+    PartPaymentSerializer,
+    RentRecordPartSerializer,
+    RentRecordSerializer,
+)
+from ..services.rent_collection_service import (
+    cancel_rent_record,
+    record_part_payment,
+    send_rent_receipt,
+    send_rent_reminder,
+)
 from ..utils.utils import generate_rent_invoice_pdf
 
 logger = logging.getLogger(__name__)
@@ -61,13 +77,17 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
             cache_key = f"rent_records_user_{user.id}"
             rent_records = cache.get(cache_key)
             if rent_records is None:
-                rent_records = RentRecord.objects.filter(
-                    unit__owner=user
-                ).select_related("unit", "renter")
+                rent_records = (
+                    RentRecord.objects.filter(unit__owner=user)
+                    .select_related("unit", "renter")
+                    .prefetch_related("parts")
+                )
                 cache.set(cache_key, rent_records, timeout=300)
         else:
-            rent_records = RentRecord.objects.filter(unit__owner=user).select_related(
-                "unit", "renter"
+            rent_records = (
+                RentRecord.objects.filter(unit__owner=user)
+                .select_related("unit", "renter")
+                .prefetch_related("parts")
             )
 
         search = self.request.GET.get("search")
@@ -157,12 +177,130 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
 
     @override
     def perform_destroy(self, instance: RentRecord) -> None:
-        if instance.unit.owner != self.request.user:
+        """Rent records are never deleted.
+
+        The ledger keeps every record for the audit trail — a record leaves
+        the books only through ``POST /rent-records/{id}/cancel/``, which
+        needs a reason and keeps the row visible.
+        """
+        raise MethodNotAllowed(
+            "Rent records are never deleted. Cancel the record instead so the "
+            "ledger history stays intact."
+        )
+
+    def _owned_record(self, pk: Any) -> RentRecord:
+        """Fetch a rent record owned by the caller or raise 404/403."""
+        rent = get_object_or_404(RentRecord, pk=pk)
+        if rent.unit.owner != self.request.user:
             raise PermissionDenied("You do not own this rent record.")
-        enforcer = FeatureEnforcer(self.request.user)
-        instance.delete()
-        enforcer.decrement("rent_records")
+        return rent
+
+    def _invalidate_caches(self) -> None:
         cache.delete(f"rent_records_user_{self.request.user.id}")
+
+    @action(detail=True, methods=["post"], url_path="cancel")
+    def cancel(self, request: DRFRequest, pk: Any = None) -> Response:
+        """Cancel a rent record — the only way to take one out of the books.
+
+        Body: ``{"reason": "..."}`` — the reason is mandatory.
+        """
+        rent = self._owned_record(pk)
+        reason = request.data.get("reason", "") if hasattr(request, "data") else ""
+        rent = cancel_rent_record(rent, reason, request.user)
+        self._invalidate_caches()
+        return Response(self.get_serializer(rent).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], url_path="send-receipt")
+    def send_receipt(self, request: DRFRequest, pk: Any = None) -> Response:
+        """Send the settlement receipt of a settled month to the renter.
+
+        A month that is still open does not need a manual receipt: every
+        part payment already carries its own receipt, and the settlement
+        receipt unlocks once the balance reaches zero.
+        """
+        rent = self._owned_record(pk)
+        status_value = str(rent.status or "").lower()
+        if status_value != RentRecord.Status.PAID:
+            if (rent.amount_paid or Decimal("0")) <= 0:
+                raise ValidationError(
+                    {
+                        "error": (
+                            "The rent receipt is generated once a payment is "
+                            "confirmed. Use Remind to follow up on the pending "
+                            "payment."
+                        )
+                    }
+                )
+            raise ValidationError(
+                {
+                    "error": (
+                        "This month is not settled yet. The receipt of every part "
+                        "payment is sent automatically, and the settlement receipt "
+                        "can be sent once the month is fully paid."
+                    )
+                }
+            )
+        delivered = send_rent_receipt(rent, request.user)
+        self._invalidate_caches()
+        return Response(
+            {
+                "sent": delivered,
+                "receipt_sent_at": rent.receipt_sent_at,
+                "record": self.get_serializer(rent).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="send-reminder")
+    def send_reminder(self, request: DRFRequest, pk: Any = None) -> Response:
+        """Send a WhatsApp reminder for whatever balance is still due."""
+        rent = self._owned_record(pk)
+        sent = send_rent_reminder(rent, request.user)
+        self._invalidate_caches()
+        return Response(
+            {
+                "sent": sent,
+                "balance": str(rent.balance),
+                "last_reminded_at": rent.last_reminded_at,
+                "record": self.get_serializer(rent).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="payments")
+    def payments(self, request: DRFRequest, pk: Any = None) -> Response:
+        """Record one part payment against the month."""
+        rent = self._owned_record(pk)
+        payload = PartPaymentSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        data = payload.validated_data
+
+        part = record_part_payment(
+            rent,
+            amount=data["amount"],
+            paid_on=data["paid_on"],
+            payment_method=data.get("payment_method") or RentRecord.PaymentMethod.CASH,
+            transaction_id=data.get("transaction_id", ""),
+            note=data.get("note", ""),
+            user=request.user,
+        )
+        part.refresh_from_db()
+        part.receipt_no = receipt_filename(rent, part)
+        part.save(update_fields=["receipt_no"])
+
+        self._invalidate_caches()
+        rent.refresh_from_db()
+        serializer = self.get_serializer(rent)
+        return Response(
+            {
+                "part": RentRecordPartSerializer(part).data,
+                "record": serializer.data,
+                "status": rent.status,
+                "amount_paid": str(rent.amount_paid),
+                "balance": str(rent.balance),
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=False, methods=["get"], url_path="monthly_rent_summary")
     def monthly_rent_summary(self, request: DRFRequest) -> Response:
@@ -188,7 +326,7 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
         )
 
         collected = rent_records.filter(status=RentRecord.Status.PAID).aggregate(
-            total=Sum("amount"), count=Count("id")
+            total=Sum("amount_paid"), count=Count("id")
         )
 
         pending = rent_records.filter(status=RentRecord.Status.PENDING).count()
@@ -226,7 +364,7 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
             payout_status="SUCCESS",
         )
 
-        totals = rent_records.aggregate(total=Sum("amount"), count=Count("id"))
+        totals = rent_records.aggregate(total=Sum("amount_paid"), count=Count("id"))
 
         return Response(
             {

@@ -1,17 +1,19 @@
 """Rent receipt presentation model.
 
-The receipt card is rendered in two places:
+The receipt card is rendered in three places:
 
 * ``documents.views.GenerateRentReceiptPdfViewSet.pdf_receipt`` — the PDF
   the owner downloads from the web client.
 * ``properties.services.receipt_service.generate_rent_receipt_pdf`` — the
   PDF attached to the receipt email sent to the renter.
+* ``properties.services.rent_collection_service`` — the PDF attached to a
+  part-payment receipt.
 
-Both render ``documents/templates/receipt_card.html`` so the downloaded
-receipt and the emailed receipt are identical.  The web client
-(``rentsecure-web``) mirrors the same card, which is why every derived
-value (labels, amounts, dates, file name) is computed here once instead of
-being repeated inside the template.
+All of them render ``documents/templates/receipt_card.html`` so the
+downloaded receipt, the emailed receipt and the part receipt are
+identical.  The web client (``rentsecure-web``) mirrors the same card,
+which is why every derived value (labels, amounts, dates, file name) is
+computed here once instead of being repeated inside the template.
 """
 
 from __future__ import annotations
@@ -43,6 +45,7 @@ STATUS_TONES: dict[str, str] = {
     "pending": "pending",
     "overdue": "overdue",
     "cancelled": "overdue",
+    "partial": "partial",
 }
 
 DASH = "—"
@@ -62,8 +65,13 @@ class Receipt:
     payment_method: str
     dues_amount: str
     paid_amount: str
+    total_paid: str
     net_balance: str
     total_amount: str
+    total_label: str
+    subtitle: str
+    part_label: str
+    is_part: bool
     status: str
     status_label: str
     status_tone: str
@@ -105,18 +113,51 @@ def format_period(value: Any) -> str:
     return value.strftime("%B %Y")
 
 
-def receipt_filename(rent_record: Any) -> str:
-    """File name used for the downloaded and the emailed receipt."""
+def _period_slug(rent_record: Any) -> str:
     due_date = rent_record.due_date
-    period = due_date.strftime("%Y%m") if due_date else "000000"
-    return f"rent_receipt_{rent_record.id}_{period}.pdf"
+    return due_date.strftime("%Y%m") if due_date else "000000"
 
 
-def build_receipt(rent_record: Any) -> Receipt:
-    """Build the receipt card model for a rent record.
+def receipt_filename(rent_record: Any, part: Any = None) -> str:
+    """File name used for the downloaded and the emailed receipt.
+
+    ``rent_receipt_<id>_<YYYYMM>.pdf`` for the month, and
+    ``rent_receipt_<id>_<YYYYMM>_part<N>.pdf`` for a single part.
+    """
+    period = _period_slug(rent_record)
+    if part is None:
+        return f"rent_receipt_{rent_record.id}_{period}.pdf"
+    number = _part_number(rent_record, part)
+    return f"rent_receipt_{rent_record.id}_{period}_part{number}.pdf"
+
+
+def _part_number(rent_record: Any, part: Any) -> int:
+    """1-based position of a part inside its rent record."""
+    parts = list(rent_record.parts.all())
+    for index, entry in enumerate(parts):
+        if entry.id == part.id:
+            return index + 1
+    return len(parts)
+
+
+def _cumulative_paid(rent_record: Any, part: Any) -> Decimal:
+    """Total received up to and including ``part``."""
+    total = Decimal("0")
+    for entry in rent_record.parts.all():
+        total += entry.amount or Decimal("0")
+        if entry.id == part.id:
+            break
+    return total
+
+
+def build_receipt(rent_record: Any, part: Any = None) -> Receipt:
+    """Build the receipt card model for a rent record (or one of its parts).
 
     Args:
         rent_record: The :class:`properties.models.RentRecord` to describe.
+        part: Optional :class:`properties.models.RentRecordPart` — when
+            given the card describes that instalment instead of the whole
+            month.
 
     Returns:
         A :class:`Receipt` holding every label and amount the card shows.
@@ -124,42 +165,78 @@ def build_receipt(rent_record: Any) -> Receipt:
     unit = rent_record.unit
     building_name = getattr(unit, "building_name", "") or ""
     unit_label = getattr(unit, "unit", "") or ""
-    property_label = " · ".join(part for part in (building_name, unit_label) if part)
+    property_label = " · ".join(piece for piece in (building_name, unit_label) if piece)
 
     renter = rent_record.renter
     payee = getattr(renter, "name", "") or DASH
 
-    amount = Decimal(rent_record.amount or 0)
-    late_fee = Decimal(rent_record.late_fee or 0)
-    discount = Decimal(rent_record.discount or 0)
-
-    dues = amount + late_fee - discount
-    is_paid = str(rent_record.status or "").lower() == "paid"
-    paid = amount if is_paid else Decimal("0")
-    outstanding = dues - paid
-    net_balance = DASH if outstanding <= 0 else format_inr(outstanding)
-
+    dues = rent_record.total_due
+    received = rent_record.amount_paid or Decimal("0")
     status = str(rent_record.status or "pending").lower()
     payment_method = str(rent_record.payment_method or "").lower()
+    parts = list(rent_record.parts.all())
+
+    filename = receipt_filename(rent_record, part)
+    subtitle = "Rent receipt"
+    part_label = ""
+    total_label = "Amount paid by tenant"
+    paid_on = format_date(rent_record.paid_on)
+    method = PAYMENT_METHOD_LABELS.get(payment_method, DASH)
+    paid_amount = received
+    total_paid = received
+    outstanding = dues - received
+    total_amount = received
+    status_label = STATUS_LABELS.get(status, (status[:1].upper() + status[1:]) or DASH)
+    status_tone = STATUS_TONES.get(status, "pending")
+    transaction_id = getattr(rent_record, "transaction_id", "") or ""
+
+    if part is not None:
+        number = _part_number(rent_record, part)
+        count = len(parts)
+        cumulative = _cumulative_paid(rent_record, part)
+        part_label = f"Part {number} of {count}"
+        subtitle = f"Rent receipt · Part {number} of {count}"
+        total_label = "Amount received (this part)"
+        paid_on = format_date(part.paid_on)
+        method = PAYMENT_METHOD_LABELS.get(str(part.payment_method or "").lower(), DASH)
+        paid_amount = part.amount or Decimal("0")
+        total_paid = cumulative
+        outstanding = dues - cumulative
+        total_amount = paid_amount
+        status_label = "Part paid"
+        status_tone = "partial"
+        transaction_id = part.transaction_id or ""
+    elif parts:
+        last = parts[-1]
+        part_label = f"{len(parts)} parts"
+        paid_on = format_date(last.paid_on)
+        method = PAYMENT_METHOD_LABELS.get(
+            str(last.payment_method or "").lower(), method
+        )
+
+    net_balance = DASH if outstanding <= 0 else format_inr(outstanding)
 
     return Receipt(
-        receipt_no=receipt_filename(rent_record),
-        filename=receipt_filename(rent_record),
+        receipt_no=filename,
+        filename=filename,
         payee=payee,
         property=property_label or DASH,
         period=format_period(rent_record.due_date),
         due_date=format_date(rent_record.due_date),
-        paid_on=format_date(rent_record.paid_on),
-        payment_method=PAYMENT_METHOD_LABELS.get(payment_method, DASH),
+        paid_on=paid_on,
+        payment_method=method,
         dues_amount=format_inr(dues),
-        paid_amount=format_inr(paid),
+        paid_amount=format_inr(paid_amount),
+        total_paid=format_inr(total_paid),
         net_balance=net_balance,
-        total_amount=format_inr(paid),
+        total_amount=format_inr(total_amount),
+        total_label=total_label,
+        subtitle=subtitle,
+        part_label=part_label,
+        is_part=part is not None,
         status=status,
-        status_label=STATUS_LABELS.get(
-            status, (status[:1].upper() + status[1:]) or DASH
-        ),
-        status_tone=STATUS_TONES.get(status, "pending"),
-        transaction_id=getattr(rent_record, "transaction_id", "") or "",
+        status_label=status_label,
+        status_tone=status_tone,
+        transaction_id=transaction_id,
         notes=getattr(rent_record, "notes", "") or "",
     )

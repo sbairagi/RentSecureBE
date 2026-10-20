@@ -420,9 +420,11 @@ def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     client = razorpay.Client(
         auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
     )
+    # The renter pays what is still outstanding on the month.
+    outstanding = rent.balance
     razorpay_order = client.order.create(
         {
-            "amount": int(rent.amount * 100),  # In paise
+            "amount": int(outstanding * 100),  # In paise
             "currency": "INR",
             "receipt": f"rent_{rent.id}",
             "payment_capture": 1,
@@ -435,7 +437,7 @@ def create_rent_payment(request: HttpRequest) -> JsonResponse:  # nosonar
     return JsonResponse(
         {
             "order_id": razorpay_order["id"],
-            "amount": rent.amount,
+            "amount": outstanding,
             "currency": "INR",
             "key_id": settings.RAZORPAY_KEY_ID,
         }

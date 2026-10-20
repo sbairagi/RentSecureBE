@@ -343,5 +343,14 @@ class RentRecordSerializerCoverageTests(TestCase):
         )
         set(serializer.fields.keys())
         model_field_names = {f.name for f in RentRecord._meta.get_fields()}
-        unknown_read_only = set(serializer.Meta.read_only_fields) - model_field_names
+        model_property_names = {
+            name
+            for name in dir(RentRecord)
+            if isinstance(getattr(RentRecord, name, None), property)
+        }
+        unknown_read_only = (
+            set(serializer.Meta.read_only_fields)
+            - model_field_names
+            - model_property_names
+        )
         self.assertEqual(unknown_read_only, set())

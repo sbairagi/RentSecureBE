@@ -16,7 +16,7 @@ from datetime import date
 from typing import Any, TypedDict
 
 from django.core.mail import send_mail
-from django.db.models import Sum
+from django.db.models import F, Sum
 from django.utils import timezone
 
 from core.models import NotificationPreference, User
@@ -62,21 +62,24 @@ def get_monthly_rent_summary(
     ).select_related("renter", "unit")
 
     collected: float = float(
-        rents.filter(status=RentRecord.Status.PAID).aggregate(total=Sum("amount"))[
+        rents.filter(status=RentRecord.Status.PAID).aggregate(total=Sum("amount_paid"))[
             "total"
         ]
         or 0
     )
 
+    # Pending is the money still to collect: total billed minus received.
     pending: float = float(
-        rents.filter(status=RentRecord.Status.PENDING).aggregate(total=Sum("amount"))[
-            "total"
-        ]
+        rents.filter(status=RentRecord.Status.PENDING).aggregate(
+            total=Sum(F("amount") + F("late_fee") - F("discount")) - Sum("amount_paid")
+        )["total"]
         or 0
     )
 
     failed: float = float(
-        rents.filter(payout_status="FAILED").aggregate(total=Sum("amount"))["total"]
+        rents.filter(payout_status="FAILED").aggregate(total=Sum("amount_paid"))[
+            "total"
+        ]
         or 0
     )
 

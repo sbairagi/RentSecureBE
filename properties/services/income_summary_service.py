@@ -57,12 +57,16 @@ def get_income_summary(owner: User, period: str = "monthly") -> IncomeSummary:
     ).select_related("renter", "unit")
 
     total_received: float = float(
-        rents.filter(payout_status="SUCCESS").aggregate(total=Sum("amount"))["total"]
+        rents.filter(payout_status="SUCCESS").aggregate(total=Sum("amount_paid"))[
+            "total"
+        ]
         or 0
     )
 
     total_failed: float = float(
-        rents.filter(payout_status="FAILED").aggregate(total=Sum("amount"))["total"]
+        rents.filter(payout_status="FAILED").aggregate(total=Sum("amount_paid"))[
+            "total"
+        ]
         or 0
     )
 

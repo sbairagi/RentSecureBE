@@ -15,7 +15,7 @@ from typing import Any, cast
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -163,9 +163,24 @@ class UnitViewSet(viewsets.ModelViewSet[Unit]):
 
     @override
     def perform_destroy(self, instance: Unit) -> None:
-        """Delete a unit and decrement the owner's quota."""
+        """Delete a unit — but never while it still carries rent history.
+
+        ``RentRecord.unit`` cascades, so deleting a unit that owns rent
+        records would silently destroy the ledger. Such a unit has to be
+        archived or emptied first.
+        """
         if instance.owner != self.request.user:
             raise PermissionDenied("You do not have permission to delete this unit.")
+        rent_records = instance.rent_records.all()
+        if rent_records.exists():
+            raise ValidationError(
+                {
+                    "error": (
+                        "This unit has rent records, so it cannot be deleted. Archive "
+                        "it instead so the rent history stays available."
+                    )
+                }
+            )
         instance.delete()
         cache.delete(f"units_user_{self.request.user.id}")
 

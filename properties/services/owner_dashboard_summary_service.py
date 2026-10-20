@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any, TypedDict
 
-from django.db.models import Sum
+from django.db.models import F, Sum
 from django.utils import timezone
 
 from core.models import User, UserProfile
@@ -54,7 +54,12 @@ def build_owner_summary(owner: User) -> OwnerDashboardSummary:
             RentRecord.objects.filter(
                 unit__owner=owner,
                 status=RentRecord.Status.PENDING,
-            ).aggregate(total=Sum("amount"))["total"]
+            ).aggregate(
+                total=Sum(F("amount") + F("late_fee") - F("discount"))
+                - Sum("amount_paid")
+            )[
+                "total"
+            ]
             or 0
         )
 

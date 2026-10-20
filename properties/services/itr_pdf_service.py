@@ -43,7 +43,7 @@ def get_itr_summary_data(owner: User, fy_start: date, fy_end: date) -> dict[str,
         .order_by("-created_at")
     )
 
-    total_income = float(rent_records.aggregate(total=Sum("amount"))["total"] or 0)
+    total_income = float(rent_records.aggregate(total=Sum("amount_paid"))["total"] or 0)
 
     return {
         "owner": owner,

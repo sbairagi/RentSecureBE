@@ -1,6 +1,7 @@
 # mypy: ignore-errors
 
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -8,7 +9,7 @@ from rest_framework.request import Request as DRFRequest
 from rest_framework.response import Response
 
 from django.contrib.auth.models import AnonymousUser
-from django.db.models import Q, Sum
+from django.db.models import F, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
@@ -25,6 +26,19 @@ from ..models import (
     Unit,
 )
 from ..services.tax_estimation_service import estimate_tax
+
+
+def _rent_balance_total(records) -> Decimal:
+    """Total money still to collect on a set of rent records.
+
+    The balance of a record is what was billed (rent + late fee - discount)
+    minus what has already been received, so a partially paid month only
+    counts for the part that is still outstanding.
+    """
+    total = records.aggregate(
+        total=Sum(F("amount") + F("late_fee") - F("discount")) - Sum("amount_paid")
+    )["total"]
+    return total or Decimal("0")
 
 
 @api_view(["GET"])
@@ -50,7 +64,7 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
     rents = RentRecord.objects.filter(unit__owner=owner)
 
     total_rent_collected = (
-        rents.filter(status=RentRecord.Status.PAID).aggregate(total=Sum("amount"))[
+        rents.filter(status=RentRecord.Status.PAID).aggregate(total=Sum("amount_paid"))[
             "total"
         ]
         or 0
@@ -59,7 +73,7 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
     rent_collected_this_month = (
         rents.filter(
             status=RentRecord.Status.PAID, due_date__gte=current_month
-        ).aggregate(total=Sum("amount"))["total"]
+        ).aggregate(total=Sum("amount_paid"))["total"]
         or 0
     )
 
@@ -76,7 +90,7 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
         )
         .annotate(month=TruncMonth("due_date"))
         .values("month")
-        .annotate(total=Sum("amount"))
+        .annotate(total=Sum("amount_paid"))
         .order_by("month")
     )
 
@@ -112,11 +126,8 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
         for rent in rent_defaulters
     ]
 
-    pending_rent = (
-        rents.exclude(status=RentRecord.Status.PAID).aggregate(total=Sum("amount"))[
-            "total"
-        ]
-        or 0
+    pending_rent = _rent_balance_total(
+        rents.exclude(status__in=[RentRecord.Status.PAID, RentRecord.Status.CANCELLED])
     )
 
     taxes = PropertyTaxRecord.objects.filter(property__owner=owner)
@@ -207,39 +218,38 @@ def owner_dashboard(request: DRFRequest) -> Response:
         rents.filter(
             status=RentRecord.Status.PAID,
             due_date__gte=current_month,
-        ).aggregate(total=Sum("amount"))["total"]
+        ).aggregate(total=Sum("amount_paid"))["total"]
         or 0
     )
 
     pending_collection = float(
-        rents.exclude(status=RentRecord.Status.PAID).aggregate(total=Sum("amount"))[
-            "total"
-        ]
-        or 0
+        _rent_balance_total(
+            rents.exclude(
+                status__in=[RentRecord.Status.PAID, RentRecord.Status.CANCELLED]
+            )
+        )
     )
 
     rent_expected = float(
-        rents.filter(due_date__gte=current_month).aggregate(total=Sum("amount"))[
-            "total"
-        ]
+        rents.exclude(status=RentRecord.Status.CANCELLED)
+        .filter(due_date__gte=current_month)
+        .aggregate(total=Sum("amount"))["total"]
         or 0
     )
 
     rent_collected = monthly_collection
 
     rent_pending = float(
-        rents.filter(status=RentRecord.Status.PENDING).aggregate(total=Sum("amount"))[
-            "total"
-        ]
-        or 0
+        _rent_balance_total(rents.filter(status=RentRecord.Status.PENDING))
     )
 
     rent_overdue = float(
-        rents.filter(
-            Q(status=RentRecord.Status.OVERDUE)
-            | Q(status=RentRecord.Status.PENDING, due_date__lt=today)
-        ).aggregate(total=Sum("amount"))["total"]
-        or 0
+        _rent_balance_total(
+            rents.filter(
+                Q(status=RentRecord.Status.OVERDUE)
+                | Q(status=RentRecord.Status.PENDING, due_date__lt=today)
+            )
+        )
     )
 
     overdue_renters_count = (
@@ -295,7 +305,7 @@ def owner_dashboard(request: DRFRequest) -> Response:
         )
         .annotate(month=TruncMonth("due_date"))
         .values("month")
-        .annotate(total=Sum("amount"))
+        .annotate(total=Sum("amount_paid"))
         .order_by("month")
     )
 
@@ -644,7 +654,7 @@ def income_summary(request: DRFRequest) -> Response:
 
     rent_income = float(
         RentRecord.objects.filter(unit__owner=owner, payout_status="SUCCESS").aggregate(
-            total=Sum("amount")
+            total=Sum("amount_paid")
         )["total"]
         or 0
     )

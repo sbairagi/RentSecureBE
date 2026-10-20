@@ -30,7 +30,7 @@ def handle_chat_message(user: Any, message: str) -> str:
         )
         if next_due is not None:
             return (
-                f"🏠 Your next rent of ₹{next_due.amount_paid} "
+                f"🏠 Your next rent of ₹{next_due.total_due} "
                 f"is due on {next_due.due_date}."
             )
         return "✅ No upcoming rent dues."
