@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from io import BytesIO
 
-import xlsxwriter
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from django.db.models import F, Q, Sum
+from django.db.models import F, Sum
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
 from django.utils import timezone
@@ -21,6 +19,9 @@ from properties.models import (
     RentRecord,
     Unit,
 )
+from properties.services.rent_amounts import build_amounts, rent_collected
+from properties.services.rent_ledger_query import build_ledger_scope
+from properties.services.rent_report import build_rent_report
 
 
 def _report_dates(request: Request) -> tuple[date, date] | Response:
@@ -62,33 +63,33 @@ def owner_reports(request: Request) -> Response:
     rent_rows = RentRecord.objects.filter(
         unit_id__in=unit_ids, due_date__range=(start, end)
     ).exclude(status=RentRecord.Status.CANCELLED)
-    rent_summary = rent_rows.aggregate(
-        expected=Sum("amount"),
-        collected=Sum("amount_paid", filter=Q(status=RentRecord.Status.PAID)),
-    )
-    expected = float(rent_summary["expected"] or 0)
-    collected = float(rent_summary["collected"] or 0)
+    # The money of the period — expected, collected, the late fees and the
+    # collection rate.  The rate measures the **rent** only, so a period that
+    # was settled with a late fee can never push it above 100%.
+    period_amounts = build_amounts(rent_rows)
+    expected = period_amounts["expected"]
+    collected = period_amounts["collected"]
     overdue_rows = rent_rows.filter(
         due_date__lt=timezone.localdate(),
         status__in=[RentRecord.Status.PENDING, RentRecord.Status.OVERDUE],
     )
     previous_days = (end - start).days + 1
     previous_start = start - timedelta(days=previous_days)
-    previous_collected = float(
+    # The rent that was collected in the period before — the same rule as the
+    # period itself, so the comparison means something.
+    previous_collected = build_amounts(
         RentRecord.objects.filter(
             unit_id__in=unit_ids,
-            status=RentRecord.Status.PAID,
             due_date__range=(previous_start, start - timedelta(days=1)),
-        ).aggregate(total=Sum("amount_paid"))["total"]
-        or 0
-    )
+        ).exclude(status=RentRecord.Status.CANCELLED)
+    )["collected"]
 
     trend = (
         rent_rows.annotate(month=TruncMonth("due_date"))
         .values("month")
         .annotate(
             expected=Sum("amount"),
-            collected=Sum("amount_paid", filter=Q(status=RentRecord.Status.PAID)),
+            collected=Sum(rent_collected()),
         )
         .order_by("month")
     )
@@ -147,9 +148,11 @@ def owner_reports(request: Request) -> Response:
             "summary": {
                 "rent_expected": expected,
                 "rent_collected": collected,
-                "collection_rate": (
-                    round(collected / expected * 100, 1) if expected else 0
-                ),
+                "rent_received": period_amounts["received"],
+                "collection_rate": period_amounts["collection_rate"],
+                "late_fee_billed": period_amounts["late_fee_billed"],
+                "late_fee_collected": period_amounts["late_fee_collected"],
+                "late_fee_pending": period_amounts["late_fee_pending"],
                 "previous_rent_collected": previous_collected,
                 "overdue_amount": overdue_amount,
                 "overdue_count": overdue_rows.count(),
@@ -175,60 +178,63 @@ def owner_reports(request: Request) -> Response:
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def download_owner_rent_report(request: Request) -> HttpResponse | Response:
-    """Export the same owner-scoped, date/property-filtered rent rows as Excel."""
-    dates = _report_dates(request)
-    if isinstance(dates, Response):
-        return dates
-    start, end = dates
-    _owner, units = _report_scope(request)
-    records = (
-        RentRecord.objects.filter(
+    """Export the rent report of the owner as a workbook.
+
+    The reports page sends a date range (``start_date`` / ``end_date``); the
+    rent ledger sends its own filters (``period``, ``building``, ``unit``,
+    ``status``, ``search``).  Both end in the same workbook — the rows and a
+    summary sheet with the money of the scope.
+    """
+    owner = request.user
+    if request.query_params.get("start_date") or request.query_params.get("end_date"):
+        dates = _report_dates(request)
+        if isinstance(dates, Response):
+            return dates
+        start, end = dates
+        _owner, units = _report_scope(request)
+        records = RentRecord.objects.filter(
             unit_id__in=units.values_list("id", flat=True),
             due_date__range=(start, end),
         )
-        .select_related("unit", "unit__building", "renter")
-        .order_by("due_date", "unit__unit")
-    )
-    output = BytesIO()
-    workbook = xlsxwriter.Workbook(output, {"in_memory": True})
-    sheet = workbook.add_worksheet("Rent report")
-    headers = [
-        "Property",
-        "Unit",
-        "Renter",
-        "Due date",
-        "Amount",
-        "Payment status",
-        "Payout status",
-    ]
-    for column, label in enumerate(headers):
-        sheet.write(0, column, label)
-    row_index = 0
-    for row_index, record in enumerate(records, start=1):
-        sheet.write(
-            row_index,
-            0,
-            (
-                record.unit.building.name
-                if record.unit.building
-                else record.unit.building_name
+        scope = {
+            "rows": list(
+                records.select_related("unit", "unit__building", "renter").order_by(
+                    "due_date", "unit__unit"
+                )
             ),
-        )
-        sheet.write(row_index, 1, record.unit.unit)
-        sheet.write(row_index, 2, record.renter.name if record.renter else "")
-        sheet.write(row_index, 3, record.due_date.isoformat())
-        sheet.write_number(row_index, 4, float(record.amount))
-        sheet.write(row_index, 5, record.status)
-        sheet.write(row_index, 6, record.payout_status)
-    sheet.freeze_panes(1, 0)
-    sheet.autofilter(0, 0, max(1, row_index if records else 1), len(headers) - 1)
-    workbook.close()
-    output.seek(0)
+            "queryset": records,
+            "periods": _months_between(start, end),
+        }
+    else:
+        try:
+            scope = build_ledger_scope(owner, request.query_params)
+        except ValueError as error:
+            return Response({"detail": str(error)}, status=400)
+
+    content, name = build_rent_report(scope)
     response = HttpResponse(
-        output.getvalue(),
+        content,
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    response["Content-Disposition"] = (
-        'attachment; filename="securenest-rent-report.xlsx"'
-    )
+    response["Content-Disposition"] = f'attachment; filename="{name}"'
     return response
+
+
+def _months_between(start: date, end: date) -> list[str]:
+    """The months a date range covers — written ``YYYY-MM``.
+
+    Args:
+        start: The first day of the range.
+        end: The last day of the range.
+
+    Returns:
+        The months of the range, oldest first.
+    """
+    months: list[str] = []
+    year, month = start.year, start.month
+    while (year, month) <= (end.year, end.month):
+        months.append(f"{year:04d}-{month:02d}")
+        month += 1
+        if month > 12:
+            year, month = year + 1, 1
+    return months

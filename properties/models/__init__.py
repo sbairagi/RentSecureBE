@@ -1,6 +1,7 @@
 from .building_models import Building
+from .caretaker_models import CareTaker
 from .caretaker_models import CareTaker as Caretaker
-from .caretaker_models import CareTakerAssignmentLog
+from .caretaker_models import CareTakerAssignment, CareTakerAssignmentLog
 from .extra_charge_models import ExtraCharge
 from .itr_ca_contact_models import ITRCAContactRequest
 from .itr_tracker_models import ITRTracker
@@ -14,6 +15,7 @@ from .renter_models import (
     RentAgreementDraft,
     Renter,
     RentReminderLog,
+    ViewingAppointment,
 )
 from .unit_models import Unit, UnitDocument, UnitImage, UnitVacancy
 
@@ -24,6 +26,8 @@ __all__ = [
     "UnitImage",
     "UnitVacancy",
     "Caretaker",
+    "CareTaker",
+    "CareTakerAssignment",
     "CareTakerAssignmentLog",
     "Renter",
     "RentReminderLog",
@@ -31,6 +35,7 @@ __all__ = [
     "ArchivedRenter",
     "RentAgreementDraft",
     "PoliceVerification",
+    "ViewingAppointment",
     "RentRecord",
     "RentRecordPart",
     "RentRecordAction",

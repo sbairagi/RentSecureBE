@@ -1,32 +1,34 @@
 from django.contrib import admin
 
-from ..models import Caretaker
+from ..models import CareTaker, CareTakerAssignment, CareTakerAssignmentLog
 
 
-@admin.register(Caretaker)
-class CaretakerAdmin(admin.ModelAdmin):
+@admin.register(CareTaker)
+class CareTakerAdmin(admin.ModelAdmin):
     list_display = (
         "id",
-        "unit",
+        "owner",
         "name",
+        "unit",
         "email",
         "phone",
         "alternate_phone",
-        "address",
         "joining_date",
         "leaving_date",
         "is_active",
-        "notes",
-        "created_at",
-        "updated_at",
     )
-    search_fields = ("name", "phone")
-    list_filter = ("joining_date", "leaving_date", "is_active")
+    search_fields = ("name", "phone", "email")
+    list_filter = ("joining_date", "leaving_date", "is_active", "owner")
     readonly_fields = ("created_at", "updated_at")
+    autocomplete_fields = ("owner", "unit", "user")
     fieldsets = (
         (
+            "Who they work for",
+            {"fields": ("owner", "unit", "user")},
+        ),
+        (
             "Basic Info",
-            {"fields": ("unit", "name", "email", "phone", "alternate_phone")},
+            {"fields": ("name", "email", "phone", "alternate_phone")},
         ),
         (
             "Address",
@@ -36,3 +38,27 @@ class CaretakerAdmin(admin.ModelAdmin):
         ("Notes", {"fields": ("notes",)}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
+
+
+@admin.register(CareTakerAssignment)
+class CareTakerAssignmentAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "caretaker",
+        "scope_type",
+        "scope_label",
+        "assigned_by",
+        "assigned_at",
+        "unassigned_at",
+        "is_active",
+    )
+    search_fields = ("caretaker__name", "notes")
+    list_filter = ("is_active", "assigned_at")
+    autocomplete_fields = ("caretaker", "building", "unit", "assigned_by")
+
+
+@admin.register(CareTakerAssignmentLog)
+class CareTakerAssignmentLogAdmin(admin.ModelAdmin):
+    list_display = ("id", "caretaker", "action", "action_date", "notes")
+    search_fields = ("caretaker__name", "notes")
+    list_filter = ("action", "action_date")

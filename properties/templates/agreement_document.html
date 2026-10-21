@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rent Agreement {{ agreement_number }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; @bottom-center { content: "SecureNest · Rent Agreement · {{ agreement_number }} · Page " counter(page) " of " counter(pages); font-size: 8pt; color: #8b8da0; } }
+    body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 10pt; color: #20213a; line-height: 1.6; }
+    h1 { text-align: center; font-size: 17pt; margin: 0 0 4px; letter-spacing: .3px; }
+    h2 { font-size: 11pt; margin: 20px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #e9eaf1; }
+    p { margin: 0 0 8px; }
+    .meta { text-align: center; color: #6f7184; font-size: 9pt; margin-bottom: 4px; }
+    .lead { background: #f5f6fb; border: 1px solid #e9eaf1; border-radius: 10px; padding: 12px 14px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eef0f5; font-size: 9.5pt; vertical-align: top; }
+    th { width: 32%; color: #6f7184; font-weight: 600; }
+    .signatures { margin-top: 34px; display: flex; gap: 28px; }
+    .signatures div { flex: 1; }
+    .sign-line { margin-top: 42px; border-top: 1px solid #20213a; padding-top: 5px; font-size: 9pt; }
+    .muted { color: #8b8da0; font-size: 8.5pt; }
+    .clause { text-align: justify; }
+  </style>
+</head>
+<body>
+  <h1>Rent Agreement</h1>
+  <p class="meta">Agreement number {{ agreement_number }} · Generated on {{ generated_on|date:"d F Y" }}</p>
+  <p class="meta">Document status: {{ status_label }}</p>
+
+  <div class="lead">
+    <table>
+      <tr><th>Owner (Lessor)</th><td>{{ owner.name }}{% if owner.email %} · {{ owner.email }}{% endif %}{% if owner.phone %} · {{ owner.phone }}{% endif %}</td></tr>
+      <tr><th>Renter (Lessee)</th><td>{{ renter.name }}{% if renter.email %} · {{ renter.email }}{% endif %}{% if renter.phone %} · {{ renter.phone }}{% endif %}</td></tr>
+      <tr><th>Premises</th><td>Flat {{ premises.unit }}, {{ premises.building }}{% if premises.address %} · {{ premises.address }}{% endif %}</td></tr>
+      <tr><th>Term</th><td>{{ term.start_date }} to {{ term.end_date }}</td></tr>
+    </table>
+  </div>
+
+  <h2>1. Parties</h2>
+  <p class="clause">This Rent Agreement is made on {{ generated_on|date:"d F Y" }} between <strong>{{ owner.name }}</strong>, hereinafter referred to as the &ldquo;Owner&rdquo;, and <strong>{{ renter.name }}</strong>, hereinafter referred to as the &ldquo;Renter&rdquo;. The Owner and the Renter are together referred to as the &ldquo;Parties&rdquo;.</p>
+
+  <h2>2. Premises</h2>
+  <p class="clause">The Owner lets out the residential premises described as Flat {{ premises.unit }} in the building {{ premises.building }}{% if premises.address %}, {{ premises.address }}{% endif %}, of the type {{ premises.type|default:"residential" }}, to the Renter for the term of this agreement. The premises are used for residential purposes only.</p>
+
+  <h2>3. Term</h2>
+  <p class="clause">The tenancy starts on <strong>{{ term.start_date }}</strong> and ends on <strong>{{ term.end_date }}</strong>. Either party may end the tenancy by giving {{ rent.notice_period_months }} month&rsquo;s written notice to the other party.</p>
+
+  <h2>4. Rent, deposit and payment</h2>
+  <p class="clause">The Renter pays a monthly rent of <strong>{{ rent.monthly }}</strong>, due on day {{ rent.due_day }} of every month, by {{ rent.payment_mode }}. The security deposit held by the Owner is <strong>{{ rent.deposit }}</strong>, refundable at the end of the tenancy after the premises are handed back in the same condition, normal wear and tear excepted. Late payment is charged as per the applicable law and the schedule agreed between the Parties.</p>
+
+  <h2>5. Utilities, care and maintenance</h2>
+  <p class="clause">The Renter pays the electricity, water, gas and other consumable charges of the premises, unless the Parties agree otherwise in writing. The Renter keeps the premises in good condition, reports any repair need through SecureNest, and does not carry out structural changes without the written consent of the Owner.</p>
+
+  {% if special_clauses %}
+  <h2>6. Special clauses</h2>
+  <p class="clause">{{ special_clauses|linebreaksbr }}</p>
+  {% endif %}
+
+  <h2>{% if special_clauses %}7{% else %}6{% endif %}. Jurisdiction</h2>
+  <p class="clause">This agreement is governed by the laws applicable in {{ jurisdiction }}, and the courts at {{ jurisdiction }} have the exclusive jurisdiction over any dispute that arises out of it.</p>
+
+  <div class="signatures">
+    <div><strong>Owner</strong><div class="sign-line">{{ signatures.owner }}{% if signatures.owner_signed_at %} · signed {{ signatures.owner_signed_at|date:"d M Y" }}{% else %} · pending{% endif %}</div></div>
+    <div><strong>Renter</strong><div class="sign-line">{{ signatures.renter }}{% if signatures.renter_signed_at %} · signed {{ signatures.renter_signed_at|date:"d M Y" }}{% else %} · pending{% endif %}</div></div>
+  </div>
+  {% if witness_name %}<p class="muted" style="margin-top:18px">Witness: {{ witness_name }}</p>{% endif %}
+  <p class="muted" style="margin-top:22px">This document was generated by SecureNest from the details captured on the agreement record. The electronic signatures carry legal validity under the Information Technology Act, 2000.</p>
+</body>
+</html>

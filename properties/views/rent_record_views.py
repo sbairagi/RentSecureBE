@@ -47,8 +47,9 @@ from ..services.rent_collection_service import (
 )
 from ..services.rent_cycle import build_cycle_state, cycle_violation
 from ..services.rent_history import build_rent_history
-from ..services.rent_ledger_query import build_ledger_page
+from ..services.rent_ledger_query import build_ledger_page, build_ledger_scope
 from ..services.rent_ledger_view import format_money
+from ..services.rent_report import build_rent_report
 from ..services.rent_rules import build_rent_rules
 from ..utils.utils import generate_rent_invoice_pdf
 
@@ -282,16 +283,49 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
         """The ledger of the owner — one page of rows, the filters and the pagination.
 
         The ledger is queried on the server: the client sends the filters it
-        applied (``building``, ``unit``, ``status``), the search text and the
-        page it wants (``page``, ``page_size``), and the server answers with
-        the rows of that page, the grouped filter options and the state of the
-        pagination.
+        applied (``period``, ``building``, ``unit``, ``status``), the search
+        text and the page it wants (``page``, ``page_size``), and the server
+        answers with the rows of that page, the grouped filter options, the
+        money of the scope and the state of the pagination.
+
+        The period filter is the month of the due date and it starts on the
+        current month of the server; ``?period=all`` asks for every month.
         """
-        page = build_ledger_page(request.user, request.query_params)
+        try:
+            page = build_ledger_page(request.user, request.query_params)
+        except ValueError as error:
+            return Response(
+                {"detail": str(error)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         rows = page.pop("results")
         serializer = RentRecordSerializer(rows, many=True)
         page["results"] = serializer.data
         return Response(page, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"], url_path="report")
+    def report(self, request: DRFRequest) -> FileResponse | Response:
+        """The rent report of the owner — the ledger as a workbook.
+
+        The report is made from the **same filters as the ledger** (``period``,
+        ``building``, ``unit``, ``status``, ``search``) and holds the whole
+        filtered ledger, not only the page that was on screen.
+        """
+        try:
+            scope = build_ledger_scope(request.user, request.query_params)
+        except ValueError as error:
+            return Response(
+                {"detail": str(error)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        content, name = build_rent_report(scope)
+        response = FileResponse(
+            BytesIO(content),
+            as_attachment=True,
+            filename=name,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        return response
 
     @action(detail=False, methods=["get"], url_path="cycle")
     def cycle(self, request: DRFRequest) -> Response:

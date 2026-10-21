@@ -1,8 +1,17 @@
 from .building_views import BuildingViewSet
-from .caretaker_views import CaretakerViewSet
+from .caretaker_portal_views import (
+    caretaker_dashboard,
+    caretaker_maintenance,
+    caretaker_maintenance_detail,
+    caretaker_properties,
+    caretaker_tenants,
+    caretaker_today,
+)
+from .caretaker_views import CareTakerViewSet, CaretakerViewSet
 from .extra_charge_views import ExtraChargeViewSet
 from .itr_views import contact_ca, extract_form16_data, get_itr_deduction_suggestions
 from .maintenance_views import MaintenanceRequestViewSet
+from .ops_views import OpsAgreementViewSet, OpsPoliceVerificationViewSet
 from .owner_dashboard import (
     income_summary,
     itr_tracker_summary,
@@ -26,6 +35,15 @@ from .rent_record_views import (
     retry_payout_api,
 )
 from .rent_reminder import rent_whatsapp_logs, resend_rent_confirmation
+from .renter_portal_views import (
+    RenterAppointmentViewSet,
+    renter_agreements,
+    renter_listings,
+    renter_maintenance,
+    renter_rent_payment,
+    renter_sign_agreement,
+    renter_verification,
+)
 from .renter_views import (
     RenterViewSet,
     renter_agreement,
@@ -54,6 +72,7 @@ __all__ = [
     "UnitImageViewSet",
     "UnitDocumentViewSet",
     "RentAgreementDraftViewSet",
+    "CareTakerViewSet",
     "CaretakerViewSet",
     "RenterViewSet",
     "RentRecordViewSet",
@@ -86,4 +105,19 @@ __all__ = [
     "renter_documents",
     "renter_extra_charges",
     "renter_dashboard",
+    "renter_listings",
+    "renter_agreements",
+    "renter_sign_agreement",
+    "renter_maintenance",
+    "renter_verification",
+    "renter_rent_payment",
+    "RenterAppointmentViewSet",
+    "OpsPoliceVerificationViewSet",
+    "OpsAgreementViewSet",
+    "caretaker_dashboard",
+    "caretaker_today",
+    "caretaker_properties",
+    "caretaker_maintenance",
+    "caretaker_maintenance_detail",
+    "caretaker_tenants",
 ]

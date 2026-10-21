@@ -15,7 +15,7 @@ from typing import Any, cast
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -27,6 +27,7 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Q, QuerySet
 from django.http import HttpRequest, JsonResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from core.models import User
@@ -42,6 +43,7 @@ from ..serializers import (
     UnitImageSerializer,
     UnitSerializer,
 )
+from ..services.agreement_document_service import generate_agreement_document
 
 logger = logging.getLogger(__name__)
 
@@ -387,18 +389,29 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
             return queryset
 
         status_map: dict[str, QuerySet[RentAgreementDraft]] = {
-            "draft": queryset.filter(owner_signed=False, renter_signed=False),
+            "draft": queryset.filter(status=RentAgreementDraft.AgreementStatus.DRAFT),
             "pending_signature": queryset.filter(
-                owner_signed=False, renter_signed=False
+                status=RentAgreementDraft.AgreementStatus.PENDING_SIGNATURE
             ),
             "partially_signed": queryset.filter(
-                Q(owner_signed=True, renter_signed=False)
-                | Q(owner_signed=False, renter_signed=True)
+                status=RentAgreementDraft.AgreementStatus.PARTIALLY_SIGNED
             ),
-            "fully_signed": queryset.filter(owner_signed=True, renter_signed=True),
-            "active": queryset.filter(owner_signed=True, renter_signed=True),
+            "fully_signed": queryset.filter(
+                status=RentAgreementDraft.AgreementStatus.FULLY_SIGNED
+            ),
+            "active": queryset.filter(status=RentAgreementDraft.AgreementStatus.ACTIVE),
         }
-        return status_map.get(status_param, queryset)
+        if status_param in status_map:
+            return status_map[status_param]
+        if status_param == "in_progress":
+            return queryset.filter(
+                status=RentAgreementDraft.AgreementStatus.IN_PROGRESS
+            )
+        if status_param == "expired":
+            return queryset.filter(status=RentAgreementDraft.AgreementStatus.EXPIRED)
+        if status_param == "terminated":
+            return queryset.filter(status=RentAgreementDraft.AgreementStatus.TERMINATED)
+        return queryset
 
     def _apply_agreement_relation_filters(
         self, queryset: QuerySet[RentAgreementDraft]
@@ -435,25 +448,8 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
             return queryset.order_by(ordering)
         return queryset.order_by("-generated_at")
 
-    @override
-    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
-        """Persist a new draft and send it for digital signature."""
-        enforcer = FeatureEnforcer(self.request.user)
-        renter: Renter | None = serializer.validated_data.get("renter")
-        unit: Unit | None = serializer.validated_data.get("unit")
-
-        if not enforcer.can_create("rent_agreement_drafts"):
-            raise PermissionDenied("You have reached your draft creation limit.")
-
-        if unit is None or unit.owner != self.request.user:
-            raise PermissionDenied("You do not own the selected unit.")
-        if renter is None or renter.unit != unit:
-            raise PermissionDenied("Renter does not belong to this unit.")
-
-        agreement: RentAgreementDraft = serializer.save(user=self.request.user)
-        enforcer.increment("rent_agreement_drafts")
-        cache.delete(f"rent_drafts_user_{self.request.user.id}")
-
+    def _send_for_signature(self, agreement: RentAgreementDraft) -> None:
+        """Dispatch the agreement to the signature provider (best effort)."""
         try:
             user_obj = cast(User, self.request.user)
             owner_email: str | None = getattr(user_obj, "email", None)
@@ -467,10 +463,126 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
             )
         except Exception as exc:
             logger.warning("Failed to send agreement for signature: %s", exc)
+            return
+
+        agreement.status = RentAgreementDraft.AgreementStatus.PENDING_SIGNATURE
+        agreement.sent_for_signature_at = timezone.now()
+        agreement.save(update_fields=["status", "sent_for_signature_at"])
+
+    @override
+    def perform_create(self, serializer: BaseSerializer[Any]) -> None:
+        """Persist a new draft, generate the document and send it for signature.
+
+        The document is generated by the backend from the details that were
+        captured on the form, so the agreement never depends on an upload.
+        """
+        enforcer = FeatureEnforcer(self.request.user)
+        renter: Renter | None = serializer.validated_data.get("renter")
+        unit: Unit | None = serializer.validated_data.get("unit")
+
+        if not enforcer.can_create("rent_agreement_drafts"):
+            raise PermissionDenied("You have reached your draft creation limit.")
+
+        if unit is None or unit.owner != self.request.user:
+            raise PermissionDenied("You do not own the selected unit.")
+        if renter is None or renter.unit != unit:
+            raise PermissionDenied("Renter does not belong to this unit.")
+
+        agreement: RentAgreementDraft = serializer.save(user=self.request.user)
+        agreement.status = RentAgreementDraft.AgreementStatus.IN_PROGRESS
+        agreement.save(update_fields=["status"])
+        enforcer.increment("rent_agreement_drafts")
+        cache.delete(f"rent_drafts_user_{self.request.user.id}")
+
+        generate_agreement_document(agreement)
+        cache.delete(f"rent_drafts_user_{self.request.user.id}")
+        self._send_for_signature(agreement)
+
+    @action(detail=True, methods=["post"], url_path="generate")
+    def generate(self, request: Request, pk: int | None = None) -> Response:
+        """Regenerate the agreement document from the details on the record."""
+        agreement = self.get_object()
+        if agreement.status not in (
+            RentAgreementDraft.AgreementStatus.DRAFT,
+            RentAgreementDraft.AgreementStatus.IN_PROGRESS,
+            RentAgreementDraft.AgreementStatus.PARTIALLY_SIGNED,
+            RentAgreementDraft.AgreementStatus.PENDING_SIGNATURE,
+        ):
+            raise PermissionDenied(
+                "A signed agreement cannot be regenerated. Create a new one instead."
+            )
+        generate_agreement_document(agreement)
+        cache.delete(f"rent_drafts_user_{self.request.user.id}")
+        serializer = self.get_serializer(agreement)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="sign")
+    def sign(self, request: Request, pk: int | None = None) -> Response:
+        """Record the signature of the owner or of the renter."""
+        agreement = self.get_object()
+        role = str(request.data.get("role", "")).lower()
+        if role not in ("owner", "renter"):
+            raise ValidationError("The role must be either 'owner' or 'renter'.")
+
+        if role == "owner" and agreement.user != request.user:
+            raise PermissionDenied("Only the owner can sign as the owner.")
+        if role == "renter" and agreement.renter.user_id != request.user.id:
+            raise PermissionDenied("Only the renter can sign as the renter.")
+
+        if not agreement.document_generated_at:
+            raise ValidationError(
+                "The agreement document is still being generated. "
+                "Try again in a moment."
+            )
+        if agreement.status in (
+            RentAgreementDraft.AgreementStatus.TERMINATED,
+            RentAgreementDraft.AgreementStatus.EXPIRED,
+        ):
+            raise ValidationError("This agreement can no longer be signed.")
+
+        now = timezone.now()
+        if role == "owner":
+            agreement.owner_signed = True
+            agreement.owner_signed_at = agreement.owner_signed_at or now
+        else:
+            agreement.renter_signed = True
+            agreement.renter_signed_at = agreement.renter_signed_at or now
+
+        agreement.status = agreement.refresh_status()
+        agreement.save(
+            update_fields=[
+                "owner_signed",
+                "renter_signed",
+                "owner_signed_at",
+                "renter_signed_at",
+                "status",
+            ]
+        )
+        cache.delete(f"rent_drafts_user_{self.request.user.id}")
+        serializer = self.get_serializer(agreement)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="document")
+    def document(self, request: Request, pk: int | None = None) -> Response:
+        """Return the generated document of an agreement."""
+        agreement = self.get_object()
+        if not agreement.file:
+            raise NotFound("The agreement document has not been generated yet.")
+        return Response(
+            {
+                "file": agreement.file.url,
+                "agreement_number": agreement.agreement_number,
+                "document_url": request.build_absolute_uri(agreement.file.url),
+            }
+        )
 
     @override
     def perform_update(self, serializer: BaseSerializer[Any]) -> None:
-        """Persist draft updates after ownership + integrity checks."""
+        """Persist draft updates after ownership + integrity checks.
+
+        Replacing the document resets the signature state: the previous
+        signatures were given for a file that no longer exists.
+        """
         instance = serializer.instance
         if instance is None or instance.user != self.request.user:
             raise PermissionDenied("You do not own this draft.")
@@ -487,7 +599,22 @@ class RentAgreementDraftViewSet(viewsets.ModelViewSet[RentAgreementDraft]):
         if renter is None or renter.unit != unit:
             raise PermissionDenied("Renter does not belong to this unit.")
 
-        serializer.save()
+        document_replaced = "file" in serializer.validated_data
+        agreement = serializer.save()
+
+        if document_replaced and agreement is not None:
+            agreement.owner_signed = False
+            agreement.renter_signed = False
+            agreement.leegality_document_id = ""
+            agreement.save(
+                update_fields=[
+                    "owner_signed",
+                    "renter_signed",
+                    "leegality_document_id",
+                ]
+            )
+            self._send_for_signature(agreement)
+
         cache.delete(f"rent_drafts_user_{self.request.user.id}")
 
     @override

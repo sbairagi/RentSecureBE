@@ -106,7 +106,9 @@ def update_unit_usage(sender: type[Unit], instance: Unit, **kwargs: object) -> N
 def update_caretaker_usage(
     sender: type[Caretaker], instance: Caretaker, **kwargs: object
 ) -> None:
-    update_usage_count(instance.unit.owner, "max_caretakers", Caretaker)
+    owner = instance.owner or getattr(instance.unit, "owner", None)
+    if owner is not None:
+        update_usage_count(owner, "max_caretakers", Caretaker)
 
 
 @receiver(post_save, sender=Caretaker)
@@ -117,13 +119,13 @@ def log_caretaker_assignment(
         CareTakerAssignmentLog.objects.create(
             caretaker=instance,
             action="assigned",
-            notes=f"Assigned to unit {instance.unit_id}",
+            notes="Caretaker hired by the owner",
         )
     else:
         CareTakerAssignmentLog.objects.create(
             caretaker=instance,
             action="assigned",
-            notes=f"Reassigned to unit {instance.unit_id}",
+            notes="Caretaker details updated",
         )
 
 
@@ -134,7 +136,7 @@ def log_caretaker_unassignment(
     CareTakerAssignmentLog.objects.create(
         caretaker=instance,
         action="unassigned",
-        notes=f"Unassigned from unit {instance.unit_id}",
+        notes="Caretaker removed from the owner team",
     )
 
 

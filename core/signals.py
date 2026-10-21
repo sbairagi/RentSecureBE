@@ -7,6 +7,7 @@ from django.dispatch import receiver
 from core.models import NotificationPreference, User, UserProfile
 
 from .models import PlanFeatureLimit, SubscriptionPlan, UserSubscription
+from .plan_limits import FREE_PLAN_LIMITS
 
 
 @receiver(post_save, sender=User)
@@ -30,19 +31,7 @@ def assign_default_plan(
                 "is_active": True,
             },
         )
-        default_limits = {
-            "max_buildings": "2",
-            "max_units": "3",
-            "max_renters": "3",
-            "max_caretakers": "1",
-            "max_unit_images": "3",
-            "max_document_uploads": "2",
-            "unit_images": "3",
-            "unit_documents": "2",
-            "rent_records": "12",
-            "rent_agreement_drafts": "1",
-        }
-        for feature_key, value in default_limits.items():
+        for feature_key, value in FREE_PLAN_LIMITS.items():
             PlanFeatureLimit.objects.get_or_create(
                 plan=default_plan,
                 feature_key=feature_key,

@@ -16,6 +16,10 @@ class User(AbstractUser):
     phone = models.CharField(max_length=15, blank=True)
     is_investor = models.BooleanField(default=False)
     is_phone_verified = models.BooleanField(default=False)
+    is_ops = models.BooleanField(
+        default=False,
+        help_text="RentSecure Ops staff: reviews verifications and agreements.",
+    )
     whatsapp_number = models.CharField(
         max_length=15, help_text="Include country code, e.g. +91xxxxxxxxxx"
     )

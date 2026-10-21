@@ -25,6 +25,7 @@ from ..models import (
     RentRecord,
     Unit,
 )
+from ..services.rent_amounts import build_amounts, rent_collected
 from ..services.tax_estimation_service import estimate_tax
 
 
@@ -83,6 +84,8 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
         "failed": rents.filter(payout_status="FAILED").count(),
     }
 
+    # The rent that was collected — the money received without the late fee,
+    # so the bars of the trend agree with the collection rate.
     rent_payment_trends = (
         rents.filter(
             status=RentRecord.Status.PAID,
@@ -90,7 +93,7 @@ def owner_dashboard_summary(request: DRFRequest) -> Response:
         )
         .annotate(month=TruncMonth("due_date"))
         .values("month")
-        .annotate(total=Sum("amount_paid"))
+        .annotate(total=Sum(rent_collected()))
         .order_by("month")
     )
 
@@ -208,11 +211,18 @@ def owner_dashboard(request: DRFRequest) -> Response:
         unit__owner=owner, status=Renter.RenterStatus.ACTIVE
     ).count()
 
-    caretakers_count = Caretaker.objects.filter(
-        unit__owner=owner, is_active=True
-    ).count()
+    caretakers_count = Caretaker.objects.filter(owner=owner, is_active=True).count()
 
     rents = RentRecord.objects.filter(unit__owner=owner)
+
+    # The money of the month that is running — expected, collected, the late
+    # fees and the collection rate.  The rate measures the **rent** only, so a
+    # month that was settled with a late fee can never push it above 100%
+    # (the same service answers the ledger and the reports).
+    month_scope = rents.exclude(status=RentRecord.Status.CANCELLED).filter(
+        due_date__gte=current_month
+    )
+    month_amounts = build_amounts(month_scope)
 
     monthly_collection = float(
         rents.filter(
@@ -230,14 +240,9 @@ def owner_dashboard(request: DRFRequest) -> Response:
         )
     )
 
-    rent_expected = float(
-        rents.exclude(status=RentRecord.Status.CANCELLED)
-        .filter(due_date__gte=current_month)
-        .aggregate(total=Sum("amount"))["total"]
-        or 0
-    )
+    rent_expected = month_amounts["expected"]
 
-    rent_collected = monthly_collection
+    rent_collected_total = month_amounts["collected"]
 
     rent_pending = float(
         _rent_balance_total(rents.filter(status=RentRecord.Status.PENDING))
@@ -277,11 +282,7 @@ def owner_dashboard(request: DRFRequest) -> Response:
         "cancelled": rents.filter(status=RentRecord.Status.CANCELLED).count(),
     }
 
-    collection_rate = (
-        round((monthly_collection / rent_expected * 100), 1)
-        if rent_expected > 0
-        else 0.0
-    )
+    collection_rate = month_amounts["collection_rate"]
 
     notice_period_renters = Renter.objects.filter(
         unit__owner=owner, status=Renter.RenterStatus.NOTICE_PERIOD
@@ -298,6 +299,8 @@ def owner_dashboard(request: DRFRequest) -> Response:
     # ----------------------------------------------------------------
     # Analytics Trends
     # ----------------------------------------------------------------
+    # The rent that was collected — the money received without the late fee,
+    # so the bars of the trend agree with the collection rate.
     rent_payment_trends = (
         rents.filter(
             status=RentRecord.Status.PAID,
@@ -305,7 +308,7 @@ def owner_dashboard(request: DRFRequest) -> Response:
         )
         .annotate(month=TruncMonth("due_date"))
         .values("month")
-        .annotate(total=Sum("amount_paid"))
+        .annotate(total=Sum(rent_collected()))
         .order_by("month")
     )
 
@@ -592,11 +595,14 @@ def owner_dashboard(request: DRFRequest) -> Response:
             "revoked_renters": revoked_renters,
             "deactivated_renters": deactivated_renters,
             "rent_expected": rent_expected,
-            "rent_collected": rent_collected,
+            "rent_collected": rent_collected_total,
             "rent_pending": rent_pending,
             "rent_overdue": rent_overdue,
             "overdue_renters_count": overdue_renters_count,
             "late_fees_total": late_fees_total,
+            "late_fee_billed": month_amounts["late_fee_billed"],
+            "late_fee_collected": month_amounts["late_fee_collected"],
+            "late_fee_pending": month_amounts["late_fee_pending"],
             "monthly_collection": monthly_collection,
             "pending_collection": pending_collection,
             "collection_rate": collection_rate,

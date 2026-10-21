@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from properties.models import Caretaker, MaintenanceRequest, Renter, Unit
+from properties.services.caretaker_scope import covers_unit
 
 
 class MaintenanceRequestSerializer(serializers.ModelSerializer):
@@ -36,7 +37,9 @@ class MaintenanceRequestSerializer(serializers.ModelSerializer):
                 {"renter": "The renter must belong to the selected unit."}
             )
         if caretaker and (
-            not isinstance(caretaker, Caretaker) or caretaker.unit_id != unit.id
+            not isinstance(caretaker, Caretaker)
+            or caretaker.owner_id != unit.owner_id
+            or not covers_unit(caretaker, unit)
         ):
             raise serializers.ValidationError(
                 {"assigned_caretaker": "Choose a caretaker assigned to this unit."}

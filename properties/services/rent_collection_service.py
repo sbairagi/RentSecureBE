@@ -140,6 +140,7 @@ def record_part_payment(
     transaction_id: str = "",
     note: str = "",
     user: Any = None,
+    split_allowed: bool = True,
 ) -> RentRecordPart:
     """Record one instalment against a monthly rent record.
 
@@ -156,6 +157,9 @@ def record_part_payment(
         transaction_id: Optional gateway / bank reference.
         note: Optional note for this part.
         user: The owner recording the part.
+        split_allowed: Whether the month may be split at all. The renter pays
+            the balance of their own month: when the unit does not allow part
+            payments, only a payment that settles the whole month is accepted.
 
     Returns:
         The created :class:`RentRecordPart`.
@@ -172,7 +176,9 @@ def record_part_payment(
         if locked is None:
             raise ValidationError({"error": "This rent record no longer exists."})
 
-        _guard_part_payment(locked, amount=amount, paid_on=paid_on)
+        _guard_part_payment(
+            locked, amount=amount, paid_on=paid_on, split_allowed=split_allowed
+        )
 
         part = RentRecordPart.objects.create(
             rent_record=locked,
@@ -218,7 +224,11 @@ def record_part_payment(
 
 
 def _guard_part_payment(
-    rent_record: RentRecord, *, amount: Decimal, paid_on: Any
+    rent_record: RentRecord,
+    *,
+    amount: Decimal,
+    paid_on: Any,
+    split_allowed: bool = True,
 ) -> None:
     """Every rule that decides whether a part payment may be recorded.
 
@@ -226,6 +236,10 @@ def _guard_part_payment(
         rent_record: The monthly record the part belongs to.
         amount: How much the part claims to be.
         paid_on: When the money was received.
+        split_allowed: Whether the month may be split at all. When the month
+            may not be split, only a payment that settles the whole balance is
+            accepted — that is what the renter pays when the owner keeps the
+            month in one piece.
 
     Raises:
         ValidationError: When the part may not be recorded.
@@ -250,14 +264,32 @@ def _guard_part_payment(
             }
         )
     if not getattr(rent_record.unit, "allow_partial_payments", False):
-        raise ValidationError(
-            {
-                "error": (
-                    "Part payments are off for this unit. Turn them on in Unit details "
-                    "to split the rent."
+        if not split_allowed:
+            # The month is kept in one piece: the only payment that is allowed
+            # is the one that settles the whole balance.
+            balance = rent_record.balance
+            if amount is None or amount <= ZERO:
+                raise ValidationError(
+                    {"error": PART_PAYMENT_MESSAGES["amount_required"]}
                 )
-            }
-        )
+            if amount != balance:
+                raise ValidationError(
+                    {
+                        "error": (
+                            "This month is paid in one go. Pay the whole balance of "
+                            f"{format_money_exact(balance)}."
+                        )
+                    }
+                )
+        else:
+            raise ValidationError(
+                {
+                    "error": (
+                        "Part payments are off for this unit. Turn them on in "
+                        "Unit details to split the rent."
+                    )
+                }
+            )
     if amount is None or amount <= ZERO:
         raise ValidationError({"error": PART_PAYMENT_MESSAGES["amount_required"]})
 

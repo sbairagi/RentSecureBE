@@ -4,7 +4,8 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from properties.models import Caretaker, RentRecord
+from properties.models import RentRecord
+from properties.services.caretaker_scope import caretakers_for_unit
 from rentsecure_be.type_compat import override
 
 if TYPE_CHECKING:
@@ -101,9 +102,7 @@ class Command(BaseCommand):
             return False
 
         owner = rent.unit.owner
-        caretakers = Caretaker.objects.filter(
-            unit=rent.unit, is_active=True
-        ).select_related("user")
+        caretakers = caretakers_for_unit(rent.unit).select_related("user")
 
         msg = (
             f"🚨 Reminder: ₹{rent.amount} rent for {rent.unit.unit} "

@@ -310,6 +310,38 @@ API — a client can never set it directly.
   `amount_paid` — the money that is still to collect.
 * A cancelled record counts towards neither.
 
+### 3.4.1 The money of a scope — one service for every screen
+
+`properties/services/rent_amounts.py::build_amounts(queryset, today=None)` is the
+**only** place where the money of a set of records is added up. The cards above
+the ledger, the dashboard of the owner and the reports page all call it, so
+they can never disagree.
+
+| Number | What it is | How it is computed |
+|---|---|---|
+| `expected` | the **rent** that was billed | `Σ amount` of the records that are not cancelled |
+| `collected` | the **rent** that came in | `Σ (amount_paid − late_fee_collected)`, never below zero |
+| `received` | the money that came in | `Σ amount_paid` |
+| `pending` | the money still to collect on the open months | `Σ balance` of the records that are not settled |
+| `overdue` | the money still to collect on the months past their due date | `Σ balance` of the records that are `overdue` (or `pending` with a due date in the past) |
+| `late_fee_billed` | the late fees that were charged | `Σ late_fee` of the records that are not cancelled |
+| `late_fee_collected` | the late fees that came in with the bill | `Σ late_fee` of the **settled** records |
+| `late_fee_pending` | the late fees that are still owed | `late_fee_billed − late_fee_collected` |
+| `collection_rate` | how much of the **rent** was collected | `collected ÷ expected × 100`, **capped at 100** |
+
+> **The late fee is a charge, not rent.** The bill of a record is
+> `amount + late_fee − discount` and the renter pays the bill. The late fee is
+> therefore **collected with the bill**: it comes in when the month is settled,
+> and while the month is still open the money received is credited to the rent
+> and the late fee is still owed. The **collection rate measures the rent
+> only** — that is why it can never pass 100% — and the late fee has its own
+> card. A settled month with a late fee counts 100% of its rent on the rate
+> **and** its late fee on the late-fee card.
+>
+> A discount lowers the rent that was collected, not the rate: the owner
+> expected `₹26,000`, collected `₹25,500` because `₹500` was given away — the
+> rate says 98.1%.
+
 ### 3.5 How amounts and dates are rendered
 
 * **Money** — `₹` with Indian digit grouping: `₹30,000`, `₹1,00,000`. The
@@ -522,6 +554,7 @@ The rules live in `properties/services/rent_ledger_query.py`.
 
 | Filter | The parameter | The values |
 |---|---|---|
+| Period | `period` | the months of the due date, written `YYYY-MM` — or `all` |
 | Building | `building` | the ids of the buildings |
 | Unit | `unit` | the ids of the units |
 | Status | `status` | `pending`, `overdue`, `paid`, `cancelled` |
@@ -536,6 +569,21 @@ The rules live in `properties/services/rent_ledger_query.py`.
 * The search (`search`) narrows the ledger down to the renter, the unit, the
   building, the transaction reference or the notes.
 
+### 7.1.1 The period — the month of the due date
+
+* The period filter is the **month of the due date**, written `YYYY-MM`.
+* **The default is the current month** — the month of the **server's** clock
+  (`timezone.localdate()`), never the one of the client. A client that sends no
+  period gets the month that is running.
+* `?period=all` (or an empty `?period=`) asks for **every month**.
+* `?period=2026-10,2026-09` asks for two months.
+* A period that is not written `YYYY-MM` is **refused** with
+  `400 — "The period must be written YYYY-MM, or 'all'."`; the ledger never
+  answers with a scope the client did not ask for.
+* The month names of the options come from the fixed list
+  (`documents/receipt.py::MONTH_NAMES`), so the same month is never written in
+  two languages.
+
 ### 7.2 The facets — the options of the filters
 
 The options of every filter are **grouped by the server**, and every option
@@ -543,6 +591,11 @@ carries the number of records behind it:
 
 ```jsonc
 "filters": {
+  "period":   { "key": "period", "label": "Period", "searchable": false,
+                "options": [ { "value": "all", "label": "All months", "meta": "",
+                               "count": 24, "selected": false },
+                             { "value": "2026-10", "label": "October 2026", "meta": "",
+                               "count": 6, "selected": true } ] },
   "building": { "key": "building", "label": "Building", "searchable": true,
                 "options": [ { "value": "1", "label": "Maple Heights", "meta": "",
                                "count": 12, "selected": false } ] },
@@ -561,6 +614,8 @@ carries the number of records behind it:
   `Overdue`, `Cancelled`).
 * The label of a unit carries the building it belongs to in `meta`.
 * The values that are picked carry `selected: true`.
+* The **months** are offered **newest first**, and `All months` is the first
+  option — it is the way back to the whole ledger.
 
 ### 7.3 The pagination
 
@@ -582,7 +637,28 @@ The answer carries the state of the pagination:
 * The **counts** (`summary`) belong to the whole filtered ledger, not to the
   page on screen: `paid`, `pending`, `overdue`, `cancelled` and
   `partially_paid`.
+* The **money** (`amounts`) belongs to the same scope — the numbers of §3.4.1.
+  The cards above the ledger read them, the client never adds them up.
 * The client may only ask for a page and a page size the server offers.
+
+### 7.3.1 The report of the ledger
+
+`GET /api/rent-records/report/?<the same filters as the ledger>`
+
+* The report is made by the **server** from the **same filters as the ledger**
+  — `period`, `building`, `unit`, `status` and `search` — and holds the
+  **whole** filtered ledger, never only the page that was on screen.
+* The answer is an Excel workbook
+  (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`) named
+  `rent-report-<period>.xlsx` (`rent-report-all-months.xlsx` for every month).
+* The workbook carries the **rows** (property, unit, renter, period, due date,
+  rent, late fee, discount, total due, received, balance, paid on, status,
+  parts) and a **Summary** sheet with the money of the scope — the same
+  numbers the cards show.
+* A period that is not written `YYYY-MM` is refused with **400**.
+* The reports page (`owner/rent-report/`) keeps its own period wording (this
+  month, last month, last 6 months, this year) and now writes the same
+  workbook, so a downloaded report and the screen can never disagree.
 
 ### 7.4 The history of a record
 
@@ -652,7 +728,8 @@ Every action the owner takes leaves a row in the action log
 | Endpoint | What it does |
 |---|---|
 | `GET /api/owner/rent-records/`, `GET /api/rent-records/` | The ledger: every record with its `ledger` view and its parts. |
-| `GET /api/rent-records/ledger/` | The ledger of the owner — one page of rows, the grouped filter options, the counts and the pagination state (§7). |
+| `GET /api/rent-records/ledger/` | The ledger of the owner — one page of rows, the grouped filter options, the counts, the money of the scope and the pagination state (§7). |
+| `GET /api/rent-records/report/` | The report of the ledger — the whole filtered ledger as a workbook (§7.3.1). |
 | `GET /api/rent-records/rules/` | The rules catalogue: limits, flags and the wording of every form. |
 | `GET /api/rent-records/cycle/?unit=<id>` | The billing cycle of one unit: which month may be billed next and why (§2). |
 | `POST /api/rent-records/` | Create a record — only for the month the cycle allows (§2). |
@@ -705,6 +782,7 @@ display, and pre-check a form against the rules the API ships
 **May not** — recompute the balance or the total due, decide the badges,
 decide which actions a row offers, invent the part limits or their wording,
 compute the month of the billing cycle, group or count the ledger on its own,
+add the money of a scope up on its own, compute a collection rate of its own,
 build the receipt card from the raw record, or build an entry of the history
 of a record.
 
@@ -731,6 +809,19 @@ The filters, their options, their counts and the pagination are the server's
 renders the rows, the options and the pagination state it gets back. It may
 search **inside** the options the server sent — it may not build an option of
 its own, count the ledger itself or slice a page out of a list it holds.
+
+### The money is not an exception either
+
+The money of a scope is the server's (§3.4.1). The cards above the ledger, the
+dashboard and the reports page read the numbers the server sends
+(`amounts`, `stats`, `summary`) — the client never adds a rent up, never
+subtracts a late fee and never computes a rate of its own.
+
+### The report is the server's
+
+The report of the ledger is made by the server from the same filters (§7.3.1).
+The client asks for it and saves the file it gets — it never writes a
+spreadsheet of its own.
 
 ---
 
@@ -780,6 +871,18 @@ its own, count the ledger itself or slice a page out of a list it holds.
       values that are picked are marked.
 - [ ] The counts above the ledger belong to the whole filtered ledger, not to
       the page on screen.
+- [ ] The money of a scope is the server's: expected, collected, pending,
+      overdue, the late fees and the collection rate come from one service.
+- [ ] The **late fee is a charge, not rent** — it is collected with the bill,
+      it has its own card, and the collection rate (the **rent** collected
+      against the rent expected) never passes 100%.
+- [ ] The period filter is the month of the due date, it **starts on the
+      current month of the server**, and a period that is not `YYYY-MM` is
+      refused.
+- [ ] The months of the period filter are offered newest first, with the
+      number of records behind each of them.
+- [ ] The report of the ledger is made by the server from the same filters and
+      holds the whole filtered ledger — never only the page on screen.
 - [ ] The history of a record is the server's: the audit trail, the actions of
       the user and the part payments, merged, newest first, at most 50 entries.
 - [ ] Every action of a user leaves a trail — including a receipt or a

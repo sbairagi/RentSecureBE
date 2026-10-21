@@ -101,7 +101,7 @@ SEARCHABLE_RESOURCE_TYPES: dict[str, dict[str, Any]] = {
         "label": "Caretakers",
         "fields": ["name", "email", "phone", "alternate_phone", "address"],
         "queryset_fn": lambda user: Caretaker.objects.filter(
-            unit__owner=user, is_active=True
+            owner=user, is_active=True
         ),
         "serializer": CaretakerSerializer,
         "detail_route": "caretakers-detail",

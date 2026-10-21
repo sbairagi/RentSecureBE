@@ -80,6 +80,9 @@ def update_usage_count(
         count: int = model_class.objects.filter(owner=runtime_user).count()
     elif model_class.__name__ == "Building":
         count = model_class.objects.filter(owner=runtime_user).count()
+    elif model_class.__name__ == "CareTaker":
+        # only the active team of the owner holds a place on the plan
+        count = model_class.objects.filter(owner=runtime_user, is_active=True).count()
     else:
         count = model_class.objects.filter(unit__owner=runtime_user).count()
 

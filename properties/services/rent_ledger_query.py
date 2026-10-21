@@ -3,7 +3,7 @@
 A ledger that grows is not a list any more: the owner needs to narrow it down
 and to walk through it.  Both are **server** work:
 
-* the **filters** — building, unit and status — are multi-select;
+* the **filters** — period, building, unit and status — are multi-select;
 * the **facets** — the values of every filter — are grouped by the server and
   carry the number of records behind every value;
 * the **pagination** — the page, the page size and the totals — is decided by
@@ -21,8 +21,12 @@ import math
 from typing import Any
 
 from django.db.models import Count, Q, QuerySet
+from django.db.models.functions import ExtractMonth, ExtractYear
+from django.utils import timezone
 
+from documents.receipt import MONTH_NAMES
 from properties.models import RentRecord
+from properties.services.rent_amounts import build_amounts
 
 #: The page sizes the ledger offers.  A size that is not on the list is
 #: refused and the default is used instead.
@@ -32,7 +36,10 @@ PAGE_SIZES: tuple[int, ...] = (10, 25, 50, 75, 100)
 DEFAULT_PAGE_SIZE: int = 25
 
 #: The filters of the ledger, in the order the columns carry them.
-FILTER_FIELDS: tuple[str, ...] = ("building", "unit", "status")
+FILTER_FIELDS: tuple[str, ...] = ("period", "building", "unit", "status")
+
+#: The value that asks for every month of the period filter.
+ALL_PERIODS = "all"
 
 #: The label of every status of a record — the same word the badge carries.
 STATUS_LABELS: dict[str, str] = {
@@ -132,6 +139,93 @@ def parse_page_size(raw: Any) -> int:
     return size if size in PAGE_SIZES else DEFAULT_PAGE_SIZE
 
 
+def current_period(today: Any = None) -> str:
+    """The month the ledger starts with.
+
+    The default of the period filter is the month of the **server's** clock —
+    never the one of the client, and never the one of the browser.
+
+    Args:
+        today: The day the month is read from.  Defaults to the local date of
+            the server.
+
+    Returns:
+        The period of the month, written ``YYYY-MM``.
+    """
+    if today is None:
+        today = timezone.localdate()
+    return f"{today.year:04d}-{today.month:02d}"
+
+
+def period_label(period: str) -> str:
+    """The name of a period — the month and the year, in the fixed wording.
+
+    The month names come from the shared list, so the same month is never
+    written in two languages.
+
+    Args:
+        period: The period, written ``YYYY-MM``.
+
+    Returns:
+        The label of the period — "October 2026".
+    """
+    try:
+        year, month = str(period).split("-")
+        return f"{MONTH_NAMES[int(month) - 1]} {int(year)}"
+    except (AttributeError, IndexError, TypeError, ValueError):
+        return str(period)
+
+
+def parse_periods(raw: Any) -> list[str]:
+    """Read the periods that are asked for.
+
+    The period of the ledger is the month of the due date, written
+    ``YYYY-MM``.  ``?period=2026-10`` and ``?period=2026-10,2026-09`` are both
+    accepted, and ``?period=all`` asks for every month.
+
+    Args:
+        raw: The raw value of the parameter — a string, a list of strings or
+            ``None``.
+
+    Returns:
+        The periods of the parameter, without duplicates.  An empty list means
+        every month.
+
+    Raises:
+        ValueError: When a period is not written ``YYYY-MM``.
+    """
+    if raw is None:
+        return []
+    parts: list[str] = []
+    if isinstance(raw, (list, tuple)):
+        for item in raw:
+            parts.extend(str(item).split(","))
+    else:
+        parts = str(raw).split(",")
+
+    periods: list[str] = []
+    for part in parts:
+        cleaned = str(part).strip()
+        if not cleaned:
+            continue
+        if cleaned.lower() == ALL_PERIODS:
+            return []
+        year, _, month = cleaned.partition("-")
+        if (
+            len(year) != 4
+            or len(month) != 2
+            or not year.isdigit()
+            or not month.isdigit()
+        ):
+            raise ValueError("The period must be written YYYY-MM, or 'all'.")
+        if not 1 <= int(month) <= 12:
+            raise ValueError("The month of a period must be between 01 and 12.")
+        period = f"{int(year):04d}-{int(month):02d}"
+        if period not in periods:
+            periods.append(period)
+    return periods
+
+
 def apply_search(
     queryset: QuerySet[RentRecord], search: str | None
 ) -> QuerySet[RentRecord]:
@@ -162,6 +256,7 @@ def apply_search(
 def apply_filters(
     queryset: QuerySet[RentRecord],
     *,
+    periods: list[str] | None = None,
     buildings: list[str] | None = None,
     units: list[str] | None = None,
     statuses: list[str] | None = None,
@@ -169,10 +264,12 @@ def apply_filters(
     """Apply the filters of the ledger.
 
     Every filter is a multi-select: an empty list leaves the ledger alone and
-    a list narrows it down to the rows that carry **any** of the values.
+    a list narrows it down to the rows that carry **any** of the values.  The
+    period filter narrows the ledger down to the months of the due date.
 
     Args:
         queryset: The ledger to filter.
+        periods: The months (``YYYY-MM``) that were picked.
         buildings: The ids of the buildings that were picked.
         units: The ids of the units that were picked.
         statuses: The statuses that were picked.
@@ -180,6 +277,12 @@ def apply_filters(
     Returns:
         The filtered rows.
     """
+    if periods:
+        condition = Q()
+        for period in periods:
+            year, _, month = period.partition("-")
+            condition |= Q(due_date__year=int(year), due_date__month=int(month))
+        queryset = queryset.filter(condition)
     if buildings:
         queryset = queryset.filter(unit__building_id__in=buildings)
     if units:
@@ -195,6 +298,7 @@ def apply_filters(
 def build_facets(
     queryset: QuerySet[RentRecord],
     *,
+    periods: list[str] | None = None,
     buildings: list[str] | None = None,
     units: list[str] | None = None,
     statuses: list[str] | None = None,
@@ -208,6 +312,7 @@ def build_facets(
 
     Args:
         queryset: The ledger of the owner (the search already applied).
+        periods: The months that were picked.
         buildings: The ids of the buildings that were picked.
         units: The ids of the units that were picked.
         statuses: The statuses that were picked.
@@ -215,12 +320,13 @@ def build_facets(
     Returns:
         The filters with their options.
     """
+    periods = periods or []
     buildings = buildings or []
     units = units or []
     statuses = statuses or []
 
     building_rows = (
-        apply_filters(queryset, units=units, statuses=statuses)
+        apply_filters(queryset, periods=periods, units=units, statuses=statuses)
         .values("unit__building_id", "unit__building__name")
         .annotate(count=Count("id"))
     )
@@ -239,7 +345,7 @@ def build_facets(
     )
 
     unit_rows = (
-        apply_filters(queryset, buildings=buildings, statuses=statuses)
+        apply_filters(queryset, periods=periods, buildings=buildings, statuses=statuses)
         .values("unit_id", "unit__unit", "unit__building__name")
         .annotate(count=Count("id"))
     )
@@ -258,7 +364,7 @@ def build_facets(
     )
 
     status_rows = (
-        apply_filters(queryset, buildings=buildings, units=units)
+        apply_filters(queryset, periods=periods, buildings=buildings, units=units)
         .values("status")
         .annotate(count=Count("id"))
     )
@@ -278,7 +384,44 @@ def build_facets(
         if status_counts.get(status)
     ]
 
+    # The months of the ledger — counted with the other filters, without the
+    # period filter itself, so the owner can see what every month holds.
+    period_rows = (
+        apply_filters(queryset, buildings=buildings, units=units, statuses=statuses)
+        .annotate(period=ExtractYear("due_date") * 100 + ExtractMonth("due_date"))
+        .values("period")
+        .annotate(count=Count("id"))
+    )
+    period_options: list[dict[str, Any]] = []
+    for row in sorted(period_rows, key=lambda row: row["period"], reverse=True):
+        value = f"{int(row['period']) // 100:04d}-{int(row['period']) % 100:02d}"
+        period_options.append(
+            {
+                "value": value,
+                "label": period_label(value),
+                "meta": "",
+                "count": row["count"],
+                "selected": value in periods,
+            }
+        )
+    period_options.insert(
+        0,
+        {
+            "value": ALL_PERIODS,
+            "label": "All months",
+            "meta": "",
+            "count": sum(option["count"] for option in period_options),
+            "selected": not periods,
+        },
+    )
+
     return {
+        "period": {
+            "key": "period",
+            "label": "Period",
+            "searchable": False,
+            "options": period_options,
+        },
         "building": {
             "key": "building",
             "label": "Building",
@@ -324,16 +467,23 @@ def build_summary(queryset: QuerySet[RentRecord]) -> dict[str, int]:
     return {key: int(value or 0) for key, value in totals.items()}
 
 
-def build_ledger_page(owner: Any, params: Any) -> dict[str, Any]:
-    """The ledger of an owner — one page of rows, the filters and the pagination.
+def build_ledger_scope(owner: Any, params: Any) -> dict[str, Any]:
+    """The scope of a ledger request — the filters and the rows they select.
+
+    The page of the ledger and the report of the ledger read the **same**
+    scope, so a downloaded report always holds exactly the rows the owner was
+    looking at.
 
     Args:
         owner: The owner whose ledger is read.
         params: The query parameters of the request.
 
     Returns:
-        The rows of the page, the grouped filter options, the counts of the
-        ledger and the state of the pagination.
+        The periods, the buildings, the units, the statuses, the search and
+        the rows of the scope.
+
+    Raises:
+        ValueError: When a period is not written ``YYYY-MM``.
     """
     get = params.get
 
@@ -341,6 +491,11 @@ def build_ledger_page(owner: Any, params: Any) -> dict[str, Any]:
     search = (get("search") or "").strip()
     base = apply_search(base, search)
 
+    raw_period = read_param(params, "period")
+    if raw_period is None:
+        periods = [current_period()]
+    else:
+        periods = parse_periods(raw_period)
     buildings = parse_values(read_param(params, "building"))
     units = parse_values(read_param(params, "unit"))
     statuses = [
@@ -349,18 +504,60 @@ def build_ledger_page(owner: Any, params: Any) -> dict[str, Any]:
         if value.lower() in STATUS_LABELS
     ]
 
-    filtered = apply_filters(base, buildings=buildings, units=units, statuses=statuses)
+    filtered = apply_filters(
+        base, periods=periods, buildings=buildings, units=units, statuses=statuses
+    )
+    rows = list(
+        filtered.order_by("-due_date", "id")
+        .select_related("renter", "unit", "unit__building")
+        .prefetch_related("parts")
+    )
+    return {
+        "base": base,
+        "rows": rows,
+        "queryset": filtered,
+        "periods": periods,
+        "buildings": buildings,
+        "units": units,
+        "statuses": statuses,
+        "search": search,
+    }
+
+
+def build_ledger_page(owner: Any, params: Any) -> dict[str, Any]:
+    """The ledger of an owner — one page of rows, the filters and the pagination.
+
+    The **period** filter is the month of the due date, and it starts on the
+    current month of the server: a client that sends no period gets the month
+    that is running.  ``?period=all`` asks for every month.
+
+    Args:
+        owner: The owner whose ledger is read.
+        params: The query parameters of the request.
+
+    Returns:
+        The rows of the page, the grouped filter options, the counts of the
+        ledger, the money of the scope and the state of the pagination.
+
+    Raises:
+        ValueError: When a period is not written ``YYYY-MM``.
+    """
+    get = params.get
+
+    scope = build_ledger_scope(owner, params)
+    periods = scope["periods"]
+    buildings = scope["buildings"]
+    units = scope["units"]
+    statuses = scope["statuses"]
+    search = scope["search"]
+    filtered = scope["queryset"]
 
     total = filtered.count()
     page_size = parse_page_size(get("page_size"))
     total_pages = max(1, math.ceil(total / page_size)) if total else 1
     page = min(parse_page(get("page")), total_pages)
 
-    rows = list(
-        filtered.order_by("-due_date", "id")[(page - 1) * page_size : page * page_size]
-        .select_related("renter", "unit", "unit__building")
-        .prefetch_related("parts")
-    )
+    rows = scope["rows"][(page - 1) * page_size : page * page_size]
 
     first_row = (page - 1) * page_size + 1 if total else 0
     last_row = min(page * page_size, total)
@@ -377,13 +574,19 @@ def build_ledger_page(owner: Any, params: Any) -> dict[str, Any]:
         "page_sizes": list(PAGE_SIZES),
         "search": search,
         "filters": build_facets(
-            base, buildings=buildings, units=units, statuses=statuses
+            scope["base"],
+            periods=periods,
+            buildings=buildings,
+            units=units,
+            statuses=statuses,
         ),
         "selected_filters": {
+            "period": periods,
             "building": buildings,
             "unit": units,
             "status": statuses,
         },
         "summary": build_summary(filtered),
+        "amounts": build_amounts(filtered),
         "results": rows,
     }

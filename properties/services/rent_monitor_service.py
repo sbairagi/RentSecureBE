@@ -11,7 +11,8 @@ from typing import Any
 
 from django.utils import timezone
 
-from properties.models import Caretaker, Renter, RentRecord
+from properties.models import Renter, RentRecord
+from properties.services.caretaker_scope import caretakers_for_unit
 
 logger = logging.getLogger(__name__)
 
@@ -90,9 +91,7 @@ def _notify_all_parties(renter: Renter, message: str) -> None:
         )
         _notify_user(owner_phone, message, owner_lang, owner, context="owner")
 
-    caretakers = Caretaker.objects.filter(
-        unit=renter.unit, is_active=True
-    ).select_related("user")
+    caretakers = caretakers_for_unit(renter.unit).select_related("user")
     for caretaker in caretakers:
         caretaker_user = caretaker.user
         if not caretaker_user:

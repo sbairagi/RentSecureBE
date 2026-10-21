@@ -9,7 +9,8 @@ from notification.services.whatsapp_service import (
     send_whatsapp_audio,
     send_whatsapp_message,
 )
-from properties.models import Caretaker, PropertyTaxRecord, RentRecord
+from properties.models import Caretaker, PropertyTaxRecord, RentRecord, Unit
+from properties.services.caretaker_scope import assigned_building_ids, assigned_unit_ids
 from rentsecure_be.services.i18n_service import translate_msg
 from rentsecure_be.type_compat import override
 
@@ -91,26 +92,26 @@ class Command(BaseCommand):
             return
 
         today = timezone.now().date()
-        unit = caretaker.unit
+        unit_ids = assigned_unit_ids(caretaker)
+        building_ids = assigned_building_ids(caretaker)
+        units = Unit.objects.filter(id__in=unit_ids).select_related("building")
 
         rent_due = RentRecord.objects.filter(
-            unit=unit,
+            unit_id__in=unit_ids,
             due_date=today,
             status=RentRecord.Status.PENDING,
         ).select_related("renter")
 
         tax_due = PropertyTaxRecord.objects.filter(
-            property=unit.building,
+            property_id__in=building_ids,
             due_date=today,
             paid=False,
         )
 
-        building_name = (
-            unit.building_name or unit.building.name if unit.building else "Standalone"
-        )
         lines = [
             f"📋 Daily Summary ({today.strftime('%d %b')}):",
-            f"🏠 Unit: {unit.unit} | {building_name}",
+            f"🏠 Properties: {len(unit_ids)} home(s), "
+            f"{len(building_ids)} building(s)",
             f"🔔 Rent Due Today: {rent_due.count()}",
         ]
         for rent in rent_due:
@@ -121,8 +122,13 @@ class Command(BaseCommand):
         for tax in tax_due:
             lines.append(f"  - {tax.property.name}: ₹{tax.amount}")
 
-        if unit.maintenance_notes:
-            lines.append(f"🧹 Maintenance: {unit.maintenance_notes[:200]}")
+        notes = [
+            unit.maintenance_notes
+            for unit in units
+            if getattr(unit, "maintenance_notes", "")
+        ]
+        if notes:
+            lines.append(f"🧹 Maintenance: {'; '.join(notes)[:200]}")
 
         message = "\n".join(lines)
 

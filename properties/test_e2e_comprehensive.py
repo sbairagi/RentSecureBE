@@ -423,23 +423,40 @@ class CaretakerModelTests(TestCase):
             )
             caretaker.full_clean()
 
-    def test_unique_phone_per_unit(self):
-        """Test unique phone constraint per unit"""
-        Caretaker.objects.create(
+    def test_unique_phone_per_owner(self):
+        """Test the phone is used once in the team of one owner"""
+        caretaker = Caretaker.objects.create(
+            owner=self.user,
             unit=self.unit,
             name="John Doe",
             phone="+919876543210",
             address="123 Main St, New York, NY, USA, 10001",
             joining_date=date(2025, 1, 1),
         )
-        with self.assertRaises(IntegrityError):
-            Caretaker.objects.create(
-                unit=self.unit,
-                name="Jane Doe",
-                phone="+919876543210",
-                address="123 Main St, New York, NY, USA, 10001",
-                joining_date=date(2025, 1, 1),
-            )
+        self.assertEqual(caretaker.owner_id, self.user.id)
+
+        # the same person may work for another owner
+        other_owner = User.objects.create_user(username="owner2", password="pass123")
+        Caretaker.objects.create(
+            owner=other_owner,
+            unit=self.unit,
+            name="John Doe",
+            phone="+919876543210",
+            address="123 Main St, New York, NY, USA, 10001",
+            joining_date=date(2025, 1, 1),
+        )
+
+        # but the same owner cannot hire the same phone twice
+        duplicate = Caretaker(
+            owner=self.user,
+            unit=self.unit,
+            name="Jane Doe",
+            phone="+919876543210",
+            address="123 Main St, New York, NY, USA, 10001",
+            joining_date=date(2025, 1, 1),
+        )
+        with self.assertRaises(ValidationError):
+            duplicate.full_clean()
 
     def test_end_date_before_start_date(self):
         """Test end_date cannot be before start_date"""

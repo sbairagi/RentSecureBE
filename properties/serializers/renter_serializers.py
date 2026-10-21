@@ -209,6 +209,8 @@ class RenterAgreementSerializer(serializers.ModelSerializer):
     unit_name = serializers.CharField(source="unit.unit", read_only=True)
     building_name = serializers.CharField(source="unit.building.name", read_only=True)
     document_url = serializers.SerializerMethodField()
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+    signature_progress = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = RentAgreementDraft
@@ -218,6 +220,10 @@ class RenterAgreementSerializer(serializers.ModelSerializer):
             "unit",
             "unit_name",
             "building_name",
+            "agreement_number",
+            "status",
+            "status_label",
+            "signature_progress",
             "generated_at",
             "file",
             "leegality_document_id",
