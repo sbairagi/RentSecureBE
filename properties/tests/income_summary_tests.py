@@ -85,6 +85,7 @@ class IncomeSummaryTests(TestCase):
             unit=self.u,
             due_date="2025-02-01",
             amount=120000,
+            amount_paid=120000,
             payment_method="upi",
             status=RentRecord.Status.PAID,
             payout_status="SUCCESS",

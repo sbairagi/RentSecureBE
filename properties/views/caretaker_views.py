@@ -17,10 +17,12 @@ from rentsecure_be.type_compat import override
 from ..feature_enforcer import FeatureEnforcer
 from ..models import Building, CareTaker, CareTakerAssignment, Unit
 from ..serializers.caretaker_serializers import (
+    CareTakerActivitySerializer,
     CareTakerAssignmentCreateSerializer,
     CareTakerAssignmentSerializer,
     CareTakerSerializer,
 )
+from ..services.caretaker_activity import team_activity
 
 
 class CareTakerPagination(PageNumberPagination):
@@ -230,6 +232,39 @@ class CareTakerViewSet(viewsets.ModelViewSet[CareTaker]):
         assignment.unassigned_at = timezone.now()
         assignment.save(update_fields=["is_active", "unassigned_at"])
         return Response(status=204)
+
+    @override
+    @action(detail=False, methods=["get"], url_path="team-activity")
+    def team_activity(self, request: Any) -> Response:
+        """What the team of the owner did — the caretaker panel of the owner.
+
+        The trail is the caretaker's own work: the job they took, the status
+        they moved a request to and the notes they left. It is scoped to the
+        owner, so a caretaker of another owner never shows up here.
+        """
+        caretaker_id = request.GET.get("caretaker")
+        if caretaker_id:
+            try:
+                caretaker_id = int(caretaker_id)
+            except (TypeError, ValueError):
+                raise ValidationError("That caretaker does not exist.") from None
+            if not CareTaker.objects.filter(
+                pk=caretaker_id, owner=request.user
+            ).exists():
+                raise ValidationError("That caretaker does not exist.")
+
+        try:
+            limit = int(request.GET.get("limit", 20))
+        except (TypeError, ValueError):
+            limit = 20
+        limit = max(1, min(limit, 100))
+
+        queryset = team_activity(request.user, caretaker_id)
+        count = queryset.count()
+        serializer = CareTakerActivitySerializer(
+            queryset[:limit], many=True, context={"request": request}
+        )
+        return Response({"data": {"count": count, "results": serializer.data}})
 
     @override
     @action(detail=False, methods=["get"], url_path="assignable-properties")

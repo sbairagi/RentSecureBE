@@ -1,6 +1,11 @@
 from django.contrib import admin
 
-from ..models import CareTaker, CareTakerAssignment, CareTakerAssignmentLog
+from ..models import (
+    CareTaker,
+    CareTakerActivity,
+    CareTakerAssignment,
+    CareTakerAssignmentLog,
+)
 
 
 @admin.register(CareTaker)
@@ -62,3 +67,19 @@ class CareTakerAssignmentLogAdmin(admin.ModelAdmin):
     list_display = ("id", "caretaker", "action", "action_date", "notes")
     search_fields = ("caretaker__name", "notes")
     list_filter = ("action", "action_date")
+
+
+@admin.register(CareTakerActivity)
+class CareTakerActivityAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "owner",
+        "caretaker",
+        "action",
+        "summary",
+        "created_at",
+    )
+    search_fields = ("caretaker__name", "summary", "detail")
+    list_filter = ("action", "created_at")
+    readonly_fields = ("created_at", "maintenance_request", "actor")
+    autocomplete_fields = ("caretaker", "owner")

@@ -47,7 +47,9 @@ class LegacyGenerateRentAgreementPdfViewSetTest(TestCase):
         self, mock_html, mock_render, mock_renter
     ):
         mock_renter_instance = MagicMock()
-        mock_renter_instance.unit.owner = MagicMock()
+        # The document belongs to the owner of the home, and only that owner
+        # may download it.
+        mock_renter_instance.unit.owner = self.user
         mock_renter.objects.select_related.return_value.get.return_value = (
             mock_renter_instance
         )
@@ -100,6 +102,7 @@ class LegacyGenerateUnitDossierPdfViewSetTest(TestCase):
         viewset.kwargs = {"pk": 1}
         with patch("documents.views.get_object_or_404") as mock_get:
             mock_unit = MagicMock()
+            mock_unit.owner = self.user
             mock_unit.caretakers.all.return_value = []
             mock_unit.renters.all.return_value = []
             mock_unit.tax_records.all.return_value = []

@@ -50,6 +50,32 @@ def assigned_unit_ids(caretaker: CareTaker) -> set[int]:
     return unit_ids
 
 
+def directly_assigned_unit_ids(caretaker: CareTaker) -> set[int]:
+    """Return the homes that are properties of the caretaker on their own.
+
+    A home that is covered by an assigned building belongs to the building —
+    it is not a property of its own. When the caretaker has no assignment at
+    all, the legacy home unit is the property of the caretaker.
+    """
+    from properties.models import Unit
+
+    unit_ids = set(
+        caretaker.assignments.filter(is_active=True, unit__isnull=False).values_list(
+            "unit_id", flat=True
+        )
+    )
+    building_ids = assigned_building_ids(caretaker)
+    if building_ids:
+        unit_ids -= set(
+            Unit.objects.filter(building_id__in=building_ids).values_list(
+                "id", flat=True
+            )
+        )
+    if not unit_ids and not building_ids and caretaker.unit_id:
+        unit_ids.add(caretaker.unit_id)
+    return unit_ids
+
+
 def scope_queryset(caretaker: CareTaker) -> QuerySet[Unit]:
     """Return the units of the caretaker as a queryset."""
     from properties.models import Unit

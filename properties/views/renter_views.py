@@ -14,15 +14,24 @@ from rest_framework.serializers import BaseSerializer
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from core.models import User
+from documents.receipt import receipt_filename
 from notification.models import Notification
 from rentsecure_be.type_compat import override
 
 from ..feature_enforcer import FeatureEnforcer
-from ..models import ExtraCharge, RentAgreementDraft, Renter, RentRecord, Unit
+from ..models import (
+    ExtraCharge,
+    MaintenanceRequest,
+    RentAgreementDraft,
+    Renter,
+    RentRecord,
+    Unit,
+)
 from ..serializers import (
     RenterAgreementSerializer,
     RenterDocumentSerializer,
@@ -31,6 +40,17 @@ from ..serializers import (
     RenterRentRecordDetailSerializer,
     RenterRentRecordSerializer,
     RenterSerializer,
+)
+from ..serializers.renter_portal_serializers import RenterMaintenanceSerializer
+from ..services.receipt_service import generate_rent_receipt_pdf
+from ..services.renter_portal_service import (
+    agreement_terms,
+    maintenance_summary,
+    profile_completion,
+    rent_summary,
+    renter_contacts,
+    shared_documents,
+    verification_summary,
 )
 from ..services.unit_service import update_unit_status
 from ..utils.utils import check_feature_limit
@@ -406,6 +426,74 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
 # ---------------------------------------------------------------------------
 
 
+def suggested_homes(renter: Renter | None, limit: int = 3) -> list[dict[str, Any]]:
+    """Return a few vacant homes the renter can book a viewing for."""
+    from properties.serializers.renter_portal_serializers import RenterListingSerializer
+
+    query = Unit.objects.filter(
+        is_archived=False, status=Unit.VacancyStatus.VACANT
+    ).select_related("building", "owner")
+    if renter is not None and renter.unit_id is not None:
+        query = query.exclude(id=renter.unit_id)
+    homes = query.order_by("city", "building_name", "unit")[:limit]
+    return RenterListingSerializer(homes, many=True).data
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def renter_home(request: Request) -> Response:
+    """Return everything about the home the renter lives in.
+
+    The screen of the flat needs the tenancy, the terms of the agreement, the
+    documents that were shared and the state of the requests — one call, one
+    answer, no guessing in the browser.
+    """
+    user = cast(User, request.user)
+    if isinstance(user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    renter = (
+        Renter.objects.select_related("unit", "unit__building", "unit__owner")
+        .filter(user=user, status__in=["active", "notice_period"])
+        .first()
+    )
+    if renter is None:
+        return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    profile = RenterProfileSerializer(renter, context={"request": request}).data
+    documents = RenterDocumentSerializer(renter, context={"request": request}).data
+    shared = shared_documents(renter)
+    for document in shared:
+        if document.get("url"):
+            document["url"] = request.build_absolute_uri(document["url"])
+    requests_qs = MaintenanceRequest.objects.filter(
+        Q(renter=renter) | Q(unit=renter.unit)
+    ).select_related("unit", "unit__building", "assigned_caretaker")
+    records_qs = (
+        RentRecord.objects.filter(renter=renter)
+        .select_related("unit", "unit__building")
+        .order_by("-due_date")[:6]
+    )
+
+    return Response(
+        {
+            "profile": profile,
+            "terms": agreement_terms(renter),
+            "documents": documents,
+            "shared_documents": shared,
+            "maintenance": maintenance_summary(renter),
+            "rent_summary": rent_summary(renter),
+            "contacts": renter_contacts(renter),
+            "records": RenterRentRecordDetailSerializer(
+                records_qs, many=True, context={"request": request}
+            ).data,
+            "requests": RenterMaintenanceSerializer(
+                requests_qs, many=True, context={"request": request}
+            ).data,
+        }
+    )
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def renter_profile(request: Request) -> Response:
@@ -503,6 +591,56 @@ def renter_rent_record_detail(request: Request, rent_id: int) -> Response:
 
     serializer = RenterRentRecordDetailSerializer(rent, context={"request": request})
     return Response(serializer.data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def renter_rent_receipt(request: Request, rent_id: int) -> HttpResponse:
+    """Return the receipt of one of the months of the renter as a PDF.
+
+    The renter may only download the receipt of their own month — the record
+    is looked up through the renter of the request.
+    """
+    user = cast(User, request.user)
+    if isinstance(user, AnonymousUser):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    renter = get_object_or_404(
+        Renter.objects.select_related("unit", "unit__building"),
+        user=user,
+        status__in=["active", "notice_period"],
+    )
+
+    rent = get_object_or_404(
+        RentRecord.objects.select_related("unit", "renter"),
+        pk=rent_id,
+        renter=renter,
+    )
+
+    part = None
+    part_id = request.query_params.get("part")
+    if part_id:
+        part = rent.parts.filter(pk=part_id).first()
+        if part is None:
+            return Response(
+                {"error": "Part payment not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    try:
+        pdf_bytes = generate_rent_receipt_pdf(rent, part)
+    except Exception as exc:  # pragma: no cover - depends on the host
+        logger.exception("Could not render the receipt of rent %s", rent.id)
+        return Response(
+            {"error": "The receipt could not be prepared.", "details": str(exc)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f"attachment; filename={receipt_filename(rent, part)}"
+    )
+    return response
 
 
 @api_view(["GET"])
@@ -637,6 +775,13 @@ def renter_dashboard(request: Request) -> Response:
                 user=user, is_read=False, archived=False
             ).count(),
             "extra_charges_count": 0,
+            "rent_summary": None,
+            "verification": None,
+            "maintenance": None,
+            "terms": None,
+            "profile_completion": 0,
+            "contacts": [],
+            "suggested_homes": suggested_homes(None),
         }
         return Response(dashboard_data)
 
@@ -689,6 +834,13 @@ def renter_dashboard(request: Request) -> Response:
         "agreement": agreement_data,
         "notifications_unread_count": notifications_unread_count,
         "extra_charges_count": extra_charges_count,
+        "rent_summary": rent_summary(renter),
+        "verification": verification_summary(renter),
+        "maintenance": maintenance_summary(renter),
+        "terms": agreement_terms(renter),
+        "profile_completion": profile_completion(renter),
+        "contacts": renter_contacts(renter),
+        "suggested_homes": suggested_homes(renter),
     }
 
     cache.set(cache_key, dashboard_data, timeout=60)

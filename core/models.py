@@ -43,6 +43,35 @@ class UserProfile(models.Model):
     receive_tax_alerts = models.BooleanField(default=True)
     receive_rent_alerts = models.BooleanField(default=True)
     receive_vacancy_alerts = models.BooleanField(default=True)
+    reminder_time = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="The time of the day the rent reminder is sent.",
+    )
+    rent_reminders_enabled = models.BooleanField(
+        default=True,
+        help_text="Whether the rent reminders are sent to this owner.",
+    )
+    salary = models.DecimalField(
+        null=True,
+        blank=True,
+        max_digits=12,
+        decimal_places=2,
+        help_text="The yearly salary of the owner, used by the income summary.",
+    )
+    other_income = models.DecimalField(
+        null=True,
+        blank=True,
+        max_digits=12,
+        decimal_places=2,
+        help_text="The other yearly income of the owner.",
+    )
+    alert_frequency = models.CharField(
+        max_length=10,
+        default="weekly",
+        choices=[("daily", "Daily"), ("weekly", "Weekly"), ("monthly", "Monthly")],
+        help_text="How often the owner receives the dashboard summary.",
+    )
 
 
 class NotificationPreference(models.Model):
@@ -94,6 +123,25 @@ class OTP(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_verified = models.BooleanField(default=False)
     history = HistoricalRecords(user_model=settings.AUTH_USER_MODEL)
+
+
+class EmailSignInLink(models.Model):
+    """A one time sign in link sent to an e-mail address.
+
+    The link carries a token that works once and only until it expires; the
+    row is the proof that it was already used.
+    """
+
+    email = models.EmailField()
+    token = models.CharField(max_length=64, unique=True)
+    role = models.CharField(max_length=32, default="renter")
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.email} · {self.role}"
 
 
 # models.py

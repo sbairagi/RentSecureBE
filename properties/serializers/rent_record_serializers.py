@@ -17,7 +17,6 @@ from rentsecure_be.type_compat import override
 from ..models import RentRecord, RentRecordPart
 from ..services.rent_ledger_view import build_ledger_view, build_part_view, format_money
 from ..services.rent_rules import MAX_RENT_AMOUNT, message
-from .renter_serializers import RenterSerializer
 from .unit_serializers import UnitSerializer
 
 
@@ -125,7 +124,7 @@ class PartPaymentSerializer(serializers.Serializer):
 
 
 class RentRecordSerializer(serializers.ModelSerializer):
-    renter = RenterSerializer(read_only=True)
+    renter = serializers.SerializerMethodField()
     unit = UnitSerializer(read_only=True)
     parts = RentRecordPartSerializer(many=True, read_only=True)
     total_due = serializers.DecimalField(
@@ -165,6 +164,19 @@ class RentRecordSerializer(serializers.ModelSerializer):
             "receipt_sent_at",
             "last_reminded_at",
         ]
+
+    @override
+    def get_renter(self, obj: RentRecord) -> Any:
+        """Return the renter of the record.
+
+        The renter serializer is imported here so the two modules do not
+        import each other in a circle.
+        """
+        from .renter_serializers import RenterSerializer
+
+        if obj.renter is None:
+            return None
+        return RenterSerializer(obj.renter).data
 
     ALLOWED_UPDATE_FIELDS = {
         "notes",

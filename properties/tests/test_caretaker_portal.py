@@ -415,8 +415,15 @@ class TestCaretakerPortal:
         CareTakerAssignment.objects.create(caretaker=caretaker, building=building)
         response = caretaker_client.get("/properties/caretaker/properties/")
         assert response.status_code == 200
-        unit_ids = [item["id"] for item in response.data["data"]["units"]]
-        assert unit.id in unit_ids
+        data = response.data["data"]
+        # The building is a property of the caretaker, the home belongs to it.
+        building_ids = [item["id"] for item in data["buildings"]]
+        assert building.id in building_ids
+        home_ids = [item["id"] for item in data["homes"]]
+        assert unit.id in home_ids
+        # The home of the building is not a property on its own.
+        unit_ids = [item["id"] for item in data["units"]]
+        assert unit.id not in unit_ids
 
     def test_another_owner_property_stays_hidden(
         self, caretaker_client, caretaker, other_owner, other_building

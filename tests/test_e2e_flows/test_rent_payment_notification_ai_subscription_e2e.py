@@ -55,14 +55,32 @@ class RentPaymentE2EFlowTests(E2EAPIClientMixin, APITestCase):
         self.assertEqual(rent.status, "pending")
         self.assertEqual(rent.amount, Decimal("15000.00"))
 
+        # The status of a month is not a field the owner edits: the month
+        # becomes paid when the money arrives.
         response = self._patch_json(
             f"{API_PREFIX}/rent-records/{rent.id}/",
             {"status": "paid", "paid_on": str(timezone.now().date())},
             token=self.owner_token,
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        rent.refresh_from_db()
+        self.assertEqual(rent.status, "pending")
+
+        # The renter pays the month through their own portal.
+        response = self._post_json(
+            f"{API_PREFIX}/renter/rent-records/{rent.id}/payments/",
+            {
+                "amount": "15000.00",
+                "payment_method": "upi",
+                "transaction_id": "e2e_txn_lifecycle",
+                "paid_on": str(timezone.now().date()),
+            },
+            token=self.renter_token,
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         rent.refresh_from_db()
         self.assertEqual(rent.status, "paid")
+        self.assertEqual(rent.amount_paid, Decimal("15000.00"))
 
     def test_payment_creation_mocked(self):
         rent = RentRecord.objects.create(
@@ -73,12 +91,17 @@ class RentPaymentE2EFlowTests(E2EAPIClientMixin, APITestCase):
             status="pending",
         )
         with patch(
-            "properties.views.rent_record_views.create_payment_link",
+            "rentsecure_be.services.razorpay_service.create_payment_link",
             return_value="https://payments.test/rent/1",
         ):
             response = self._post_json(
-                f"{API_PREFIX}/rent/payment/",
-                {"rent_record_id": rent.id, "method": "upi"},
+                f"{API_PREFIX}/renter/rent-records/{rent.id}/payments/",
+                {
+                    "amount": "15000.00",
+                    "payment_method": "upi",
+                    "transaction_id": "e2e_txn_mocked",
+                    "paid_on": str(timezone.now().date()),
+                },
                 token=self.renter_token,
             )
         self.assertIn(

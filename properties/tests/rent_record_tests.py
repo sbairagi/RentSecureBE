@@ -193,6 +193,10 @@ class RentRecordSerializerSecurityTests(TestCase):
         self.assertEqual(self.rent.notes, "Late fee waived")
 
     def test_post_sets_status_default_when_not_provided(self):
+        # The month before must be settled before the next one is billed.
+        self.rent.status = RentRecord.Status.PAID
+        self.rent.amount_paid = 10000
+        self.rent.save(update_fields=["status", "amount_paid"])
         response = self._auth().post(
             "/properties/rent-records/",
             {
@@ -204,7 +208,6 @@ class RentRecordSerializerSecurityTests(TestCase):
             },
             format="json",
         )
-        print("RESPONSE:", response.status_code, response.data)
         self.assertEqual(response.status_code, 201)
         created_id = response.data["id"]
         created = RentRecord.objects.get(id=created_id)
@@ -618,6 +621,7 @@ class MonthlyRentSummaryTests(TestCase):
             unit=self.u,
             due_date=date.today(),
             amount=10000,
+            amount_paid=10000,
             payment_method="upi",
             status=RentRecord.Status.PAID,
             created_at=timezone.now(),
@@ -718,6 +722,7 @@ class ITRSummaryTests(TestCase):
             unit=self.u,
             due_date=date.today(),
             amount=10000,
+            amount_paid=10000,
             payment_method="upi",
             status=RentRecord.Status.PAID,
             payout_status="SUCCESS",
@@ -728,6 +733,7 @@ class ITRSummaryTests(TestCase):
             unit=self.u,
             due_date=date(2025, 2, 1),
             amount=5000,
+            amount_paid=5000,
             payment_method="upi",
             status=RentRecord.Status.PAID,
             payout_status="SUCCESS",

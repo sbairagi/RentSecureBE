@@ -40,6 +40,19 @@ class Building(models.Model):
     country = models.CharField(max_length=100, help_text="Country name")
     postal_code = models.CharField(max_length=10, help_text="ZIP or postal code")
 
+    # Society contact — the person of the society the caretaker can call
+    # when something of the building has to be opened or fixed.
+    society_contact_name = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Name of the society contact of the building",
+    )
+    society_contact_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Phone of the society contact of the building",
+    )
+
     # Owner & Status
     owner = models.ForeignKey(
         User,

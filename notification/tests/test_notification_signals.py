@@ -22,7 +22,7 @@ class NotificationSignalTest(TestCase):
         )
         NotificationPreference.objects.create(owner=self.user)
 
-    @patch("notification.services.notifications.send_fcm_notification")
+    @patch("notification.signals.send_fcm_notification")
     def test_push_dispatched_on_notification_create(self, mock_send_fcm):
         note = Notification.objects.create(
             user=self.user,
@@ -37,7 +37,7 @@ class NotificationSignalTest(TestCase):
         self.assertEqual(args.kwargs["notification_type"], Notification.SYSTEM_ALERT)
         self.assertEqual(args.kwargs["data"]["notification_id"], str(note.id))
 
-    @patch("notification.services.notifications.send_fcm_notification")
+    @patch("notification.signals.send_fcm_notification")
     def test_push_not_dispatched_on_update(self, mock_send_fcm):
         note = Notification.objects.create(
             user=self.user,
@@ -50,7 +50,7 @@ class NotificationSignalTest(TestCase):
         note.save()
         mock_send_fcm.assert_not_called()
 
-    @patch("notification.services.notifications.send_fcm_notification")
+    @patch("notification.signals.send_fcm_notification")
     def test_push_not_dispatched_when_push_disabled(self, mock_send_fcm):
         pref = NotificationPreference.objects.get(owner=self.user)
         pref.push_enabled = False
@@ -64,7 +64,7 @@ class NotificationSignalTest(TestCase):
         )
         mock_send_fcm.assert_not_called()
 
-    @patch("notification.services.notifications.send_fcm_notification")
+    @patch("notification.signals.send_fcm_notification")
     def test_push_not_dispatched_when_type_pref_disabled(self, mock_send_fcm):
         pref = NotificationPreference.objects.get(owner=self.user)
         pref.system_push = False

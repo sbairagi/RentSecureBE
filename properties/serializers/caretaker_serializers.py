@@ -5,7 +5,7 @@ from rest_framework.exceptions import PermissionDenied
 
 from rentsecure_be.type_compat import override
 
-from ..models import Building, CareTaker, CareTakerAssignment, Unit
+from ..models import Building, CareTaker, CareTakerActivity, CareTakerAssignment, Unit
 
 
 class CareTakerAssignmentSerializer(serializers.ModelSerializer):
@@ -138,6 +138,91 @@ class CareTakerSerializer(serializers.ModelSerializer):
         if unit is not None and user is not None and unit.owner_id != user.id:
             raise serializers.ValidationError("You do not own the selected unit.")
         return cast(CareTaker, super().update(instance, validated_data))
+
+
+class CareTakerActivitySerializer(serializers.ModelSerializer):
+    """One thing the team of the owner did."""
+
+    action_label = serializers.SerializerMethodField()
+    caretaker = serializers.SerializerMethodField()
+    request_title = serializers.SerializerMethodField()
+    property_label = serializers.SerializerMethodField()
+    from_status_label = serializers.SerializerMethodField()
+    to_status_label = serializers.SerializerMethodField()
+    actor_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CareTakerActivity
+        fields = [
+            "id",
+            "action",
+            "action_label",
+            "summary",
+            "detail",
+            "caretaker",
+            "request_title",
+            "property_label",
+            "from_status",
+            "from_status_label",
+            "to_status",
+            "to_status_label",
+            "actor_name",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+    @override
+    def get_caretaker(self, obj: CareTakerActivity) -> dict[str, Any]:
+        return {"id": obj.caretaker_id, "name": obj.caretaker.name}
+
+    @override
+    def get_action_label(self, obj: CareTakerActivity) -> str:
+        return dict(CareTakerActivity.Action.choices).get(obj.action, obj.action)
+
+    @override
+    def get_request_title(self, obj: CareTakerActivity) -> str:
+        request = obj.maintenance_request
+        return request.title if request is not None else ""
+
+    @override
+    def get_property_label(self, obj: CareTakerActivity) -> str:
+        request = obj.maintenance_request
+        if request is None:
+            return ""
+        unit = request.unit
+        building = getattr(unit, "building", None)
+        unit_label = getattr(unit, "unit", "") or ""
+        building_label = getattr(building, "name", "") or ""
+        if building_label and unit_label:
+            return f"{building_label} · {unit_label}"
+        return building_label or unit_label
+
+    @override
+    def get_from_status_label(self, obj: CareTakerActivity) -> str:
+        return _maintenance_status_label(obj.from_status)
+
+    @override
+    def get_to_status_label(self, obj: CareTakerActivity) -> str:
+        return _maintenance_status_label(obj.to_status)
+
+    @override
+    def get_actor_name(self, obj: CareTakerActivity) -> str:
+        if obj.actor_id is None:
+            return obj.caretaker.name
+        return (
+            getattr(obj.actor, "full_name", "")
+            or getattr(obj.actor, "username", "")
+            or obj.caretaker.name
+        )
+
+
+def _maintenance_status_label(value: str) -> str:
+    """Return the label of a maintenance status."""
+    if not value:
+        return ""
+    from ..models import MaintenanceRequest
+
+    return dict(MaintenanceRequest.Status.choices).get(value, value)
 
 
 class CareTakerAssignmentCreateSerializer(serializers.Serializer):

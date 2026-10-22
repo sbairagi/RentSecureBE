@@ -125,7 +125,12 @@ class RenterViewSetGetQuerysetTests(TestCase):
             is_active=True,
         )
         cache_key = f"renters_user_{self.owner.id}"
-        cache.set(cache_key, [renter], timeout=300)
+        # The view stores the filtered queryset in the cache.
+        cache.set(
+            cache_key,
+            Renter.objects.filter(unit__owner=self.owner).select_related("unit"),
+            timeout=300,
+        )
 
         request = RequestFactory().get("/properties/renters/")
         request.user = self.owner

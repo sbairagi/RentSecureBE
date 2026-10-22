@@ -279,6 +279,7 @@ class TestOwnerDashboard:
             unit=unit,
             renter=renter,
             amount=Decimal("10000"),
+            amount_paid=Decimal("10000"),
             payment_method="upi",
             status=RentRecord.Status.PAID,
             due_date=owner.date_joined.date(),
@@ -323,7 +324,9 @@ class TestOwnerDashboard:
             response = client.get("/owner/dashboard/")
         assert response.status_code == 200
         stats = response.data["stats"]
-        assert stats["rent_overdue"] == 10000.0
+        # The balance of the month is what was billed — the rent and the late
+        # fee — minus what was received.
+        assert stats["rent_overdue"] == 10500.0
         assert stats["overdue_renters_count"] == 1
         assert stats["late_fees_total"] == 500.0
 
@@ -378,6 +381,7 @@ class TestOwnerDashboard:
             unit=unit,
             renter=renter,
             amount=Decimal("10000"),
+            amount_paid=Decimal("10000"),
             payment_method="upi",
             status=RentRecord.Status.PAID,
             due_date=owner.date_joined.date(),

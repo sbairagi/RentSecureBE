@@ -202,7 +202,7 @@ def _fallback_lines(context: dict[str, Any]) -> list[tuple[str, TextStyle]]:
         ),
     ]
     if context.get("witness_name"):
-        lines.append(f"Witness: {context['witness_name']}", "body")
+        lines.append((f"Witness: {context['witness_name']}", "body"))
     return lines
 
 

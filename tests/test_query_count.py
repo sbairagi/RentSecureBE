@@ -182,7 +182,10 @@ class N1RentRecordQueryBudgetTests(QueryBudgetTestCase):
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
         cache.clear()
-        with self.assertNumQueries(2):
+        # Three queries: the user of the token, the records of the owner and
+        # the payment history of those records. The history is prefetched, so
+        # the list does not ask for it row by row.
+        with self.assertNumQueries(3):
             resp = client.get("/api/rent-records/")
         self.assertEqual(resp.status_code, 200)
 

@@ -13,10 +13,18 @@ from typing import TYPE_CHECKING, Any
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 
-from documents.receipt import build_receipt
+from documents.receipt import build_receipt, receipt_lines
+from properties.services.simple_pdf import build_text_pdf
 
 if TYPE_CHECKING:
     from properties.models import RentRecord
+
+try:  # pragma: no cover - depends on the host
+    from weasyprint import HTML
+except Exception:  # pragma: no cover - depends on the host
+    # The native libraries of WeasyPrint are missing on some hosts. The plain
+    # renderer below keeps the receipt working there.
+    HTML = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +45,11 @@ def generate_rent_receipt_pdf(rent_record: RentRecord, part: Any = None) -> byte
         Exception: Re-raises the underlying rendering exception after
             logging context.
     """
-    try:
-        from weasyprint import HTML
+    if HTML is None:
+        # WeasyPrint is not available on this host; the plain renderer is.
+        return build_text_pdf(receipt_lines(rent_record, part))
 
+    try:
         receipt = build_receipt(rent_record, part)
         context: dict[str, Any] = {
             "receipt": receipt,
@@ -60,8 +70,11 @@ def generate_rent_receipt_pdf(rent_record: RentRecord, part: Any = None) -> byte
             exc,
         )
         raise
-    else:
-        return pdf_bytes
+    if not pdf_bytes:
+        # The engine of the host produced nothing; the plain renderer writes
+        # the receipt everywhere.
+        return build_text_pdf(receipt_lines(rent_record, part))
+    return pdf_bytes
 
 
 def send_rent_receipt_email(rent_record: RentRecord, part: Any = None) -> bool:

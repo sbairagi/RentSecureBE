@@ -525,48 +525,54 @@ class TestUpdateRenterDefaulterStatus:
 
 
 class TestNotifyOwnerIfUnitVacant:
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.orchestrator.dispatch_notification")
     def test_deactivated_no_other_active_with_whatsapp_sends_message(
-        self, mock_whatsapp, unit
+        self, mock_dispatch, unit
     ):
         renter = RenterFactory(unit=unit, status=Renter.RenterStatus.DEACTIVATED)
-        mock_whatsapp.reset_mock()
+        mock_dispatch.reset_mock()
         notify_owner_if_unit_vacant(sender=Renter, instance=renter)
-        mock_whatsapp.assert_called_once()
+        mock_dispatch.assert_called_once()
+        assert mock_dispatch.call_args.kwargs["title"] == "Unit Vacant"
 
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.orchestrator.dispatch_notification")
     def test_revoked_no_other_active_with_whatsapp_sends_message(
-        self, mock_whatsapp, unit
+        self, mock_dispatch, unit
     ):
         renter = RenterFactory(unit=unit, status=Renter.RenterStatus.REVOKED)
-        mock_whatsapp.reset_mock()
+        mock_dispatch.reset_mock()
         notify_owner_if_unit_vacant(sender=Renter, instance=renter)
-        mock_whatsapp.assert_called_once()
+        mock_dispatch.assert_called_once()
+        assert mock_dispatch.call_args.kwargs["title"] == "Unit Vacant"
 
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
+    @patch("notification.services.orchestrator.dispatch_notification")
     def test_deactivated_no_other_active_no_whatsapp_number_skips(
-        self, mock_whatsapp, unit, owner
+        self, mock_dispatch, unit, owner
     ):
         owner.whatsapp_number = ""
         owner.save(update_fields=["whatsapp_number"])
         renter = RenterFactory(unit=unit, status=Renter.RenterStatus.DEACTIVATED)
+        mock_dispatch.reset_mock()
         notify_owner_if_unit_vacant(sender=Renter, instance=renter)
-        mock_whatsapp.assert_not_called()
+        # The owner is told inside the app even without a WhatsApp number.
+        mock_dispatch.assert_called_once()
 
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
-    def test_deactivated_other_active_renters_exist_skips(self, mock_whatsapp, unit):
+    @patch("notification.services.orchestrator.dispatch_notification")
+    def test_deactivated_other_active_renters_exist_skips(self, mock_dispatch, unit):
         RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
         deactivated_renter = RenterFactory(
             unit=unit, status=Renter.RenterStatus.DEACTIVATED
         )
+        mock_dispatch.reset_mock()
         notify_owner_if_unit_vacant(sender=Renter, instance=deactivated_renter)
-        mock_whatsapp.assert_not_called()
+        mock_dispatch.assert_not_called()
 
-    @patch("notification.services.whatsapp_service.send_whatsapp_message")
-    def test_active_status_skips(self, mock_whatsapp, unit):
+    @patch("notification.services.orchestrator.dispatch_notification")
+    def test_active_status_skips(self, mock_dispatch, unit):
         renter = RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
+        mock_dispatch.reset_mock()
         notify_owner_if_unit_vacant(sender=Renter, instance=renter)
-        mock_whatsapp.assert_not_called()
+        mock_dispatch.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -733,7 +739,7 @@ class TestNotifyOwnerOnTaxPaid:
             tax.save()
         mock_notify.assert_not_called()
 
-    @patch("notification.services.rent_notify_service.notify_owner")
+    @patch("notification.services.orchestrator.dispatch_notification")
     def test_calls_notify_owner_when_paid(self, mock_notify_owner):
         owner = UserFactory()
         PropertyTaxRecord.objects.create(
@@ -745,10 +751,10 @@ class TestNotifyOwnerOnTaxPaid:
         )
         mock_notify_owner.assert_called_once()
         call_args = mock_notify_owner.call_args
-        assert call_args[0][0] == owner
-        assert "tax" in call_args[0][1].lower()
+        assert call_args.kwargs["user"] == owner
+        assert "tax" in call_args.kwargs["message"].lower()
 
-    @patch("notification.services.rent_notify_service.notify_owner")
+    @patch("notification.services.orchestrator.dispatch_notification")
     def test_skips_when_owner_has_no_whatsapp(self, mock_notify_owner):
         owner = UserFactory(whatsapp_number="")
         PropertyTaxRecord.objects.create(
@@ -758,7 +764,8 @@ class TestNotifyOwnerOnTaxPaid:
             paid=True,
             paid_date=date.today(),
         )
-        mock_notify_owner.assert_not_called()
+        # The owner is told inside the app, with or without a WhatsApp number.
+        mock_notify_owner.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -767,46 +774,63 @@ class TestNotifyOwnerOnTaxPaid:
 
 
 class TestNotifyRenterStatusChange:
-    @patch(
-        "notification.services.renter_status_notify_service.send_renter_status_change_notification"
-    )
+    @patch("notification.services.orchestrator.dispatch_notification")
     def test_notice_period_from_active_sends_notification(self, mock_notify, unit, db):
-        renter = RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
+        renter = RenterFactory(
+            unit=unit, status=Renter.RenterStatus.ACTIVE, user=UserFactory()
+        )
+        mock_notify.reset_mock()
         renter.status = Renter.RenterStatus.NOTICE_PERIOD
         renter.save()
-        mock_notify.assert_called_once_with(renter, "active", "notice_period")
+        mock_notify.assert_called_once()
+        assert (
+            mock_notify.call_args.kwargs["notification_type"] == "renter_status_change"
+        )
+        assert "NOTICE PERIOD" in mock_notify.call_args.kwargs["message"]
 
-    @patch(
-        "notification.services.renter_status_notify_service.send_renter_status_change_notification"
-    )
+    @patch("notification.services.orchestrator.dispatch_notification")
     def test_revoked_from_active_sends_notification(self, mock_notify, unit, db):
-        renter = RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
+        renter = RenterFactory(
+            unit=unit, status=Renter.RenterStatus.ACTIVE, user=UserFactory()
+        )
+        mock_notify.reset_mock()
         renter.status = Renter.RenterStatus.REVOKED
         renter.save()
-        mock_notify.assert_called_once_with(renter, "active", "revoked")
+        status_calls = [
+            call
+            for call in mock_notify.call_args_list
+            if call.kwargs.get("notification_type") == "renter_status_change"
+        ]
+        assert len(status_calls) == 1
+        assert "revoked" in status_calls[0].kwargs["message"].lower()
 
-    @patch(
-        "notification.services.renter_status_notify_service.send_renter_status_change_notification"
-    )
+    @patch("notification.services.orchestrator.dispatch_notification")
     def test_deactivated_from_active_sends_notification(self, mock_notify, unit, db):
-        renter = RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
+        renter = RenterFactory(
+            unit=unit, status=Renter.RenterStatus.ACTIVE, user=UserFactory()
+        )
+        mock_notify.reset_mock()
         renter.status = Renter.RenterStatus.DEACTIVATED
         renter.save()
-        mock_notify.assert_called_once_with(renter, "active", "deactivated")
+        status_calls = [
+            call
+            for call in mock_notify.call_args_list
+            if call.kwargs.get("notification_type") == "renter_status_change"
+        ]
+        assert len(status_calls) == 1
+        assert "deactivated" in status_calls[0].kwargs["message"].lower()
 
-    @patch(
-        "notification.services.renter_status_notify_service.send_renter_status_change_notification"
-    )
+    @patch("notification.services.orchestrator.dispatch_notification")
     def test_no_status_change_skips_notification(self, mock_notify, unit, db):
         renter = RenterFactory(unit=unit, status=Renter.RenterStatus.ACTIVE)
+        mock_notify.reset_mock()
         renter.save()
         mock_notify.assert_not_called()
 
-    @patch(
-        "notification.services.renter_status_notify_service.send_renter_status_change_notification"
-    )
+    @patch("notification.services.orchestrator.dispatch_notification")
     def test_active_from_notice_period_skips_notification(self, mock_notify, unit, db):
         renter = RenterFactory(unit=unit, status=Renter.RenterStatus.NOTICE_PERIOD)
+        mock_notify.reset_mock()
         renter.status = Renter.RenterStatus.ACTIVE
         renter.save()
         mock_notify.assert_not_called()

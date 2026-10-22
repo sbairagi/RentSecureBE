@@ -102,8 +102,13 @@ class RentRecordViewSet(viewsets.ModelViewSet[RentRecord]):
                     RentRecord.objects.filter(unit__owner=user)
                     .select_related("unit", "renter")
                     .prefetch_related("parts")
+                    .order_by("-due_date")
                 )
                 cache.set(cache_key, rent_records, timeout=300)
+                # The cached queryset already carries its order, its rows and
+                # the payment history — touching it again would ask the
+                # database for the same answer twice.
+                return rent_records
         else:
             rent_records = (
                 RentRecord.objects.filter(unit__owner=user)

@@ -249,11 +249,13 @@ class TestSendRentReceiptEmail:
         subject = captured_call["kwargs"]["subject"]
         assert "Rent Receipt" in subject
         assert "June 2026" in subject
-        assert "₹15000" in subject
+        # The amounts are written with the Indian digit grouping, the way the
+        # web client writes them.
+        assert "₹15,000" in subject
         body = captured_call["kwargs"]["body"]
         assert renter.name in body
         assert "Property:" in body
-        assert "Amount: ₹15000" in body
+        assert "Amount: ₹15,000" in body
         assert "Date Paid:" in body
         assert "Payment Status:" in body
 

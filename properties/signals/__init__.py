@@ -106,7 +106,7 @@ def update_unit_usage(sender: type[Unit], instance: Unit, **kwargs: object) -> N
 def update_caretaker_usage(
     sender: type[Caretaker], instance: Caretaker, **kwargs: object
 ) -> None:
-    owner = instance.owner or getattr(instance.unit, "owner", None)
+    owner = instance.owner
     if owner is not None:
         update_usage_count(owner, "max_caretakers", Caretaker)
 

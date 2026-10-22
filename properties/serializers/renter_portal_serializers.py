@@ -191,6 +191,8 @@ class RenterVerificationSerializer(serializers.ModelSerializer):
     status_label = serializers.CharField(source="get_status_display", read_only=True)
     renter_name = serializers.CharField(source="renter.name", read_only=True)
     unit_label = serializers.CharField(source="unit.unit", read_only=True)
+    reviewed_by_name = serializers.SerializerMethodField()
+    file_name = serializers.SerializerMethodField()
 
     class Meta:
         model = PoliceVerification
@@ -201,9 +203,11 @@ class RenterVerificationSerializer(serializers.ModelSerializer):
             "renter_name",
             "unit_label",
             "file",
+            "file_name",
             "submitted_at",
             "verified_at",
             "reviewed_at",
+            "reviewed_by_name",
             "review_notes",
             "rejection_reason",
         ]
@@ -212,9 +216,24 @@ class RenterVerificationSerializer(serializers.ModelSerializer):
             "submitted_at",
             "verified_at",
             "reviewed_at",
+            "reviewed_by_name",
+            "file_name",
             "review_notes",
             "rejection_reason",
         ]
+
+    def get_reviewed_by_name(self, obj: PoliceVerification) -> str:
+        """Return who reviewed the document, without the account details."""
+        reviewer = obj.reviewed_by
+        if reviewer is None:
+            return ""
+        return getattr(reviewer, "full_name", "") or getattr(reviewer, "username", "")
+
+    def get_file_name(self, obj: PoliceVerification) -> str:
+        """Return the name of the uploaded document."""
+        if not obj.file:
+            return ""
+        return obj.file.name.rsplit("/", 1)[-1]
 
 
 class RenterAgreementSerializer(serializers.ModelSerializer):
@@ -247,6 +266,7 @@ class RenterAgreementSerializer(serializers.ModelSerializer):
             "payment_mode",
             "notice_period_months",
             "jurisdiction",
+            "witness_name",
             "special_clauses",
             "owner_signed",
             "renter_signed",

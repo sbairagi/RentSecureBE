@@ -17,7 +17,7 @@ from django.test import TransactionTestCase
 from django.utils import timezone
 
 from core.models import SubscriptionPlan, UserSubscription
-from properties.models import Building, Renter, RentRecord, Unit
+from properties.models import Building, Renter, RentRecord, RentRecordPart, Unit
 
 User = get_user_model()
 API_PREFIX = "/api"
@@ -163,18 +163,21 @@ class PaymentSecurityDetailTests(APITestCase):
         client = APIClient()
         client.force_authenticate(user=renter_user)
         with patch(
-            "properties.views.rent_record_views.create_payment_link",
+            "rentsecure_be.services.razorpay_service.create_payment_link",
             return_value="https://payments.test/rent/dup",
         ):
             response1 = client.post(
-                f"{API_PREFIX}/rent/payment/",
-                {"rent_record_id": self.rent.id, "method": "upi"},
+                f"{API_PREFIX}/renter/rent-records/{self.rent.id}/payments/",
+                {"amount": "10000.00", "payment_method": "upi"},
                 format="json",
             )
-        # Should not create duplicate payment links
+        # The month is settled already, so the renter cannot pay it twice.
         self.assertIn(
             response1.status_code,
             [status.HTTP_200_OK, status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST],
+        )
+        self.assertEqual(
+            RentRecordPart.objects.filter(rent_record=self.rent).count(), 0
         )
 
     def test_rent_amount_tampering_rejected(self):

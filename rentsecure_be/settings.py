@@ -67,7 +67,10 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # Application URLs
-FRONTEND_URL = config("FRONTEND_URL", default="https://app.rentsecure.com")
+FRONTEND_URL = config(
+    "FRONTEND_URL",
+    default="http://127.0.0.1:8082" if DEBUG else "https://app.rentsecure.com",
+)
 BACKEND_URL = config("BACKEND_URL", default="http://localhost:8000")
 
 # Public app startup checks. These defaults keep local development available;
@@ -91,6 +94,11 @@ EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@example.com")
+
+if DEBUG and EMAIL_HOST_USER in ("", "your-email@example.com"):
+    # There is no mail server in development; the message is written to the
+    # console so a sign in link can still be used.
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Third-party service credentials
 TWILIO_ACCOUNT_SID = config("TWILIO_ACCOUNT_SID", default="")

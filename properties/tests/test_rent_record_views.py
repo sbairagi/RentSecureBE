@@ -257,12 +257,19 @@ class TestRentRecordViewSetUpdate:
         building = BuildingFactory(owner=owner)
         unit = UnitFactory(owner=owner, building=building)
         renter = RenterFactory(unit=unit)
-        rent = RentRecordFactory(unit=unit, renter=renter)
+        # An open month can still be edited; a settled or cancelled one is
+        # frozen by the ledger rules.
+        rent = RentRecordFactory(
+            unit=unit, renter=renter, status=RentRecord.Status.PENDING
+        )
 
         c = _make_client(owner)
 
         with patch("django.core.cache.cache.delete") as mock_delete:
-            c.patch(f"/properties/rent-records/{rent.id}/", {"notes": "Updated"})
+            response = c.patch(
+                f"/properties/rent-records/{rent.id}/", {"notes": "Updated"}
+            )
+            assert response.status_code == 200
             mock_delete.assert_called_once_with(f"rent_records_user_{owner.id}")
 
 
@@ -286,7 +293,7 @@ class TestRentRecordViewSetDestroy:
         assert response.status_code == 404
 
     def test_destroy_deletes_cache(self, db):
-        """Cache key is deleted after successful destroy."""
+        """Rent records are never deleted, so no cache is touched."""
         owner = UserFactory()
         building = BuildingFactory(owner=owner)
         unit = UnitFactory(owner=owner, building=building)
@@ -296,8 +303,11 @@ class TestRentRecordViewSetDestroy:
         c = _make_client(owner)
 
         with patch("django.core.cache.cache.delete") as mock_delete:
-            c.delete(f"/properties/rent-records/{rent.id}/")
-            mock_delete.assert_called_once_with(f"rent_records_user_{owner.id}")
+            response = c.delete(f"/properties/rent-records/{rent.id}/")
+            # The ledger keeps every record; a record leaves the books
+            # through the cancel action, with a reason.
+            assert response.status_code == 405
+            mock_delete.assert_not_called()
 
 
 # ===========================================================================
@@ -675,7 +685,7 @@ class TestDuplicateRentMonthPrevention:
             },
         )
         assert response.status_code == 400
-        assert "unique" in str(response.data).lower()
+        assert "already exists for this unit and month" in str(response.data)
 
     def test_different_units_same_month_succeeds(self, db):
         """Same due_date on different units is allowed."""

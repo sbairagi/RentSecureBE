@@ -31,6 +31,24 @@ from .models import Building, ExtraCharge, RentAgreementDraft, Renter, RentRecor
 User = get_user_model()
 
 
+def _give_paid_plan(user) -> None:
+    """Put the owner on a paid plan.
+
+    The dashboard summary is a paid feature: the free plan is answered with
+    a 403.
+    """
+    plan, _ = SubscriptionPlan.objects.get_or_create(
+        name="pro",
+        defaults={"monthly_price": 999, "yearly_price": 9999},
+    )
+    UserSubscription.objects.create(
+        user=user,
+        plan=plan,
+        end_date=timezone.now() + timedelta(days=30),
+        is_active=True,
+    )
+
+
 class BuildingViewSetAPITests(APITestCase):
     """Test Building ViewSet endpoints"""
 
@@ -432,8 +450,8 @@ class RenterViewSetAPITests(APITestCase):
         response = self.client.post("/api/renters/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_list_renters_only_active(self):
-        """Test listing renters returns only active/notice_period"""
+    def test_list_renters_returns_every_status(self):
+        """The list carries every renter; the status filter narrows it."""
         Renter.objects.create(
             unit=self.unit,
             name="Alice",
@@ -452,7 +470,10 @@ class RenterViewSetAPITests(APITestCase):
         )
         response = self.client.get("/api/renters/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Should only return active renters
+        self.assertEqual(len(response.data), 2)
+
+        response = self.client.get("/api/renters/?status=active")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
 
 
@@ -512,12 +533,14 @@ class RentRecordViewSetAPITests(APITestCase):
         today = date.today()
         current_month = today.replace(day=1)
         last_month = (current_month - timedelta(days=30)).replace(day=1)
+        _give_paid_plan(self.user)
 
         RentRecord.objects.create(
             renter=self.renter,
             unit=self.unit,
             due_date=current_month,
             amount=10000,
+            amount_paid=10000,
             paid_on=today,
             status=RentRecord.Status.PAID,
             payout_status="SUCCESS",
@@ -551,12 +574,14 @@ class RentRecordViewSetAPITests(APITestCase):
         today = date.today()
         current_month = today.replace(day=1)
         next_month = (current_month + timedelta(days=32)).replace(day=1)
+        _give_paid_plan(self.user)
 
         RentRecord.objects.create(
             renter=self.renter,
             unit=self.unit,
             due_date=current_month,
             amount=10000,
+            amount_paid=10000,
             paid_on=today,
             status=RentRecord.Status.PAID,
             payout_status="SUCCESS",

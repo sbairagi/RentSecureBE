@@ -63,6 +63,11 @@ class CareTaker(models.Model):
         validators=[phone_regex], max_length=15, blank=True, help_text="Alternate phone"
     )
     address = models.TextField(blank=True)
+    preferred_language = models.CharField(
+        max_length=40,
+        blank=True,
+        help_text="Language the daily summary of the caretaker is written in",
+    )
     joining_date = models.DateField(help_text="Date of joining", db_index=True)
     leaving_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(
@@ -231,3 +236,59 @@ class CareTakerAssignmentLog(models.Model):
 
     class Meta:
         ordering = ["-action_date"]
+
+
+class CareTakerActivity(models.Model):
+    """What a caretaker did on the ground.
+
+    The caretaker works for the owner, so the owner has to be able to see what
+    the team did: the job a caretaker took, the status they moved a request to
+    and the notes they left. Every action of the caretaker portal writes one
+    row here, and the owner reads them in the *What my team did* panel.
+    """
+
+    class Action(models.TextChoices):
+        TOOK_JOB = "took_job", "Took the job"
+        STATUS_CHANGE = "status_change", "Changed the status"
+        NOTE = "note", "Added a note"
+
+    caretaker = models.ForeignKey(
+        CareTaker, on_delete=models.CASCADE, related_name="activities", db_index=True
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="caretaker_activities",
+        db_index=True,
+    )
+    maintenance_request = models.ForeignKey(
+        "properties.MaintenanceRequest",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="caretaker_activities",
+    )
+    action = models.CharField(max_length=20, choices=Action.choices, db_index=True)
+    summary = models.CharField(max_length=200)
+    detail = models.TextField(blank=True)
+    from_status = models.CharField(max_length=16, blank=True)
+    to_status = models.CharField(max_length=16, blank=True)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="caretaker_activities_made",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["owner", "-created_at"]),
+            models.Index(fields=["caretaker", "-created_at"]),
+        ]
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.caretaker} · {self.summary}"

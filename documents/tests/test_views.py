@@ -270,7 +270,9 @@ class TestGenerateUnitDossierPdfViewSet:
         assert resp["Content-Type"] == "application/pdf"
 
     @_http
-    def test_pdf_generation_exception_returns_500(self, owner, unit: UnitFactory):
+    def test_pdf_engine_failure_falls_back_to_plain_renderer(
+        self, owner, unit: UnitFactory
+    ):
         with patch("documents.views.render_to_string", return_value="<html></html>"):
             with patch("weasyprint.HTML") as mock_html_cls:
                 mock_html_inst = MagicMock()
@@ -281,6 +283,7 @@ class TestGenerateUnitDossierPdfViewSet:
 
                 mock_unit = MagicMock()
                 mock_unit.owner = owner
+                mock_unit.unit = "A-101"
                 mock_unit.caretakers.all.return_value = []
                 mock_unit.renters.all.return_value = []
 
@@ -291,10 +294,11 @@ class TestGenerateUnitDossierPdfViewSet:
                         _doc_url("properties", unit.id, "generate-dossier-pdf")
                     )
 
-        assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        body = resp.json()
-        assert body["error"] == "Failed to generate PDF"
-        assert "PDF engine crashed" in body["details"]
+        # The plain renderer keeps the document downloadable when the PDF
+        # engine of the host cannot run.
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp["Content-Type"] == "application/pdf"
+        assert resp.content.startswith(b"%PDF")
 
     @_http
     def test_success_returns_dossier_pdf(self, owner, unit: UnitFactory):

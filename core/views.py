@@ -18,6 +18,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from twilio.rest import Client
 
@@ -25,6 +27,7 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, Group
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -43,6 +46,7 @@ from rentsecure_be.utils.cashfree_payout import add_beneficiary
 from .models import (
     OTP,
     AddOnPurchase,
+    EmailSignInLink,
     OwnerBankDetails,
     PlanFeatureLimit,
     SubscriptionPlan,
@@ -116,6 +120,23 @@ def send_otp(phone_number: str, code: str) -> None:
         print(f"[MOCK OTP to {phone_number}] Your OTP is {code}")
 
 
+def _session_payload(user: User) -> dict[str, Any]:
+    """Return the user block every sign in route answers with.
+
+    The password, the OTP and the e-mail link all hand the same session to
+    the three apps, so the shell of the app never has to guess the role.
+    """
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "full_name": user.full_name,
+        "phone": user.phone,
+        "role": _get_user_role(user),
+        "permissions": list(user.get_all_permissions()),
+    }
+
+
 class SendOTP(APIView):
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         phone = request.data.get("phone")
@@ -128,7 +149,7 @@ class SendOTP(APIView):
         recent_otp = (
             OTP.objects.filter(phone_number=phone).order_by("-created_at").first()
         )
-        if recent_otp and (timezone.now() - recent_otp.created_at).seconds < 60:
+        if recent_otp and (timezone.now() - recent_otp.created_at).total_seconds() < 60:
             return Response({"error": "Wait before requesting another OTP"}, status=429)
 
         code = str(secrets.randbelow(900000) + 100000)
@@ -136,7 +157,12 @@ class SendOTP(APIView):
         OTP.objects.create(phone_number=phone, code=code, referral_code=referral_code)
         send_otp(phone, code)
 
-        return Response({"message": "OTP sent"}, status=200)
+        payload: dict[str, Any] = {"message": "OTP sent"}
+        if settings.DEBUG:
+            # The code is printed in the console; in development the app may
+            # show it so the one time code can be used without a phone.
+            payload["debug_code"] = code
+        return Response(payload, status=200)
 
 
 def _process_referral(otp: OTP, user: User) -> Response | None:
@@ -162,7 +188,7 @@ def _process_referral(otp: OTP, user: User) -> Response | None:
 def _verify_otp_and_login(
     phone: str | None, code: str | None, group_name: str
 ) -> tuple[dict[str, object], int]:
-    """Shared OTP verification logic for owner/renter login.
+    """Shared OTP verification logic for owner/renter/caretaker login.
 
     Returns (response_dict, status_code) tuple.
     """
@@ -181,7 +207,12 @@ def _verify_otp_and_login(
     otp.is_verified = True
     otp.save()
 
-    user, _ = User.objects.get_or_create(phone=phone, defaults={"username": phone})
+    user, created = User.objects.get_or_create(
+        phone=phone, defaults={"username": phone}
+    )
+    if created:
+        # An account that signs in with a code has no password to share.
+        user.set_unusable_password()
     user.is_phone_verified = True
     user.save()
 
@@ -200,7 +231,7 @@ def _verify_otp_and_login(
     return {
         "refresh": str(refresh),
         "access": str(refresh.access_token),
-        "user": {"id": user.pk, "phone": user.phone},
+        "user": _session_payload(user),
     }, 200
 
 
@@ -218,6 +249,170 @@ class RenterVerifyOTP(APIView):
         code = request.data.get("otp")
         data, status = _verify_otp_and_login(phone, code, "renter")
         return Response(data, status=status)
+
+
+class CaretakerVerifyOTP(APIView):
+    """Sign a caretaker in with the one time code sent to their phone.
+
+    A caretaker is only a caretaker when the owner assigned the properties,
+    so the account has to exist and has to carry a caretaker record. The code
+    never creates a caretaker on its own.
+    """
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        phone = request.data.get("phone")
+        code = request.data.get("otp")
+        if not phone or not code:
+            return Response({"error": "Phone and OTP required"}, status=400)
+
+        from properties.models import Caretaker
+
+        user = User.objects.filter(phone=phone).first()
+        if user is None:
+            user = (
+                Caretaker.objects.filter(phone=phone)
+                .exclude(user__isnull=True)
+                .select_related("user")
+                .first()
+            )
+            user = user.user if user is not None else None
+        if user is None:
+            return Response(
+                {
+                    "error": "No caretaker is registered with that number. "
+                    "Ask the owner to create your account."
+                },
+                status=403,
+            )
+        if not Caretaker.objects.filter(user=user).exists():
+            return Response(
+                {
+                    "error": "That account is not a caretaker. "
+                    "Ask the owner to assign you to their properties."
+                },
+                status=403,
+            )
+
+        data, status = _verify_otp_and_login(phone, code, "caretaker")
+        return Response(data, status=status)
+
+
+# ---------------------------------------------------------------------------
+# Sign in by e-mail
+# ---------------------------------------------------------------------------
+
+EMAIL_LINK_LIFETIME = timedelta(minutes=20)
+ROLE_LANDING_PATHS = {
+    "owner": "/",
+    "property_owner": "/",
+    "renter": "/renter",
+    "caretaker": "/caretaker",
+}
+
+
+def _send_sign_in_link(user: User, link: str) -> None:
+    """Send the one time sign in link by e-mail — the console in development."""
+    subject = "Your SecureNest sign in link"
+    body = (
+        f"Hello {user.full_name or user.username},\n\n"
+        f"Use this link to sign in to SecureNest:\n{link}\n\n"
+        "The link works once and expires in 20 minutes. "
+        "If you did not ask for it, ignore this e-mail."
+    )
+    try:
+        send_mail(
+            subject,
+            body,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception("Could not send the sign in link to %s", user.email)
+    if settings.DEBUG:
+        print(f"[MOCK SIGN IN LINK to {user.email}] {link}")
+
+
+class SendEmailLink(APIView):
+    """Send a one time sign in link to an e-mail address."""
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        email = str(request.data.get("email", "")).strip().lower()
+        role = str(request.data.get("role", "renter")).strip().lower() or "renter"
+        if not email:
+            return Response({"error": "E-mail address required"}, status=400)
+        if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+            return Response({"error": "Enter a valid e-mail address."}, status=400)
+
+        user = User.objects.filter(email__iexact=email).first()
+        if user is None:
+            # The answer is the same for every address, so the endpoint does
+            # not tell a stranger which accounts exist.
+            payload: dict[str, Any] = {
+                "message": (
+                    "If an account uses that address, " "a sign in link is on its way."
+                )
+            }
+            if settings.DEBUG:
+                payload["debug_error"] = "No account uses that e-mail address."
+            return Response(payload, status=200)
+
+        EmailSignInLink.objects.filter(
+            email__iexact=user.email, used_at__isnull=True
+        ).delete()
+        token = secrets.token_urlsafe(32)
+        EmailSignInLink.objects.create(
+            email=user.email,
+            token=token,
+            role=role,
+            expires_at=timezone.now() + EMAIL_LINK_LIFETIME,
+        )
+
+        path = ROLE_LANDING_PATHS.get(role, "/renter")
+        link = f"{settings.FRONTEND_URL.rstrip('/')}{path}?email_token={token}"
+        _send_sign_in_link(user, link)
+
+        payload = {"message": "The sign in link is on its way to your inbox."}
+        if settings.DEBUG:
+            payload["debug_link"] = link
+        return Response(payload, status=200)
+
+
+class VerifyEmailLink(APIView):
+    """Exchange a one time sign in link for the session of the account."""
+
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        token = str(request.data.get("token", "")).strip()
+        if not token:
+            return Response(
+                {"error": "The sign in link is missing its token."}, status=400
+            )
+
+        link = EmailSignInLink.objects.filter(token=token, used_at__isnull=True).first()
+        if link is None or link.expires_at < timezone.now():
+            return Response(
+                {"error": "This sign in link is no longer valid. Ask for a new one."},
+                status=400,
+            )
+
+        user = User.objects.filter(email__iexact=link.email).first()
+        if user is None:
+            return Response(
+                {"error": "This sign in link is no longer valid. Ask for a new one."},
+                status=400,
+            )
+
+        link.used_at = timezone.now()
+        link.save(update_fields=["used_at"])
+
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "user": _session_payload(user),
+            }
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -731,19 +926,11 @@ def login_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
         )
 
     refresh = RefreshToken.for_user(user)
-    user_role = _get_user_role(user)
     return Response(
         {
             "refresh": str(refresh),
             "access": str(refresh.access_token),
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "full_name": user.full_name,
-                "role": user_role,
-                "permissions": list(user.get_all_permissions()),
-            },
+            "user": _session_payload(user),
         }
     )
 
@@ -836,15 +1023,7 @@ def register_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
         {
             "refresh": str(refresh),
             "access": str(refresh.access_token),
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "full_name": user.full_name,
-                "phone": user.phone,
-                "role": _get_user_role(user),
-                "permissions": list(user.get_all_permissions()),
-            },
+            "user": _session_payload(user),
         },
         status=status.HTTP_201_CREATED,
     )
@@ -916,13 +1095,22 @@ def logout_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def logout_all_view(request: Request, /, *args: Any, **kwargs: Any) -> Response:
-    """Blacklist all refresh tokens for the current user by rotating the password."""
+    """Blacklist every refresh token of the current user.
+
+    The password of the account is left alone — logging out of the other
+    devices must never lock the owner out of their own account.
+    """
     user = request.user
-    # SimpleJWT does not track tokens, so we rotate the password to invalidate
-    # existing tokens
-    user.set_password(None)
-    user.save()
-    return Response({"message": "Logged out from all devices"})
+    blacklisted = 0
+    for outstanding in OutstandingToken.objects.filter(user=user):
+        try:
+            RefreshToken(outstanding.token).blacklist()
+            blacklisted += 1
+        except TokenError:
+            continue
+    return Response(
+        {"message": "Logged out from all devices", "sessions_closed": blacklisted}
+    )
 
 
 @api_view(["GET"])
