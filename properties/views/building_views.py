@@ -19,6 +19,41 @@ from ..serializers import BuildingSerializer
 from ..services.unit_service import get_building_analytics
 
 
+def _paginate(queryset, request, serializer_class, context=None):
+    """Return a paginated response shaped as { data, meta }.
+
+    The frontend ``rows()`` helper already extracts ``payload.data`` when it
+    is a list, so this shape is drop-in compatible with existing consumers.
+    """
+    try:
+        page = int(request.query_params.get("page", 1))
+        limit = int(request.query_params.get("limit", 50))
+    except (ValueError, TypeError):
+        page = 1
+        limit = 50
+    page = max(page, 1)
+    limit = max(min(limit, 200), 1)
+
+    total = queryset.count()
+    total_pages = (total + limit - 1) // limit if total > 0 else 1
+    start = (page - 1) * limit
+    end = start + limit
+    page_qs = queryset[start:end]
+
+    serializer = serializer_class(page_qs, many=True, context=context or {})
+    return Response(
+        {
+            "data": serializer.data,
+            "meta": {
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "totalPages": total_pages,
+            },
+        }
+    )
+
+
 class BuildingViewSet(viewsets.ModelViewSet[Building]):
     serializer_class = BuildingSerializer
     permission_classes = [IsAuthenticated]
@@ -56,6 +91,13 @@ class BuildingViewSet(viewsets.ModelViewSet[Building]):
                 buildings = active_buildings[:free_limit]
 
         return self._apply_building_filters(buildings)
+
+    @override
+    def list(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+        queryset = self.filter_queryset(self.get_queryset())
+        return _paginate(
+            queryset, request, BuildingSerializer, context={"request": request}
+        )
 
     def _has_active_filters(self) -> bool:
         return any(

@@ -125,6 +125,37 @@ class RenterViewSet(viewsets.ModelViewSet[Renter]):
         return renters
 
     @override
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        queryset = self.filter_queryset(self.get_queryset())
+        try:
+            page = int(request.query_params.get("page", 1))
+            limit = int(request.query_params.get("limit", 50))
+        except (ValueError, TypeError):
+            page = 1
+            limit = 50
+        page = max(page, 1)
+        limit = max(min(limit, 200), 1)
+
+        total = queryset.count()
+        total_pages = (total + limit - 1) // limit if total > 0 else 1
+        start = (page - 1) * limit
+        end = start + limit
+        page_qs = queryset[start:end]
+
+        serializer = RenterSerializer(page_qs, many=True, context={"request": request})
+        return Response(
+            {
+                "data": serializer.data,
+                "meta": {
+                    "total": total,
+                    "page": page,
+                    "limit": limit,
+                    "totalPages": total_pages,
+                },
+            }
+        )
+
+    @override
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Create a new renter, enforcing the per-plan limit first."""
         user = cast(User, request.user)

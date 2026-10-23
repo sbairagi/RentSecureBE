@@ -64,6 +64,7 @@ class Building(models.Model):
     is_archived = models.BooleanField(
         default=False,
         help_text="Soft-delete: archived buildings are excluded from queries",
+        db_index=True,
     )
 
     # Timestamps

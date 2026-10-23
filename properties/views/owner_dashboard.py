@@ -197,21 +197,43 @@ def owner_dashboard(request: DRFRequest) -> Response:
     previous_six_months = (current_month - timedelta(days=180)).replace(day=1)
 
     # ----------------------------------------------------------------
-    # Quick Statistics
+    # Quick Statistics — use denormalized counters from UserProfile
+    # when available, fall back to live queries for accuracy.
     # ----------------------------------------------------------------
-    total_buildings = Building.objects.filter(owner=owner, is_archived=False).count()
-    total_units = Unit.objects.filter(owner=owner, is_archived=False).count()
-    occupied_units = Unit.objects.filter(
-        owner=owner, is_archived=False, status=Unit.VacancyStatus.OCCUPIED
-    ).count()
+    profile = getattr(owner, "userprofile", None)
+    if profile and profile.counters_updated_at:
+        total_buildings = profile.total_buildings
+        total_units = profile.total_units
+        occupied_units = profile.occupied_units
+        active_renters = profile.active_renters
+        caretakers_count = profile.caretakers_count
+        notice_period_renters = profile.notice_period_renters
+        revoked_renters = profile.revoked_renters
+        deactivated_renters = profile.deactivated_renters
+    else:
+        total_buildings = Building.objects.filter(
+            owner=owner, is_archived=False
+        ).count()
+        total_units = Unit.objects.filter(owner=owner, is_archived=False).count()
+        occupied_units = Unit.objects.filter(
+            owner=owner, is_archived=False, status=Unit.VacancyStatus.OCCUPIED
+        ).count()
+        active_renters = Renter.objects.filter(
+            unit__owner=owner, status=Renter.RenterStatus.ACTIVE
+        ).count()
+        caretakers_count = Caretaker.objects.filter(owner=owner, is_active=True).count()
+        notice_period_renters = Renter.objects.filter(
+            unit__owner=owner, status=Renter.RenterStatus.NOTICE_PERIOD
+        ).count()
+        revoked_renters = Renter.objects.filter(
+            unit__owner=owner, status=Renter.RenterStatus.REVOKED
+        ).count()
+        deactivated_renters = Renter.objects.filter(
+            unit__owner=owner, status=Renter.RenterStatus.DEACTIVATED
+        ).count()
+
     vacant_units = total_units - occupied_units
     occupancy_rate = (occupied_units / total_units * 100) if total_units > 0 else 0.0
-
-    active_renters = Renter.objects.filter(
-        unit__owner=owner, status=Renter.RenterStatus.ACTIVE
-    ).count()
-
-    caretakers_count = Caretaker.objects.filter(owner=owner, is_active=True).count()
 
     rents = RentRecord.objects.filter(unit__owner=owner)
 

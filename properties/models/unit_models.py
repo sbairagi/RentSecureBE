@@ -126,7 +126,10 @@ class Unit(models.Model):
 
     # Property Details
     unit_type = models.CharField(
-        max_length=50, choices=UnitType.choices, help_text="Type of property"
+        max_length=50,
+        choices=UnitType.choices,
+        help_text="Type of property",
+        db_index=True,
     )
     address_line = models.CharField(max_length=255, help_text="Street address")
     landmark = models.CharField(
@@ -157,6 +160,7 @@ class Unit(models.Model):
         choices=VacancyStatus.choices,
         default=VacancyStatus.VACANT,
         help_text="Current occupancy status",
+        db_index=True,
     )
     is_vacant = models.BooleanField(
         default=True, help_text="Denormalized: True if status=='vacant'"

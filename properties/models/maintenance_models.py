@@ -37,6 +37,7 @@ class MaintenanceRequest(models.Model):
         "properties.Unit",
         on_delete=models.CASCADE,
         related_name="maintenance_requests",
+        db_index=True,
     )
     renter = models.ForeignKey(
         "properties.Renter",
@@ -44,6 +45,7 @@ class MaintenanceRequest(models.Model):
         null=True,
         blank=True,
         related_name="maintenance_requests",
+        db_index=True,
     )
     assigned_caretaker = models.ForeignKey(
         "properties.CareTaker",
@@ -51,6 +53,7 @@ class MaintenanceRequest(models.Model):
         null=True,
         blank=True,
         related_name="maintenance_requests",
+        db_index=True,
     )
     title = models.CharField(max_length=180)
     description = models.TextField(blank=True)

@@ -73,7 +73,7 @@ class BuildingViewSetAPITests(APITestCase):
         )
         response = self.client.get("/api/buildings/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(len(response.data["data"]), 1)
 
     def test_create_building(self):
         """Test creating a building"""
@@ -470,11 +470,11 @@ class RenterViewSetAPITests(APITestCase):
         )
         response = self.client.get("/api/renters/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data["data"]), 2)
 
         response = self.client.get("/api/renters/?status=active")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(len(response.data["data"]), 1)
 
 
 class RentRecordViewSetAPITests(APITestCase):
@@ -776,7 +776,7 @@ class CrossUserAccessTests(APITestCase):
         self.client.force_authenticate(user=self.user2)
         response = self.client.get("/api/buildings/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)
+        self.assertEqual(len(response.data["data"]), 0)
 
     def test_user2_cannot_update_user1_building(self):
         """Test user2 cannot update user1's building"""

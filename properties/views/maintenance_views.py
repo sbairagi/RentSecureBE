@@ -1,6 +1,9 @@
+from typing import Any
+
 from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q, QuerySet
@@ -11,11 +14,49 @@ from properties.serializers import MaintenanceRequestSerializer
 from rentsecure_be.type_compat import override
 
 
+def _paginate_maintenance(queryset, request):
+    """Return a paginated response shaped as { data, meta }."""
+    try:
+        page = int(request.query_params.get("page", 1))
+        limit = int(request.query_params.get("limit", 50))
+    except (ValueError, TypeError):
+        page = 1
+        limit = 50
+    page = max(page, 1)
+    limit = max(min(limit, 200), 1)
+
+    total = queryset.count()
+    total_pages = (total + limit - 1) // limit if total > 0 else 1
+    start = (page - 1) * limit
+    end = start + limit
+    page_qs = queryset[start:end]
+
+    serializer = MaintenanceRequestSerializer(
+        page_qs, many=True, context={"request": request}
+    )
+    return Response(
+        {
+            "data": serializer.data,
+            "meta": {
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "totalPages": total_pages,
+            },
+        }
+    )
+
+
 class MaintenanceRequestViewSet(viewsets.ModelViewSet[MaintenanceRequest]):
     """Authenticated CRUD for maintenance requests belonging to the owner."""
 
     permission_classes = [IsAuthenticated]
     serializer_class = MaintenanceRequestSerializer
+
+    @override
+    def list(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+        queryset = self.filter_queryset(self.get_queryset())
+        return _paginate_maintenance(queryset, request)
 
     @override
     def get_queryset(self) -> QuerySet[MaintenanceRequest]:

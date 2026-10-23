@@ -72,6 +72,19 @@ class UserProfile(models.Model):
         choices=[("daily", "Daily"), ("weekly", "Weekly"), ("monthly", "Monthly")],
         help_text="How often the owner receives the dashboard summary.",
     )
+    # Denormalized dashboard counters — updated on write so the dashboard
+    # never runs COUNT(*) over large tables at request time.
+    total_buildings = models.PositiveIntegerField(default=0)
+    total_units = models.PositiveIntegerField(default=0)
+    occupied_units = models.PositiveIntegerField(default=0)
+    active_renters = models.PositiveIntegerField(default=0)
+    caretakers_count = models.PositiveIntegerField(default=0)
+    notice_period_renters = models.PositiveIntegerField(default=0)
+    revoked_renters = models.PositiveIntegerField(default=0)
+    deactivated_renters = models.PositiveIntegerField(default=0)
+    pending_rent = models.DecimalField(decimal_places=2, default=0, max_digits=12)
+    overdue_rent = models.DecimalField(decimal_places=2, default=0, max_digits=12)
+    counters_updated_at = models.DateTimeField(null=True, blank=True)
 
 
 class NotificationPreference(models.Model):
